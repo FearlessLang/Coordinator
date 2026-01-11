@@ -88,8 +88,10 @@ While scanning the project, we reject any path that could cause trouble later, i
   - stay within a reasonable total path length of 200 characters
 
 Exceptions (explicit allowlists)
-- A small set of well-known files are allowed to have no extension: %s
-- A small set of well-known multi-part extensions are allowed: %s
+- A small set of well-known files are allowed to have no extension:
+  %s
+- A small set of well-known multi-part extensions are allowed:
+  %s
 
 Protected paths
 Many tools treat names starting with '.' (for example `.gitignore`) as private tool data.

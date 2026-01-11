@@ -15,18 +15,27 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.function.Consumer;
 import java.util.stream.IntStream;
 
 import utils.IoErr;
 
-final class Build{
+class Build{
   private final Path root;
+  Build(Path root){ this.root= root.toAbsolutePath().normalize(); }
+  protected void walkRoot(Consumer<Path> f){ IoErr.walkV(root, s-> s.filter(p->!p.equals(root)).forEach(f)); }
+  protected Path relativize(Path abs){ return root.relativize(abs); }
+  protected Path resolve(Path rel){ return root.resolve(rel); }
+  protected URI uriOf(Path abs){ return abs.toUri().normalize(); }
+  protected boolean isSymbolicLink(Path abs){ return Files.isSymbolicLink(abs); }
+  protected boolean isDirectory(Path abs){ return Files.isDirectory(abs, LinkOption.NOFOLLOW_LINKS); }
+  protected boolean isRegularFile(Path abs){ return Files.isRegularFile(abs, LinkOption.NOFOLLOW_LINKS); }
+
   private final Map<URI,Path> files= new TreeMap<>(Comparator.comparing(URI::toString));
   private final Map<Path,List<Path>> visKidsByDir= new TreeMap<>(Comparator.comparing(Path::toString));
-  private final Map<Path,List<Path>> dotKidsByDir= new TreeMap<>(Comparator.comparing(Path::toString));
-  Build(Path root){ this.root= root.toAbsolutePath().normalize(); }
+  private final Map<Path,List<Path>> dotKidsByDir= new TreeMap<>(Comparator.comparing(Path::toString));  
   Map<URI,Path>  build(){
-    IoErr.walkV(root, s-> s.filter(p->!p.equals(root)).forEach(this::collect));
+    walkRoot(this::collect);
     visKidsByDir.forEach((_,kids)->{
       kids.forEach(kid->checkIndividualVisibleSegment(kid));
       checkCollectiveVisible(kids);
@@ -38,13 +47,13 @@ final class Build{
     return Collections.unmodifiableMap(files);
   }
   private void collect(Path abs){
-    var rel= root.relativize(abs);
-    var dir= rel.getParent(); if (dir == null){ dir= root.relativize(root); }
+    var rel= relativize(abs);
+    var dir= rel.getParent(); if (dir == null){ dir= relativize(root); }
     var m= isInvisible(dir) ? dotKidsByDir : visKidsByDir;
     m.computeIfAbsent(dir, _->new ArrayList<>()).add(rel);
     if (isInvisible(rel)){ return; }
-    if (!Files.isRegularFile(abs, LinkOption.NOFOLLOW_LINKS)){ return; }
-    var u= abs.toUri().normalize();
+    if (!isRegularFile(abs)){ return; }
+    var u= uriOf(abs);
     var res= files.putIfAbsent(u, abs);
     assert res == null;
   }
@@ -58,10 +67,10 @@ final class Build{
     if(kid.toString().length()>200){ throw Err.pathTooLong(kid); }
     var name= kid.getFileName().toString();
     if (name.startsWith(".")){ checkIndividualInvisibleSegment(kid); return; }
-    var abs= root.resolve(kid);
-    if (Files.isSymbolicLink(abs)){ throw Err.symlinkForbidden(kid); }
-    boolean isDir= Files.isDirectory(abs, LinkOption.NOFOLLOW_LINKS);
-    boolean isFile= Files.isRegularFile(abs, LinkOption.NOFOLLOW_LINKS);
+    var abs= resolve(kid);
+    if (isSymbolicLink(abs)){ throw Err.symlinkForbidden(kid); }
+    boolean isDir= isDirectory(abs);
+    boolean isFile= isRegularFile(abs);
     if (!isDir && !isFile){ throw Err.onlyRegularFilesAndDirs(kid); }
     var validNoExt= isDir || Policy.allowedNoExtFilesS.contains(name);
     var badNoExt= isFile && !name.contains(".") && !validNoExt;
@@ -108,10 +117,10 @@ final class Build{
   private void checkIndividualInvisibleSegment(Path kid){
     assert isInvisible(kid);
     if(kid.toString().length()>200){ throw Err.pathTooLong(kid); }
-    var abs= root.resolve(kid);
-    if (Files.isSymbolicLink(abs)){ throw Err.invisibleSymlinkForbidden(kid); }
-    boolean isDir= Files.isDirectory(abs, LinkOption.NOFOLLOW_LINKS);
-    boolean isFile= Files.isRegularFile(abs, LinkOption.NOFOLLOW_LINKS);
+    var abs= resolve(kid);
+    if (isSymbolicLink(abs)){ throw Err.invisibleSymlinkForbidden(kid); }
+    boolean isDir= isDirectory(abs);
+    boolean isFile= isRegularFile(abs);
     if (!isDir && !isFile){ throw Err.invisibleOnlyRegularFilesAndDirs(kid); }
     var name= kid.getFileName().toString();
     if (name.isEmpty()){ throw Err.invisibleEmptySegment(kid); }
@@ -157,7 +166,7 @@ final class Build{
       var name= kid.getFileName().toString();
       if (name.indexOf('.') >= 0){ continue; }
       if (!Policy.allowedNoExtFilesS.contains(name)){ continue; }
-      if (!Files.isRegularFile(root.resolve(kid), LinkOption.NOFOLLOW_LINKS)){ continue; }//is directory
+      if (!isRegularFile(resolve(kid))){ continue; }//is directory
       checkNoExtBaseClash(visKids, kid, name);
     }
   }

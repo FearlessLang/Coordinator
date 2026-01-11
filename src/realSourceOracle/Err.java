@@ -31,7 +31,7 @@ class Err{
       "- This file has no extension.\n"
     + "  Files normally must be named like `name.ext` (one dot).",
       "- Rename it to have a single extension (example: `foo.txt`, `source.fear`).\n"
-    + "- If it is a well-known extensionless file (example: `readme`), add it to the allowlist."
+    + "- Rename it to a well-known extensionless file (example: `readme`)."
     );
   }
   static UncheckedIOException emptyName(Path kid){
@@ -70,7 +70,7 @@ class Err{
       "- A visible folder/file name is reserved on Windows (device name).\n"
     + "  Even if you add an extension, Windows treats it as the same reserved name.",
       "- Rename the folder/file so its base name is not a Windows device name.\n"
-    + "  Examples to avoid: `con`, `prn`, `aux`, `nul`, `com1`..`com9`, `lpt1`..`lpt9`."
+    + "  Reserved device name: `con`, `prn`, `aux`, `nul`, `com1`..`com9`, `lpt1`..`lpt9`."
     );
   }
   static UncheckedIOException missingExtension(Path kid){
@@ -86,7 +86,7 @@ class Err{
       "- This file name has more than one dot in the extension part.\n"
     + "  Most files must use exactly one dot: `name.ext`.",
       "- Rename it to use a single extension, OR\n"
-    + "- If it is a well-known multi-part extension (example: `tar.gz`), add it to the allowlist."
+    + "- Rename it to use a well-known extensionless file (example: `tar.gz`)."
     );
   }
   static UncheckedIOException extLenMustBe1To16(Path kid){
@@ -161,7 +161,7 @@ class Err{
       "- A protected name segment uses a Windows reserved device name.\n"
     + "  Bad base: `"+base+"` in segment: `"+name+"`",
       "- Rename it so the base name is not a Windows device name.\n"
-    + "  Examples to avoid: `con`, `prn`, `aux`, `nul`, `com1`..`com9`, `lpt1`..`lpt9`."
+    + "  Reserved device name: `con`, `prn`, `aux`, `nul`, `com1`..`com9`, `lpt1`..`lpt9`."
     );
   }
 
@@ -182,7 +182,7 @@ class Err{
     + "  Extensionless file: `"+Policy.showRel(noExtKid)+"`\n"
     + "  Extended file:      `"+Policy.showRel(kid)+"`\n"
     + "  This is confusing in file browsers (extensions may be hidden).",
-      "- Rename one of them, or remove the extensionless one if it is not needed here."
+      "- Rename one of them so they are clearly distinct."
     );
   }
 }
