@@ -9,6 +9,7 @@ import java.util.List;
 import core.E.Literal;
 import core.OtherPackages;
 import main.FrontendLogicMain;
+import message.FearlessException;
 import naiveBackend.Backend;
 import realSourceOracle.RealSourceOracle;
 import tools.Fs;
@@ -23,7 +24,11 @@ public interface Coordinator {
   OtherPackages other();
   OutputOracle out();
   default List<Literal> frontend(String pkgName, List<URI> files, SourceOracle oracle, OtherPackages other){
-    return new FrontendLogicMain().of(List.of(), files, oracle, other);
+    try{ return new FrontendLogicMain().of(pkgName,List.of(), files, oracle, other); }
+    catch(FearlessException fe){
+      System.err.println(fe.render(oracle));
+      throw fe;
+      }
     }
   default void backend(String pkgName, List<Literal> core, SourceOracle oracle, OtherPackages other, OutputOracle out){
     var outPath= out.pathOf(List.of("gen_java",pkgName));
