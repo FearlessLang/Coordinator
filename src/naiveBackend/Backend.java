@@ -19,17 +19,14 @@ public class Backend{
     this.out= out;
     this.pkgName= pkgName;
     this.decs= decs;
-    this.rt= out.getParent().resolve("rt");
   }
   Path out;
   String pkgName;
   List<Literal> decs;
-  Path rt;
 
   public void produceJavaCode(){
     cleanOutFolder();
     decs.forEach(d->generateInterface(d,false));
-    copyExtra();
     writeMainJava();
   }
   void cleanOutFolder(){
@@ -74,13 +71,8 @@ public class Backend{
         .append("  }\n");
       return;
     }   
-    //if (abstractOnly || m.sig().abs()){ sb.append("  Object "+jName+paramsSig(m)+";\n"); return; }
     sb.append("  default Object "+jName+paramsSig(m)+"{\n");
     new ProduceBody(sb,this, iface, l.thisName(), m).emitBody();
-  }
-  void copyExtra(){
-    assert Files.exists(rt): "Missing extra folder: "+rt;
-    Fs.copyTree(rt, out);
   }
   String ifaceNameFor(Literal l){
     if (!l.infName()){ return typeName(l.name()); }
