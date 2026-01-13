@@ -18,7 +18,7 @@ import utils.ResolveResource;
 class TestBuildBase {
   Coordinator c= new Coordinator(){
     @Override  public void main(Path path){
-      OutputOracle out= ps->  ps.stream().map(Path::of).reduce(ResolveResource.stLibDebugOut, (acc,e)->acc.resolve(e)); 
+      OutputOracle out= ()->ResolveResource.stLibDebugOut; 
       var pkgName= "base";
       var other= OtherPackages.empty();
       SourceOracle o= Coordinator.sourceOracle(ResolveResource.stLibPath);

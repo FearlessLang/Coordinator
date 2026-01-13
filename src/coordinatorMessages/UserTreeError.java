@@ -4,6 +4,8 @@ import java.net.URI;
 import java.nio.file.Path;
 import java.util.List;
 
+import utils.Bug;
+
 @SuppressWarnings("serial")
 public final class UserTreeError extends RuntimeException{
   private UserTreeError(String msg){ super(msg); }
@@ -11,6 +13,12 @@ public final class UserTreeError extends RuntimeException{
   UserTreeError = problems in the user-provided project folder.
   These are always shown to the user (no automatic repair).
   */
+  
+  public static UserTreeError reservedBeforePkg(URI file){
+    return new UserTreeError("""
+    TODO
+    """);}
+  
   public static UserTreeError noPackageSegment(URI file){
     return new UserTreeError("""
       Cannot assign a source file to a package.
@@ -39,7 +47,7 @@ public final class UserTreeError extends RuntimeException{
         Move the file under a "_pkgName" folder (for example "_bla").
       """.formatted(file));
   }
-
+  public static UserTreeError emptyProject(Path root){ throw Bug.todo(); }
   public static UserTreeError ambiguousPackageSegment(URI file, List<String> candidates){
     return new UserTreeError("""
       Cannot assign a source file to a unique package.
@@ -121,6 +129,7 @@ public final class UserTreeError extends RuntimeException{
       """.formatted(pkg, pkgRoot, pkg));
   }
 
+  //TODO: bad error, just printing the list?
   public static UserTreeError multipleRankFiles(String pkg, List<URI> rankFiles){
     return new UserTreeError("""
       Multiple rank files for the same package.
