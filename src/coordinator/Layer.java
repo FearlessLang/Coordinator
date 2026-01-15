@@ -65,7 +65,7 @@ record BaseLayer(Map<String,Map<String,String>> map, long baseStamp) implements 
     SourceOracle o= Coordinator.sourceOracle(ResolveResource.stLibPath);
     long maxIn= o.allFiles().stream().mapToLong(o::lastModified).max().getAsLong();
     var stillCached= out.pkgApiStamp(pkgName)>= maxIn;
-    if (stillCached){ return out.addCachedPkgApi(other, pkgName); }
+    if (stillCached){ return out.startCachedPkgApi(pkgName,map,baseStamp); }
     List<Literal> core= frontend(pkgName,o.allFiles(),o,other,Map.of());
     backend(pkgName,core,o,other,out);
     long newStamp= out.commitPkgApi(pkgName, core, baseStamp);

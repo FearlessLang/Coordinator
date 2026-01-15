@@ -52,11 +52,11 @@ class Helper{
       int currNum= rankNumber(u);
       if (currNum == lastNum){ pkgs.put(pkgName,map.get(pkgName)); continue; }
       lastNum = currNum;
-      if (pkgs.isEmpty()){continue; }
       l = new MiddleLayer(l, pkgs);
-      pkgs = new LinkedHashMap<String, List<URI>>(); 
+      pkgs = new LinkedHashMap<String, List<URI>>();
+      pkgs.put(pkgName,map.get(pkgName));
     }
-    return new MiddleLayer(l, pkgs);    
+    return pkgs.isEmpty() ? l : new MiddleLayer(l, pkgs);    
   }
   static Layer mapFromRanks(List<URI> allRanks, SourceOracle o, OutputOracle out, long maxStamp){
     Map<String,Map<String,String>> res; try {res= new FrontendLogicMain().parseRankFiles(allRanks,o, Comparator.comparingInt((URI u)->_rankNumber(u)));}
