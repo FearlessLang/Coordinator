@@ -75,11 +75,12 @@ public class Backend{
     new ProduceBody(sb,this, iface, l.thisName(), m).emitBody();
   }
   String ifaceNameFor(Literal l){
-    if (!l.infName()){ return typeName(l.name()); }
+    if (!l.infName()){ return decTypeName(l.name()); }
     if (l.cs().isEmpty()){ return "Object"; }
     return typeName(l.cs().getFirst().name());
   }
-  String typeName(TName n){ return n.simpleName()+"$"+n.arity(); }
+  String decTypeName(TName n){ return n.simpleName()+"$"+n.arity(); }
+  String typeName(TName n){ return n.s()+"$"+n.arity(); }
   Path ifaceFile(Literal l, Path dest){ return dest.resolve(ifaceNameFor(l)+".java"); }
   String mangledMethodName(RC rc, MName m){ return rc.name()+"$"+methodBaseName(m)+"$"+m.arity(); }
   String methodBaseName(MName m){
@@ -93,7 +94,7 @@ public class Backend{
       .append("package ").append(pkgName).append(";\n\n")
       .append("public final class Main{\n  public static void main(String[] args){\n");
     mains.stream().sorted().forEach(n->
-      sb.append("    Util.topLevel(()->").append(n).append(".instance.imm$main$1(new _System$0()));\n")
+      sb.append("    base.Util.topLevel(()->").append(n).append(".instance.imm$main$1(new base._System$0()));\n")
     );
     Fs.writeUtf8(out.resolve("Main.java"), sb.append("  }\n}\n").toString());
   }

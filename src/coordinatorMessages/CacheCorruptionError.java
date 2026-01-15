@@ -21,11 +21,12 @@ public final class CacheCorruptionError extends RuntimeException{
 
   // Trigger: build needs depPkg API file, but it is missing in ".fearless_out".
   // Action: Fearless starts automatic cache repair immediately.
-  public static CacheCorruptionError startRepair_missingPkgApiFile(String depPkg, Path apiJson, String neededByPkg, Path outDir, Path preservedOutDir){
+  public static CacheCorruptionError startRepair_missingPkgApiFile(Path apiJson){
+    Path outDir= apiJson.getParent();
+    Path preservedOutDir=null;//TODO: compute AND do the saving
     return new CacheCorruptionError("""
       Build cache is missing a generated package API file.
 
-      While compiling "%s", Fearless needed the compiled package metadata of "%s".
       That metadata should be stored in:
         "%s"
 
@@ -37,7 +38,7 @@ public final class CacheCorruptionError extends RuntimeException{
         2) We rebuild from a clean "%s".
 
       If the rebuild fails again, Fearless prints another cache error log and then stops.
-      """.formatted(neededByPkg, depPkg, apiJson, outDir, preservedOutDir, outDir));
+      """.formatted(apiJson, outDir, preservedOutDir, outDir));
   }
 
   // Trigger: depPkg API file exists but cannot be parsed.
@@ -67,8 +68,9 @@ public final class CacheCorruptionError extends RuntimeException{
 
   // Trigger: "_map.json" exists but cannot be parsed.
   // Action: Fearless starts automatic cache repair immediately.
-  public static CacheCorruptionError startRepair_invalidVirtualizationMap(
-      Path mapJson, String parseErr, Path outDir, Path preservedOutDir){
+  public static CacheCorruptionError startRepair_invalidVirtualizationMap( Path mapJson, String parseErr){
+    Path outDir= mapJson.getParent();
+    Path preservedOutDir=null;//TODO: compute AND do the saving
     return new CacheCorruptionError("""
       Build cache contains an invalid virtualization map.
 

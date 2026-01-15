@@ -5,6 +5,8 @@ import java.nio.file.Files;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+
 import core.E.Literal;
 import core.FearlessException;
 import core.OtherPackages;
@@ -13,12 +15,12 @@ import naiveBackend.Backend;
 import tools.Fs;
 import tools.JavacTool;
 import tools.SourceOracle;
-import utils.Bug;
 import utils.IoErr;
 import utils.ResolveResource;
 
 public interface Layer{
-  default OtherPackages compile(SourceOracle src, OutputOracle out){ throw Bug.unreachable(); }
+  default LinkedHashMap<String,List<URI>> pkgs(){ return new LinkedHashMap<>();}
+  OtherPackages compile(SourceOracle src, OutputOracle out);
   default List<Literal> frontend(String pkgName, List<URI> files, SourceOracle oracle, OtherPackages other,Map<String,String> vres){
     try{ return new FrontendLogicMain().of(pkgName,vres, files, oracle, other); }
     catch(FearlessException fe){ System.err.println(fe.render(oracle)); throw fe; }
@@ -31,15 +33,12 @@ public interface Layer{
     var classes= out.rootDir().resolve("gen_java","_classes");
     Fs.ensureDir(classes);
     Fs.cleanDirContents(classes);
-    var javacOut= IoErr.of(()->JavacTool.compileTree(outPath, classes));
+    var javacOut= IoErr.of(()->JavacTool.compileTree(outPath, classes,out.rootDir().resolve("gen_java",pkgName+".jar")));
     assert javacOut.isEmpty();
-    //if you add stuff to address this comment, it should be just a single call to a separate method
-    //here we need to use out to produce the following: pkgName.jar, pkgName.html, pkgName.json
-    //pkgName.html will contain docs for the types and methods in pkgName.
-    //pkgName.json is the signatures of all the types saved in a json format, so that we can read them for separate compilation.      
   }
 }
-record MiddleLayer(Layer next, LinkedHashMap<String,List<URI>> pkgs) implements Layer{   
+record MiddleLayer(Layer next, LinkedHashMap<String,List<URI>> pkgs) implements Layer{
+  MiddleLayer{ assert !pkgs.isEmpty(); }
   @Override public OtherPackages compile(SourceOracle src, OutputOracle out){
     OtherPackages other= next.compile(src, out);
     var res= new Object(){
@@ -49,10 +48,11 @@ record MiddleLayer(Layer next, LinkedHashMap<String,List<URI>> pkgs) implements 
         long maxIn= Math.max(maxSrc, other.stamp());//out.mapStamp() must be <= then other.watermark() since it comes from next
         var stillCached= out.pkgApiStamp(pkg) >= maxIn;
         if (stillCached){ nextOther = out.addCachedPkgApi(nextOther, pkg); return; }
-        List<Literal> core= frontend(pkg, files, src, other,other.map().getOrDefault(pkg,Map.of()));
+        List<Literal> core= frontend(pkg, files, src, other,other.virtualizationMap().getOrDefault(pkg,Map.of()));
         backend(pkg, core, src, other, out);      
         long newStamp= out.commitPkgApi(pkg, core, maxIn); // newStamp will be maxIn if there was no reason to commit. 
-        nextOther = nextOther.mergeWith(core,newStamp);
+        var map= core.stream().collect(Collectors.toUnmodifiableMap (Literal::name, d->d));
+        nextOther = nextOther.mergeWith(map,newStamp);
       }};
     pkgs.forEach(res::compilePkg);
     return res.nextOther;
@@ -69,6 +69,6 @@ record BaseLayer(Map<String,Map<String,String>> map, long baseStamp) implements 
     List<Literal> core= frontend(pkgName,o.allFiles(),o,other,Map.of());
     backend(pkgName,core,o,other,out);
     long newStamp= out.commitPkgApi(pkgName, core, baseStamp);
-    return other.mergeWith(core,newStamp);
+    return OtherPackages.start(map, core, newStamp);
   }
 }

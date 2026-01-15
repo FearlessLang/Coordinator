@@ -1,5 +1,4 @@
 package coordinator;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.UncheckedIOException;
 import java.net.URI;
@@ -11,15 +10,16 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import coordinatorMessages.UserTreeError;
+import core.FearlessException;
+import main.FrontendLogicMain;
 import realSourceOracle.RealSourceOracle;
 import tools.JavaTool;
 import tools.SourceOracle;
 
 public interface Coordinator {
   default void runAllMains(String pkgName,OutputOracle out){
-    var classes= out.rootDir().resolve("gen_java","_classes");
-    var runOut= JavaTool.runMain(classes, pkgName+".Main");
-    assertEquals("", runOut);
+    var jars= out.rootDir().resolve("gen_java");
+    JavaTool.runMainFromJars(jars,pkgName+".Main");
   }
   static SourceOracle sourceOracle(Path path){
     try{ return new RealSourceOracle(path); }
@@ -28,7 +28,7 @@ public interface Coordinator {
   default void main(Path path){
     SourceOracle o= sourceOracle(path);
     long maxStamp= o.allFiles().stream()
-      .filter(u->Path.of(u).endsWith(".fear"))
+      .filter(u->Path.of(u).toString().endsWith(".fear"))
       .mapToLong(u->o.lastModified(u))
       .max().orElseThrow(()->UserTreeError.emptyProject(path));
     Map<String,List<URI>> map= o.allFiles().stream().collect(
@@ -36,33 +36,33 @@ public interface Coordinator {
     List<URI> allRanks= map.values().stream().map(u->Helper.okPkgContent(u,path)).toList();
     var pOut= path.resolve(".fearless_out");
     OutputOracle out= ()->pOut;
-    Layer l= Helper.mapFromRanks(allRanks,out,maxStamp);
+    Layer l= Helper.mapFromRanks(allRanks,o,out,maxStamp);
     l = Helper.layers(map,l,allRanks.stream()
       .sorted(Comparator.comparingInt(Helper::rankNumber).thenComparing(URI::toString)).toList());
-    //l = Helper.layers(l,allRanks.stream().sorted(Helper::rankNumber).toList());//also sort on the toString of the full URI to get unique sorting
     l.compile(o, out);
+    l.pkgs().keySet().stream().forEach(p->runAllMains(p,out));
   }
 }
 class Helper{
   static Layer layers(Map<String,List<URI>> map, Layer l, List<URI> ranks){
-    int lastNum= 0;
+    int lastNum= rankNumber(ranks.getFirst());
     var pkgs= new LinkedHashMap<String, List<URI>>();
     for(URI u:ranks){
       var pkgName= pkgName(u);
       int currNum= rankNumber(u);
       if (currNum == lastNum){ pkgs.put(pkgName,map.get(pkgName)); continue; }
       lastNum = currNum;
-      if (!pkgs.isEmpty()){continue; }
+      if (pkgs.isEmpty()){continue; }
       l = new MiddleLayer(l, pkgs);
       pkgs = new LinkedHashMap<String, List<URI>>(); 
     }
-    return l;    
+    return new MiddleLayer(l, pkgs);    
   }
-  static Layer mapFromRanks(List<URI> allRanks, OutputOracle out, long maxStamp){
-    /*this for will do later*/
-    Map<String,Map<String,String>> res= new LinkedHashMap<>();
-    long baseStamp= out.commitMap(res, 0);
-    return new BaseLayer(res,Math.max(baseStamp,maxStamp));
+  static Layer mapFromRanks(List<URI> allRanks, SourceOracle o, OutputOracle out, long maxStamp){
+    Map<String,Map<String,String>> res; try {res= new FrontendLogicMain().parseRankFiles(allRanks,o, Comparator.comparingInt((URI u)->_rankNumber(u)));}
+    catch(FearlessException fe){ System.err.println(fe.render(o)); throw fe; }
+    long baseStamp= out.commitMap(res, maxStamp);
+    return new BaseLayer(res,baseStamp);
   }
   static int rankNumber(URI u){ 
     int res= _rankNumber(u);
@@ -72,10 +72,10 @@ class Helper{
   static int _rankNumber(URI u){
     var name= Path.of(u).getFileName().toString();
     assert name.endsWith(".fear");
-    var prefix= name.substring(name.length() - 8); //8 is length of NNN.fear
+    var prefix= name.substring(0,name.length() - 8); //8 is length of NNN.fear
     var digits= name.substring(name.length() - 8,name.length() - 5); //5 is length of .fear
     int base= ranks.indexOf(prefix) + 1;
-    assert base > 0; 
+    assert base > 0:name+" "+prefix+" "+digits; 
     return base*1000+Integer.parseInt(digits);
   }
   private static final List<String> ranks= List.of(
@@ -102,7 +102,7 @@ class Helper{
     if (candidates.isEmpty()){ throw UserTreeError.noPackageSegment(u); }
     if (whiteListAfterPkg.contains(candidates.getFirst())){ throw UserTreeError.reservedBeforePkg(u); }    
     var onlyGood= candidates.stream().skip(1).allMatch(s->whiteListAfterPkg.contains(s));
-    if (onlyGood){ return candidates.getFirst(); } 
+    if (onlyGood){ return candidates.getFirst().substring(1); } 
     throw UserTreeError.ambiguousPackageSegment(u, candidates);    
   }
 }

@@ -6,8 +6,8 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 
+import tools.Fs;
 import tools.SourceOracle;
-import utils.Bug;
 import utils.IoErr;
 
 public final class RealSourceOracle implements SourceOracle{
@@ -27,9 +27,7 @@ public final class RealSourceOracle implements SourceOracle{
     if (!SourceOracle.isFile(uri)){ return false; }
     return files.containsKey(uri.normalize());
   }
-  @Override public long lastModified(URI u){
-    throw Bug.todo(); 
-  }
+  @Override public long lastModified(URI u){ return Fs.lastModified(Path.of(u)); } 
 
   @Override public List<URI> allFiles(){ return files.keySet().stream().toList(); }
 }

@@ -4,8 +4,6 @@ import java.net.URI;
 import java.nio.file.Path;
 import java.util.List;
 
-import utils.Bug;
-
 @SuppressWarnings("serial")
 public final class UserTreeError extends RuntimeException{
   private UserTreeError(String msg){ super(msg); }
@@ -47,7 +45,13 @@ public final class UserTreeError extends RuntimeException{
         Move the file under a "_pkgName" folder (for example "_bla").
       """.formatted(file));
   }
-  public static UserTreeError emptyProject(Path root){ throw Bug.todo(); }
+  public static UserTreeError emptyProject(Path root){ 
+  return new UserTreeError("""
+      This folder contains no *.fear files
+      Folder:
+      "%s"
+      """.formatted(root));
+  }
   public static UserTreeError ambiguousPackageSegment(URI file, List<String> candidates){
     return new UserTreeError("""
       Cannot assign a source file to a unique package.
