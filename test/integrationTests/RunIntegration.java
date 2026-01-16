@@ -1,5 +1,7 @@
 package integrationTests;
 
+import java.nio.file.Path;
+
 import org.junit.jupiter.api.Test;
 
 import coordinator.Coordinator;
@@ -7,7 +9,10 @@ import utils.ResolveResource;
 
 public class RunIntegration {
   void testOk(String name){
-    var c= new Coordinator(){};
+    var c= new Coordinator(){
+      public Path rtPath(){    return ResolveResource.stLibRTPath; }  
+      public Path stLibPath(){ return ResolveResource.stLibPath; }
+    };
     c.main(ResolveResource.integrationTests.resolve(name));
   }
   @Test void helloWorld(){ testOk("helloWorld");}

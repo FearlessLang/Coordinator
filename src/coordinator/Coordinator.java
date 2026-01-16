@@ -1,50 +1,64 @@
 package coordinator;
 
-import java.io.UncheckedIOException;
 import java.net.URI;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
+import java.util.Optional;
 import java.util.stream.IntStream;
 import coordinatorMessages.UserTreeError;
 import core.FearlessException;
+import core.OtherPackages;
+import core.E.Literal;
 import main.FrontendLogicMain;
+import mainCoordinator.UserExit;
+import naiveBackend.NaiveBackendLogicMain;
 import realSourceOracle.RealSourceOracle;
 import tools.JavaTool;
 import tools.SourceOracle;
 
 public interface Coordinator {
+  Path rtPath();  
+  Path stLibPath();
+
   default void runAllMains(String pkgName,OutputOracle out){
     var jars= out.rootDir().resolve("gen_java");
     JavaTool.runMainFromJars(jars,pkgName+".Main");
   }
-  static SourceOracle sourceOracle(Path path){
-    try{ return new RealSourceOracle(path); }
-    catch(UncheckedIOException ioe){ System.err.println(ioe.getCause().getMessage()); throw ioe; }
-  }  
-  default void main(Path path){
-    SourceOracle o= sourceOracle(path);
-    long maxStamp= o.allFiles().stream()
-      .filter(u->Path.of(u).toString().endsWith(".fear"))
-      .mapToLong(u->o.lastModified(u))
-      .max().orElseThrow(()->UserTreeError.emptyProject(path));
-    Map<String,List<URI>> map= o.allFiles().stream().collect(
-      Collectors.groupingBy(Helper::pkgName, LinkedHashMap::new, Collectors.toList()));
-    List<URI> allRanks= map.values().stream().map(u->Helper.okPkgContent(u,path)).toList();
-    var pOut= path.resolve(".fearless_out");
-    OutputOracle out= ()->pOut;
-    Layer l= Helper.mapFromRanks(allRanks,o,out,maxStamp);
-    l = Helper.layers(map,l,allRanks.stream()
-      .sorted(Comparator.comparingInt(Helper::rankNumber).thenComparing(URI::toString)).toList());
-    l.compile(o, out);
-    l.pkgs().keySet().stream().forEach(p->runAllMains(p,out));
+  default SourceOracle sourceOracle(Path path){ return new RealSourceOracle(path); }
+  default void main(Path path){ Helper.main(this, path); }
+  
+  default List<Literal> frontend(String pkgName, List<URI> files, SourceOracle oracle, OtherPackages other,Map<String,String> vres){
+    try{ return new FrontendLogicMain().of(pkgName,vres, files, oracle, other); }
+    catch(FearlessException fe){ throw new UserExit(fe.render(oracle)); }
+  }
+  default void backend(String pkgName, List<Literal> core, SourceOracle oracle, OtherPackages other, OutputOracle out){
+    new NaiveBackendLogicMain().of(pkgName,core,out.rootDir(),rtPath());
   }
 }
 class Helper{
-  static Layer layers(Map<String,List<URI>> map, Layer l, List<URI> ranks){
+  static boolean isFear(URI u){ return Path.of(u).toString().endsWith(".fear"); }
+  static void main(Coordinator coordinator, Path path){
+    SourceOracle o= coordinator.sourceOracle(path);
+    long maxStamp= o.allFiles().stream()
+      .filter(Helper::isFear).mapToLong(o::lastModified)
+      .max().orElseThrow(()->UserTreeError.emptyProject(path));
+    o.allFiles().stream().filter(Helper::isFear).forEach(Helper::pkgName);//err if not under a pkg
+    var map= new LinkedHashMap<String,List<URI>>();
+    for(URI u:o.allFiles()){ pkgNameOpt(u).ifPresent(pn->map.computeIfAbsent(pn,_->new ArrayList<>()).add(u)); }
+    List<URI> allRanks= map.values().stream().map(u->Helper.okPkgContent(u,path)).toList();
+    var pOut= path.resolve(".fearless_out");
+    OutputOracle out= ()->pOut;
+    Layer l= mapFromRanks(coordinator,allRanks,o,out,maxStamp);
+    l = layers(coordinator,map,l,allRanks.stream()
+      .sorted(Comparator.comparingInt(Helper::rankNumber).thenComparing(URI::toString)).toList());
+    l.compile(o, out);
+    l.pkgs().keySet().forEach(p->coordinator.runAllMains(p,out));
+  }
+  static Layer layers(Coordinator coordinator, Map<String,List<URI>> map, Layer l, List<URI> ranks){
     int lastNum= rankNumber(ranks.getFirst());
     var pkgs= new LinkedHashMap<String, List<URI>>();
     for(URI u:ranks){
@@ -52,31 +66,34 @@ class Helper{
       int currNum= rankNumber(u);
       if (currNum == lastNum){ pkgs.put(pkgName,map.get(pkgName)); continue; }
       lastNum = currNum;
-      l = new MiddleLayer(l, pkgs);
+      l = new MiddleLayer(coordinator,l, pkgs);
       pkgs = new LinkedHashMap<String, List<URI>>();
       pkgs.put(pkgName,map.get(pkgName));
     }
-    return pkgs.isEmpty() ? l : new MiddleLayer(l, pkgs);    
+    return pkgs.isEmpty() ? l : new MiddleLayer(coordinator,l, pkgs);    
   }
-  static Layer mapFromRanks(List<URI> allRanks, SourceOracle o, OutputOracle out, long maxStamp){
-    Map<String,Map<String,String>> res; try {res= new FrontendLogicMain().parseRankFiles(allRanks,o, Comparator.comparingInt((URI u)->_rankNumber(u)));}
+  static Layer mapFromRanks(Coordinator coordinator, List<URI> allRanks, SourceOracle o, OutputOracle out, long maxStamp){
+    Map<String,Map<String,String>> res; try {res= new FrontendLogicMain()
+      .parseRankFiles(allRanks,o, Comparator.comparingInt((URI u)->rankNumber(u)));}
     catch(FearlessException fe){ System.err.println(fe.render(o)); throw fe; }
     long baseStamp= out.commitMap(res, maxStamp);
-    return new BaseLayer(res,baseStamp);
+    return new BaseLayer(coordinator,res,baseStamp);
   }
-  static int rankNumber(URI u){ 
-    int res= _rankNumber(u);
-    assert res != -1;
-    return res;
-  }
-  static int _rankNumber(URI u){
+  static int rankNumber(URI u){
     var name= Path.of(u).getFileName().toString();
-    assert name.endsWith(".fear");
-    var prefix= name.substring(0,name.length() - 8); //8 is length of NNN.fear
-    var digits= name.substring(name.length() - 8,name.length() - 5); //5 is length of .fear
-    int base= ranks.indexOf(prefix) + 1;
-    assert base > 0:name+" "+prefix+" "+digits; 
-    return base*1000+Integer.parseInt(digits);
+    if(!name.endsWith(".fear")){ throw UserTreeError.malformedRankFileName(u); }
+    var stem= name.substring(0, name.length()-5); // no ".fear"
+    for(int i=0;i<ranks.size();i++){
+      var pref= ranks.get(i);
+      int base= (i+1)*1000;
+      if(stem.equals(pref)){ return base+999; } // shortcut: _rank_app.fear == _rank_app999.fear
+      if(!stem.startsWith(pref)){ continue; }
+      if(stem.length()!=pref.length()+3){ throw UserTreeError.malformedRankFileName(u); }
+      var digits= stem.substring(pref.length());
+      if(!digits.chars().allMatch(Character::isDigit)){ throw UserTreeError.malformedRankFileName(u); }
+      return base+Integer.parseInt(digits);
+    }
+    throw UserTreeError.malformedRankFileName(u);
   }
   private static final List<String> ranks= List.of(
     "_rank_base","_rank_core","_rank_driver","_rank_worker","_rank_framework","_rank_accumulator","_rank_tool","_rank_app");
@@ -87,11 +104,12 @@ class Helper{
       .filter(ui->Path.of(ui).getFileName().toString().startsWith("_rank_")).toList();
     if (rankFiles.isEmpty()){ throw UserTreeError.missingRankFile(pkg, root); }
     if (rankFiles.size() > 1){ throw UserTreeError.multipleRankFiles(pkg, rankFiles); }
-    boolean ok= _rankNumber(rankFiles.getFirst()) != -1;
-    if (ok){ return rankFiles.getFirst(); }
-    throw UserTreeError.malformedRankFileName(rankFiles.getFirst());
-  }  
-  static String pkgName(URI u){//TODO: finalize the real whitelist
+    rankNumber(rankFiles.getFirst());//err malformed rank file name is malformed
+    return rankFiles.getFirst();
+  }
+  static String pkgName(URI u){ return pkgNameOpt(u).orElseThrow(()->UserTreeError.noPackageSegment(u)); }
+
+  static Optional<String> pkgNameOpt(URI u){//TODO: finalize the real whitelist
     List<String> whiteListAfterPkg= List.of("_asset","_dbg");
     //List<String> whiteList= List.of("_ignore");//TODO: no, those files will have to be filtered way before we reach here
     var p= Path.of(u);
@@ -99,36 +117,10 @@ class Helper{
       .mapToObj(i->p.getName(i).toString())
       .filter(s->s.startsWith("_"))
       .toList();
-    if (candidates.isEmpty()){ throw UserTreeError.noPackageSegment(u); }
+    if (candidates.isEmpty()){ return Optional.empty(); }
     if (whiteListAfterPkg.contains(candidates.getFirst())){ throw UserTreeError.reservedBeforePkg(u); }    
     var onlyGood= candidates.stream().skip(1).allMatch(s->whiteListAfterPkg.contains(s));
-    if (onlyGood){ return candidates.getFirst().substring(1); } 
+    if (onlyGood){ return Optional.of(candidates.getFirst().substring(1)); } 
     throw UserTreeError.ambiguousPackageSegment(u, candidates);    
   }
 }
-    /*OutputOracle out= ps->  ps.stream().map(Path::of).reduce(path.resolve(".fearless_out"), (acc,e)->acc.resolve(e));
-    //if base is not compiled== no jar present in ".fearless_out/base.jar", compile it
-    SourceOracle o= sourceOracle(path);
-    List<URI> files= o.allFiles();
-    //list->map will need a new class. To big to fit here
-    //classify files into packages: forall f:files, if path contains _foo (underscore starting name)
-    //that is a package name.
-    //if more then one segment of path has _, all but one must be in a whitelisted list and are ignored
-    //For each file *.fear, either there is exactly one valid package segment (add to pkg) 
-    //or produce a good err message.
-    Map<String,List<URI>> pkgs= new HashMap<>();
-    Map<String,List<URI>> ranks= new HashMap<>();
-    //Rank: each pkg has a file caled _rank_xxxxNNN.fear
-    //base 1 | core 2 | driver 3 | worker 4 | framework 5 | accumulator 6 | tool 7 | app 8 
-    //example core043 = rank 2043; worker999 = rank 4999
-    //Then, open all the rank files of all the packages, parse them and extract the map component.
-    //We can merge the various map components by rank (higher rank win)
-    //We can save the tot map as a file under out called _map.json 
-    //We can use the last modified time of the map and the rank files to decide to recompute or not.
-    //now, for each package, ranked by 'rank'
-    //- is there a file pkgName.json whose last modified time is > then the max(last modified time) of the source files? (we may have to consider the _map.json too)
-    //- Yes: skip 
-    //- NO: compile using the map (frontend+backend) AND set so that any package with higher rank has to be recompiled
-    //- Note that packages with the same rank can still use their cache (this will be very common, many pkg with same rank is common) 
-    //- Then, all the pkg(s) with the highest rank get their mains executed.
-  }*/
