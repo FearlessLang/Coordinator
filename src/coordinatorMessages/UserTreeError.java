@@ -3,6 +3,7 @@ package coordinatorMessages;
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.List;
+import tools.SourceOracle.Ref;
 
 @SuppressWarnings("serial")
 public final class UserTreeError extends RuntimeException{
@@ -11,13 +12,19 @@ public final class UserTreeError extends RuntimeException{
   UserTreeError = problems in the user-provided project folder.
   These are always shown to the user (no automatic repair).
   */
+
+  public static UserTreeError zipAndDirConflict(Ref file){
+    return new UserTreeError("""
+    TODO
+    """);}
+
   
-  public static UserTreeError reservedBeforePkg(URI file){
+  public static UserTreeError reservedBeforePkg(Ref file){
     return new UserTreeError("""
     TODO
     """);}
   
-  public static UserTreeError noPackageSegment(URI file){
+  public static UserTreeError noPackageSegment(Ref file){
     return new UserTreeError("""
       Cannot assign a source file to a package.
 
@@ -52,7 +59,7 @@ public final class UserTreeError extends RuntimeException{
       "%s"
       """.formatted(root));
   }
-  public static UserTreeError ambiguousPackageSegment(URI file, List<String> candidates){
+  public static UserTreeError ambiguousPackageSegment(Ref file, List<String> candidates){
     return new UserTreeError("""
       Cannot assign a source file to a unique package.
 
@@ -134,7 +141,7 @@ public final class UserTreeError extends RuntimeException{
   }
 
   //TODO: bad error, just printing the list?
-  public static UserTreeError multipleRankFiles(String pkg, List<URI> rankFiles){
+  public static UserTreeError multipleRankFiles(String pkg, List<Ref> rankFiles){
     return new UserTreeError("""
       Multiple rank files for the same package.
 
@@ -153,7 +160,7 @@ public final class UserTreeError extends RuntimeException{
       """.formatted(pkg, rankFiles));
   }
 
-  public static UserTreeError malformedRankFileName(URI rankFile){
+  public static UserTreeError malformedRankFileName(Ref rankFile){
     return new UserTreeError("""
       Malformed rank file name.
 

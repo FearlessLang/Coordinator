@@ -6,6 +6,8 @@ import java.nio.file.Path;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.function.Consumer;
 
+import coordinatorMessages.UserExit;
+
 public final class LaunchPath{
   public static Path fetchCalledOn(String[] args){
     if (args.length == 0){ return forMac(); }

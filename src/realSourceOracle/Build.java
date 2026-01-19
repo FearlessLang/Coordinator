@@ -18,6 +18,7 @@ import java.util.TreeMap;
 import java.util.function.Consumer;
 import java.util.stream.IntStream;
 
+import coordinatorMessages.UserExit;
 import utils.IoErr;
 
 class Build{
@@ -64,17 +65,17 @@ class Build{
       .findFirst().orElse(rel.getNameCount());
   }
   private void checkIndividualVisibleSegment(Path kid){
-    if(kid.toString().length()>200){ throw Err.pathTooLong(kid); }
+    if(kid.toString().length()>200){ throw UserExit.pathTooLong(kid); }
     var name= kid.getFileName().toString();
     if (name.startsWith(".")){ checkIndividualInvisibleSegment(kid); return; }
     var abs= resolve(kid);
-    if (isSymbolicLink(abs)){ throw Err.symlinkForbidden(kid); }
+    if (isSymbolicLink(abs)){ throw UserExit.symlinkForbidden(kid); }
     boolean isDir= isDirectory(abs);
     boolean isFile= isRegularFile(abs);
-    if (!isDir && !isFile){ throw Err.onlyRegularFilesAndDirs(kid); }
-    var validNoExt= isDir || Policy.allowedNoExtFilesS.contains(name);
+    if (!isDir && !isFile){ throw UserExit.onlyRegularFilesAndDirs(kid); }
+    var validNoExt= isDir || UserExit.allowedNoExtFilesS.contains(name);
     var badNoExt= isFile && !name.contains(".") && !validNoExt;
-    if (badNoExt){ throw Err.needsExtension(kid); }
+    if (badNoExt){ throw UserExit.needsExtension(kid); }
     if(validNoExt){ checkVisibleAtom(kid, name); return; }
     int d0= name.indexOf('.');
     assert d0 > 0;
@@ -82,30 +83,30 @@ class Build{
     checkExt(kid, name.substring(d0+1,name.length()));
   }
   private void checkVisibleAtom(Path kid, String atom){
-    if (atom.isEmpty()){ throw Err.emptyName(kid); }
+    if (atom.isEmpty()){ throw UserExit.emptyName(kid); }
     char c0= atom.charAt(0);
-    if (!(c0=='_' || ('a'<=c0 && c0<='z'))){ throw Err.visibleMustStartWithLetterOrUnderscore(kid); }
+    if (!(c0=='_' || ('a'<=c0 && c0<='z'))){ throw UserExit.visibleMustStartWithLetterOrUnderscore(kid); }
     for (int i= 1; i < atom.length(); i++){
       char c= atom.charAt(i);
       boolean ok= ('a' <= c && c <= 'z')||('0' <= c && c <= '9')||c == '_';
-      if (!ok){ throw Err.visibleInvalidChar(kid, c); }
-      if (c == '_' && atom.charAt(i-1) == '_'){ throw Err.visibleNoDoubleUnderscore(kid); }
+      if (!ok){ throw UserExit.visibleInvalidChar(kid, c); }
+      if (c == '_' && atom.charAt(i-1) == '_'){ throw UserExit.visibleNoDoubleUnderscore(kid); }
     }
-    if (winReserved.contains(atom)){ throw Err.windowsReservedName(kid); }
+    if (winReserved.contains(atom)){ throw UserExit.windowsReservedName(kid); }
   }
   private void checkExt(Path kid, String tail){
-    if (tail.isEmpty()){ throw Err.missingExtension(kid); }
+    if (tail.isEmpty()){ throw UserExit.missingExtension(kid); }
     int d= tail.indexOf('.');
     if (d < 0){ checkExtSeg(kid, tail); return; }
-    if (!Policy.allowedMultiDotExtsS.contains(tail)){ throw Err.multiDotExtNotAllowed(kid); }
+    if (!UserExit.allowedMultiDotExtsS.contains(tail)){ throw UserExit.multiDotExtNotAllowed(kid); }
   }
   private void checkExtSeg(Path kid, String seg){
     int n= seg.length();
-    if (n < 1 || n > 16){ throw Err.extLenMustBe1To16(kid); }
+    if (n < 1 || n > 16){ throw UserExit.extLenMustBe1To16(kid); }
     for (int i= 0; i < n; i++){
       char c= seg.charAt(i);
       boolean ok= ('a' <= c && c <= 'z')||('0' <= c && c <= '9');
-      if (!ok){ throw Err.extInvalidChar(kid, c); }
+      if (!ok){ throw UserExit.extInvalidChar(kid, c); }
     }
   }
   private static final Set<String> winReserved=Set.of(
@@ -116,25 +117,25 @@ class Build{
   private static final String winBadChars="<>:\"/\\|?*";
   private void checkIndividualInvisibleSegment(Path kid){
     assert isInvisible(kid);
-    if(kid.toString().length()>200){ throw Err.pathTooLong(kid); }
+    if(kid.toString().length()>200){ throw UserExit.pathTooLong(kid); }
     var abs= resolve(kid);
-    if (isSymbolicLink(abs)){ throw Err.invisibleSymlinkForbidden(kid); }
+    if (isSymbolicLink(abs)){ throw UserExit.invisibleSymlinkForbidden(kid); }
     boolean isDir= isDirectory(abs);
     boolean isFile= isRegularFile(abs);
-    if (!isDir && !isFile){ throw Err.invisibleOnlyRegularFilesAndDirs(kid); }
+    if (!isDir && !isFile){ throw UserExit.invisibleOnlyRegularFilesAndDirs(kid); }
     var name= kid.getFileName().toString();
-    if (name.isEmpty()){ throw Err.invisibleEmptySegment(kid); }
-    if (name.endsWith(".") || name.endsWith(" ")){ throw Err.invisibleNoTrailingDotOrSpace(kid, name); }
+    if (name.isEmpty()){ throw UserExit.invisibleEmptySegment(kid); }
+    if (name.endsWith(".") || name.endsWith(" ")){ throw UserExit.invisibleNoTrailingDotOrSpace(kid, name); }
     for (int i= 0; i < name.length(); ){
       int cp= name.codePointAt(i);
-      if (0xD800 <= cp && cp <= 0xDFFF){ throw Err.invisibleInvalidSurrogate(kid, name); }
-      if (Character.isISOControl(cp)){ throw Err.invisibleNoControlChars(kid, cp, name); }
-      if (winBadChars.indexOf(cp) >= 0){ throw Err.invisibleNoWindowsBadChars(kid, (char)cp, name); }
+      if (0xD800 <= cp && cp <= 0xDFFF){ throw UserExit.invisibleInvalidSurrogate(kid, name); }
+      if (Character.isISOControl(cp)){ throw UserExit.invisibleNoControlChars(kid, cp, name); }
+      if (winBadChars.indexOf(cp) >= 0){ throw UserExit.invisibleNoWindowsBadChars(kid, (char)cp, name); }
       i += Character.charCount(cp);
     }
     int d= name.indexOf('.');
     var base= (d < 0 ? name : name.substring(0, d)).toLowerCase(Locale.ROOT);
-    if (!base.isEmpty() && winReserved.contains(base)){ throw Err.invisibleWindowsReservedDeviceName(kid, base, name); }
+    if (!base.isEmpty() && winReserved.contains(base)){ throw UserExit.invisibleWindowsReservedDeviceName(kid, base, name); }
   }
   private void checkCollectiveInvisible(List<Path> kids){
     var seenKeyToName= new HashMap<String,String>();
@@ -155,7 +156,7 @@ class Build{
       caseOnly ? "Names differ only by case."
       : nfcOnly  ? "Names differ only by Unicode normalization (NFC)."
       :            "Names collide after Unicode NFC normalization and case-folding.";
-    throw Err.hiddenSiblingNamesCollide(kid, prev, name, reason);
+    throw UserExit.hiddenSiblingNamesCollide(kid, prev, name, reason);
   }
   private void checkCollectiveVisible(List<Path> kids){
     var dotKids= new ArrayList<Path>();
@@ -165,7 +166,7 @@ class Build{
     for (var kid: visKids){
       var name= kid.getFileName().toString();
       if (name.indexOf('.') >= 0){ continue; }
-      if (!Policy.allowedNoExtFilesS.contains(name)){ continue; }
+      if (!UserExit.allowedNoExtFilesS.contains(name)){ continue; }
       if (!isRegularFile(resolve(kid))){ continue; }//is directory
       checkNoExtBaseClash(visKids, kid, name);
     }
@@ -177,7 +178,7 @@ class Build{
       int d0= name.indexOf('.');
       if (d0 < 0){ continue; }
       if (!name.substring(0, d0).equals(base)){ continue; }
-      throw Err.extensionlessMaskExtension(kid, noExtKid);
+      throw UserExit.extensionlessMaskExtension(kid, noExtKid);
     }
   }
 }

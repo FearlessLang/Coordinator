@@ -124,4 +124,17 @@ public final class CacheCorruptionError extends RuntimeException{
       Fearless stops now. No automatic cache repair is attempted for write failures.
       """.formatted(path, why));
   }
+  public static CacheCorruptionError nestedZipOverAGiga(String string){//no?
+    return new CacheCorruptionError("""
+TODO
+""");}
+  public static CacheCorruptionError nestedZipTooBig(String string){
+    return new CacheCorruptionError("""
+TODO
+""");}
+
+  public static CacheCorruptionError canNotFindExpected(String string){
+    return new CacheCorruptionError("""
+TODO
+""");}
 }

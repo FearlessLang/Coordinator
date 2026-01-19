@@ -6,6 +6,7 @@ import java.nio.file.Path;
 
 import coordinator.Coordinator;
 import coordinatorMessages.CacheCorruptionError;
+import coordinatorMessages.UserExit;
 import coordinatorMessages.UserTreeError;
 
 public final class Main{

@@ -13,6 +13,8 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.opentest4j.AssertionFailedError;
 
+import coordinatorMessages.UserExit;
+
 public class BuildErrorsTest{
   static{ utils.Err.setUp(AssertionFailedError.class, Assertions::assertEquals, Assertions::assertTrue); }
   enum K{ FILE, DIR, SYMLINK, SPECIAL }
@@ -429,7 +431,7 @@ We check this so that you do not get surprises later.[###]
 
     @Override protected URI uriOf(Path abs){
       var rel= absToRel.get(abs);
-      return URI.create("file:/"+(rel==null? "__root__" : Policy.showRel(rel)));
+      return URI.create("file:/"+(rel==null? "__root__" : UserExit.showRel(rel)));
     }
 
     @Override protected boolean isSymbolicLink(Path abs){ return kindByAbs.get(abs) == K.SYMLINK; }

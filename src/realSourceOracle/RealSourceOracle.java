@@ -5,29 +5,40 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+
+import coordinatorMessages.UserExit;
+
 import static offensiveUtils.Require.*;
+
 import tools.Fs;
 import tools.SourceOracle;
 import utils.IoErr;
 
 public final class RealSourceOracle implements SourceOracle{
-  private final Map<URI,Path> files;
+  private final List<Ref> allFiles;
+  private final Map<URI,Ref> byUri;
   public RealSourceOracle(Path root){
-    if (Files.isDirectory(root)){ files= new Build(root).build(); return; }
-    throw Policy.fail(Path.of("."), "Problem: root is not a directory."," Start Fearless on the Fearless project directory.");
+    if (!Files.isDirectory(root)){ throw UserExit.rootNotDirectory(); }
+    var files= new Build(root).build();
+    allFiles= files.entrySet().stream()
+      .<Ref>map(e-> new RealRef(e.getKey(), e.getValue()))
+      .toList();
+    byUri= allFiles.stream().collect(Collectors.toUnmodifiableMap(r->r.fearURI().normalize(), r->r));
   }
-  @Override public CharSequence load(URI uri){
-    check(SourceOracle.isFile(uri),"Only file: URIs are supported: "+uri);
-    var u= uri.normalize();
-    var p= files.get(u);
-    check(p != null,"No such file: "+u);
-    return IoErr.of(()->Files.readString(p));
-  }
-  @Override public boolean exists(URI uri){
-    if (!SourceOracle.isFile(uri)){ return false; }
-    return files.containsKey(uri.normalize());
-  }
-  @Override public long lastModified(URI u){ return Fs.lastModified(Path.of(u)); } 
+  @Override public List<Ref> allFiles(){ return allFiles; }
 
-  @Override public List<URI> allFiles(){ return files.keySet().stream().toList(); }
+  @Override public String loadString(URI uri){
+    var r= byUri.get(uri);
+    assert r != null : "No such file: "+uri;
+    return r.loadString();
+  }
+  private record RealRef(String fearPath, Path diskPath) implements Ref{
+    RealRef(URI uri, Path diskPath){ this(uri.normalize().toString(), diskPath); }
+    RealRef{ assert nonNull(fearPath, diskPath); }
+    @Override public byte[] loadBytes(){ return IoErr.of(()->Files.readAllBytes(diskPath)); }
+    @Override public String loadString(){ return IoErr.of(()->Files.readString(diskPath)); }
+    @Override public long lastModified(){ return Fs.lastModified(diskPath); }
+    @Override public String toString(){ return fearPath; }
+  }
 }
