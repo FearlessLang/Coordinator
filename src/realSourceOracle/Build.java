@@ -83,7 +83,7 @@ class Build{
     checkExt(kid, name.substring(d0+1,name.length()));
   }
   private void checkVisibleAtom(Path kid, String atom){
-    if (atom.isEmpty()){ throw UserExit.emptyName(kid); }
+    assert !atom.isEmpty();
     char c0= atom.charAt(0);
     if (!(c0=='_' || ('a'<=c0 && c0<='z'))){ throw UserExit.visibleMustStartWithLetterOrUnderscore(kid); }
     for (int i= 1; i < atom.length(); i++){
@@ -124,7 +124,7 @@ class Build{
     boolean isFile= isRegularFile(abs);
     if (!isDir && !isFile){ throw UserExit.invisibleOnlyRegularFilesAndDirs(kid); }
     var name= kid.getFileName().toString();
-    if (name.isEmpty()){ throw UserExit.invisibleEmptySegment(kid); }
+    assert !name.isEmpty();
     if (name.endsWith(".") || name.endsWith(" ")){ throw UserExit.invisibleNoTrailingDotOrSpace(kid, name); }
     for (int i= 0; i < name.length(); ){
       int cp= name.codePointAt(i);

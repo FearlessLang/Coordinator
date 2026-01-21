@@ -1,6 +1,7 @@
 package coordinatorMessages;
 
 import java.nio.file.Path;
+import java.util.List;
 
 @SuppressWarnings("serial")
 public final class CacheCorruptionError extends RuntimeException{
@@ -128,13 +129,14 @@ public final class CacheCorruptionError extends RuntimeException{
     return new CacheCorruptionError("""
 TODO
 """);}
-  public static CacheCorruptionError nestedZipTooBig(String string){
-    return new CacheCorruptionError("""
-TODO
-""");}
 
   public static CacheCorruptionError canNotFindExpected(String string){
     return new CacheCorruptionError("""
 TODO
+""");}
+
+  public static CacheCorruptionError canNotFindExpected(Path diskZip, List<String> steps, String entryName){
+    return new CacheCorruptionError("""
+TODO, this method is for can not find entry in zip (that was found before)
 """);}
 }

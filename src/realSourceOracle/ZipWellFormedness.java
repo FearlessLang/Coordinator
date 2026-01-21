@@ -4,7 +4,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -50,7 +49,6 @@ record ZipEntry(Path root, Path local, List<String> segments, List<String> zips,
 }
 public final class ZipWellFormedness{
   private static final int maxZipNesting= 64;
-  private static final int maxEntryNameLen= 4096;
   public static List<ZipEntry> allEntryPaths(Path root, Path local){
     assert root.isAbsolute() && !local.isAbsolute();
     var out= new ArrayList<ZipEntry>();
@@ -60,20 +58,11 @@ public final class ZipWellFormedness{
   private static void reqCollect(Path diskZip, Path root, Path local, List<String> steps, int depth, ArrayList<ZipEntry> out){
     if (depth > maxZipNesting){ throw UserExit.zipNestingTooDeep(diskZip, steps, depth, maxZipNesting); }
     var names= entryNamesOrExit(diskZip, steps);
-    var seen= new LinkedHashSet<String>();
-    for (var name: names){ singleName(diskZip, root, local, steps, depth, out, seen, name); }
-    for (var a: seen){ checkPrefixFor(diskZip, steps, seen, a, a + "/"); }//conflicts: "a" and "a/b.txt" both exists
+    for (var name: names){ singleName(diskZip, root, local, steps, depth, out, name); }
   }
-  private static void singleName(Path diskZip, Path root, Path local, List<String> steps, int depth, ArrayList<ZipEntry> out, LinkedHashSet<String> seen, String name){
-    if (!seen.add(name)){ throw UserExit.zipDuplicateEntryName(diskZip, steps, name); }
-    reqEntryNameOk(diskZip, steps, name);
+  private static void singleName(Path diskZip, Path root, Path local, List<String> steps, int depth, ArrayList<ZipEntry> out, String name){
     out.add(new ZipEntry(root, local, zipsToSegments(steps, name),steps,name));
     if (name.endsWith(".zip")){ reqCollect(diskZip,root,local, Push.of(steps, name), depth+1, out); }
-  }
-  private static void checkPrefixFor(Path diskZip, List<String> steps, LinkedHashSet<String> seen, String a, String pref){
-    for (var b: seen){
-      if (b.startsWith(pref)){ throw UserExit.zipFileDirPrefixConflict(diskZip, steps, a, b); }
-    }
   }
   private static List<String> zipsToSegments(List<String> steps, String name){
     assert steps.stream().allMatch(e->e.endsWith(".zip"));
@@ -93,18 +82,5 @@ public final class ZipWellFormedness{
   private static List<String> entryNamesOrExit(Path diskZip, List<String> steps){
     try{ return ZipLocator.entryNames(diskZip, steps); }
     catch (RuntimeException ex){ throw UserExit.zipCanNotRead(diskZip, steps, ex); }
-  }
-  private static void reqEntryNameOk(Path diskZip, List<String> steps, String name){
-    if (name.isEmpty()){ throw UserExit.zipBadEntryName(diskZip, steps, name); }
-    if (name.length() > maxEntryNameLen){ throw UserExit.zipEntryNameTooLong(diskZip, steps, name, maxEntryNameLen); }
-    if (name.charAt(0) == '/'){ throw UserExit.zipBadEntryName(diskZip, steps, name); }
-    if (name.indexOf('\\') >= 0){ throw UserExit.zipBadEntryName(diskZip, steps, name); }
-    if (name.indexOf("//") >= 0){ throw UserExit.zipBadEntryName(diskZip, steps, name); }
-    if (name.indexOf('\0') >= 0){ throw UserExit.zipBadEntryName(diskZip, steps, name); }
-    if (name.equals(".") || name.equals("..")){ throw UserExit.zipBadEntryName(diskZip, steps, name); }
-    if (name.startsWith("./") || name.contains("/./")){ throw UserExit.zipBadEntryName(diskZip, steps, name); }
-    if (name.startsWith("../") || name.contains("/../")){ throw UserExit.zipBadEntryName(diskZip, steps, name); }
-    try{ ZipLocator.entryBytes(diskZip, steps, name); }
-    catch(RuntimeException ex){ throw UserExit.zipCanNotRead(diskZip, Push.of(steps, name), ex); }
   }
 }

@@ -6,51 +6,49 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Function;
-import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
+
 import coordinatorMessages.CacheCorruptionError;
+import coordinatorMessages.UserExit;
+import tools.ReadZip;
 import utils.IoErr;
 
 final class ZipLocator{
-  public static List<String> entryNames(Path diskZip, List<String> steps){
-    return ZipLocator.fetch(diskZip, steps, zin -> IoErr.of(()->entryNamesAux(zin)));
+  private static Map<String, byte[]> readHere(Path diskZip, List<String> steps, byte[] bytes) {
+    return readZip(diskZip, steps) .readAll(()->zipStream(diskZip, bytes));
   }
-  static private List<String> entryNamesAux(ZipInputStream zin) throws IOException{
-    var res= new ArrayList<String>();
-    for(ZipEntry e; (e= zin.getNextEntry())!=null; zin.closeEntry()){
-      var n= e.getName(); if (!n.endsWith("/")){ res.add(n); }
-    }
-    return Collections.unmodifiableList(res);
+  public static List<String> entryNames(Path diskZip, List<String> steps){
+    return fetch(diskZip, steps, bytes -> List.copyOf(readHere(diskZip, steps, bytes).keySet()));
   }
   public static byte[] entryBytes(Path diskZip, List<String> steps, String entryName){
-    return ZipLocator.fetch(diskZip, steps, zin -> IoErr.of(()->readEntryBytes(zin, entryName)));
+    var res= fetch(diskZip, steps, bytes -> readHere(diskZip, steps, bytes).get(entryName));
+    if (res == null){ throw CacheCorruptionError.canNotFindExpected(diskZip, steps, entryName); }
+    return res;
   }
-  public static <T> T fetch(Path diskZip, List<String> steps, Function<ZipInputStream,T> onZip){
-    return IoErr.of(()->fetchAux(diskZip, steps, onZip));
+  private static <T> T fetch(Path diskZip, List<String> steps, Function<byte[],T> onFinal){
+    return IoErr.of(() -> fetchSteps(diskZip, steps, onFinal));
   }
-  private static <T> T fetchAux(Path diskZip, List<String> steps, Function<ZipInputStream, T> onZip) throws IOException{
-    byte[] bytes= null;
-    for (var step: steps){
-      try(var zin= zipStream(diskZip, bytes)){ bytes = readEntryBytes(zin, step); }
-    }
-    try(var zin= zipStream(diskZip, bytes)){ return onZip.apply(zin); }
+  private static ReadZip readZip(Path diskZip, List<String> steps){
+    return new ReadZip(
+      n -> UserExit.zipBadEntryName(diskZip, steps, n),
+      a -> UserExit.zipDuplicateEntryName(diskZip, steps, a),
+      n -> UserExit.nestedZipTooBig(diskZip, steps, n)
+    );
   }
   private static ZipInputStream zipStream(Path diskZip, byte[] bytes) throws IOException{
-    return bytes == null
+    return bytes==null
       ? new ZipInputStream(Files.newInputStream(diskZip), UTF_8)
       : new ZipInputStream(new ByteArrayInputStream(bytes), UTF_8);
   }
-  private static byte[] readEntryBytes(ZipInputStream zin, String expectedName) throws IOException{
-    for (ZipEntry e; (e= zin.getNextEntry()) != null; zin.closeEntry()){
-      var n= e.getName(); if (n.endsWith("/") || !n.equals(expectedName)){ continue; }
-      try{ return zin.readAllBytes(); }
-      catch(OutOfMemoryError oom){ throw CacheCorruptionError.nestedZipTooBig(expectedName); }
-      //Note: this can never handle zips over 2gb anyway because of size limits of arrays
+  private static <T> T fetchSteps(Path diskZip, List<String> steps, Function<byte[],T> onFinal) throws IOException{
+    byte[] bytes= null; int rounds= 0;
+    for (var step: steps){ rounds++;
+      bytes= readHere(diskZip, steps.subList(0, rounds), bytes).get(step);
+      if (bytes == null){ throw CacheCorruptionError.canNotFindExpected(diskZip, steps.subList(0, rounds), step); }
     }
-    throw CacheCorruptionError.canNotFindExpected(expectedName);
+    return onFinal.apply(bytes);
   }
 }

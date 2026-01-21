@@ -19,6 +19,7 @@ import core.E.Literal;
 import main.FrontendLogicMain;
 import naiveBackend.NaiveBackendLogicMain;
 import realSourceOracle.RealSourceOracle;
+import tools.Fs;
 import tools.JavaTool;
 import tools.SourceOracle;
 import tools.SourceOracle.Ref;
@@ -85,7 +86,7 @@ class Helper{
   static int rankNumber(Ref u){
     var name= u.toString();
     if(!u.toString().endsWith(".fear")){ throw UserTreeError.malformedRankFileName(u); }
-    var stem= name.substring(name.lastIndexOf("/"), name.length()-5); // no ".fear"
+    var stem= Fs.fileNameWithoutExtension(name);
     for(int i=0;i<ranks.size();i++){
       var pref= ranks.get(i);
       int base= (i+1)*1000;
