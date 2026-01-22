@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<title>unzip_bad_lzma_2.zip « testsuite - busybox - BusyBox: The Swiss Army Knife of Embedded Linux</title>
+<meta name='generator' content='cgit v1.2.3'/>
+<meta name='robots' content='index, nofollow'/>
+<link rel='stylesheet' type='text/css' href='/cgit.css'/>
+<link rel='shortcut icon' href='/favicon.ico'/>
+<link rel='alternate' title='Atom feed' href='https://git.busybox.net/busybox/atom/testsuite/unzip_bad_lzma_2.zip?h=master' type='application/atom+xml'/>
+<link rel='vcs-git' href='git://git.busybox.net/busybox' title='busybox Git repository'/>
+<link rel='vcs-git' href='https://git.busybox.net/busybox' title='busybox Git repository'/>
+</head>
+<body>
+<div id='cgit'><table id='header'>
+<tr>
+<td class='logo' rowspan='2'><a href='/'><img src='/busybox1.png' alt='cgit logo'/></a></td>
+<td class='main'><a href='/'>index</a> : <a title='busybox' href='/busybox/'>busybox</a></td><td class='form'><form method='get'>
+<select name='h' onchange='this.form.submit();'>
+<option value='0_60_stable'>0_60_stable</option>
+<option value='1_00_stable'>1_00_stable</option>
+<option value='1_00_stable_10817'>1_00_stable_10817</option>
+<option value='1_10_stable'>1_10_stable</option>
+<option value='1_11_stable'>1_11_stable</option>
+<option value='1_12_stable'>1_12_stable</option>
+<option value='1_13_stable'>1_13_stable</option>
+<option value='1_14_stable'>1_14_stable</option>
+<option value='1_15_stable'>1_15_stable</option>
+<option value='1_16_stable'>1_16_stable</option>
+<option value='1_17_stable'>1_17_stable</option>
+<option value='1_18_stable'>1_18_stable</option>
+<option value='1_19_stable'>1_19_stable</option>
+<option value='1_1_stable'>1_1_stable</option>
+<option value='1_20_stable'>1_20_stable</option>
+<option value='1_21_stable'>1_21_stable</option>
+<option value='1_22_stable'>1_22_stable</option>
+<option value='1_23_stable'>1_23_stable</option>
+<option value='1_24_stable'>1_24_stable</option>
+<option value='1_25_stable'>1_25_stable</option>
+<option value='1_26_stable'>1_26_stable</option>
+<option value='1_27_stable'>1_27_stable</option>
+<option value='1_28_stable'>1_28_stable</option>
+<option value='1_29_stable'>1_29_stable</option>
+<option value='1_30_stable'>1_30_stable</option>
+<option value='1_31_stable'>1_31_stable</option>
+<option value='1_32_stable'>1_32_stable</option>
+<option value='1_33_stable'>1_33_stable</option>
+<option value='1_34_stable'>1_34_stable</option>
+<option value='1_35_stable'>1_35_stable</option>
+<option value='1_36_stable'>1_36_stable</option>
+<option value='1_37_stable'>1_37_stable</option>
+<option value='1_3_stable'>1_3_stable</option>
+<option value='1_4_stable'>1_4_stable</option>
+<option value='1_5_stable'>1_5_stable</option>
+<option value='1_6_stable'>1_6_stable</option>
+<option value='1_7_stable'>1_7_stable</option>
+<option value='1_8_stable'>1_8_stable</option>
+<option value='1_9_stable'>1_9_stable</option>
+<option value='master' selected='selected'>master</option>
+</select> <input type='submit' value='switch'/></form></td></tr>
+<tr><td class='sub'>BusyBox: The Swiss Army Knife of Embedded Linux</td><td class='sub right'>vda</td></tr></table>
+<table class='tabs'><tr><td>
+<a href='/busybox/about/'>about</a><a href='/busybox/'>summary</a><a href='/busybox/refs/'>refs</a><a href='/busybox/log/testsuite/unzip_bad_lzma_2.zip'>log</a><a class='active' href='/busybox/tree/testsuite/unzip_bad_lzma_2.zip'>tree</a><a href='/busybox/commit/testsuite/unzip_bad_lzma_2.zip'>commit</a><a href='/busybox/diff/testsuite/unzip_bad_lzma_2.zip'>diff</a></td><td class='form'><form class='right' method='get' action='/busybox/log/testsuite/unzip_bad_lzma_2.zip'>
+<select name='qt'>
+<option value='grep'>log msg</option>
+<option value='author'>author</option>
+<option value='committer'>committer</option>
+<option value='range'>range</option>
+</select>
+<input class='txt' type='search' size='10' name='q' value=''/>
+<input type='submit' value='search'/>
+</form>
+</td></tr></table>
+<div class='path'>path: <a href='/busybox/tree/'>root</a>/<a href='/busybox/tree/testsuite'>testsuite</a>/<a href='/busybox/tree/testsuite/unzip_bad_lzma_2.zip'>unzip_bad_lzma_2.zip</a></div><div class='content'>blob: cdb917088e11f2da7008b27978b9d371f49013c4 (<a href='/busybox/plain/testsuite/unzip_bad_lzma_2.zip'>plain</a>)
+<table summary='blob content' class='bin-blob'>
+<tr><th>ofs</th><th>hex dump</th><th>ascii</th></tr><tr><td class='right'>0000</td><td class='hex'> 50 4b 03 00 00 00 a4 00 0e 00 b3 69 2c 4b 5a ad    f0 16 07 00 00 04 00 00 00 00 04 00 00 00 2f 0f </td><td class='hex'>PK.........i,KZ.............../.</td></tr>
+<tr><td class='right'>0020</td><td class='hex'> 04 55 54 09 00 03 65 dd 01 00 00 00 00 00 00 00    c0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 </td><td class='hex'>.UT...e.........................</td></tr>
+<tr><td class='right'>0040</td><td class='hex'> 00 00 00 00 00 00 00 00 00 00 18 00 00 00 00 00    00 00 00 50 4b 05 06 00 00 00 00 50 4b 05 06 00 </td><td class='hex'>...................PK......PK...</td></tr>
+</table>
+</div> <!-- class=content -->
+<div class='footer'>generated by <a href='https://git.zx2c4.com/cgit/about/'>cgit v1.2.3</a> (<a href='https://git-scm.com/'>git 2.25.1</a>) at 2026-01-22 04:46:08 +0000</div>
+</div> <!-- id=cgit -->
+</body>
+</html>

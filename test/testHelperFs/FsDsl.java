@@ -184,22 +184,14 @@ public final class FsDsl{
   }
   public static String runOk(Path tmp, String spec){
     Path root= tmp.resolve("root");
+    UserExit.root= root;
     mkdirs(root);
     materialize(root, spec);
     return dump(new RealSourceOracleWithZip(root));
   }
-  public static String runErr(Path tmp, String spec){
-    Path root= tmp.resolve("root");
-    mkdirs(root);
-    materialize(root, spec);
-    try{
-      dump(new RealSourceOracleWithZip(root));
-      throw new AssertionError("Expected UserExit");
-    }
-    catch (UserExit ex){ return dumpErr(root, ex); }
-  }
   public static void runErrIOE(Path tmp, String spec, String expected){
-    Path root= tmp.resolve("root").toAbsolutePath().normalize();;
+    Path root= tmp.resolve("root").toAbsolutePath().normalize();
+    UserExit.root= root;
     mkdirs(root);
     materialize(root, spec);
     var ex= assertThrows(UncheckedIOException.class, ()->new RealSourceOracleWithZip(root));

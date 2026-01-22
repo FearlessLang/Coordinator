@@ -18,6 +18,7 @@ import tools.SourceOracle.RefParent;
 
 import utils.Bug;
 import utils.Join;
+import utils.Pop;
 
 @SuppressWarnings("serial")
 public final class UserExit extends RuntimeException{
@@ -102,20 +103,16 @@ Details:
   public static String showZipRel(Path diskZip, List<String> steps, String entryName){
   assert diskZip.isAbsolute();
   diskZip= root.relativize(diskZip);
-  String zipPath= diskZip.getFileName().toString().replace("\\","/"); 
-  if (!steps.isEmpty()){ zipPath+= String.join("/", steps); }
+  String zipPath= diskZip.toString().replace("\\","/"); 
+  if (!steps.isEmpty()){ zipPath+="/"+String.join("/", steps); }
   return ""
     + "Root: "+PrettyFileName.displayFileName(root.toUri())+"\n"
     + "Path: "+disp(zipPath)+"\n"
     + printEntryName(entryName)+"\n\n";    
-  }
+  }  
   static String printEntryName(String entryName){
     if (!isSimpleString(entryName)){ 
       return "Entry contains non-standard characters.\nShown as: "+disp(entryName); }
-//    if (entryName.contains("/") ){ 
-//      return "Entry contains the character \"/\" inside of it.\nShown as: "+disp(entryName); }
-//    if (entryName.contains("..") ){ 
-//      return "Entry contains the characters \"..\" inside of it.\nShown as: "+disp(entryName); }
     return "Entry: "+disp(entryName)+"\n";
   }
   static boolean isSimpleString(String s){
@@ -439,7 +436,15 @@ public static RuntimeException zipDuplicateEntryName(Path diskZip, List<String> 
 
 
 // "nested zips too deep"
-public static UncheckedIOException zipNestingTooDeep(Path diskZip, List<String> steps, int depth, int maxDepth){ throw Bug.todo(); }
+  public static UncheckedIOException zipNestingTooDeep(Path diskZip, List<String> steps, int depth, int maxDepth){
+    assert !steps.isEmpty();
+    var all=Pop.right(steps);
+    return UserExit.directFail(showZipRel(diskZip,all,steps.getLast()),"""
+Too many layers of nested zips.
+We explored %s layers and there was still more.
+Different systems handleds very nested zips differenty; overall if
+recursivelly unzipped, it would clearly go over the OS path lenght limit.
+""".formatted(depth));}
 
   public static UncheckedIOException emptyDirectory(Path kid){
     return UserExit.directFail(showRel(kid),"""

@@ -42,7 +42,7 @@ _pkg/z.zip/a.fear/
 iii
 ""","""
 Root: [###]
-Path: "z.zip"
+Path: "_pkg/z.zip"
 Entry: "a.fear"
 
 
@@ -529,7 +529,7 @@ iii
 X
 ""","""
 Root: [###]
-Path: "z.zip"
+Path: "_pkg/z.zip"
 Entry: "/a.fear"
 
 
@@ -544,8 +544,8 @@ _pkg/z.zip/./a.fear
 iii
 X
 ""","""
-Root: ~/OneDrive/Desktop/Java2025_24/ws/Coordinator
-Path: "z.zip"
+Root: [###]
+Path: "_pkg/z.zip"
 Entry: "./a.fear"
 
 
@@ -561,7 +561,7 @@ iii
 X
 ""","""
 Root: [###]
-Path: "z.zip"
+Path: "_pkg/z.zip"
 Entry: "../a.fear"
 
 
@@ -577,7 +577,7 @@ iii
 X
 ""","""
 Root: [###]
-Path: "z.zip"
+Path: "_pkg/z.zip"
 Entry: "a/."
 
 
@@ -593,7 +593,7 @@ iii
 X
 ""","""
 Root: [###]
-Path: "z.zip"
+Path: "_pkg/z.zip"
 Entry: "a/.."
 
 
@@ -609,7 +609,7 @@ iii
 X
 ""","""
 Root: [###]
-Path: "z.zip"
+Path: "_pkg/z.zip"
 Entry contains non-standard characters.
 Shown as: "a\\u0000b.fear"
 
