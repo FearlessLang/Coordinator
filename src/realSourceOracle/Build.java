@@ -152,11 +152,7 @@ class Build{
     var prevNfc= Normalizer.normalize(prev, Form.NFC);
     boolean caseOnly= lowPrev.equals(lowName) && !prevNfc.equals(nfc);
     boolean nfcOnly= prevNfc.equals(nfc) && !lowPrev.equals(lowName);
-    String reason=
-      caseOnly ? "Names differ only by case."
-      : nfcOnly  ? "Names differ only by Unicode normalization (NFC)."
-      :            "Names collide after Unicode NFC normalization and case-folding.";
-    throw UserExit.hiddenSiblingNamesCollide(kid, prev, name, reason);
+    throw UserExit.hiddenSiblingNamesCollide(kid, prev, name, caseOnly,nfcOnly);
   }
   private void checkCollectiveVisible(List<Path> kids){
     var dotKids= new ArrayList<Path>();

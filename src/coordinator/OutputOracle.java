@@ -68,13 +68,6 @@ public interface OutputOracle{
 }
 
 class OutputHelper{
-  private static final String asciiWhitelist=
-      "0123456789" +
-      "abcdefghijklmnopqrstuvwxyz" +
-      "ABCDEFGHIJKLMNOPQRSTUVWXYZ" +
-      "+-*/=<>,.;:()[]{}" +
-      "`'\"!?@#$%^&_|~\\" +
-      " \n";
   String toJSon(Map<String,Map<String,String>> map){
     if (map.isEmpty()){ return "{}"; }
     return obj(map, m->obj(m, s->"\""+s+"\""));
@@ -82,7 +75,7 @@ class OutputHelper{
   Optional<Map<TName,Literal>> pgkApiFromJSon(Path p){
     if (!IoErr.of(()->Files.exists(p))){ return Optional.empty(); }
     var s= IoErr.of(() -> Files.readString(p));
-    assert s.chars().allMatch(c -> asciiWhitelist.indexOf(c) >= 0) : "Non-whitelisted char in "+p;//should cause Cachecorruption instead
+    assert s.chars().allMatch(c -> Fs.allowed.indexOf(c) >= 0) : "Non-whitelisted char in "+p;//should cause Cachecorruption instead
     var out= new LimitedJsonParser(s, p).apiJsonToMap();
     return Optional.of(out);
   }
@@ -94,7 +87,7 @@ class OutputHelper{
   Optional<Map<String,Map<String,String>>> mapFromJSon(Path p){
     if (!IoErr.of(()->Files.exists(p))){ return Optional.empty(); }
     var s= IoErr.of(() -> Files.readString(p));
-    assert s.chars().allMatch(c -> asciiWhitelist.indexOf(c) >= 0) : "Non-whitelisted char in "+p;
+    assert s.chars().allMatch(c -> Fs.allowed.indexOf(c) >= 0) : "Non-whitelisted char in "+p;
     var out= new LimitedJsonParser(s,p).obj2();
     return Optional.of(out);
   }

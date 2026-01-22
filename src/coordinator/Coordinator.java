@@ -1,6 +1,5 @@
 package coordinator;
 
-import java.net.URI;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -8,7 +7,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import coordinatorMessages.UserExit;
@@ -18,7 +16,7 @@ import core.OtherPackages;
 import core.E.Literal;
 import main.FrontendLogicMain;
 import naiveBackend.NaiveBackendLogicMain;
-import realSourceOracle.RealSourceOracle;
+import realSourceOracle.RealSourceOracleWithZip;
 import tools.Fs;
 import tools.JavaTool;
 import tools.SourceOracle;
@@ -32,7 +30,7 @@ public interface Coordinator {
     var jars= out.rootDir().resolve("gen_java");
     JavaTool.runMainFromJars(jars,pkgName+".Main");
   }
-  default SourceOracle sourceOracle(Path path){ return new RealSourceOracle(path); }
+  default SourceOracle sourceOracle(Path path){ return new RealSourceOracleWithZip(path); }
   default void main(Path path){ Helper.main(this, path); }
   
   default List<Literal> frontend(String pkgName, List<Ref> files, SourceOracle oracle, OtherPackages other,Map<String,String> vres){
@@ -116,7 +114,7 @@ class Helper{
   static Optional<String> pkgNameOpt(Ref u){//TODO: finalize the real whitelist
     List<String> whiteListAfterPkg= List.of("_asset","_dbg");
     //List<String> whiteList= List.of("_ignore");//TODO: no, those files will have to be filtered way before we reach here
-    var candidates= Stream.of(u.toString().split("/"))
+    var candidates= Stream.of(Fs.removeFileName(u.toString()).split("/"))
       .filter(s->s.startsWith("_"))
       .toList();
     if (candidates.isEmpty()){ return Optional.empty(); }

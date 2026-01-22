@@ -13,8 +13,6 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.opentest4j.AssertionFailedError;
 
-import coordinatorMessages.UserExit;
-
 public class BuildErrorsTest{
   static{ utils.Err.setUp(AssertionFailedError.class, Assertions::assertEquals, Assertions::assertTrue); }
   enum K{ FILE, DIR, SYMLINK, SPECIAL }
@@ -23,7 +21,8 @@ public class BuildErrorsTest{
   @Test void visible_invalidChar(){ fail(List.of(new E("foo-bar.txt", K.FILE)),"""
 Invalid path in this project folder.
 
-Path: `foo-bar.txt`
+Root: [###]
+Path: "foo-bar.txt"
 
 What went wrong
 - A visible folder/file name contains an unsupported character: '-'.
@@ -31,7 +30,7 @@ What went wrong
 
 How to fix
 - Rename it to use only lowercase letters, digits, and underscores.
-  Examples: `foo_bar2`, `src1`, `_cache`.
+  Examples: "foo_bar2", "src1", "_cache".
 
 We check this so that you do not get surprises later.
 Fearless enforces simple, portable names so the same data/repository works on Windows, Linux, and Mac,
@@ -72,7 +71,8 @@ Other rules (everywhere)
   @Test void visible_mustStart(){ fail(List.of(new E("9foo.txt", K.FILE)),"""
 Invalid path in this project folder.
 
-Path: `9foo.txt`
+Root: [###]
+Path: "9foo.txt"
 
 What went wrong
 - A visible folder/file name starts with an invalid character.
@@ -80,14 +80,15 @@ What went wrong
 
 How to fix
 - Rename it to start with a-z or _.
-  Examples: `foo`, `_tmp`, `foo1`.
+  Examples: "foo", "_tmp", "foo1".
 
 We check this so that you do not get surprises later.[###]
 """); }
   @Test void visible_noDoubleUnderscore(){ fail(List.of(new E("foo__bar.txt", K.FILE)),"""
 Invalid path in this project folder.
 
-Path: `foo__bar.txt`
+Root: [###]
+Path: "foo__bar.txt"
 
 What went wrong
 - A visible folder/file name contains a double underscore (__).
@@ -95,14 +96,15 @@ What went wrong
 
 How to fix
 - Rename it to remove '__'.
-  Example: change `foo__bar` to `foo_bar`.
+  Example: change "foo__bar" to "foo_bar".
 
 We check this so that you do not get surprises later.[###]
 """); }
   @Test void visible_windowsReserved(){ fail(List.of(new E("con.txt", K.FILE)),"""
 Invalid path in this project folder.
 
-Path: `con.txt`
+Root: [###]
+Path: "con.txt"
 
 What went wrong
 - A visible folder/file name is reserved on Windows (device name).
@@ -110,59 +112,63 @@ What went wrong
 
 How to fix
 - Rename the folder/file so its base name is not a Windows device name.
-  Reserved device name: `con`, `prn`, `aux`, `nul`, `com1`..`com9`, `lpt1`..`lpt9`.
+  Reserved device name: "con", "prn", "aux", "nul", "com1".."com9", "lpt1".."lpt9"s.
 
 We check this so that you do not get surprises later.[###]
 """); }
   @Test void visible_needsExtension(){ fail(List.of(new E("foo", K.FILE)),"""
 Invalid path in this project folder.
 
-Path: `foo`
+Root: [###]
+Path: "foo"
 
 What went wrong
 - This file has no extension.
-  Files normally must be named like `name.ext` (one dot).
+  Files normally must be named like "name.ext" (one dot).
 
 How to fix
-- Rename it to have a single extension (example: `foo.txt`, `source.fear`).
-- Rename it to a well-known extensionless file (example: `readme`).
+- Rename it to have a single extension (example: "foo.txt", "source.fear").
+- Rename it to a well-known extensionless file (example: "readme").
 
 We check this so that you do not get surprises later.[###]
 """); }
   @Test void visible_missingExtension(){ fail(List.of(new E("bar.", K.FILE)),"""
 Invalid path in this project folder.
 
-Path: `bar.`
+Root: [###]
+Path: "bar."
 
 What went wrong
 - The file name ends with a dot.
   That means the extension is missing.
 
 How to fix
-- Rename it to `name.ext` with one dot.
-  Example: change `foo.` to `foo.txt`.
+- Rename it to "name.ext" with one dot.
+  Example: change "foo." to "foo.txt".
 
 We check this so that you do not get surprises later.[###]
 """); }
   @Test void visible_multiDotExtNotAllowed(){ fail(List.of(new E("foo.a.b", K.FILE)),"""
 Invalid path in this project folder.
 
-Path: `foo.a.b`
+Root: [###]
+Path: "foo.a.b"
 
 What went wrong
 - This file name has more than one dot in the extension part.
-  Most files must use exactly one dot: `name.ext`.
+  Most files must use exactly one dot: "name.ext".
 
 How to fix
 - Rename it to use a single extension, OR
-- Rename it to use a well-known extensionless file (example: `tar.gz`).
+- Rename it to use a well-known extensionless file (example: \"tar.gz\").
 
 We check this so that you do not get surprises later.[###]
 """); }
   @Test void visible_extLen(){ fail(List.of(new E("foo."+("a".repeat(17)), K.FILE)),"""
 Invalid path in this project folder.
 
-Path: `foo.aaaaaaaaaaaaaaaaa`
+Root: [###]
+Path: "foo.aaaaaaaaaaaaaaaaa"
 
 What went wrong
 - The file extension is too long.
@@ -176,22 +182,24 @@ We check this so that you do not get surprises later.[###]
   @Test void visible_extInvalidChar(){ fail(List.of(new E("foo.A", K.FILE)),"""
 Invalid path in this project folder.
 
-Path: `foo.A`
+Root: [###]
+Path: "foo.A"
 
 What went wrong
-- The file extension contains an unsupported character: 'A'.
+- The file extension contains an unsupported character: "A".
   Extensions may use only lowercase letters (a-z) and digits (0-9).
 
 How to fix
 - Rename the file to use an extension made only of lowercase letters and digits.
-  Examples: `.txt`, `.fear`, `.md`, `.tar.gz` (if allowed).
+  Examples: ".txt", ".fear", ".md", ".tar.gz"
 
 We check this so that you do not get surprises later.[###]
 """); }
   @Test void visible_symlinkForbidden(){ fail(List.of(new E("ok.txt", K.SYMLINK)),"""
 Invalid path in this project folder.
 
-Path: `ok.txt`
+Root: [###]
+Path: "ok.txt"
 
 What went wrong
 - This path is a symbolic link.
@@ -206,7 +214,8 @@ We check this so that you do not get surprises later.[###]
   @Test void visible_onlyRegularFilesAndDirs(){ fail(List.of(new E("ok.txt", K.SPECIAL)),"""
 Invalid path in this project folder.
 
-Path: `ok.txt`
+Root: [###]
+Path: "ok.txt"
 
 What went wrong
 - This path is not a normal file or folder.
@@ -221,12 +230,19 @@ We check this so that you do not get surprises later.[###]
   @Test void visible_extensionlessMasksExtension(){ fail(List.of(new E("readme", K.FILE), new E("readme.md", K.FILE)),"""
 Invalid path in this project folder.
 
-Path: `readme.md`
+Root: [###]
+Path: "readme.md"
 
 What went wrong
 - Both an allowed extensionless file and an extended file share the same base name.
-  Extensionless file: `readme`
-  Extended file:      `readme.md`
+  Extensionless file:
+  Root: [###]
+  Path: "readme"
+  
+  Extended file:
+  Root: [###]
+  Path: "readme.md"
+
   This is confusing in file browsers (extensions may be hidden).
 
 How to fix
@@ -238,12 +254,13 @@ We check this so that you do not get surprises later.[###]
   @Test void protected_windowsBadChar(){ fail(List.of(new E(".d/a:b", K.FILE)),"""
 Invalid path in this project folder.
 
-Path: `.d/a:b`
+Root: [###]
+Path: ".d/a:b"
 
 What went wrong
 - A protected name segment contains a character that Windows forbids.
-  Bad char: ':'
-  Segment: `a:b`
+  Bad char: `:`
+  Segment: "a:b"
 
 How to fix
 - Rename the segment to remove Windows-forbidden characters.
@@ -254,12 +271,13 @@ We check this so that you do not get surprises later.[###]
   @Test void protected_controlChar(){ fail(List.of(new E(".a\u0001b", K.FILE)),"""
 Invalid path in this project folder.
 
-Path: `.a\u0001b`
+Root: [###]
+Path: ".a\\u0001b"
 
 What went wrong
 - A protected name segment contains a control character.
-  Bad code: 1
-  Segment: `.a\u0001b`
+  Character: [Start Of Heading 0x01]
+  Segment: ".a\\u0001b"
 
 How to fix
 - Rename the segment to remove the control character.
@@ -269,12 +287,13 @@ We check this so that you do not get surprises later.[###]
   @Test void protected_trailingDot(){  fail(List.of(new E(".x.", K.FILE)),"""
 Invalid path in this project folder.
 
-Path: `.x.`
+Root: [###]
+Path: ".x."
 
 What went wrong
 - A protected name segment ends with a dot or a space.
   Some systems/tools trim these, which causes collisions.
-  Bad segment: `.x.`
+  Bad segment: ".x."
 
 How to fix
 - Rename the segment so it does not end with '.' or space.
@@ -284,12 +303,13 @@ We check this so that you do not get surprises later.[###]
   @Test void protected_trailingSpace(){ fail(List.of(new E(".x ", K.FILE)),"""
 Invalid path in this project folder.
 
-Path: `.x `
+Root: [###]
+Path: ".x "
 
 What went wrong
 - A protected name segment ends with a dot or a space.
   Some systems/tools trim these, which causes collisions.
-  Bad segment: `.x `
+  Bad segment: ".x "
 
 How to fix
 - Rename the segment so it does not end with '.' or space.
@@ -299,15 +319,16 @@ We check this so that you do not get surprises later.[###]
   @Test void protected_windowsReservedDevice(){ fail(List.of(new E(".d/con.txt", K.FILE)),"""
 Invalid path in this project folder.
 
-Path: `.d/con.txt`
+Root: [###]
+Path: ".d/con.txt"
 
 What went wrong
 - A protected name segment uses a Windows reserved device name.
-  Bad base: `con` in segment: `con.txt`
+  Bad base: "con" in segment: "con.txt"
 
 How to fix
 - Rename it so the base name is not a Windows device name.
-  Reserved device name: `con`, `prn`, `aux`, `nul`, `com1`..`com9`, `lpt1`..`lpt9`.
+  Reserved device name: "con", "prn", "aux", "nul", "com1".."com9", "lpt1".."lpt9".
 
 We check this so that you do not get surprises later.[###]
 """); }
@@ -315,12 +336,13 @@ We check this so that you do not get surprises later.[###]
   @Test void protected_siblingCollision_case(){ fail(List.of(new E(".A", K.FILE), new E(".a", K.FILE)),"""
 Invalid path in this project folder.
 
-Path: `.a`
+Root: [###]
+Path: ".a"
 
 What went wrong
 - Two protected names in the same folder collide.
-  Name 1: `.A`
-  Name 2: `.a`
+  Name 1: ".A"
+  Name 2: ".a"
   Reason: Names differ only by case.
 
 How to fix
@@ -332,12 +354,13 @@ We check this so that you do not get surprises later.[###]
   @Test void protected_siblingCollision_nfc(){ fail(List.of(new E(".e\u0301", K.FILE), new E(".\u00e9", K.FILE)),"""
 Invalid path in this project folder.
 
-Path: `.é`
+Root: [###]
+Path: ".\\u00E9"
 
 What went wrong
 - Two protected names in the same folder collide.
-  Name 1: `.é`
-  Name 2: `.é`
+  Name 1: ".e\\u0301"
+  Name 2: ".\\u00E9"
   Reason: Names differ only by Unicode normalization (NFC).
 
 How to fix
@@ -349,11 +372,12 @@ We check this so that you do not get surprises later.[###]
   @Test void protected_invalidSurrogate(){ fail(List.of(new E(".x\uD800y", K.FILE)),"""
 Invalid path in this project folder.
 
-Path: `.x\uD800y`
+Root: [###]
+Path: ".x\\uD800y"
 
 What went wrong
 - A protected name segment contains invalid Unicode.
-  Bad segment: `.x\uD800y`
+  Bad segment: ".x\\uD800y"
 
 How to fix
 - Rename the segment to remove the invalid characters.
@@ -367,17 +391,18 @@ We check this so that you do not get surprises later.[###]
     fail(List.of(new E("_", K.FILE)),"""
 Invalid path in this project folder.
 
-Path: `_`
+Root: [###]
+Path: "_"
 
 What went wrong
 - This file has no extension.
-  Files normally must be named like `name.ext` (one dot).
+  Files normally must be named like "name.ext" (one dot).
 
 How to fix
-- Rename it to have a single extension (example: `foo.txt`, `source.fear`).
-- Rename it to a well-known extensionless file (example: `readme`).
+- Rename it to have a single extension (example: "foo.txt", "source.fear").
+- Rename it to a well-known extensionless file (example: "readme").
 
-We check this so that you do not get surprises later.[###]
+We check this so that you[###]
 """); }
 
   private static void fail(List<E> es, String expected){
@@ -431,7 +456,7 @@ We check this so that you do not get surprises later.[###]
 
     @Override protected URI uriOf(Path abs){
       var rel= absToRel.get(abs);
-      return URI.create("file:/"+(rel==null? "__root__" : UserExit.showRel(rel)));
+      return URI.create("file:/"+(rel==null? "__root__" : rel.toString()));
     }
 
     @Override protected boolean isSymbolicLink(Path abs){ return kindByAbs.get(abs) == K.SYMLINK; }

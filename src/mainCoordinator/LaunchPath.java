@@ -6,6 +6,7 @@ import java.nio.file.Path;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.function.Consumer;
 
+import coordinatorMessages.CacheCorruptionError;
 import coordinatorMessages.UserExit;
 
 public final class LaunchPath{
@@ -30,7 +31,7 @@ public final class LaunchPath{
     try{ return opened.take(); }
     catch(InterruptedException ie){
       Thread.currentThread().interrupt();
-      throw UserExit.interruptedWhileWaitingForProject();
+      throw CacheCorruptionError.interruptedWhileWaitingForProject();
     }
   }
   private static Path normalizeArg0(String s){

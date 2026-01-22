@@ -8,17 +8,8 @@ import tools.SourceOracle.Ref;
 @SuppressWarnings("serial")
 public final class UserTreeError extends RuntimeException{
   private UserTreeError(String msg){ super(msg); }
-  /*
-  UserTreeError = problems in the user-provided project folder.
-  These are always shown to the user (no automatic repair).
-  */
-
-  public static UserTreeError zipAndDirConflict(Ref file){
-    return new UserTreeError("""
-    TODO
-    """);}
-
-  
+  ///UserTreeError = problems in the user-provided project folder.
+ 
   public static UserTreeError reservedBeforePkg(Ref file){
     return new UserTreeError("""
     TODO
@@ -184,7 +175,7 @@ public final class UserTreeError extends RuntimeException{
       """.formatted(rankFile));
   }
 
-  public static UserTreeError mapMentionsUnknownPackage(URI rankFile, String unknownPkg, String exampleStmt){
+  public static UserTreeError _unused_mapMentionsUnknownPackage(URI rankFile, String unknownPkg, String exampleStmt){
     return new UserTreeError("""
       Virtualization map mentions an unknown package.
 
@@ -218,7 +209,7 @@ public final class UserTreeError extends RuntimeException{
       """.formatted(rankFile, unknownPkg, exampleStmt.isEmpty() ? "(no example available)" : exampleStmt, unknownPkg));
   }
 
-  public static UserTreeError dependencyOnHigherRank(String fromPkg, int fromRank, String toPkg, int toRank){
+  public static UserTreeError _unused_dependencyOnHigherRank(String fromPkg, int fromRank, String toPkg, int toRank){
     return new UserTreeError("""
       Invalid dependency across ranks.
 

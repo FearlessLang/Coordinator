@@ -139,4 +139,8 @@ TODO
     return new CacheCorruptionError("""
 TODO, this method is for can not find entry in zip (that was found before)
 """);}
+  public static CacheCorruptionError interruptedWhileWaitingForProject(){ return new CacheCorruptionError(
+    "Interrupted while waiting for the project to open."
+  );}
+
 }

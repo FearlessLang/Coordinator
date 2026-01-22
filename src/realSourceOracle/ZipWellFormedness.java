@@ -57,7 +57,7 @@ public final class ZipWellFormedness{
   }
   private static void reqCollect(Path diskZip, Path root, Path local, List<String> steps, int depth, ArrayList<ZipEntry> out){
     if (depth > maxZipNesting){ throw UserExit.zipNestingTooDeep(diskZip, steps, depth, maxZipNesting); }
-    var names= entryNamesOrExit(diskZip, steps);
+    var names= ZipLocator.entryNames(diskZip, steps);
     for (var name: names){ singleName(diskZip, root, local, steps, depth, out, name); }
   }
   private static void singleName(Path diskZip, Path root, Path local, List<String> steps, int depth, ArrayList<ZipEntry> out, String name){
@@ -78,9 +78,5 @@ public final class ZipWellFormedness{
   private static String lastSegmentOf(String e){
     assert e.endsWith(".zip");
     return e.substring(0, e.length()-4);
-  }
-  private static List<String> entryNamesOrExit(Path diskZip, List<String> steps){
-    try{ return ZipLocator.entryNames(diskZip, steps); }
-    catch (RuntimeException ex){ throw UserExit.zipCanNotRead(diskZip, steps, ex); }
   }
 }

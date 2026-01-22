@@ -1,8 +1,10 @@
 package testHelperFs;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.ByteArrayOutputStream;
+import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -25,10 +27,9 @@ public final class FsDsl{
   }
 
   static List<Item> parse(String spec){
-    String s= spec.replace("\r\n","\n");
     var items= new ArrayList<Item>();
     var cur= new ArrayList<String>();
-    for (var line: s.split("\n",-1)){
+    for (var line: spec.split("\n",-1)){
       if (line.equals("jjj")){ addItem(items, cur); cur.clear(); continue; }
       cur.add(line);
     }
@@ -187,7 +188,6 @@ public final class FsDsl{
     materialize(root, spec);
     return dump(new RealSourceOracleWithZip(root));
   }
-
   public static String runErr(Path tmp, String spec){
     Path root= tmp.resolve("root");
     mkdirs(root);
@@ -196,9 +196,16 @@ public final class FsDsl{
       dump(new RealSourceOracleWithZip(root));
       throw new AssertionError("Expected UserExit");
     }
-    catch (UserExit ex){
-      return dumpErr(root, ex);
-    }
+    catch (UserExit ex){ return dumpErr(root, ex); }
   }
+  public static void runErrIOE(Path tmp, String spec, String expected){
+    Path root= tmp.resolve("root").toAbsolutePath().normalize();;
+    mkdirs(root);
+    materialize(root, spec);
+    var ex= assertThrows(UncheckedIOException.class, ()->new RealSourceOracleWithZip(root));
+    String res= dumpErr(root, ex);
+    utils.Err.strCmp(expected, res);
+  }  
+  
   private FsDsl(){}
 }
