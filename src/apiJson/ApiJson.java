@@ -10,8 +10,8 @@ import core.Sig;
 import core.T;
 import utils.Join;
 
-public final class ApiJson{
-  public static String toJSon(List<Literal> core){ return Join.of(core.stream().filter(l->l.name().isPublic()).map(ApiJson::typeJ), "[", ",", "]", "[]"); }
+public final class ApiJson{//We need all the names, because they can appear as meth signatures or subtypes and type system need to reason on them, even if can not be used by name outside pkg
+  public static String toJSon(List<Literal> core){ return Join.of(core.stream()/*.filter(l->l.name().isPublic())*/.map(ApiJson::typeJ), "[", ",", "]", "[]"); }
   static String typeJ(Literal l){ return Join.of(List.of(q(l.name().s()), q(l.rc().name()), bsJ(l.bs()), csJ(l.cs()), msJ(l.ms())), "[", ",", "]"); }
   static String bsJ(List<B> bs){ return Join.of(bs.stream().map(ApiJson::bJ), "[", ",", "]", "[]"); }
   static String bJ(B b){ return Join.of(Stream.concat(Stream.of(q(b.x())), b.rcs().stream().map(rc->q(rc.name()))), "[", ",", "]", "[]"); }
