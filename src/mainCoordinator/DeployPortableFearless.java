@@ -3,9 +3,9 @@ package mainCoordinator;
 import tools.PortableApp;
 import utils.ResolveResource;
 
-public class DeployPortableFearless {
+public class DeployPortableFearless{
   public static void main(String[]a){
-    PortableApp.build(
+    new PortableApp(
       ResolveResource.commonsSrc,
       ResolveResource.frontendSrc,
       ResolveResource.frontendSrcModule,
@@ -13,6 +13,7 @@ public class DeployPortableFearless {
       ResolveResource.coordinatorSrcModule,
       ResolveResource.stLibPath,//base
       ResolveResource.stLibRTPath,//rt
-      ResolveResource.portableFolderOut);//out
+      ResolveResource.portableFolderOut//out
+    ).build();
   }
 }

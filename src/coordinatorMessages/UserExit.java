@@ -61,18 +61,18 @@ public final class UserExit extends RuntimeException{
     "Value: "+s
   );}
 
-  public static UserExit cannotFindProjectFolder(Path launch){ return die(
+  public static UserExit cannotF_indProjectFolder(Path launch){ return die(
     "Could not determine the project folder from the launch path.",
     "Value: "+launch
   );}
 
   public static UserExit mustUseLauncherMissingAppDir(){ return die(
     "Start Fearless using its launcher (not by running a jar directly).",
-    "Launcher did not provide fearless.appDir."
+    "Launcher did not provide app.dir."
   );}
 
   public static UserExit launcherProvidedNonAbsoluteAppDir(String s){ return die(
-    "Launcher error: fearless.appDir must be an absolute path.",
+    "Launcher error: app.dir must be an absolute path.",
     "Value: "+s
   );}
 
@@ -460,4 +460,8 @@ This is most likely a mistake.
 """);}
 
 public static RuntimeException nestedZipTooBig(Path diskZip, List<String> steps, String string){ throw Bug.todo(); }
+
+public static UserExit mustOpenFearlessProjectFile(){ return UserExit.die("""
+Fearless needs to be called on a project folder.
+""");}
 }
