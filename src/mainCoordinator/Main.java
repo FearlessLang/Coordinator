@@ -4,6 +4,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 
 import java.awt.Desktop;
 import java.awt.Font;
+import java.awt.Taskbar;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.io.UncheckedIOException;
@@ -16,13 +17,14 @@ import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Locale;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
+
+import javax.imageio.ImageIO;
 import javax.swing.JFrame;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
@@ -32,6 +34,8 @@ import coordinator.Coordinator;
 import coordinatorMessages.CacheCorruptionError;
 import coordinatorMessages.UserExit;
 import coordinatorMessages.UserTreeError;
+import tools.Fs;
+import utils.IoErr;
 
 public final class Main{
   private static final AtomicInteger macSpawnOk= new AtomicInteger(0);
@@ -50,9 +54,9 @@ public final class Main{
   private static void run(String[] args) throws InvocationTargetException, InterruptedException, ExecutionException{
     var appDir= reqAppDir();
     Optional<Path> launch= launchPath(args);
-    if (isMac()){ registerMacSpawnHandler(appDir); }
+    if (Fs.isMac()){ registerMacSpawnHandler(appDir); }
     if (!launch.isPresent()){
-      if (isMac()){ Thread.sleep(1000); }
+      if (Fs.isMac()){ Thread.sleep(1000); }
       if ( macSpawnOk.get() != 0){ return; }
     }          
     Path l= launch.orElseThrow(UserExit::mustOpenFearlessProjectFile);
@@ -89,6 +93,14 @@ public final class Main{
     area.setEditable(false);
     area.setFont(new Font(Font.MONOSPACED, Font.BOLD, 18));
     var frame= new JFrame("Fearless output");
+    IoErr.ofV(()->{
+      var icon= ImageIO.read(reqAppDir().resolve("icon.png").toFile());
+      frame.setIconImage(icon);
+      if (Taskbar.isTaskbarSupported()){
+        var tb= Taskbar.getTaskbar();
+        if (tb.isSupported(Taskbar.Feature.ICON_IMAGE)){ tb.setIconImage(icon); }
+      }
+    });
     frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
     frame.add(new JScrollPane(area));
     frame.pack();
@@ -119,7 +131,6 @@ public final class Main{
     if (!p.isAbsolute()){ throw UserExit.launcherProvidedNonAbsoluteAppDir(s); }
     return p;
   }
-  private static boolean isMac(){ return System.getProperty("os.name").toLowerCase(Locale.ROOT).contains("mac"); }
 }
 class Utf8Sink extends OutputStream{
   private final Consumer<String> out;
