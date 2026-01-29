@@ -9,8 +9,6 @@ import utils.IoErr;
 import utils.Join;
 
 import java.io.BufferedWriter;
-import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -30,13 +28,9 @@ public interface OutputOracle{
   default long pkgApiStamp(String pkg){ return Fs.lastModified(rootDir().resolve(pkg+".json")); }
   
   default void write(String path, Consumer<Consumer<String>> dataProducer){
-    try (BufferedWriter writer = Files.newBufferedWriter(rootDir().resolve(path))){
-      dataProducer.accept(content -> {
-        try { writer.write(content); }
-        catch (IOException e){ throw new UncheckedIOException(e); }
-      });
-    }
-    catch (IOException e){ throw new UncheckedIOException(e); }
+    IoErr.ofV(()->{try (BufferedWriter writer = Files.newBufferedWriter(rootDir().resolve(path))){
+      dataProducer.accept(content -> IoErr.ofV(()->writer.write(content)));
+    }});
   }
   default OtherPackages addCachedPkgApi(OtherPackages other, String pkg){
     var path= rootDir().resolve(pkg+".json");
@@ -74,7 +68,7 @@ class OutputHelper{
   }
   Optional<Map<TName,Literal>> pgkApiFromJSon(Path p){
     if (!IoErr.of(()->Files.exists(p))){ return Optional.empty(); }
-    var s= IoErr.of(() -> Files.readString(p));
+    var s= Fs.readUtf8(p);
     assert s.chars().allMatch(c -> Fs.allowed.indexOf(c) >= 0) : "Non-whitelisted char in "+p;//should cause Cachecorruption instead
     var out= new LimitedJsonParser(s, p).apiJsonToMap();
     return Optional.of(out);
@@ -86,7 +80,7 @@ class OutputHelper{
   }
   Optional<Map<String,Map<String,String>>> mapFromJSon(Path p){
     if (!IoErr.of(()->Files.exists(p))){ return Optional.empty(); }
-    var s= IoErr.of(() -> Files.readString(p));
+    var s= Fs.readUtf8(p);
     assert s.chars().allMatch(c -> Fs.allowed.indexOf(c) >= 0) : "Non-whitelisted char in "+p;
     var out= new LimitedJsonParser(s,p).obj2();
     return Optional.of(out);

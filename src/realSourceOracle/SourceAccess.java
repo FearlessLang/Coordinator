@@ -27,7 +27,7 @@ record ZipDemoDfs(Path root){
     .toList());
   }
   private void nameAndContentConsumer(Path p, Consumer<String> out){
-    if (!isZip(p)) { out.accept(toName(p)+"\n"+IoErr.of(()->Files.readString(p,UTF_8))); return; }
+    if (!isZip(p)) { out.accept(toName(p)+"\n"+Fs.readUtf8(p)); return; }
     IoErr.ofV(()->scanZip(toName(p),out,()->new ZipInputStream(IoErr.of(()->Files.newInputStream(p)),UTF_8)));
   }
   private void scanZip(String outName, Consumer<String> out, Supplier<ZipInputStream> zis) throws IOException{

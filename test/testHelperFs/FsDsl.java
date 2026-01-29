@@ -4,7 +4,6 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.ByteArrayOutputStream;
-import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -194,7 +193,7 @@ public final class FsDsl{
     UserExit.root= root;
     mkdirs(root);
     materialize(root, spec);
-    var ex= assertThrows(UncheckedIOException.class, ()->new RealSourceOracleWithZip(root));
+    var ex= assertThrows(UserExit.class, ()->new RealSourceOracleWithZip(root));
     String res= dumpErr(root, ex);
     utils.Err.strCmp(expected, res);
   }  

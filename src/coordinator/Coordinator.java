@@ -77,7 +77,7 @@ class Helper{
   static Layer mapFromRanks(Coordinator coordinator, List<Ref> allRanks, SourceOracle o, OutputOracle out, long maxStamp){
     Map<String,Map<String,String>> res; try {res= new FrontendLogicMain()
       .parseRankFiles(allRanks,o, Comparator.comparingInt(Helper::rankNumber));}
-    catch(FearlessException fe){ System.err.println(fe.render(o)); throw fe; }
+    catch(FearlessException fe){ throw new UserExit(fe.render(o)); }
     long baseStamp= out.commitMap(res, maxStamp);
     return new BaseLayer(coordinator,res,baseStamp);
   }

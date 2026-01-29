@@ -2,9 +2,7 @@ package badZipsTest;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import java.io.UncheckedIOException;
 import java.nio.file.Path;
-
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.opentest4j.AssertionFailedError;
@@ -20,7 +18,7 @@ public class BadZipsTest {
   public static void runErrIOE(String in, String expected){
     Path input= root.resolve(in);
     UserExit.root= root;
-    var ex= assertThrows(UncheckedIOException.class, ()->new RealSourceOracleWithZip(input));
+    var ex= assertThrows(UserExit.class, ()->new RealSourceOracleWithZip(input));
     String res= FsDsl.dumpErr(input,ex);
     utils.Err.strCmp(expected, res);
   }

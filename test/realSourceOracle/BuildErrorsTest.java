@@ -1,6 +1,5 @@
 package realSourceOracle;
 
-import java.io.UncheckedIOException;
 import java.net.URI;
 import java.nio.file.FileSystem;
 import java.nio.file.Path;
@@ -12,6 +11,8 @@ import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.opentest4j.AssertionFailedError;
+
+import coordinatorMessages.UserExit;
 
 public class BuildErrorsTest{
   static{ utils.Err.setUp(AssertionFailedError.class, Assertions::assertEquals, Assertions::assertTrue); }
@@ -408,7 +409,7 @@ We check this so that you[###]
   private static void fail(List<E> es, String expected){
     var root= Path.of("buildErrorsMockRoot").toAbsolutePath().normalize();
     var b= new MockBuild(root, es);
-    var ex= assertThrows(UncheckedIOException.class, b::build);
+    var ex= assertThrows(UserExit.class, b::build);
     utils.Err.strCmp(expected, ex.getMessage());
   }
 

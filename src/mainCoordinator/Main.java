@@ -7,7 +7,6 @@ import java.awt.Font;
 import java.awt.Taskbar;
 import java.io.OutputStream;
 import java.io.PrintStream;
-import java.io.UncheckedIOException;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URI;
 import java.nio.ByteBuffer;
@@ -44,12 +43,10 @@ public final class Main{
     catch(UserExit e){ System.err.print(e.getMessage()); }
     catch(UserTreeError e){ System.err.print(e.getMessage()); }
     catch(CacheCorruptionError e){ System.err.print(e.getMessage()); }
-    catch(UncheckedIOException e){
-      var c= e.getCause();
-      var m= c == null ? e.getMessage() : c.getMessage();
-      System.err.print(m != null ? m : UserExit.crash(e));
+    catch(Throwable t){ 
+      System.err.println(t.getClass().getCanonicalName());
+      System.err.print(UserExit.crash(t));
     }
-    catch(Throwable t){ System.err.print(UserExit.crash(t)); }
   }
   private static void run(String[] args) throws InvocationTargetException, InterruptedException, ExecutionException{
     var appDir= reqAppDir();

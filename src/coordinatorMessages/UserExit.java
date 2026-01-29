@@ -3,7 +3,6 @@ package coordinatorMessages;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.io.UncheckedIOException;
 import java.nio.file.Path;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -120,16 +119,16 @@ Details:
     );
   }
   public static String disp(String s){ return Message.displayString(s); }
-  private static UncheckedIOException fail(String rel, String wentWrong, String howToFix){
+  private static UserExit fail(String rel, String wentWrong, String howToFix){
     String msg= "Invalid path in this project folder.\n\n"
       + rel
       + "\nWhat went wrong\n" + wentWrong
       + "\n\nHow to fix\n" + howToFix+"\n\n" + rulesWallS();
-    return new UncheckedIOException(msg, new IOException(msg));
+    return new UserExit(msg);
   }
-  private static UncheckedIOException directFail(String rel, String msg){
+  private static UserExit directFail(String rel, String msg){
     var all= rel+msg+"\n\n" + rulesWallS();
-    return new UncheckedIOException(all, new IOException(all));
+    return new UserExit(all);
   }
   public static final Set<String> allowedNoExtFilesS= """
 readme
@@ -203,15 +202,15 @@ Other rules (everywhere)
 - Only normal files and folders are allowed.
 """.formatted(tickList(allowedNoExtFilesS), tickList(allowedMultiDotExtsS));
   }
-  public static UncheckedIOException pathTooLong(RefParent kid){ throw Bug.todo(); }
-  public static UncheckedIOException pathTooLong(Path kid){
+  public static UserExit pathTooLong(RefParent kid){ throw Bug.todo(); }
+  public static UserExit pathTooLong(Path kid){
     return UserExit.fail(showRel(kid),
       "- The path is longer than 200 characters.\n"
     + "  Long paths often fail on Windows and in some tools.",
       "- Shorten folder/file names, or move this content closer to the project root."
     );
   }
-  public static UncheckedIOException symlinkForbidden(Path kid){
+  public static UserExit symlinkForbidden(Path kid){
     return UserExit.fail(showRel(kid),
       "- This path is a symbolic link.\n"
     + "  Symbolic links behave differently across systems and tools, so we forbid them.",
@@ -219,16 +218,16 @@ Other rules (everywhere)
     + "- If you need the linked content, copy it into the repository."
     );
   }
-  public static UncheckedIOException onlyRegularFilesAndDirs(Path kid){
+  public static UserExit onlyRegularFilesAndDirs(Path kid){
     return UserExit.fail(showRel(kid),
       "- This path is not a normal file or folder.",
       "- Remove it from the project folder.\n"
     + "- Keep only normal files and folders here."
     );
   }
-  public static UncheckedIOException needsExtension(RefParent kid){ return needsExtension(showRel(kid)); }
-  public static UncheckedIOException needsExtension(Path kid){ return needsExtension(showRel(kid));}
-  public static UncheckedIOException needsExtension(String kid){
+  public static UserExit needsExtension(RefParent kid){ return needsExtension(showRel(kid)); }
+  public static UserExit needsExtension(Path kid){ return needsExtension(showRel(kid));}
+  public static UserExit needsExtension(String kid){
     return UserExit.fail(kid,
       "- This file has no extension.\n"
     + "  Files normally must be named like \"name.ext\" (one dot).",
@@ -236,9 +235,9 @@ Other rules (everywhere)
     + "- Rename it to a well-known extensionless file (example: \"readme\")."
     );
   }
-  public static UncheckedIOException visibleMustStartWithLetterOrUnderscore(RefParent kid){ return visibleMustStartWithLetterOrUnderscore(showRel(kid)); }
-  public static UncheckedIOException visibleMustStartWithLetterOrUnderscore(Path kid){ return visibleMustStartWithLetterOrUnderscore(showRel(kid)); }
-  public static UncheckedIOException visibleMustStartWithLetterOrUnderscore(String kid){
+  public static UserExit visibleMustStartWithLetterOrUnderscore(RefParent kid){ return visibleMustStartWithLetterOrUnderscore(showRel(kid)); }
+  public static UserExit visibleMustStartWithLetterOrUnderscore(Path kid){ return visibleMustStartWithLetterOrUnderscore(showRel(kid)); }
+  public static UserExit visibleMustStartWithLetterOrUnderscore(String kid){
     return UserExit.fail(kid,
       "- A visible folder/file name starts with an invalid character.\n"
     + "  Visible names must start with a lowercase letter (a-z) or underscore (_).",
@@ -246,8 +245,8 @@ Other rules (everywhere)
     + "  Examples: \"foo\", \"_tmp\", \"foo1\"."
     );
   }
-  public static UncheckedIOException visibleInvalidChar(RefParent kid, char c){ throw Bug.of(); }
-  public static UncheckedIOException visibleInvalidChar(Path kid, char c){
+  public static UserExit visibleInvalidChar(RefParent kid, char c){ throw Bug.of(); }
+  public static UserExit visibleInvalidChar(Path kid, char c){
     return UserExit.fail(showRel(kid),
       "- A visible folder/file name contains an unsupported character: '"+c+"'.\n"
     + "  Visible names may use only lowercase letters (a-z), digits (0-9), and underscore (_).",
@@ -255,9 +254,9 @@ Other rules (everywhere)
     + "  Examples: \"foo_bar2\", \"src1\", \"_cache\"."
     );
   }
-  public static UncheckedIOException visibleNoDoubleUnderscore(RefParent kid){ return visibleNoDoubleUnderscore(showRel(kid)); }
-  public static UncheckedIOException visibleNoDoubleUnderscore(Path kid){ return visibleNoDoubleUnderscore(showRel(kid)); }
-  public static UncheckedIOException visibleNoDoubleUnderscore(String kid){
+  public static UserExit visibleNoDoubleUnderscore(RefParent kid){ return visibleNoDoubleUnderscore(showRel(kid)); }
+  public static UserExit visibleNoDoubleUnderscore(Path kid){ return visibleNoDoubleUnderscore(showRel(kid)); }
+  public static UserExit visibleNoDoubleUnderscore(String kid){
     return UserExit.fail(kid,
       "- A visible folder/file name contains a double underscore (__).\n"
     + "  Double underscores are reserved to avoid accidental collisions and confusion.",
@@ -265,9 +264,9 @@ Other rules (everywhere)
     + "  Example: change \"foo__bar\" to \"foo_bar\"."
     );
   }
-  public static UncheckedIOException windowsReservedName(RefParent kid){ return windowsReservedName(showRel(kid)); }
-  public static UncheckedIOException windowsReservedName(Path kid){ return windowsReservedName(showRel(kid)); }
-  public static UncheckedIOException windowsReservedName(String kid){
+  public static UserExit windowsReservedName(RefParent kid){ return windowsReservedName(showRel(kid)); }
+  public static UserExit windowsReservedName(Path kid){ return windowsReservedName(showRel(kid)); }
+  public static UserExit windowsReservedName(String kid){
     return UserExit.fail(kid,
       "- A visible folder/file name is reserved on Windows (device name).\n"
     + "  Even if you add an extension, Windows treats it as the same reserved name.",
@@ -275,9 +274,9 @@ Other rules (everywhere)
     + "  Reserved device name: \"con\", \"prn\", \"aux\", \"nul\", \"com1\"..\"com9\", \"lpt1\"..\"lpt9\"s."
     );
   }
-  public static UncheckedIOException missingExtension(RefParent kid){ return missingExtension(showRel(kid)); }
-  public static UncheckedIOException missingExtension(Path kid){ return missingExtension(showRel(kid)); }
-  public static UncheckedIOException missingExtension(String kid){
+  public static UserExit missingExtension(RefParent kid){ return missingExtension(showRel(kid)); }
+  public static UserExit missingExtension(Path kid){ return missingExtension(showRel(kid)); }
+  public static UserExit missingExtension(String kid){
     return UserExit.fail(kid,
       "- The file name ends with a dot.\n"
     + "  That means the extension is missing.",
@@ -285,9 +284,9 @@ Other rules (everywhere)
     + "  Example: change \"foo.\" to \"foo.txt\"."
     );
   }
-  public static UncheckedIOException multiDotExtNotAllowed(RefParent kid){ return multiDotExtNotAllowed(showRel(kid)); }
-  public static UncheckedIOException multiDotExtNotAllowed(Path kid){ return multiDotExtNotAllowed(showRel(kid)); }
-  public static UncheckedIOException multiDotExtNotAllowed(String kid){
+  public static UserExit multiDotExtNotAllowed(RefParent kid){ return multiDotExtNotAllowed(showRel(kid)); }
+  public static UserExit multiDotExtNotAllowed(Path kid){ return multiDotExtNotAllowed(showRel(kid)); }
+  public static UserExit multiDotExtNotAllowed(String kid){
     return UserExit.fail(kid,
       "- This file name has more than one dot in the extension part.\n"
     + "  Most files must use exactly one dot: \"name.ext\".",
@@ -295,18 +294,18 @@ Other rules (everywhere)
     + "- Rename it to use a well-known extensionless file (example: \"tar.gz\")."
     );
   }
-  public static UncheckedIOException extLenMustBe1To16(RefParent kid){ return extLenMustBe1To16(showRel(kid)); }
-  public static UncheckedIOException extLenMustBe1To16(Path kid){ return extLenMustBe1To16(showRel(kid)); }
-  public static UncheckedIOException extLenMustBe1To16(String kid){
+  public static UserExit extLenMustBe1To16(RefParent kid){ return extLenMustBe1To16(showRel(kid)); }
+  public static UserExit extLenMustBe1To16(Path kid){ return extLenMustBe1To16(showRel(kid)); }
+  public static UserExit extLenMustBe1To16(String kid){
     return UserExit.fail(kid,
       "- The file extension is too long.\n"
     + "  Extensions must be 1..16 characters.",
       "- Use a shorter extension (1..16 characters), using only lowercase letters and digits."
     );
   }
-  public static UncheckedIOException extInvalidChar(RefParent kid, char c){ return extInvalidChar(showRel(kid),c); }
-  public static UncheckedIOException extInvalidChar(Path kid, char c){ return extInvalidChar(showRel(kid),c); }
-  public static UncheckedIOException extInvalidChar(String kid, char c){
+  public static UserExit extInvalidChar(RefParent kid, char c){ return extInvalidChar(showRel(kid),c); }
+  public static UserExit extInvalidChar(Path kid, char c){ return extInvalidChar(showRel(kid),c); }
+  public static UserExit extInvalidChar(String kid, char c){
     return UserExit.fail(kid,
       "- The file extension contains an unsupported character: "+Message.displayChar(c)+".\n"
     + "  Extensions may use only lowercase letters (a-z) and digits (0-9).",
@@ -314,22 +313,22 @@ Other rules (everywhere)
     + "  Examples: \".txt\", \".fear\", \".md\", \".tar.gz\""
     );
   }
-  public static UncheckedIOException invisibleSymlinkForbidden(Path kid){
+  public static UserExit invisibleSymlinkForbidden(Path kid){
     return UserExit.fail(showRel(kid),
       "- This protected path is a symbolic link.\n"
     + "  Even though protected paths are ignored, symbolic links can cause surprises across systems/tools.",
       "- Replace the symbolic link with a real file/folder, or remove it."
     );
   }
-  public static UncheckedIOException invisibleOnlyRegularFilesAndDirs(Path kid){
+  public static UserExit invisibleOnlyRegularFilesAndDirs(Path kid){
     return UserExit.fail(showRel(kid),
       "- This protected path is not a normal file or folder.",
       "- Remove it, and keep only normal files and folders."
     );
   }
-  public static UncheckedIOException invisibleNoTrailingDotOrSpace(RefParent kid, String name){ return invisibleNoTrailingDotOrSpace(showRel(kid),name); }
-public static UncheckedIOException invisibleNoTrailingDotOrSpace(Path kid, String name){ return invisibleNoTrailingDotOrSpace(showRel(kid),name); }
-  public static UncheckedIOException invisibleNoTrailingDotOrSpace(String kid, String name){
+  public static UserExit invisibleNoTrailingDotOrSpace(RefParent kid, String name){ return invisibleNoTrailingDotOrSpace(showRel(kid),name); }
+public static UserExit invisibleNoTrailingDotOrSpace(Path kid, String name){ return invisibleNoTrailingDotOrSpace(showRel(kid),name); }
+  public static UserExit invisibleNoTrailingDotOrSpace(String kid, String name){
     return UserExit.fail(kid,
       "- A protected name segment ends with a dot or a space.\n"
     + "  Some systems/tools trim these, which causes collisions.\n"
@@ -337,26 +336,26 @@ public static UncheckedIOException invisibleNoTrailingDotOrSpace(Path kid, Strin
       "- Rename the segment so it does not end with '.' or space."
     );
   }
-  public static UncheckedIOException invisibleInvalidSurrogate(RefParent kid, String name){ throw Bug.of(); }
-  public static UncheckedIOException invisibleInvalidSurrogate(Path kid, String name){
+  public static UserExit invisibleInvalidSurrogate(RefParent kid, String name){ throw Bug.of(); }
+  public static UserExit invisibleInvalidSurrogate(Path kid, String name){
     return UserExit.fail(showRel(kid),
       "- A protected name segment contains invalid Unicode.\n"
     + "  Bad segment: "+disp(name),
       "- Rename the segment to remove the invalid characters."
     );
   }
-  public static UncheckedIOException invisibleNoControlChars(RefParent kid, int cp, String name){ return invisibleNoControlChars(showRel(kid),cp,name); }
-  public static UncheckedIOException invisibleNoControlChars(Path kid, int cp, String name){ return invisibleNoControlChars(showRel(kid),cp,name); }
-  public static UncheckedIOException invisibleNoControlChars(String kid, int cp, String name){
+  public static UserExit invisibleNoControlChars(RefParent kid, int cp, String name){ return invisibleNoControlChars(showRel(kid),cp,name); }
+  public static UserExit invisibleNoControlChars(Path kid, int cp, String name){ return invisibleNoControlChars(showRel(kid),cp,name); }
+  public static UserExit invisibleNoControlChars(String kid, int cp, String name){
     return UserExit.fail(kid,
       "- A protected name segment contains a control character.\n"
      + "  Character: " + Message.displayChar(cp)+"\n"
      + "  Segment: " + disp(name) + "",
       "- Rename the segment to remove the control character."
     );}  
-  public static UncheckedIOException invisibleNoWindowsBadChars(RefParent kid, char bad, String name){ return invisibleNoWindowsBadChars(showRel(kid),bad,name); }
-  public static UncheckedIOException invisibleNoWindowsBadChars(Path kid, char bad, String name){ return invisibleNoWindowsBadChars(showRel(kid),bad,name); }
-  public static UncheckedIOException invisibleNoWindowsBadChars(String kid, char bad, String name){
+  public static UserExit invisibleNoWindowsBadChars(RefParent kid, char bad, String name){ return invisibleNoWindowsBadChars(showRel(kid),bad,name); }
+  public static UserExit invisibleNoWindowsBadChars(Path kid, char bad, String name){ return invisibleNoWindowsBadChars(showRel(kid),bad,name); }
+  public static UserExit invisibleNoWindowsBadChars(String kid, char bad, String name){
     return UserExit.fail(kid,
       "- A protected name segment contains a character that Windows forbids.\n"
     + "  Bad char: `"+bad+"`\n"
@@ -365,9 +364,9 @@ public static UncheckedIOException invisibleNoTrailingDotOrSpace(Path kid, Strin
     + "  Forbidden on Windows: < > : \" / \\ | ? *"
     );
   }
-  public static UncheckedIOException invisibleWindowsReservedDeviceName(RefParent kid, String base, String name){ return invisibleWindowsReservedDeviceName(showRel(kid),base,name); }
-  public static UncheckedIOException invisibleWindowsReservedDeviceName(Path kid, String base, String name){ return invisibleWindowsReservedDeviceName(showRel(kid),base,name); }
-  public static UncheckedIOException invisibleWindowsReservedDeviceName(String kid, String base, String name){
+  public static UserExit invisibleWindowsReservedDeviceName(RefParent kid, String base, String name){ return invisibleWindowsReservedDeviceName(showRel(kid),base,name); }
+  public static UserExit invisibleWindowsReservedDeviceName(Path kid, String base, String name){ return invisibleWindowsReservedDeviceName(showRel(kid),base,name); }
+  public static UserExit invisibleWindowsReservedDeviceName(String kid, String base, String name){
     return UserExit.fail(kid,
       "- A protected name segment uses a Windows reserved device name.\n"
     + "  Bad base: "+disp(base)+" in segment: "+disp(name)+"",
@@ -375,9 +374,9 @@ public static UncheckedIOException invisibleNoTrailingDotOrSpace(Path kid, Strin
     + "  Reserved device name: \"con\", \"prn\", \"aux\", \"nul\", \"com1\"..\"com9\", \"lpt1\"..\"lpt9\"."
     );
   }
-  public static UncheckedIOException hiddenSiblingNamesCollide(RefParent kid, String prev, String name, boolean caseOnly, boolean nfcOnly){ return hiddenSiblingNamesCollide(showRel(kid),prev,name,caseOnly,nfcOnly); }
-  public static UncheckedIOException hiddenSiblingNamesCollide(Path kid, String prev, String name, boolean caseOnly, boolean nfcOnly){ return hiddenSiblingNamesCollide(showRel(kid),prev,name,caseOnly,nfcOnly); }
-  public static UncheckedIOException hiddenSiblingNamesCollide(String kid, String prev, String name, boolean caseOnly, boolean nfcOnly){
+  public static UserExit hiddenSiblingNamesCollide(RefParent kid, String prev, String name, boolean caseOnly, boolean nfcOnly){ return hiddenSiblingNamesCollide(showRel(kid),prev,name,caseOnly,nfcOnly); }
+  public static UserExit hiddenSiblingNamesCollide(Path kid, String prev, String name, boolean caseOnly, boolean nfcOnly){ return hiddenSiblingNamesCollide(showRel(kid),prev,name,caseOnly,nfcOnly); }
+  public static UserExit hiddenSiblingNamesCollide(String kid, String prev, String name, boolean caseOnly, boolean nfcOnly){
       String reason=
       caseOnly ? "Names differ only by case."
       : nfcOnly  ? "Names differ only by Unicode normalization (NFC)."
@@ -391,8 +390,8 @@ public static UncheckedIOException invisibleNoTrailingDotOrSpace(Path kid, Strin
     + "- Avoid differences that are only case changes or Unicode-equivalent spellings."
     );
   }
-  public static UncheckedIOException extensionlessMaskExtension(RefParent kid,RefParent noExtKid){throw Bug.todo(); }
-  public static UncheckedIOException extensionlessMaskExtension(Path kid,Path noExtKid){
+  public static UserExit extensionlessMaskExtension(RefParent kid,RefParent noExtKid){throw Bug.todo(); }
+  public static UserExit extensionlessMaskExtension(Path kid,Path noExtKid){
     return UserExit.fail(showRel(kid),
       "- Both an allowed extensionless file and an extended file share the same base name.\n"
     + "  Extensionless file:\n  "
@@ -403,7 +402,7 @@ public static UncheckedIOException invisibleNoTrailingDotOrSpace(Path kid, Strin
       "- Rename one of them so they are clearly distinct."
     );
   }
-  public static UncheckedIOException rootNotDirectory(){
+  public static UserExit rootNotDirectory(){
     return UserExit.fail(".",
     "Problem: root is not a directory.",
     "Start Fearless on the Fearless project directory."); 
@@ -436,7 +435,7 @@ public static RuntimeException zipDuplicateEntryName(Path diskZip, List<String> 
 
 
 // "nested zips too deep"
-  public static UncheckedIOException zipNestingTooDeep(Path diskZip, List<String> steps, int depth, int maxDepth){
+  public static UserExit zipNestingTooDeep(Path diskZip, List<String> steps, int depth, int maxDepth){
     assert !steps.isEmpty();
     var all=Pop.right(steps);
     return UserExit.directFail(showZipRel(diskZip,all,steps.getLast()),"""
@@ -446,14 +445,14 @@ Different systems handleds very nested zips differenty; overall if
 recursivelly unzipped, it would clearly go over the OS path lenght limit.
 """.formatted(depth));}
 
-  public static UncheckedIOException emptyDirectory(Path kid){
+  public static UserExit emptyDirectory(Path kid){
     return UserExit.directFail(showRel(kid),"""
 This directory is empty.
 Different systems handleds empty directories differently,
 and they may not be supported by compression tools (zip) 
 or version control system (git).
 """);}
-public static UncheckedIOException emptyExpandedZip(Path kid){
+public static UserExit emptyExpandedZip(Path kid){
   return UserExit.directFail(showRel(kid),"""
 This zip file contains no entries. 
 This is most likely a mistake.

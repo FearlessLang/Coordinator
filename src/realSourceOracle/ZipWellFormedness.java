@@ -25,7 +25,7 @@ import utils.Push;
 record PathEntry(Path root, Path local) implements SourceOracle.Ref{
   @Override public String fearPath(){ return "fear:/"+localSegments(local).stream().collect(Collectors.joining("/")); }
   @Override public byte[] loadBytes(){ return IoErr.of(()->Files.readAllBytes(root.resolve(local))); }
-  @Override public String loadString(){ return IoErr.of(()->Files.readString(root.resolve(local))); }
+  @Override public String loadString(){ return Fs.readUtf8(root.resolve(local)); }
   @Override public long lastModified(){ return Fs.lastModified(root.resolve(local)); }
   @Override public String toString(){ return fearPath(); }
   static List<String> localSegments(Path local){

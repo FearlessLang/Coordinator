@@ -3,4 +3,5 @@ module Coordinator {
   requires org.junit.jupiter.api;
   requires FearlessFrontend;
   requires java.desktop;
+  exports mainCoordinator;
 }
