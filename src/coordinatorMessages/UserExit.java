@@ -245,9 +245,10 @@ Other rules (everywhere)
     + "  Examples: \"foo\", \"_tmp\", \"foo1\"."
     );
   }
-  public static UserExit visibleInvalidChar(RefParent kid, char c){ throw Bug.of(); }
-  public static UserExit visibleInvalidChar(Path kid, char c){
-    return UserExit.fail(showRel(kid),
+  public static UserExit visibleInvalidChar(RefParent kid, char c){ return visibleInvalidChar(showRel(kid),c); }
+  public static UserExit visibleInvalidChar(Path kid, char c){ return visibleInvalidChar(showRel(kid),c); }
+  public static UserExit visibleInvalidChar(String kid, char c){
+    return UserExit.fail(kid,
       "- A visible folder/file name contains an unsupported character: '"+c+"'.\n"
     + "  Visible names may use only lowercase letters (a-z), digits (0-9), and underscore (_).",
       "- Rename it to use only lowercase letters, digits, and underscores.\n"
