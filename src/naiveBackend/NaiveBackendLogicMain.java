@@ -7,7 +7,6 @@ import java.util.List;
 import core.E.Literal;
 import tools.Fs;
 import tools.JavacTool;
-import utils.IoErr;
 
 public class NaiveBackendLogicMain {
   public void of(String pkgName, List<Literal> core, Path rootDir, Path rtPath){
@@ -18,7 +17,7 @@ public class NaiveBackendLogicMain {
     var classes= rootDir.resolve("gen_java","_classes");
     Fs.ensureDir(classes);
     Fs.cleanDirContents(classes);
-    var javacOut= IoErr.of(()->JavacTool.compileTree(outPath, classes,rootDir.resolve("gen_java",pkgName+".jar")));
+    var javacOut= Fs.of(()->JavacTool.compileTree(outPath, classes,rootDir.resolve("gen_java",pkgName+".jar")));
     assert javacOut.isEmpty();
     }
 }

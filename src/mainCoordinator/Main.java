@@ -34,12 +34,12 @@ import coordinatorMessages.CacheCorruptionError;
 import coordinatorMessages.UserExit;
 import coordinatorMessages.UserTreeError;
 import tools.Fs;
-import utils.IoErr;
+import tools.JavacTool;
 
 public final class Main{
   private static final AtomicInteger macSpawnOk= new AtomicInteger(0);
   public static void main(String[] args){
-    try{ if (!hasConsoleFlag(args)){ hookStd(); } run(args); }
+    try{ if (!hasConsoleFlag()){ hookStd(); } run(args); }
     catch(UserExit e){ System.err.print(e.getMessage()); }
     catch(UserTreeError e){ System.err.print(e.getMessage()); }
     catch(CacheCorruptionError e){ System.err.print(e.getMessage()); }
@@ -79,18 +79,18 @@ public final class Main{
   }
   private static void hookStd() throws InvocationTargetException, InterruptedException, ExecutionException{
     assert !SwingUtilities.isEventDispatchThread();
-    FutureTask<Consumer<String>> task = new FutureTask<>(Main::initGui);
+    FutureTask<Consumer<String>> task= new FutureTask<>(Main::initGui);
     SwingUtilities.invokeAndWait(task);
     Consumer<String> frame= task.get();
     System.setOut(new PrintStream(new Utf8Sink(frame), true, UTF_8));
     System.setErr(new PrintStream(new Utf8Sink(frame), true, UTF_8));
   }
   private static Consumer<String> initGui(){
-    var area= new JTextArea(25, 125);
+    var area= new JTextArea(25, 120);
     area.setEditable(false);
     area.setFont(new Font(Font.MONOSPACED, Font.BOLD, 18));
     var frame= new JFrame("Fearless output");
-    IoErr.ofV(()->{
+    Fs.ofV(()->{
       var icon= ImageIO.read(reqAppDir().resolve("icon.png").toFile());
       frame.setIconImage(icon);
       if (Taskbar.isTaskbarSupported()){
@@ -106,11 +106,10 @@ public final class Main{
       if (!frame.isVisible()){ frame.setVisible(true); }
       area.append(s);
     });
-  }
-  private static boolean hasConsoleFlag(String[] args){ return Stream.of(args).anyMatch(a->a.equals("-c") || a.equals("--console")); }
+  }  
+  private static boolean hasConsoleFlag(){ return JavacTool.consoleKey.equals(System.getProperty(JavacTool.launcherKey)); }
   private static Optional<Path> launchPath(String[] args){
     return Stream.of(args)
-      .filter(a->!a.equals("-c") && !a.equals("--console"))
       .filter(a->!a.startsWith("-psn_"))
       .findFirst().map(Main::normalize);
   }
@@ -122,7 +121,7 @@ public final class Main{
     return p.normalize();
   }
   private static Path reqAppDir(){
-    var s= System.getProperty("app.dir");
+    var s= System.getProperty(JavacTool.appDirKey);
     if (s == null){ throw UserExit.mustUseLauncherMissingAppDir(); }
     var p= Path.of(s);
     if (!p.isAbsolute()){ throw UserExit.launcherProvidedNonAbsoluteAppDir(s); }

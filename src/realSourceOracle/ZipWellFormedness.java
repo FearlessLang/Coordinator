@@ -12,7 +12,6 @@ import java.util.stream.StreamSupport;
 import coordinatorMessages.UserExit;
 import tools.Fs;
 import tools.SourceOracle;
-import utils.IoErr;
 import utils.Push;
 
 //A segment is the 'folder like' single unit
@@ -24,7 +23,7 @@ import utils.Push;
 //Here Both PathEntry and ZipEntry can be used as Ref for a RealSourceOracle extends SourceOracle
 record PathEntry(Path root, Path local) implements SourceOracle.Ref{
   @Override public String fearPath(){ return "fear:/"+localSegments(local).stream().collect(Collectors.joining("/")); }
-  @Override public byte[] loadBytes(){ return IoErr.of(()->Files.readAllBytes(root.resolve(local))); }
+  @Override public byte[] loadBytes(){ return Fs.of(()->Files.readAllBytes(root.resolve(local))); }
   @Override public String loadString(){ return Fs.readUtf8(root.resolve(local)); }
   @Override public long lastModified(){ return Fs.lastModified(root.resolve(local)); }
   @Override public String toString(){ return fearPath(); }
@@ -38,7 +37,7 @@ record ZipEntry(Path root, Path local, List<String> segments, List<String> zips,
       .collect(Collectors.joining("/"));
   }
   @Override public byte[] loadBytes(){ return ZipLocator.entryBytes(root.resolve(local), zips,lastZips); }
-  @Override public long lastModified(){ return IoErr.of(()->Files.getLastModifiedTime(root.resolve(local)).toMillis()); }
+  @Override public long lastModified(){ return Fs.of(()->Files.getLastModifiedTime(root.resolve(local)).toMillis()); }
   static List<String> localSegments(Path local){
     List<String> res= StreamSupport.stream(local.spliterator(),false).map(Path::toString).toList();
     var last= res.getLast();

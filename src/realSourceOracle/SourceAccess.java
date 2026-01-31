@@ -12,7 +12,6 @@ import java.util.function.Supplier;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import tools.Fs;
-import utils.IoErr;
 
 record ZipDemoDfs(Path root){
   public ZipDemoDfs{ root= root.toAbsolutePath().normalize(); Fs.reqDir(root,"root"); }
@@ -20,7 +19,7 @@ record ZipDemoDfs(Path root){
   private boolean isZip(ZipEntry e){ return e.getName().endsWith(".zip"); }
   private String toName(Path p){ return root.relativize(p).toString().replace('\\','/'); }//this method is wrong as is, we will need to go from Path to URI eventually
   private static String toName(String out, ZipEntry e){ return out+"/"+e.getName(); }//this method is wrong as is, we will need to go from Uri+ZipEntry to URI eventually
-  public List<String> nameAndContent(){ return IoErr.walk(root, s-> s
+  public List<String> nameAndContent(){ return Fs.walk(root, s-> s
     .filter(p->!p.equals(root))
     .filter(Files::isRegularFile)
     .mapMulti(this::nameAndContentConsumer)
@@ -28,7 +27,7 @@ record ZipDemoDfs(Path root){
   }
   private void nameAndContentConsumer(Path p, Consumer<String> out){
     if (!isZip(p)) { out.accept(toName(p)+"\n"+Fs.readUtf8(p)); return; }
-    IoErr.ofV(()->scanZip(toName(p),out,()->new ZipInputStream(IoErr.of(()->Files.newInputStream(p)),UTF_8)));
+    Fs.ofV(()->scanZip(toName(p),out,()->new ZipInputStream(Fs.of(()->Files.newInputStream(p)),UTF_8)));
   }
   private void scanZip(String outName, Consumer<String> out, Supplier<ZipInputStream> zis) throws IOException{
     try(var z= zis.get()){ for(ZipEntry e;(e = z.getNextEntry())!=null;){ scanZipEntry(z, outName, out, e); } } 

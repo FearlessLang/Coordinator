@@ -18,7 +18,6 @@ import tools.Fs;
 import tools.SourceOracle;
 import tools.SourceOracle.Ref;
 import tools.SourceOracle.RefParent;
-import utils.IoErr;
 record Tree(
   Path root,
   ArrayList<Ref> visibleFiles,
@@ -28,7 +27,7 @@ record Tree(
   Tree{ assert root.equals(root.toAbsolutePath().normalize()); }
   public void collect(){    
     reqNoEmptyDirs();
-    IoErr.walkV(root, s->s
+    Fs.walkV(root, s->s
       .filter(p->!p.equals(root))
       .filter(p->!Files.isDirectory(p, LinkOption.NOFOLLOW_LINKS))
       .forEach(abs->collectFile(abs))
@@ -53,7 +52,7 @@ record Tree(
     var dirs= new LinkedHashSet<Path>();
     var nonEmpty= new LinkedHashSet<Path>();
     dirs.add(Path.of(""));
-    IoErr.walkV(root, s->s.filter(p->!p.equals(root)).forEach(abs->{
+    Fs.walkV(root, s->s.filter(p->!p.equals(root)).forEach(abs->{
       var rel= root.relativize(abs);
       nonEmpty.add(parentOrEmpty(rel));
       if (isDirectory(abs)){ dirs.add(rel); }

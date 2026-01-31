@@ -13,7 +13,6 @@ import static offensiveUtils.Require.*;
 
 import tools.Fs;
 import tools.SourceOracle;
-import utils.IoErr;
 
 public final class RealSourceOracle implements SourceOracle{
   private final List<Ref> allFiles;
@@ -36,7 +35,7 @@ public final class RealSourceOracle implements SourceOracle{
   private record RealRef(String fearPath, Path diskPath) implements Ref{
     RealRef(URI uri, Path diskPath){ this(uri.normalize().toString(), diskPath); }
     RealRef{ assert nonNull(fearPath, diskPath); }
-    @Override public byte[] loadBytes(){ return IoErr.of(()->Files.readAllBytes(diskPath)); }
+    @Override public byte[] loadBytes(){ return Fs.of(()->Files.readAllBytes(diskPath)); }
     @Override public String loadString(){ return Fs.readUtf8(diskPath); }
     @Override public long lastModified(){ return Fs.lastModified(diskPath); }
     @Override public String toString(){ return fearPath; }

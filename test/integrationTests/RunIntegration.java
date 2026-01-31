@@ -5,7 +5,7 @@ import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
 
 import coordinator.Coordinator;
-import utils.ResolveResource;
+import mainCoordinator.ResolveResource;
 
 public class RunIntegration {
   void testOk(String name){

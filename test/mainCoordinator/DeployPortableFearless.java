@@ -1,7 +1,6 @@
 package mainCoordinator;
 
 import tools.PortableApp;
-import utils.ResolveResource;
 
 public class DeployPortableFearless{
   public static void main(String[] a){

@@ -19,12 +19,12 @@ import java.util.function.Consumer;
 import java.util.stream.IntStream;
 
 import coordinatorMessages.UserExit;
-import utils.IoErr;
+import tools.Fs;
 
 class Build{
   private final Path root;
   Build(Path root){ this.root= root.toAbsolutePath().normalize(); }
-  protected void walkRoot(Consumer<Path> f){ IoErr.walkV(root, s-> s.filter(p->!p.equals(root)).forEach(f)); }
+  protected void walkRoot(Consumer<Path> f){ Fs.walkV(root, s-> s.filter(p->!p.equals(root)).forEach(f)); }
   protected Path relativize(Path abs){ return root.relativize(abs); }
   protected Path resolve(Path rel){ return root.resolve(rel); }
   protected URI uriOf(Path abs){ return abs.toUri().normalize(); }

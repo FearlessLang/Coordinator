@@ -13,9 +13,9 @@ import coordinator.Coordinator;
 import coordinator.OutputOracle;
 import core.OtherPackages;
 import core.E.Literal;
+import mainCoordinator.ResolveResource;
 import tools.JavaTool;
 import tools.SourceOracle;
-import utils.ResolveResource;
 
 class TestBuildBase {
   Coordinator c= new Coordinator(){

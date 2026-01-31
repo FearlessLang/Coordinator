@@ -4,15 +4,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.Optional;
-
-import utils.IoErr;
 import utils.Join;
-
 import java.io.BufferedWriter;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Function;
-
 import apiJson.ApiJson;
 import coordinatorMessages.CacheCorruptionError;
 import core.E.Literal;
@@ -28,8 +24,8 @@ public interface OutputOracle{
   default long pkgApiStamp(String pkg){ return Fs.lastModified(rootDir().resolve(pkg+".json")); }
   
   default void write(String path, Consumer<Consumer<String>> dataProducer){
-    IoErr.ofV(()->{try (BufferedWriter writer = Files.newBufferedWriter(rootDir().resolve(path))){
-      dataProducer.accept(content -> IoErr.ofV(()->writer.write(content)));
+    Fs.ofV(()->{try (BufferedWriter writer = Files.newBufferedWriter(rootDir().resolve(path))){
+      dataProducer.accept(content -> Fs.ofV(()->writer.write(content)));
     }});
   }
   default OtherPackages addCachedPkgApi(OtherPackages other, String pkg){
@@ -67,7 +63,7 @@ class OutputHelper{
     return obj(map, m->obj(m, s->"\""+s+"\""));
   }
   Optional<Map<TName,Literal>> pgkApiFromJSon(Path p){
-    if (!IoErr.of(()->Files.exists(p))){ return Optional.empty(); }
+    if (!Fs.of(()->Files.exists(p))){ return Optional.empty(); }
     var s= Fs.readUtf8(p);
     assert s.chars().allMatch(c -> Fs.allowed.indexOf(c) >= 0) : "Non-whitelisted char in "+p;//should cause Cachecorruption instead
     var out= new LimitedJsonParser(s, p).apiJsonToMap();
@@ -79,7 +75,7 @@ class OutputHelper{
       "{",",\n","}\n");//correctly throw for empty
   }
   Optional<Map<String,Map<String,String>>> mapFromJSon(Path p){
-    if (!IoErr.of(()->Files.exists(p))){ return Optional.empty(); }
+    if (!Fs.of(()->Files.exists(p))){ return Optional.empty(); }
     var s= Fs.readUtf8(p);
     assert s.chars().allMatch(c -> Fs.allowed.indexOf(c) >= 0) : "Non-whitelisted char in "+p;
     var out= new LimitedJsonParser(s,p).obj2();

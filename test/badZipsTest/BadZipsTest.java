@@ -8,9 +8,9 @@ import org.junit.jupiter.api.Test;
 import org.opentest4j.AssertionFailedError;
 
 import coordinatorMessages.UserExit;
+import mainCoordinator.ResolveResource;
 import realSourceOracle.RealSourceOracleWithZip;
 import testHelperFs.FsDsl;
-import utils.ResolveResource;
 
 public class BadZipsTest {
   static{ utils.Err.setUp(AssertionFailedError.class, Assertions::assertEquals, Assertions::assertTrue); }

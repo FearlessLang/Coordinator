@@ -13,8 +13,8 @@ import java.util.zip.ZipInputStream;
 
 import coordinatorMessages.CacheCorruptionError;
 import coordinatorMessages.UserExit;
+import tools.Fs;
 import tools.ReadZip;
-import utils.IoErr;
 
 final class ZipLocator{
   private static Map<String, byte[]> readHere(Path diskZip, List<String> steps, byte[] bytes) {
@@ -29,7 +29,7 @@ final class ZipLocator{
     return res;
   }
   private static <T> T fetch(Path diskZip, List<String> steps, Function<byte[],T> onFinal){
-    return IoErr.of(() -> fetchSteps(diskZip, steps, onFinal));
+    return Fs.of(() -> fetchSteps(diskZip, steps, onFinal));
   }
   private static ReadZip readZip(Path diskZip, List<String> steps){
     return new ReadZip(
