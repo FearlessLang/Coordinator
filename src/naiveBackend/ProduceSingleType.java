@@ -11,7 +11,7 @@ record ProduceBody(StringBuilder sb, Backend b, String iface, String thisName, M
     Streams.zipI(m.xs(), m.sig().ts())
       .filter((_,x,_)->!"_".equals(x))
       .forEach((i,x,t)->sb
-        .append("    var ").append(x)
+        .append("    var ").append(b.encodeTrailingPrimes(x))
         .append("$= ").append(optCast("p"+i,t)).append(";\n"));
     sb.append("    return "+emitE(m.e().get())+";\n  }\n");
   }
@@ -27,8 +27,7 @@ record ProduceBody(StringBuilder sb, Backend b, String iface, String thisName, M
   };}
   private String emitX(X x){
     assert !"_".equals(x.name());
-    //if ( "this".equals(x.name())){ return "this$"; }
-    return x.name()+"$";
+    return b.encodeTrailingPrimes(x.name())+"$";
   }
   private String emitType(Type t){
     var n= t.type().c().name();

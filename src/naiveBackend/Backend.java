@@ -79,13 +79,21 @@ public class Backend{
     if (l.cs().isEmpty()){ return "Object"; }
     return typeName(l.cs().getFirst().name());
   }
-  String decTypeName(TName n){ return n.simpleName()+"$"+n.arity(); }
-  String typeName(TName n){ return n.s()+"$"+n.arity(); }
+  String encodeTrailingPrimes(String s){
+    int k= 0;
+    while (k < s.length() && s.charAt(s.length() - 1 - k) == '\''){ k++; }
+    if (k == 0){ return s; }
+    var head= s.substring(0, s.length() - k);
+    assert head.indexOf('\'')==-1: "prime (') must be trailing only: "+s;
+    return head + "$p" + k;
+  }  
+  String decTypeName(TName n){ return encodeTrailingPrimes(n.simpleName())+"$"+n.arity(); }
+  String typeName(TName n){ return encodeTrailingPrimes(n.s())+"$"+n.arity(); }
   Path ifaceFile(Literal l, Path dest){ return dest.resolve(ifaceNameFor(l)+".java"); }
   String mangledMethodName(RC rc, MName m){ return rc.name()+"$"+methodBaseName(m)+"$"+m.arity(); }
   String methodBaseName(MName m){
     var s= m.s();
-    if (s.startsWith(".")){ return s.substring(1); }
+    if (s.startsWith(".")){ return encodeTrailingPrimes(s.substring(1)); }
     return "$" + mangleOp(s);
   }
   final List<String> mains= new ArrayList<>();
