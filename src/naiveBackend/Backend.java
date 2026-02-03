@@ -4,6 +4,7 @@ import static offensiveUtils.Require.*;
 
 import java.nio.file.*;
 import java.util.*;
+import java.util.function.Consumer;
 import java.util.stream.IntStream;
 
 import core.*;
@@ -23,11 +24,12 @@ public class Backend{
   Path out;
   String pkgName;
   List<Literal> decs;
-
-  public void produceJavaCode(){
+  List<Consumer<Path>> fixers= new ArrayList<>();
+  public List<Consumer<Path>> produceJavaCode(){
     cleanOutFolder();
     decs.forEach(d->generateInterface(d,false));
     writeMainJava();
+    return fixers;
   }
   void cleanOutFolder(){
     Fs.ensureDir(out);
@@ -35,14 +37,15 @@ public class Backend{
   }
   void generateInterface(Literal l, boolean abstractOnly){
     var iface= ifaceNameFor(l);
-    var sb=new StringBuilder(32_000)
-      .append("package "+pkgName+";\n")
-      .append("public interface "+iface+extendsClause(l)+"{\n");
+    var sb= new BytecodeLineFix(iface, l.pos().fileName())
+      .a("package "+pkgName+";\n")
+      .a("public interface "+iface+extendsClause(l)+"{\n");
     for (var m:l.ms()){ emitTopMethod(sb, l, m, abstractOnly); }
     var hasInstance= hasInstance(l, abstractOnly);
-    if (hasInstance){ sb.append("  "+iface+" instance= new "+iface+"(){};"); }
-    Fs.writeUtf8(ifaceFile(l, out), sb.append("}").toString());
+    if (hasInstance){ sb.a("  "+iface+" instance= new "+iface+"(){};"); }
+    Fs.writeUtf8(ifaceFile(l, out), sb.a("}").toString());
     if (hasInstance && implementsBaseMain(l)){ mains.add(iface); }
+    fixers.add(sb);
   }
   private boolean hasInstance(Literal l, boolean abstractOnly) {
     if (abstractOnly){ return false; } 
@@ -60,18 +63,18 @@ public class Backend{
     IntStream.range(0, m.xs().size()).mapToObj(i->"Object p"+i),
     "(",", ",")","()"
   );}
-  void emitTopMethod(StringBuilder sb, Literal l, M m, boolean abstractOnly){
+  void emitTopMethod(BytecodeLineFix sb, Literal l, M m, boolean abstractOnly){
     if (!m.sig().origin().equals(l.name())){ return ; }
     String iface=ifaceNameFor(l);
     var jName= mangledMethodName(m.sig().rc(), m.sig().m());
     if (abstractOnly || m.sig().abs()){
-      sb.append("  default Object ").append(jName).append(paramsSig(m)).append("{\n")
-        .append("    throw new AssertionError(\"Uncallable method: ")
-        .append(iface).append(".").append(jName).append("\");\n")
-        .append("  }\n");
+      sb.a("  default Object ").a(jName).a(paramsSig(m)).a("{\n")
+        .a("    throw new AssertionError(\"Uncallable method: ")
+        .a(iface).a(".").a(jName).a("\");\n")
+        .a("  }\n");
       return;
     }   
-    sb.append("  default Object "+jName+paramsSig(m)+"{\n");
+    sb.a("  default Object "+jName+paramsSig(m)+"{\n");
     new ProduceBody(sb,this, iface, l.thisName(), m).emitBody();
   }
   String ifaceNameFor(Literal l){

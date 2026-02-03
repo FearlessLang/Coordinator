@@ -11,13 +11,15 @@ import tools.JavacTool;
 public class NaiveBackendLogicMain {
   public void of(String pkgName, List<Literal> core, Path rootDir, Path rtPath){
     var outPath= rootDir.resolve("gen_java",pkgName);
-    new Backend(outPath, pkgName, core).produceJavaCode();
+    var fixers= new Backend(outPath, pkgName, core).produceJavaCode();
     assert Files.exists(rtPath): "Missing extra folder: "+rtPath;
     if (pkgName.equals("base")){ Fs.copyTree(rtPath, outPath); }
     var classes= rootDir.resolve("gen_java","_classes");
     Fs.ensureDir(classes);
     Fs.cleanDirContents(classes);
-    var javacOut= Fs.of(()->JavacTool.compileTree(outPath, classes,rootDir.resolve("gen_java",pkgName+".jar")));
+    var pkgPath= classes.resolve(pkgName);
+    Runnable post= ()->fixers.forEach(f->f.accept(pkgPath));
+    var javacOut= Fs.of(()->JavacTool.compileTree(outPath, classes,post,rootDir.resolve("gen_java",pkgName+".jar")));
     assert javacOut.isEmpty();
-    }
+  }
 }
