@@ -56,7 +56,8 @@ public final class Main{
       if (Fs.isMac()){ Thread.sleep(1000); }
       if ( macSpawnOk.get() != 0){ return; }
     }          
-    Path l= launch.orElseThrow(UserExit::mustOpenFearlessProjectFile);
+    if (launch.isEmpty()){ InitialSupportGuiMain.main(new String[]{}); return; }
+    Path l= launch.get();
     var project= Files.isDirectory(l) ? l : l.getParent();
     var base= appDir.resolve("stdLib").resolve("base");
     var rt= appDir.resolve("stdLib").resolve("rt");

@@ -459,8 +459,4 @@ This is most likely a mistake.
 """);}
 
 public static RuntimeException nestedZipTooBig(Path diskZip, List<String> steps, String string){ throw Bug.todo(); }
-
-public static UserExit mustOpenFearlessProjectFile(){ return UserExit.die("""
-Fearless needs to be called on a project folder.
-""");}
 }
