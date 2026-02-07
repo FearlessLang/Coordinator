@@ -1,8 +1,8 @@
 package mainCoordinator;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
-
 import java.io.PrintStream;
+
 import java.nio.file.Path;
 
 import coordinator.Coordinator;
@@ -29,9 +29,6 @@ public record ProgrammaticMain(StringBuilder out, StringBuilder err,String fName
     System.setOut(new PrintStream(new Utf8Sink(out::append), true, UTF_8));
     System.setErr(new PrintStream(new Utf8Sink(err::append), true, UTF_8));
     var oracle= SourceOracle.debugBuilder().put(fName,code).build();
-/*    IoErr.walkV(this.stdLib,s->s
-      .filter(pi->!Files.isDirectory(pi))
-      .forEach(pi->oracle.put("_base/"+pi.getFileName().toString(),Fs.readUtf8(pi))));*/
     new Coordinator(){
       @Override public Path stLibPath(){ return stdLib; }
       @Override public Path rtPath(){ return stdRt; }
@@ -40,6 +37,5 @@ public record ProgrammaticMain(StringBuilder out, StringBuilder err,String fName
         return oracle;
       }
     }.main(dest);
-
   }
 }
