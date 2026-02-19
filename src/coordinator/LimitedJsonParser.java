@@ -171,6 +171,6 @@ final class LimitedJsonParser{
     i++; return true;
   }
   private RuntimeException err(String msg){
-    return CacheCorruptionError.startRepair_invalidVirtualizationMap(forErr,msg+" at "+i);
+    return CacheCorruptionError.invalidVirtualizationMap(forErr,msg+" at "+i);
   }
 }

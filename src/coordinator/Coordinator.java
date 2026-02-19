@@ -113,12 +113,11 @@ class Helper{
 
   static Optional<String> pkgNameOpt(Ref u){//TODO: finalize the real whitelist
     List<String> whiteListAfterPkg= List.of("_asset","_dbg");
-    //List<String> whiteList= List.of("_ignore");//TODO: no, those files will have to be filtered way before we reach here
-    var candidates= Stream.of(Fs.removeFileName(u.toString()).split("/"))
-      .filter(s->s.startsWith("_"))
+    var candidates= Stream.of(u.toString().split("/"))
+      .filter(s->s.startsWith("_") && !s.contains("."))
       .toList();
     if (candidates.isEmpty()){ return Optional.empty(); }
-    if (whiteListAfterPkg.contains(candidates.getFirst())){ throw UserTreeError.reservedBeforePkg(u); }    
+    if (whiteListAfterPkg.contains(candidates.getFirst())){ throw UserTreeError.reservedBeforePkg(u,candidates.getFirst()); }    
     var onlyGood= candidates.stream().skip(1).allMatch(s->whiteListAfterPkg.contains(s));
     if (onlyGood){ return Optional.of(candidates.getFirst().substring(1)); } 
     throw UserTreeError.ambiguousPackageSegment(u, candidates);    

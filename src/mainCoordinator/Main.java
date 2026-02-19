@@ -39,6 +39,7 @@ import tools.JavacTool;
 public final class Main{
   private static final AtomicInteger macSpawnOk= new AtomicInteger(0);
   public static void main(String[] args){
+    checkFlags();
     try{ if (!hasConsoleFlag()){ hookStd(); } run(args); }
     catch(UserExit e){ System.err.print(e.getMessage()); }
     catch(UserTreeError e){ System.err.print(e.getMessage()); }
@@ -48,10 +49,17 @@ public final class Main{
       System.err.print(UserExit.crash(t));
     }
   }
+  private static void checkFlags(){
+    var a= System.getProperty(JavacTool.launcherKey);
+    var b= System.getProperty(JavacTool.appDirKey);
+    if (a == null || b == null){ throw UserExit.mustUseLauncher(); }
+    if (!Path.of(b).isAbsolute()){ throw UserExit.mustUseLauncher(); }
+ 
+  }
   private static void run(String[] args) throws InvocationTargetException, InterruptedException, ExecutionException{
     var appDir= reqAppDir();
     Optional<Path> launch= launchPath(args);
-    if (Fs.isMac()){ registerMacSpawnHandler(appDir); }
+    if (Fs.isMac() && !hasConsoleFlag()){ registerMacSpawnHandler(appDir); }
     if (!launch.isPresent()){
       if (Fs.isMac()){ Thread.sleep(1000); }
       if ( macSpawnOk.get() != 0){ return; }
@@ -67,10 +75,7 @@ public final class Main{
     }.main(project);
   }
   private static void registerMacSpawnHandler(Path appDir){
-    if (!Desktop.isDesktopSupported()){ throw UserExit.desktopUnsupported(); }
-    var d= Desktop.getDesktop();
-    if (!d.isSupported(Desktop.Action.APP_OPEN_FILE)){ throw UserExit.openFileUnsupported(); }
-    d.setOpenFileHandler(e->e.getFiles().forEach(f->spawnMac(appDir, f.toPath())));
+    Desktop.getDesktop().setOpenFileHandler(e->e.getFiles().forEach(f->spawnMac(appDir, f.toPath())));
   }
   private static void spawnMac(Path appDir, Path file){
     var bundle= appDir.getParent().getParent();
@@ -79,6 +84,7 @@ public final class Main{
     macSpawnOk.incrementAndGet();
   }
   private static void hookStd() throws InvocationTargetException, InterruptedException, ExecutionException{
+    if (!Desktop.isDesktopSupported()){ throw UserExit.desktopUnsupported(); }
     assert !SwingUtilities.isEventDispatchThread();
     FutureTask<Consumer<String>> task= new FutureTask<>(Main::initGui);
     SwingUtilities.invokeAndWait(task);
@@ -108,26 +114,19 @@ public final class Main{
       area.append(s);
     });
   }  
-  private static boolean hasConsoleFlag(){ return JavacTool.consoleKey.equals(System.getProperty(JavacTool.launcherKey)); }
+  public static boolean hasConsoleFlag(){ return JavacTool.consoleKey.equals(System.getProperty(JavacTool.launcherKey)); }
   private static Optional<Path> launchPath(String[] args){
     return Stream.of(args)
       .filter(a->!a.startsWith("-psn_"))
       .findFirst().map(Main::normalize);
   }
   private static Path normalize(String s){
-    if (s.isEmpty()){ throw UserExit.emptyLaunchArg(); }
-    Path p; try{ p= s.startsWith("file:") ? Path.of(URI.create(s)) : Path.of(s); }
+    assert !s.isEmpty();
+    Path p; try{ p= s.startsWith("file:")?Path.of(URI.create(s)):Path.of(s); }
     catch(RuntimeException ex){ throw UserExit.badLaunchArg(s); }
-    if (!p.isAbsolute()){ throw UserExit.nonAbsoluteLaunchArg(s); }
-    return p.normalize();
+    return p.toAbsolutePath().normalize();
   }
-  private static Path reqAppDir(){
-    var s= System.getProperty(JavacTool.appDirKey);
-    if (s == null){ throw UserExit.mustUseLauncherMissingAppDir(); }
-    var p= Path.of(s);
-    if (!p.isAbsolute()){ throw UserExit.launcherProvidedNonAbsoluteAppDir(s); }
-    return p;
-  }
+  private static Path reqAppDir(){ return Path.of(System.getProperty(JavacTool.appDirKey)); }
 }
 class Utf8Sink extends OutputStream{
   private final Consumer<String> out;

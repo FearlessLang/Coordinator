@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import mainCoordinator.Main;
 import metaParser.Message;
 import metaParser.PrettyFileName;
 import tools.Fs;
@@ -28,56 +29,25 @@ public final class UserExit extends RuntimeException{
     for (var s: more){ sb.append("  ").append(s).append('\n'); }
     return new UserExit(sb.toString());
   }
-
-  static UserExit _unused_launchNeedsProject(){ return die(
-    "Start Fearless by opening a \"*.fearless\" file (or pass the project path explicitly).",
-    "Nothing was provided to open."
-  );}
-
   public static UserExit desktopUnsupported(){ return die(
-    "Start Fearless by opening a \"*.fearless\" file (file association).",
-    "This system does not support Desktop open-file notifications."
+    "Program fearlessw was started in headless mode.",
+    "fearlessw requires GUI capabilities.",
+    "Use fearless (without 'w') to work with a console instead."
   );}
-
-  public static UserExit openFileUnsupported(){ return die(
-    "Start Fearless by opening a \"*.fearless\" file (file association).",
-    "This system does not support APP_OPEN_FILE notifications."
-  );}
-  public static UserExit emptyLaunchArg(){ return die(
-    "Could not read the project path.",
-    "Argument was empty."
-  );}
-
-  public static UserExit badLaunchArg(String s){ return die(
-    "Could not read the project path.",
-    "Value: "+s
-  );}
-
-  public static UserExit nonAbsoluteLaunchArg(String s){ return die(
-    "Fearless was started without an absolute project path.",
-    "Fix: open a \"*.fearless\" file with Fearless or pass an absolute path.",
-    "Value: "+s
-  );}
-
-  public static UserExit cannotF_indProjectFolder(Path launch){ return die(
-    "Could not determine the project folder from the launch path.",
-    "Value: "+launch
-  );}
-
-  public static UserExit mustUseLauncherMissingAppDir(){ return die(
-    "Start Fearless using its launcher (not by running a jar directly).",
-    "Launcher did not provide app.dir."
-  );}
-
-  public static UserExit launcherProvidedNonAbsoluteAppDir(String s){ return die(
-    "Launcher error: app.dir must be an absolute path.",
-    "Value: "+s
-  );}
-
-  static UserExit from(Throwable t){
-    return new UserExit(t.getMessage() == null ? t.toString() : t.getMessage());
+  public static UserExit badLaunchArg(String s){ 
+    if (Main.hasConsoleFlag()){ return die(
+      "The OS provided a broken path for the input file.",
+      "Value: "+s
+      );}
+    return die(
+      "fearless received a broken path for the input file.",
+      "Value: "+s
+    );
   }
-
+  public static UserExit mustUseLauncher(){ return die(
+    "Fearless has been started without using its launcher.",
+    "Do not start fearless directly from the Jars."
+  );}
   public static String crash(Throwable t){
     var sw= new StringWriter();
     t.printStackTrace(new PrintWriter(sw));

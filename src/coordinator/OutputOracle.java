@@ -31,13 +31,13 @@ public interface OutputOracle{
   default OtherPackages addCachedPkgApi(OtherPackages other, String pkg){
     var path= rootDir().resolve(pkg+".json");
     var api= new OutputHelper().pgkApiFromJSon(path);
-    if (api.isEmpty()){ throw CacheCorruptionError.startRepair_missingPkgApiFile(path); }
+    if (api.isEmpty()){ throw CacheCorruptionError.missingPkgApiFile(path); }
     return other.mergeWith(api.get(), other.stamp());
   }//READS the pkg info and adds to other; Does not update the disk. Just reads info
   default OtherPackages startCachedPkgApi(String pkg,Map<String,Map<String,String>> map,long stamp){
     var path= rootDir().resolve(pkg+".json");
     var api= new OutputHelper().pgkApiFromJSon(path);
-    if (api.isEmpty()){ throw CacheCorruptionError.startRepair_missingPkgApiFile(path); }
+    if (api.isEmpty()){ throw CacheCorruptionError.missingPkgApiFile(path); }
     return OtherPackages.start(map,api.get(),stamp);
   }
   default long commitPkgApi(String pkg, List<Literal> core, long minExclusiveMillis){
