@@ -26,9 +26,9 @@ That metadata should be stored in:
   %s
 """.formatted(PrettyFileName.displayFileName(apiJson.toUri())));
   }
-  public static CacheCorruptionError invalidVirtualizationMap(Path mapJson, String parseErr){
+  public static CacheCorruptionError invalidCachedFile(Path mapJson, String parseErr){
     return new CacheCorruptionError("""
-Build cache contains an invalid virtualization map.
+Build cache contains an invalid cached file.
 
 Fearless tried to read:
   %s

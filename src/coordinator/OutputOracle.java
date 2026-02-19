@@ -65,7 +65,8 @@ class OutputHelper{
   Optional<Map<TName,Literal>> pgkApiFromJSon(Path p){
     if (!Fs.of(()->Files.exists(p))){ return Optional.empty(); }
     var s= Fs.readUtf8(p);
-    assert s.chars().allMatch(c -> Fs.allowed.indexOf(c) >= 0) : "Non-whitelisted char in "+p;//should cause Cachecorruption instead
+    var allowed= s.chars().allMatch(c -> Fs.allowed.indexOf(c) >= 0);
+    if (!allowed){ CacheCorruptionError.invalidCachedFile(p, "Non-whitelisted char"); }
     var out= new LimitedJsonParser(s, p).apiJsonToMap();
     return Optional.of(out);
   }
@@ -77,7 +78,8 @@ class OutputHelper{
   Optional<Map<String,Map<String,String>>> mapFromJSon(Path p){
     if (!Fs.of(()->Files.exists(p))){ return Optional.empty(); }
     var s= Fs.readUtf8(p);
-    assert s.chars().allMatch(c -> Fs.allowed.indexOf(c) >= 0) : "Non-whitelisted char in "+p;
+    var allowed= s.chars().allMatch(c -> Fs.allowed.indexOf(c) >= 0);
+    if (!allowed){ CacheCorruptionError.invalidCachedFile(p, "Non-whitelisted char"); }
     var out= new LimitedJsonParser(s,p).obj2();
     return Optional.of(out);
   }
