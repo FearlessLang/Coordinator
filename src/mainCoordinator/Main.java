@@ -69,10 +69,13 @@ public final class Main{
     var project= Files.isDirectory(l) ? l : l.getParent();
     var base= appDir.resolve("stdLib").resolve("base");
     var rt= appDir.resolve("stdLib").resolve("rt");
+    run(project,base,rt);
+  }
+  public static void run(Path project, Path base, Path rt) throws InvocationTargetException, InterruptedException, ExecutionException{
     new Coordinator(){
       @Override public Path stLibPath(){ return base; }
       @Override public Path rtPath(){ return rt; }
-    }.main(project);
+    }.main(project);  
   }
   private static void registerMacSpawnHandler(Path appDir){
     Desktop.getDesktop().setOpenFileHandler(e->e.getFiles().forEach(f->spawnMac(appDir, f.toPath())));
