@@ -26,12 +26,13 @@ public interface Coordinator {
   Path rtPath();  
   Path stLibPath();
 
-  default void runAllMains(String pkgName,OutputOracle out){
+  default void runAllMains(String pkgName,OutputOracle out) throws InterruptedException{
     var jars= out.rootDir().resolve("gen_java");
-    JavaTool.runMainFromJars(jars,pkgName+".Main");
+    var data= List.of("-DfearlessUser.dir="+jars.getParent().getParent());
+    JavaTool.runMainFromJars(data,jars,pkgName+".Main");
   }
   default SourceOracle sourceOracle(Path path){ return new RealSourceOracleWithZip(path); }
-  default void main(Path path){ Helper.main(this, path); }
+  default void main(Path path) throws InterruptedException{ Helper.main(this, path); }
   
   default List<Literal> frontend(String pkgName, List<Ref> files, SourceOracle oracle, OtherPackages other,Map<String,String> vres){
     try{ return new FrontendLogicMain().of(pkgName,vres, files, oracle, other); }
@@ -43,7 +44,7 @@ public interface Coordinator {
 }
 class Helper{
   static boolean isFear(Ref u){ return u.toString().endsWith(".fear"); }
-  static void main(Coordinator coordinator, Path path){
+  static void main(Coordinator coordinator, Path path) throws InterruptedException{
     SourceOracle o= coordinator.sourceOracle(path);
     long maxStamp= o.allFiles().stream()
       .filter(Helper::isFear).mapToLong(Ref::lastModified)
@@ -58,7 +59,7 @@ class Helper{
     l = layers(coordinator,map,l,allRanks.stream()
       .sorted(Comparator.comparingInt(Helper::rankNumber).thenComparing(Object::toString)).toList());
     l.compile(o, out);
-    l.pkgs().keySet().forEach(p->coordinator.runAllMains(p,out));
+    for(var p: l.pkgs().keySet()){ coordinator.runAllMains(p,out); }
   }
   static Layer layers(Coordinator coordinator, Map<String,List<Ref>> map, Layer l, List<Ref> ranks){
     int lastNum= rankNumber(ranks.getFirst());

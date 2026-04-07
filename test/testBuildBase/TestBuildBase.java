@@ -7,6 +7,7 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import coordinator.Coordinator;
@@ -22,7 +23,7 @@ class TestBuildBase {
     @Override public Path rtPath(){    return ResolveResource.stLibRTPath; }  
     @Override public Path stLibPath(){ return ResolveResource.stLibPath; }
 
-    @Override  public void main(Path path){
+    @Override  public void main(Path path) throws InterruptedException{
       OutputOracle out= ()->ResolveResource.stLibDebugOut;
       var pkgName= "base";
       var other= OtherPackages.empty();
@@ -30,9 +31,12 @@ class TestBuildBase {
       List<Literal> core= frontend(pkgName,o.allFiles(),o,other,Map.of());
       backend(pkgName,core,o,other,out);
       var classes= out.rootDir().resolve("gen_java","_classes");
-      var runOut= JavaTool.runMain(classes, pkgName+".Main");
+      var runOut= JavaTool.runMain(List.of("-DfearlessUser.dir="+out.rootDir().getParent()),classes, pkgName+".Main");
       assertEquals("", runOut);
     }
   };
-  @Test void test(){ c.main(c.stLibPath()); }
+  @Test void test(){
+    try { c.main(c.stLibPath());}
+    catch (InterruptedException e){ Assertions.fail(e);}
+  }
 }

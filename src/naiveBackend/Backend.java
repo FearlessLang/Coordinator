@@ -70,7 +70,7 @@ public class Backend{
     if (abstractOnly || m.sig().abs()){
       sb.a("  default Object ").a(jName).a(paramsSig(m)).a("{\n")
         .a("    throw new AssertionError(\"Uncallable method: ")
-        .a(iface).a(".").a(jName).a("\");\n")
+        .a(iface).a(".").a(jName).a("\"+this.getClass().getName());\n")
         .a("  }\n");
       return;
     }   

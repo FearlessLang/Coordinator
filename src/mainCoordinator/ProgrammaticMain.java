@@ -39,7 +39,7 @@ public record ProgrammaticMain(StringBuilder out, StringBuilder err,String fName
       System.setErr(oldErr);
     }
   }
-  private void _runFearless(){
+  private void _runFearless() throws InterruptedException{
     System.setOut(new PrintStream(new Utf8Sink(out::append), true, UTF_8));
     System.setErr(new PrintStream(new Utf8Sink(err::append), true, UTF_8));
     var oracle= SourceOracle.debugBuilder().put(fName,code).build();
