@@ -103,7 +103,7 @@ public class Backend{
   void writeMainJava(){
     var sb= new StringBuilder(8_000)
       .append("package ").append(pkgName).append(";\n\n")
-      .append("public final class Main{\n  public static void main(String[] args){\n");
+      .append("public final class Main{\n  static{ base.Util.installParentLifeline(); }\n  public static void main(String[] args){\n");
     mains.stream().sorted().forEach(n->
       sb.append("    base.Util.topLevel(()->").append(n).append(".instance.imm$main$1(new base._System$0()));\n")
     );
