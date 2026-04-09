@@ -21,5 +21,6 @@ public class RunIntegration {
   @Test void testUnitTests(){ testOk("testUnitTests");}
   @Test void map_a_to_pkc(){ testOk("map_a_to_pkc");}
   @Test void helloStackTraces(){ testOk("helloStackTraces");}
+  @Test void testingStandardLibrary(){ testOk("testingStandardLibrary");}
 
 }
