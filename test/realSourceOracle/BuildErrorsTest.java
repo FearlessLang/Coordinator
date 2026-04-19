@@ -273,12 +273,12 @@ We check this so that you do not get surprises later.[###]
 Invalid path in this project folder.
 
 Root: [###]
-Path: ".a\\u0001b"
+Path: ".a" [Start Of Heading 0x01] "b"
 
 What went wrong
 - A protected name segment contains a control character.
   Character: [Start Of Heading 0x01]
-  Segment: ".a\\u0001b"
+  Segment: ".a" [Start Of Heading 0x01] "b"
 
 How to fix
 - Rename the segment to remove the control character.
@@ -356,12 +356,12 @@ We check this so that you do not get surprises later.[###]
 Invalid path in this project folder.
 
 Root: [###]
-Path: ".\\u00E9"
+Path: "." [U+00E9]
 
 What went wrong
 - Two protected names in the same folder collide.
-  Name 1: ".e\\u0301"
-  Name 2: ".\\u00E9"
+  Name 1: ".e" [U+0301]
+  Name 2: "." [U+00E9]
   Reason: Names differ only by Unicode normalization (NFC).
 
 How to fix
@@ -374,11 +374,11 @@ We check this so that you do not get surprises later.[###]
 Invalid path in this project folder.
 
 Root: [###]
-Path: ".x\\uD800y"
+Path: ".x" [HIGH SURROGATE U+D800] "y"
 
 What went wrong
 - A protected name segment contains invalid Unicode.
-  Bad segment: ".x\\uD800y"
+  Bad segment: ".x" [HIGH SURROGATE U+D800] "y"
 
 How to fix
 - Rename the segment to remove the invalid characters.

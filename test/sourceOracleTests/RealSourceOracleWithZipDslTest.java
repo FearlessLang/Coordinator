@@ -435,12 +435,12 @@ X
 Invalid path in this project folder.
 
 Root: [###]
-Path: "_pkg/z/.d/a\\u0001b.txt"
+Path: "_pkg/z/.d/a" [Start Of Heading 0x01] "b.txt"
 
 What went wrong
 - A protected name segment contains a control character.
   Character: [Start Of Heading 0x01]
-  Segment: "a\\u0001b.txt"
+  Segment: "a" [Start Of Heading 0x01] "b.txt"
 
 How to fix
 - Rename the segment to remove the control character.
@@ -508,12 +508,12 @@ iii
 Invalid path in this project folder.
 
 Root: [###]
-Path: "_pkg/z/.d/e\\u0301.txt"
+Path: "_pkg/z/.d/e" [U+0301] ".txt"
 
 What went wrong
 - Two protected names in the same folder collide.
-  Name 1: "\\u00E9.txt"
-  Name 2: "e\\u0301.txt"
+  Name 1: [U+00E9] ".txt"
+  Name 2: "e" [U+0301] ".txt"
   Reason: Names differ only by Unicode normalization (NFC).
 
 How to fix
@@ -611,9 +611,9 @@ X
 Root: [###]
 Path: "_pkg/z.zip"
 Entry contains non-standard characters.
-Shown as: "a\\u0000b.fear"
+Shown as: "a" [Null 0x00] "b.fear"
 
-There is a zip entry named "a\\u0000b.fear"
+There is a zip entry named "a" [Null 0x00] "b.fear"
 This entry name cannot be handled safely and consistently across systems and tools.
 
 Invalid entry names (based on the exact text of the entry name):

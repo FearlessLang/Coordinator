@@ -2,9 +2,7 @@ package mainCoordinator;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import java.io.PrintStream;
-import java.lang.reflect.InvocationTargetException;
 import java.nio.file.Path;
-import java.util.concurrent.ExecutionException;
 
 import coordinator.Coordinator;
 import coordinatorMessages.CacheCorruptionError;
