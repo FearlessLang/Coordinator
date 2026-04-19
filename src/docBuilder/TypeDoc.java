@@ -16,7 +16,7 @@ final class TypeDoc{
   final List<Literal> variants= new ArrayList<>();
   final List<DocOcc> docs;
   final List<MethodDoc> methods= new ArrayList<>();
-  final Map<PosKey,MethodDoc> declaredByPos= new LinkedHashMap<>();
+  final Map<DeclaredMethodKey,MethodDoc> declaredByKey= new LinkedHashMap<>();
   final Map<ImportedKey,MethodDoc> importedByKey= new LinkedHashMap<>();
 
   Literal main(){ return variants.getFirst(); }
@@ -34,25 +34,26 @@ final class TypeDoc{
   }
 
   void declared(Pos pos, M m, List<DocOcc> docs, List<MethodRef> inheritedFrom){
-    var k= PosKey.of(pos);
-    var d= declaredByPos.get(k);
+    var k= DeclaredMethodKey.of(pos,m);
+    var d= declaredByKey.get(k);
     if (d == null){
       d= new MethodDoc(this,true,docs,inheritedFrom);
-      declaredByPos.put(k,d);
+      declaredByKey.put(k,d);
       methods.add(d);
     }
     else{ d.addInheritedFrom(inheritedFrom); }
     d.add(m);
   }
 
-  void imported(M m){
+  void imported(M m, List<MethodRef> from){
     var k= ImportedKey.of(m);
     var d= importedByKey.get(k);
     if (d == null){
-      d= new MethodDoc(this,false,List.of(),List.of());
+      d= new MethodDoc(this,false,List.of(),from);
       importedByKey.put(k,d);
       methods.add(d);
     }
+    else{ d.addInheritedFrom(from); }
     d.add(m);
   }
 }
@@ -84,21 +85,39 @@ final class MethodDoc{
   }
 }
 
-record MethodRef(TName owner, M method){}
+/*
+ * owner is the declaration used for the hyperlink target.
+ * provider is the actual type-use through which the method was found, when we
+ * have one. This preserves distinctions such as DataType[_] vs DataType[_,_].
+ */
+record MethodRef(TName owner, Optional<T.C> provider, M method){
+  static MethodRef provider(T.C provider, M method){
+    return new MethodRef(provider.name(),Optional.of(provider),method);
+  }
+  static MethodRef origin(M method){
+    return new MethodRef(method.sig().origin(),Optional.empty(),method);
+  }
+}
 
-record MethodRefKey(URI file, int line, int column, String selector, int arity){
-  static MethodRefKey of(MethodRef r){
-    var p= r.method().sig().span().pos();
-    return new MethodRefKey(
+record DeclaredMethodKey(URI file, int line, int column, String name, int arity){
+  static DeclaredMethodKey of(Pos p, M m){
+    return new DeclaredMethodKey(
       p.fileName(),
       p.line(),
       p.column(),
+      m.sig().m().s(),
+      m.sig().m().arity());
+  }
+}
+
+record MethodRefKey(String provider, String rc, String name, int arity){
+  static MethodRefKey of(MethodRef r){
+    return new MethodRefKey(
+      r.provider().map(Object::toString).orElse(r.owner().toString()),
+      r.method().sig().rc().name(),
       r.method().sig().m().s(),
       r.method().sig().m().arity());
   }
-}
-record PosKey(URI file, int line, int column){
-  static PosKey of(Pos p){ return new PosKey(p.fileName(),p.line(),p.column()); }
 }
 
 record ImportedKey(String origin, String rc, String name, int arity){

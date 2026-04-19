@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import core.*;
 import core.E.*;
@@ -34,6 +35,24 @@ final class HtmlDocRenderer{
   String lit(Literal l){ return expr(l); }
   String typeName(TName n){ return names().ofFull(n); }
 
+  String typeNameWithArity(TName n){
+    var base= typeName(n);
+    if (n.arity() == 0){ return base; }
+    return base+"["+IntStream.range(0,n.arity()).mapToObj(_ -> "_").collect(Collectors.joining(","))+"]";
+  }
+  
+  String typeName(T.C c){
+    if (c.ts().isEmpty()){ return typeNameWithArity(c.name()); }
+    return typeName(c.name())+"["+c.ts().stream().map(this::type).collect(Collectors.joining(","))+"]";
+  }
+
+  String type(T t){ return switch(t){
+    case T.X x -> x.name();
+    case T.RCX x -> x.rc()+" "+x.x().name();
+    case T.ReadImmX x -> "read/imm "+x.x().name();
+    case T.RCC r -> r.rc().toStrSpace()+typeName(r.c());
+  };}
+
   String render(){
     var shown= visibleTypes();
     var claims= inlineClaims(shown);
@@ -51,12 +70,14 @@ final class HtmlDocRenderer{
       .append("main{padding:2em;max-width:80em;box-sizing:border-box}\n")
       .append("h1{border-bottom:1px solid #bbb;padding-bottom:.3em}\n")
       .append(".type{margin:2em 0;padding:1em;border:1px solid #ccc;border-radius:.5em}\n")
-      .append(".method{margin:.7em 0 0 1.5em;padding:.5em;border-left:3px solid #ddd}\n")
+      .append(".method{margin:.25em 0 0 1.5em;padding:.15em .4em;border-left:3px solid #ddd}\n")
+      .append(".method summary{cursor:pointer;list-style-position:outside}\n")
+      .append(".method summary::-webkit-details-marker{margin-right:.35em}\n")
       .append(".sig{font-family:monospace;white-space:pre-wrap;font-size:1.08em;font-weight:600}\n")
       .append(".variant{font-family:monospace;white-space:pre-wrap}\n")
-      .append(".doc{margin:.4em 0;color:#333;font-size:.94em}\n")
+      .append(".doc{margin:.35em 0 .35em 1.3em;color:#333;font-size:.94em}\n")
       .append(".missing{color:#777;font-style:italic}\n")
-      .append(".imported,.variants{color:#555}\n")
+      .append(".from,.variants{color:#555}\n")
       .append("details{margin:.5em 0}\n")
       .append("</style>\n</head>\n<body>\n<div class=\"layout\">\n");
     renderToc(sb,shown);
@@ -113,7 +134,7 @@ final class HtmlDocRenderer{
     if (!t.main().cs().isEmpty()){
       sb.append("<p><b>Extends:</b> ")
         .append(t.main().cs().stream()
-          .map(c->typeLink(c.name()))
+          .map(c->typeLink(c))
           .collect(Collectors.joining(", ")))
         .append("</p>\n");
     }
@@ -122,40 +143,38 @@ final class HtmlDocRenderer{
     visibleMethods(t).forEach(m->renderMethod(sb,m,claims));
     sb.append("</section>\n");
   }
-
   void renderMethod(StringBuilder sb, MethodDoc m, Map<DocOcc,Object> claims){
-    sb.append("<div class=\"method\" id=\"").append(methodId(m.owner,m.main())).append("\">\n")
-      .append("<div class=\"sig\">").append(h(sig(m.main().sig()))).append("</div>\n");
-    if (m.declared){
-      renderDoc(sb,m,m.docs,claims);
-      renderInheritedLinks(sb,m);
-    }
-    else{ renderImported(sb,m); }
+    sb.append("<details class=\"method\" id=\"").append(methodId(m.owner,m.main())).append("\">\n")
+      .append("<summary><span class=\"sig\">").append(h(sig(m.main().sig()))).append("</span></summary>\n");
+    if (m.declared){ renderDoc(sb,m,m.docs,claims); }
+    renderFrom(sb,m);
     renderVariants(sb,"Typed method variants",m.variants);
-    sb.append("</div>\n");
+    sb.append("</details>\n");
   }
-
-  void renderImported(StringBuilder sb, MethodDoc m){
-    sb.append("<p class=\"doc imported\">Inherited from <a href=\"")
-      .append(h(linkTo(m.main().sig().origin(),m.main()))).append("\">")
-      .append(h(typeName(m.main().sig().origin())))
-      .append(h(m.main().sig().m().toString()))
-      .append("</a>.</p>\n");
-  }
-
-  void renderInheritedLinks(StringBuilder sb, MethodDoc m){
-    if (m.inheritedFrom.isEmpty()){ return; }
-    sb.append("<p class=\"doc imported\">Overrides ");
-    for (int i= 0; i < m.inheritedFrom.size(); i += 1){
+  void renderFrom(StringBuilder sb, MethodDoc m){
+    var refs= fromRefs(m);
+    if (refs.isEmpty()){ return; }
+    sb.append("<p class=\"doc from\">From: ");
+    for (int i= 0; i < refs.size(); i += 1){
       if (i > 0){ sb.append(", "); }
-      var r= m.inheritedFrom.get(i);
+      var r= refs.get(i);
       sb.append("<a href=\"")
         .append(h(linkTo(r.owner(),r.method()))).append("\">")
-        .append(h(typeName(r.owner())))
+        .append(h(refName(r)))
         .append(h(r.method().sig().m().toString()))
         .append("</a>");
     }
     sb.append(".</p>\n");
+  }
+
+  List<MethodRef> fromRefs(MethodDoc m){
+    if (!m.inheritedFrom.isEmpty()){ return m.inheritedFrom; }
+    if (m.declared){ return List.of(); }
+    return List.of(MethodRef.origin(m.main()));
+  }
+
+  String refName(MethodRef r){
+    return r.provider().map(this::typeName).orElseGet(()->typeNameWithArity(r.owner()));
   }
 
   void renderDoc(StringBuilder sb, Object owner, List<DocOcc> docs, Map<DocOcc,Object> claims){
@@ -187,10 +206,15 @@ final class HtmlDocRenderer{
   }
 
   String typeTitle(TypeDoc t){
-    if (!t.main().infName()){ return typeName(t.main().name()); }
+    if (!t.main().infName()){ return typeDeclName(t.main()); }
     return "anonymous literal at "+t.main().pos();
   }
-
+  String typeDeclName(Literal l){
+    if (l.bs().isEmpty()){ return typeNameWithArity(l.name()); }
+    return typeName(l.name())+l.bs().stream()
+      .map(B::compactToString)
+      .collect(Collectors.joining(",","[","]"));
+  }
   String shortTitle(TypeDoc t){
     if (!t.main().infName()){ return typeTitle(t); }
     var p= t.main().pos();
@@ -205,8 +229,8 @@ final class HtmlDocRenderer{
     return s;
   }
 
-  String typeLink(TName n){
-    return "<a href=\""+h(linkTo(n))+"\">"+h(typeName(n))+"</a>";
+  String typeLink(T.C c){
+    return "<a href=\""+h(linkTo(c.name()))+"\">"+h(typeName(c))+"</a>";
   }
 
   String linkTo(TName n){

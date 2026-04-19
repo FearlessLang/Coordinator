@@ -32,6 +32,7 @@ public final class HtmlDocBuilder implements DocBuilder{
   final OtherPackages other;
   final List<Literal> core;
   final Map<TName,Literal> currentByName;
+
   String pkgName;
   Path htmlPath;
   Map<String,String> uses= Map.of();
@@ -47,6 +48,7 @@ public final class HtmlDocBuilder implements DocBuilder{
     this.htmlPath= htmlPath;
     this.uses= DocNames.uses(pkgName,core);
   }
+
   @Override public void visitLiteral(Literal l){
     assert nonNull(l);
     var t= typeBySrc.get(l.src());
@@ -61,44 +63,19 @@ public final class HtmlDocBuilder implements DocBuilder{
       else{ visitImportedM(l,m); }
     }
   }
-  List<DocOcc> docsForLiteral(Literal l){
-    if (!l.infName()){ return docAt(l.pos()); }
-    if (l.pos().line() == 0){ return List.of(); }
-    return source(l.pos().fileName()).docsAt(l.pos(),false);
-  }
+
   @Override public void visitDeclaredM(Literal owner, M m){
     assert nonNull(owner,m);
     assert m.sig().origin().equals(owner.name());
     type(owner).declared(methodPos(m),m,methodDocAt(owner,m),inheritedMethods(owner,m));
   }
+
   @Override public void visitImportedM(Literal owner, M m){
     assert nonNull(owner,m);
     assert !m.sig().origin().equals(owner.name());
-    type(owner).imported(m);
+    type(owner).imported(m,inheritedMethods(owner,m));
   }
-  List<MethodRef> inheritedMethods(Literal owner, M m){
-    var res= new LinkedHashMap<MethodRefKey,MethodRef>();
-    owner.cs().stream()
-      .map(c->literal(c.name()))
-      .flatMap(Optional::stream)
-      .flatMap(sup->matchingMethods(sup,m))
-      .forEach(r->res.putIfAbsent(MethodRefKey.of(r),r));
-    return List.copyOf(res.values());
-  }
-  Stream<MethodRef> matchingMethods(Literal sup, M m){
-    return sup.ms().stream()
-      .filter(sm->sameSelector(sm,m))
-      .map(sm->new MethodRef(sm.sig().origin(),sm));
-  }
-  boolean sameSelector(M a, M b){
-    return a.sig().m().s().equals(b.sig().m().s())
-      && a.sig().m().arity() == b.sig().m().arity();
-  }
-  Optional<Literal> literal(TName n){
-    var local= currentByName.get(n);
-    if (local != null){ return Optional.of(local); }
-    return Optional.ofNullable(other.__of(n));
-  }
+
   @Override public void complete(){
     assert pkgName != null;
     assert htmlPath != null;
@@ -112,6 +89,37 @@ public final class HtmlDocBuilder implements DocBuilder{
   }
 
   Pos methodPos(M m){ return m.sig().span().pos(); }
+
+  List<MethodRef> inheritedMethods(Literal owner, M m){
+    var res= new LinkedHashMap<MethodRefKey,MethodRef>();
+    owner.cs().stream()
+      .flatMap(c->literal(c.name()).stream().flatMap(sup->matchingMethods(c,sup,m)))
+      .forEach(r->res.putIfAbsent(MethodRefKey.of(r),r));
+    return List.copyOf(res.values());
+  }
+
+  Stream<MethodRef> matchingMethods(T.C provider, Literal sup, M m){
+    return sup.ms().stream()
+      .filter(sm->sameSelector(sm,m))
+      .map(sm->MethodRef.provider(provider,sm));
+  }
+
+  boolean sameSelector(M a, M b){
+    return a.sig().m().s().equals(b.sig().m().s())
+      && a.sig().m().arity() == b.sig().m().arity();
+  }
+
+  Optional<Literal> literal(TName n){
+    var local= currentByName.get(n);
+    if (local != null){ return Optional.of(local); }
+    return Optional.ofNullable(other.__of(n));
+  }
+
+  List<DocOcc> docsForLiteral(Literal l){
+    if (!l.infName()){ return docAt(l.pos()); }
+    if (l.pos().line() == 0){ return List.of(); }
+    return source(l.pos().fileName()).docsAt(l.pos(),false);
+  }
 
   List<DocOcc> docAt(Pos pos){
     if (pos.line() == 0){ return List.of(); }
