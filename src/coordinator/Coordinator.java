@@ -39,7 +39,7 @@ public interface Coordinator {
     catch(FearlessException fe){ throw new UserExit(fe.render(oracle)); }
   }
   default void backend(String pkgName, List<Literal> core, SourceOracle oracle, OtherPackages other, OutputOracle out){
-    new NaiveBackendLogicMain().of(pkgName,core,out.rootDir(),rtPath());
+    new NaiveBackendLogicMain().of(pkgName,oracle,other,core,out.rootDir(),rtPath());
   }
 }
 class Helper{

@@ -9,25 +9,29 @@ import java.util.stream.IntStream;
 
 import core.*;
 import core.E.*;
+import docBuilder.DocBuilder;
 import tools.Fs;
 import utils.Join;
 import utils.Pos;
 
 public class Backend{
-  public Backend(Path out, String pkgName, List<Literal> decs){
-    assert nonNull(out,pkgName,decs);
+  public Backend(Path out, String pkgName, List<Literal> decs, DocBuilder docs){
+    assert nonNull(out,pkgName,decs,docs);
     assert unmodifiable(decs, "decs");
     this.out= out;
     this.pkgName= pkgName;
     this.decs= decs;
+    this.docs= docs;
   }
   Path out;
   String pkgName;
   List<Literal> decs;
+  DocBuilder docs;
   List<Consumer<Path>> fixers= new ArrayList<>();
   public List<Consumer<Path>> produceJavaCode(){
+    docs.packageLocation(pkgName,out.getParent().resolve(pkgName+".html"));
     cleanOutFolder();
-    decs.forEach(d->generateInterface(d,false));
+    decs.forEach(d->{docs.visitLiteral(d); generateInterface(d,false);});
     writeMainJava();
     return fixers;
   }
