@@ -59,6 +59,11 @@ record ProduceBody(BytecodeLineFix sb, Backend b, String iface, String thisName,
   };}
   private void emitLit(Literal lit){
     b.docs.visitLiteral(lit);
+    if (b.captureFree(lit)){
+      b.generateInterface(lit, false);
+      sb.a(b.decTypeName(lit.name())).a(".instance");
+      return;
+    }
     if(!lit.infName()){ b.generateInterface(lit, true); }
     var base= b.ifaceNameFor(lit);
       sb.a("new ").a(base).a("(){");

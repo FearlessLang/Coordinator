@@ -28,6 +28,10 @@ public class Backend{
   List<Literal> decs;
   DocBuilder docs;
   List<Consumer<Path>> fixers= new ArrayList<>();
+  private static final TName captureFreeName= new TName("base.CaptureFree",0,Pos.unknown);
+  boolean captureFree(Literal l){ return l.cs().stream().anyMatch(c->c.name().equals(captureFreeName)); }
+  private static final TName mainName= new TName("base.Main", 0,Pos.unknown);
+  boolean implementsBaseMain(Literal l){ return l.cs().stream().anyMatch(c->c.name().equals(mainName)); }
   public List<Consumer<Path>> produceJavaCode(){
     docs.packageLocation(pkgName,out.getParent().resolve(pkgName+".html"));
     cleanOutFolder();
@@ -40,7 +44,7 @@ public class Backend{
     Fs.cleanDirContents(out);
   }
   void generateInterface(Literal l, boolean abstractOnly){
-    var iface= ifaceNameFor(l);
+    var iface= decTypeName(l.name());
     var sb= new BytecodeLineFix(iface, l.pos().fileName())
       .a("package "+pkgName+";\n")
       .a("public interface "+iface+extendsClause(l)+"{\n");
@@ -53,11 +57,9 @@ public class Backend{
   }
   private boolean hasInstance(Literal l, boolean abstractOnly) {
     if (abstractOnly){ return false; } 
-    assert !l.thisName().isEmpty();
+    assert !l.thisName().isEmpty() || captureFree(l);
     return l.ms().stream().noneMatch(m->m.sig().abs());
   }
-  boolean implementsBaseMain(Literal l){ return l.cs().stream().anyMatch(c->c.name().equals(mainName)); }
-  private static TName mainName=new TName("base.Main", 0,Pos.unknown);
 
   String extendsClause(Literal lit){ return Join.of(
     lit.cs().stream().map(c->typeName(c.name())).distinct(),
@@ -96,7 +98,7 @@ public class Backend{
   }  
   String decTypeName(TName n){ return encodeTrailingPrimes(n.simpleName())+"$"+n.arity(); }
   String typeName(TName n){ return encodeTrailingPrimes(n.s())+"$"+n.arity(); }
-  Path ifaceFile(Literal l, Path dest){ return dest.resolve(ifaceNameFor(l)+".java"); }
+  Path ifaceFile(Literal l, Path dest){ return dest.resolve(decTypeName(l.name())+".java"); }
   String mangledMethodName(RC rc, MName m){ return rc.name()+"$"+methodBaseName(m)+"$"+m.arity(); }
   String methodBaseName(MName m){
     var s= m.s();

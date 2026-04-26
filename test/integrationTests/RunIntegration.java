@@ -23,5 +23,6 @@ public class RunIntegration {
   @Test void helloStackTraces(){ testOk("helloStackTraces");}
   @Test void testingStandardLibrary(){ testOk("testingStandardLibrary");}
   @Test void testDocs(){ testOk("testDocs");}
+  @Test void testingNorms(){ testOk("testingNorms");}
 
 }
