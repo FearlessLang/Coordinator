@@ -4,6 +4,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+
+import core.AllLs;
 import core.E.Literal;
 import realSourceOracle.SourceOracleWithAutoload;
 import core.OtherPackages;
@@ -21,7 +23,7 @@ record MiddleLayer(Coordinator coordinator, Layer next, LinkedHashMap<String,Lis
   @Override public OtherPackages compile(SourceOracle src, OutputOracle out){
     OtherPackages other= next.compile(src, out);
     var res= new Object(){
-      OtherPackages nextOther= next.compile(src, out);
+      OtherPackages nextOther= other;
       private void compilePkg(String pkg, List<Ref> files){
         long maxSrc= files.stream().mapToLong(Ref::lastModified).max().getAsLong();
         long maxIn= Math.max(maxSrc, other.stamp());//out.mapStamp() must be <= then other.watermark() since it comes from next
@@ -32,7 +34,7 @@ record MiddleLayer(Coordinator coordinator, Layer next, LinkedHashMap<String,Lis
         List<Literal> core= coordinator.frontend(pkg, files, rich.oracle(), other,other.virtualizationMap().getOrDefault(pkg,Map.of()));
         coordinator.backend(pkg, core, rich.oracle(), other, out);
         long newStamp= out.commitPkgApi(pkg, core, maxIn); // newStamp will be maxIn if there was no reason to commit. 
-        var map= core.stream().collect(Collectors.toUnmodifiableMap (Literal::name, d->d));
+        var map= AllLs.of(core).values().stream().collect(Collectors.toUnmodifiableMap (Literal::name, d->d));
         nextOther = nextOther.mergeWith(map,newStamp);
       }};
     pkgs.forEach(res::compilePkg);
@@ -50,6 +52,6 @@ record BaseLayer(Coordinator coordinator, Map<String,Map<String,String>> map, lo
     List<Literal> core= coordinator.frontend(pkgName,o.allFiles(),o,other,Map.of());
     coordinator.backend(pkgName,core,o,other,out);
     long newStamp= out.commitPkgApi(pkgName, core, baseStamp);
-    return OtherPackages.start(map, core, newStamp);
+    return OtherPackages.start(map, AllLs.of(core).values(), newStamp);
   }
 }

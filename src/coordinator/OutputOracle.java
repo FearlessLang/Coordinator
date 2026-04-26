@@ -11,6 +11,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import apiJson.ApiJson;
 import coordinatorMessages.CacheCorruptionError;
+import core.AllLs;
 import core.E.Literal;
 import core.M;
 import core.OtherPackages;
@@ -84,8 +85,10 @@ class OutputHelper{
     return Optional.of(out);
   }
   boolean consistent(Map<TName,Literal> map, List<Literal> core){
-    for (var l: core){
-      if (!l.name().isPublic()){ continue; }
+    var allCore= AllLs.of(core).values();
+    if (map.size() != allCore.size()){ return false; }
+    for (var l: allCore){
+      //if (!l.name().isPublic()){ continue; }//No, privates can still be mentioned in meth parameters and ret types.
       var cached= map.get(l.name());
       if (cached == null){ return false; }
       if (!eqApi(l, cached)){ return false; }

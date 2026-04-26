@@ -24,7 +24,7 @@ public class NaiveBackendLogicMain {
     var pkgPath= classes.resolve(pkgName);
     Runnable post= ()->fixers.forEach(f->f.accept(pkgPath));
     var javacOut= Fs.of(()->JavacTool.compileTree(outPath, classes,post,rootDir.resolve("gen_java",pkgName+".jar")));
-    assert javacOut.isEmpty();
+    assert javacOut.isEmpty(): javacOut;
     docs.complete();
   }
 }

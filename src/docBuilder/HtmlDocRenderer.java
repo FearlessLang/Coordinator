@@ -7,12 +7,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 import core.*;
 import core.E.*;
-import message.CompactPrinter;
-import message.TypeNamePrinter;
 import utils.Pos;
 
 final class HtmlDocRenderer{
@@ -21,37 +18,13 @@ final class HtmlDocRenderer{
     this.pkgName= pkgName;
     this.uses= uses;
     this.types= types;
+    this.toStr= new ExportedToStr(pkgName, uses);
   }
 
   final String pkgName;
   final Map<String,String> uses;
   final List<TypeDoc> types;
-
-  CompactPrinter printer(){ return new CompactPrinter(pkgName,uses,false); }
-  TypeNamePrinter names(){ return new TypeNamePrinter(false,pkgName,uses); }
-
-  String expr(E e){ return printer().limit(e,220); }
-  String sig(Sig s){ return printer().sig(s).stripLeading(); }
-  String lit(Literal l){ return expr(l); }
-  String typeName(TName n){ return names().ofFull(n); }
-
-  String typeNameWithArity(TName n){
-    var base= typeName(n);
-    if (n.arity() == 0){ return base; }
-    return base+"["+IntStream.range(0,n.arity()).mapToObj(_ -> "_").collect(Collectors.joining(","))+"]";
-  }
-  
-  String typeName(T.C c){
-    if (c.ts().isEmpty()){ return typeNameWithArity(c.name()); }
-    return typeName(c.name())+"["+c.ts().stream().map(this::type).collect(Collectors.joining(","))+"]";
-  }
-
-  String type(T t){ return switch(t){
-    case T.X x -> x.name();
-    case T.RCX x -> x.rc()+" "+x.x().name();
-    case T.ReadImmX x -> "read/imm "+x.x().name();
-    case T.RCC r -> r.rc().toStrSpace()+typeName(r.c());
-  };}
+  final ExportedToStr toStr;
 
   String render(){
     var shown= visibleTypes();
@@ -106,7 +79,7 @@ final class HtmlDocRenderer{
 
   String methodSortKey(MethodDoc m){
     var s= m.main().sig();
-    return s.m().s()+"/"+s.m().arity()+"/"+s.rc()+"/"+sig(s);
+    return s.m().s()+"/"+s.m().arity()+"/"+s.rc()+"/"+toStr.sig(s);
   }
 
   Map<DocOcc,Object> inlineClaims(List<TypeDoc> shown){
@@ -145,7 +118,7 @@ final class HtmlDocRenderer{
   }
   void renderMethod(StringBuilder sb, MethodDoc m, Map<DocOcc,Object> claims){
     sb.append("<details class=\"method\" id=\"").append(methodId(m.owner,m.main())).append("\">\n")
-      .append("<summary><span class=\"sig\">").append(h(sig(m.main().sig()))).append("</span></summary>\n");
+      .append("<summary><span class=\"sig\">").append(h(toStr.sig(m.main().sig()))).append("</span></summary>\n");
     if (m.declared){ renderDoc(sb,m,m.docs,claims); }
     renderFrom(sb,m);
     renderVariants(sb,"Typed method variants",m.variants);
@@ -174,7 +147,7 @@ final class HtmlDocRenderer{
   }
 
   String refName(MethodRef r){
-    return r.provider().map(this::typeName).orElseGet(()->typeNameWithArity(r.owner()));
+    return r.provider().map(toStr::typeName).orElseGet(()->toStr.typeNameWithArity(r.owner()));
   }
 
   void renderDoc(StringBuilder sb, Object owner, List<DocOcc> docs, Map<DocOcc,Object> claims){
@@ -200,8 +173,8 @@ final class HtmlDocRenderer{
   }
 
   String variant(Object v){
-    if (v instanceof Literal l){ return lit(l); }
-    if (v instanceof M m){ return sig(m.sig()); }
+    if (v instanceof Literal l){ return toStr.lit(l); }
+    if (v instanceof M m){ return toStr.sig(m.sig()); }
     return String.valueOf(v);
   }
 
@@ -210,8 +183,8 @@ final class HtmlDocRenderer{
     return "anonymous literal at "+t.main().pos();
   }
   String typeDeclName(Literal l){
-    if (l.bs().isEmpty()){ return typeNameWithArity(l.name()); }
-    return typeName(l.name())+l.bs().stream()
+    if (l.bs().isEmpty()){ return toStr.typeNameWithArity(l.name()); }
+    return toStr.typeName(l.name())+l.bs().stream()
       .map(B::compactToString)
       .collect(Collectors.joining(",","[","]"));
   }
@@ -230,7 +203,7 @@ final class HtmlDocRenderer{
   }
 
   String typeLink(T.C c){
-    return "<a href=\""+h(linkTo(c.name()))+"\">"+h(typeName(c))+"</a>";
+    return "<a href=\""+h(linkTo(c.name()))+"\">"+h(toStr.typeName(c))+"</a>";
   }
 
   String linkTo(TName n){
