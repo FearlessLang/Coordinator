@@ -17,7 +17,7 @@ public class NaiveBackendLogicMain {
     var docs= new HtmlDocBuilder(oracle,other,core);
     var fixers= new Backend(outPath, pkgName, core, docs).produceJavaCode();
     assert Files.exists(rtPath): "Missing extra folder: "+rtPath;
-    if (pkgName.equals("base")){ Fs.copyTree(rtPath, outPath); }
+    if (pkgName.equals("base")){ Fs.copyTreeFlat(rtPath, outPath); }
     var classes= rootDir.resolve("gen_java","_classes");
     Fs.ensureDir(classes);
     Fs.cleanDirContents(classes);
