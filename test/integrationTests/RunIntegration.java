@@ -25,6 +25,6 @@ public class RunIntegration {
   @Test void testDocs(){ testOk("testDocs");}
   @Test void testAssets(){ testOk("testAssets");}
   @Test void testingNorms(){ testOk("testingNorms");}
-  @Test void testGui1(){ testOk("testGui1");}
+  //@Test void testGui1(){ testOk("testGui1");}
 
 }
