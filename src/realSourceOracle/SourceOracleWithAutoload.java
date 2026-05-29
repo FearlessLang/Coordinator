@@ -13,7 +13,8 @@ public record SourceOracleWithAutoload(SourceOracle base, Ref autoload, URI auto
   public record Res(SourceOracle oracle, List<Ref> newRefs){}
   public static final String autoloadFileSuffix= "/autoloaded_assets.fear";
   public static final List<AutoloadHandler> handlers= List.of(
-    new TxtAutoloadHandler()
+    new TxtAutoloadHandler(),
+    new ImageAutoloadHandler()
   );
   public static Res of(SourceOracle base, String pkgName){
     if (suppressed(base, pkgName)){ return new Res(base, List.of()); }
