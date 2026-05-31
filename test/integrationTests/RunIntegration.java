@@ -7,9 +7,12 @@ import org.junit.jupiter.api.Test;
 
 import coordinator.Coordinator;
 import mainCoordinator.ResolveResource;
+import tools.JavacTool;
 
 public class RunIntegration {
   void testOk(String name){
+    System.setProperty(JavacTool.appDirKey,ResolveResource.stLibPath.getParent()
+      .resolve("fearlessArtefact","fearless","app").toString());
     var c= new Coordinator(){
       public Path rtPath(){    return ResolveResource.stLibRTPath; }  
       public Path stLibPath(){ return ResolveResource.stLibPath; }

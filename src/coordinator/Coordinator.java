@@ -19,6 +19,7 @@ import naiveBackend.NaiveBackendLogicMain;
 import realSourceOracle.RealSourceOracleWithZip;
 import tools.Fs;
 import tools.JavaTool;
+import tools.JavacTool;
 import tools.SourceOracle;
 import tools.SourceOracle.Ref;
 
@@ -27,8 +28,10 @@ public interface Coordinator {
   Path stLibPath();
 
   default void runAllMains(String pkgName,OutputOracle out) throws InterruptedException{
-    var jars= out.rootDir().resolve("gen_java");
-    var data= List.of("-DfearlessUser.dir="+jars.getParent().getParent());
+    var jars= out.rootDir().resolve("gen_java");    
+    var data= List.of(
+      "--enable-native-access=ALL-UNNAMED",
+      "-DfearlessUser.dir="+jars.getParent().getParent());
     JavaTool.runMainFromJars(data,jars,pkgName+".Main");
   }
   default SourceOracle sourceOracle(Path path){ return new RealSourceOracleWithZip(path); }
@@ -40,6 +43,11 @@ public interface Coordinator {
   }
   default void backend(String pkgName, List<Literal> core, SourceOracle oracle, OtherPackages other, OutputOracle out){
     new NaiveBackendLogicMain().of(pkgName,oracle,other,core,out.rootDir(),rtPath());
+  }
+  default Path modsPath(){
+    var appDir= System.getProperty(JavacTool.appDirKey);
+    assert appDir != null;
+    return Path.of(appDir).resolve("mods");
   }
 }
 class Helper{
@@ -59,6 +67,7 @@ class Helper{
     l = layers(coordinator,map,l,allRanks.stream()
       .sorted(Comparator.comparingInt(Helper::rankNumber).thenComparing(Object::toString)).toList());
     l.compile(o, out);
+    Fs.copyTreeFlat(coordinator.modsPath(),out.rootDir().resolve("gen_java"));
     for(var p: l.pkgs().keySet()){ coordinator.runAllMains(p,out); }
   }
   static Layer layers(Coordinator coordinator, Map<String,List<Ref>> map, Layer l, List<Ref> ranks){

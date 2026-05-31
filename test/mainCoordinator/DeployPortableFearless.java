@@ -16,7 +16,8 @@ public class DeployPortableFearless{
       ResolveResource.coordinatorSrc,
       ResolveResource.coordinatorSrcModule,
       ResolveResource.stLibPath,//base
-      ResolveResource.stLibRTPath//rt
+      ResolveResource.stLibRTPath,//rt
+      ResolveResource.coordinatorJars
     ).build();
   }
 }

@@ -20,7 +20,8 @@ public record ResolveResource(Path assetRoot, Path artefactRoot, Optional<Path> 
   static public final Path frontendSrc= LocalResources.frontendSrc; 
   static public final Path frontendSrcModule= LocalResources.frontendSrcModule; 
   static public final Path coordinatorSrc= LocalResources.coordinatorSrc; 
-  static public final Path coordinatorSrcModule= LocalResources.coordinatorSrcModule; 
+  static public final Path coordinatorSrcModule= LocalResources.coordinatorSrcModule;
+  static public final Path coordinatorJars= coordinatorSrc.getParent().resolve("externalJars"); 
 
   static public final Path portableFolderOut= LocalResources.portableFolderOut;
   static public final Path badZipCorpous= LocalResources.badZipCorpous;
