@@ -1,5 +1,6 @@
 package coordinator;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -66,8 +67,13 @@ class Helper{
     Layer l= mapFromRanks(coordinator,allRanks,o,out,maxStamp);
     l = layers(coordinator,map,l,allRanks.stream()
       .sorted(Comparator.comparingInt(Helper::rankNumber).thenComparing(Object::toString)).toList());
-    l.compile(o, out);
+    //--probe to remove
+var mods= coordinator.modsPath();
+System.err.println("PROBE modsPath="+mods+" exists="+Files.isDirectory(mods));
+Fs.walk(mods,s->s.map(Path::toString).sorted().toList()).forEach(p->System.err.println("PROBE mods: "+p));
+    //--
     Fs.copyTreeFlat(coordinator.modsPath(),out.rootDir().resolve("gen_java"));
+    l.compile(o, out);
     for(var p: l.pkgs().keySet()){ coordinator.runAllMains(p,out); }
   }
   static Layer layers(Coordinator coordinator, Map<String,List<Ref>> map, Layer l, List<Ref> ranks){

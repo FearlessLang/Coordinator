@@ -1,6 +1,5 @@
 package testBuildBase;
 
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.nio.file.Path;
@@ -15,6 +14,7 @@ import coordinator.OutputOracle;
 import core.OtherPackages;
 import core.E.Literal;
 import mainCoordinator.ResolveResource;
+import tools.Fs;
 import tools.JavaTool;
 import tools.SourceOracle;
 
@@ -22,16 +22,18 @@ class TestBuildBase {
   Coordinator c= new Coordinator(){
     @Override public Path rtPath(){    return ResolveResource.stLibRTPath; }  
     @Override public Path stLibPath(){ return ResolveResource.stLibPath; }
+    @Override public Path modsPath(){  return ResolveResource.coordinatorJars; }
 
-    @Override  public void main(Path path) throws InterruptedException{
+    @Override public void main(Path path) throws InterruptedException{
       OutputOracle out= ()->ResolveResource.stLibDebugOut;
       var pkgName= "base";
       var other= OtherPackages.empty();
       SourceOracle o= sourceOracle(stLibPath());
       List<Literal> core= frontend(pkgName,o.allFiles(),o,other,Map.of());
+      Fs.copyTreeFlat(modsPath(),out.rootDir().resolve("gen_java"));
       backend(pkgName,core,o,other,out);
       var classes= out.rootDir().resolve("gen_java","_classes");
-      var runOut= JavaTool.runMain(List.of("-DfearlessUser.dir="+out.rootDir().getParent()),classes, pkgName+".Main");
+      var runOut= JavaTool.runMain(List.of("-DfearlessUser.dir="+out.rootDir().getParent()),classes,modsPath(),pkgName+".Main");
       assertEquals("", runOut);
     }
   };

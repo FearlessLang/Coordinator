@@ -4,7 +4,7 @@ module Coordinator {
   requires FearlessFrontend;
   requires java.desktop;
   requires java.sql;
-  requires org.xerial.sqlitejdbc;
+  //requires org.xerial.sqlitejdbc;
 
   exports mainCoordinator;
 }
