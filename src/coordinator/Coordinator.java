@@ -48,7 +48,9 @@ public interface Coordinator {
   default Path modsPath(){
     var appDir= System.getProperty(JavacTool.appDirKey);
     assert appDir != null;
-    return Path.of(appDir).resolve("mods");
+    var path =  Path.of(appDir).resolve("mods");
+    Fs.ensureDir(path);
+    return path;
   }
 }
 class Helper{
@@ -68,9 +70,9 @@ class Helper{
     l = layers(coordinator,map,l,allRanks.stream()
       .sorted(Comparator.comparingInt(Helper::rankNumber).thenComparing(Object::toString)).toList());
     //--probe to remove
-var mods= coordinator.modsPath();
-System.err.println("PROBE modsPath="+mods+" exists="+Files.isDirectory(mods));
-Fs.walk(mods,s->s.map(Path::toString).sorted().toList()).forEach(p->System.err.println("PROBE mods: "+p));
+// var mods= coordinator.modsPath();
+// System.err.println("PROBE modsPath="+mods+" exists="+Files.isDirectory(mods));
+// Fs.walk(mods,s->s.map(Path::toString).sorted().toList()).forEach(p->System.err.println("PROBE mods: "+p));
     //--
     Fs.copyTreeFlat(coordinator.modsPath(),out.rootDir().resolve("gen_java"));
     l.compile(o, out);
