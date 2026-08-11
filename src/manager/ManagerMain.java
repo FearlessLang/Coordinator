@@ -22,6 +22,8 @@ import managerMessages.InternalBug;
 import managerMessages.RuntimeBroken;
 import managerMessages.UserActionable;
 import managerMessages.UserProblem;
+import tools.Fs;
+import tools.JavacTool;
 import utils.Bug;
 //Resource policy: the manager is a long living process. Resources opened for
 //its WHOLE life (the instance lock, the watch service, the worker threads,
@@ -74,18 +76,18 @@ public class ManagerMain {
   }
   //heuristic to navigate the path upwards
   private static Path locateBinDir(){
+    var expectedDirName= JavacTool.appNameFor(Main.reqVersionId())+(Fs.isMac() ? ".app" : "");
     Path startedFrom= Main.reqAppDir().toAbsolutePath().normalize();//TODO: is this absolute needed?
     for(var dir= startedFrom; dir != null; dir= dir.getParent()){
       Path name= dir.getFileName();
       if (name == null){ break; }//a root has no name and cannot be our folder
-      var isBinName= name.toString().startsWith("fearlessBin");//TODO: bad, we should instead hard code how jpackage handle it for OS and check the corresponding place
-      if (isBinName){ return dir; }
+      if (name.toString().equals(expectedDirName)){ return dir; }
     }
-    throw Bug.unreachable();//throw UserActionable.programFolderNotFound(startedFrom);
+    throw RuntimeBroken.programFolderNotFound(startedFrom, expectedDirName);
   }
   private static Path resolveManagerDir(){
     var host= InstallLocation.isInstalled(binDir) ? InstallLocation.userDataHome() : codeDir();
-    return host.resolve("fearlessData");
+    return host.resolve(JavacTool.dataDirNameFor(Main.reqVersionId()));
   }
   //The folder holding the program folder. Reached only when the program folder is NOT in
   //an installed-programs location, so Fearless was unpacked here and owns this folder:

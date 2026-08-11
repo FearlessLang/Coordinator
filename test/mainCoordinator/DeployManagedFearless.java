@@ -18,7 +18,7 @@ public class DeployManagedFearless{
       ResolveResource.stLibPath,//base
       ResolveResource.stLibRTPath,//rt
       ResolveResource.coordinatorJars,
-      "fearlessBin"+ResolveResource.versionId,
+      ResolveResource.versionId,
       "Coordinator/manager.ManagerMain"
     ).build();
   }
