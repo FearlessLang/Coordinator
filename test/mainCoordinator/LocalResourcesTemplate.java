@@ -20,6 +20,7 @@ public class LocalResourcesTemplate { //public class LocalResources {
   static public final Path coordinatorSrc= prefix.resolve("Coordinator","src");
   static public final Path coordinatorSrcModule= prefix.resolve("Coordinator","srcModule");
   static public final Path portableFolderOut= prefix.resolve("StandardLibrary","fearlessArtefact");
+  static public final Path managedFolderOut= prefix.resolve("StandardLibrary","fearlessManagedArtefact");
   static public final Path badZipCorpous= prefix.resolve("Coordinator","badZips");
   static public final Path packaging= prefix.resolve("Coordinator","_fearless_packaging");
   static public final String javaVersion= "24";
