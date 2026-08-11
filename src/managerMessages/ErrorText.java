@@ -1,6 +1,5 @@
 package managerMessages;
 
-import tools.FearlessId;
 
 //The pieces of text that more than one message needs, written once.
 final class ErrorText {
@@ -21,19 +20,6 @@ final class ErrorText {
     The manager folder is the folder used by the manager process to store
     coordination information into files.
     """;
-  }
-  //Fearless is not asked where to keep what it writes, and does not ask the operating
-  //system either: it reads where its own code sits and follows the convention of that
-  //place. Every message naming the manager folder also states this rule, so that the
-  //folder in the message is never a folder out of nowhere.
-  static String managerFolderRule(){ return """
-    Fearless offers no setting for this folder. It reads where its own program
-    folder "%s" sits, and follows the convention of that place:
-    - when the program folder sits where this operating system keeps installed
-      programs, the manager folder goes where this operating system keeps what
-      one program writes for one user;
-    - otherwise the manager folder goes next to the program folder, named "%s".
-    """.formatted(FearlessId.binFolder, FearlessId.dataFolder);
   }
   static String blockingPrograms(){ return """
     Programs that may use or block this folder include security software

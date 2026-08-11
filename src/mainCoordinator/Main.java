@@ -38,8 +38,17 @@ import tools.JavacTool;
 
 public final class Main{
   private static final AtomicInteger macSpawnOk= new AtomicInteger(0);
+  public static Path reqAppDir(){//also used in manager, TODO: refactor
+    var launcher= System.getProperty(JavacTool.launcherKey);
+    var appDir= System.getProperty(JavacTool.appDirKey);
+    if (launcher == null || appDir == null){ throw UserExit.mustUseLauncher(); }
+    var res= Path.of(appDir);
+    if (!res.isAbsolute()){ throw UserExit.mustUseLauncher(); }
+    return res;
+  }
+
   public static void main(String[] args){
-    checkFlags();
+    reqAppDir();
     try{ if (!hasConsoleFlag()){ hookStd(); } run(args); }
     catch(UserExit e){ System.err.print(e.getMessage()); }
     catch(UserTreeError e){ System.err.print(e.getMessage()); }
@@ -49,7 +58,6 @@ public final class Main{
       System.err.print(UserExit.crash(t));
     }
   }
-  private static void checkFlags(){ LauncherProps.reqAppDir(); }
   private static void run(String[] args) throws InvocationTargetException, InterruptedException, ExecutionException{
     var appDir= reqAppDir();
     Optional<Path> launch= launchPath(args);
@@ -116,7 +124,7 @@ public final class Main{
       area.append(s);
     });
   }  
-  public static boolean hasConsoleFlag(){ return LauncherProps.hasConsoleFlag(); }
+  public static boolean hasConsoleFlag(){ return JavacTool.consoleKey.equals(System.getProperty(JavacTool.launcherKey)); }
   private static Optional<Path> launchPath(String[] args){
     return Stream.of(args)
       .filter(a->!a.startsWith("-psn_"))
@@ -128,7 +136,6 @@ public final class Main{
     catch(RuntimeException ex){ throw UserExit.badLaunchArg(s); }
     return p.toAbsolutePath().normalize();
   }
-  private static Path reqAppDir(){ return LauncherProps.reqAppDir(); }
 }
 class Utf8Sink extends OutputStream{
   private final Consumer<String> out;

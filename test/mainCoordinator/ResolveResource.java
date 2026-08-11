@@ -28,5 +28,6 @@ public record ResolveResource(Path assetRoot, Path artefactRoot, Optional<Path> 
   static public final Path badZipCorpous= LocalResources.badZipCorpous;
   static public final Path packaging= LocalResources.packaging;
 
-  static public final String javaVersion= LocalResources.javaVersion;
+  static public final String javaVersion= "26";
+  public static final String versionId= "0_001";
 }

@@ -45,12 +45,6 @@ public interface Coordinator {
   default void backend(String pkgName, List<Literal> core, SourceOracle oracle, OtherPackages other, OutputOracle out){
     new NaiveBackendLogicMain().of(pkgName,oracle,other,core,out.rootDir(),rtPath());
   }
-  // "mods" here is jpackage's own app-image naming convention, not ours: PortableApp
-  // stages the module jars under a build-time-only dir named JavacTool.buildModsDirName
-  // ("_mods"), and jpackage copies that content into the deployed app under a dir
-  // named JavacTool.deployedModsDirName ("mods") — confirmed by JavacTool.jpackage's
-  // own post-build check. Keep this resolve() in sync with that constant, not a
-  // literal, so the two can't silently drift apart again.
   default Path modsPath(){
     var appDir= System.getProperty(JavacTool.appDirKey);
     assert appDir != null;

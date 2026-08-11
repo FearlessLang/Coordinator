@@ -27,7 +27,6 @@ public class Manager {
     //Resource policy (see ManagerMain): the watch service, the executor,
     //the workers and the window live for the whole process life and are ended
     //by process exit; every path out of this method leads to System.exit.
-    FearlessIcon.load();//before the first window: a damaged copy says so instead of failing inside the GUI
     var executor= Executors.newVirtualThreadPerTaskExecutor();
     var watcher= watcher(msgDir);//registered BEFORE the first drain: messages arriving in between queue up, they are not lost
     var stop= new Stop();

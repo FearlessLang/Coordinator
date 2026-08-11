@@ -15,14 +15,13 @@ import java.util.UUID;
 import coordinatorMessages.UserExit;
 import fileSupport.NativeLocaleForcer;
 import fileSupport.StringFiles;
-import mainCoordinator.LauncherProps;
+import mainCoordinator.Main;
 import managerMessages.EnvironmentBusy;
 import managerMessages.ErrorContext;
 import managerMessages.InternalBug;
 import managerMessages.RuntimeBroken;
 import managerMessages.UserActionable;
 import managerMessages.UserProblem;
-import tools.FearlessId;
 import utils.Bug;
 //Resource policy: the manager is a long living process. Resources opened for
 //its WHOLE life (the instance lock, the watch service, the worker threads,
@@ -73,34 +72,20 @@ public class ManagerMain {
     //manager start. Messages are never lost, only delayed.
     Manager.runOwner(msgDir());
   }
-  //Where is "the application", as the user sees it?
-  //The launcher hands over $APPDIR (LauncherProps): a folder inside the app image, at a
-  //place jpackage picks differently on each operating system. The folder holding the code
-  //is the one named FearlessId.binFolder on the way up from there.
-  //We match OUR OWN name, we do not count folder levels: the nesting is jpackage's
-  //business and differs per OS (and on mac the app image is a bundle, folder name
-  //<binFolder>.app, whose inside must not be written to as it would break the code
-  //signature), while the name is the one thing this deploy chose and this code knows.
+  //heuristic to navigate the path upwards
   private static Path locateBinDir(){
-    var startedFrom= LauncherProps.reqAppDir().toAbsolutePath().normalize();
+    Path startedFrom= Main.reqAppDir().toAbsolutePath().normalize();//TODO: is this absolute needed?
     for(var dir= startedFrom; dir != null; dir= dir.getParent()){
-      var name= dir.getFileName();
+      Path name= dir.getFileName();
       if (name == null){ break; }//a root has no name and cannot be our folder
-      if (isBinName(name.toString())){ return dir; }
+      var isBinName= name.toString().startsWith("fearlessBin");//TODO: bad, we should instead hard code how jpackage handle it for OS and check the corresponding place
+      if (isBinName){ return dir; }
     }
-    throw UserActionable.programFolderNotFound(startedFrom);
+    throw Bug.unreachable();//throw UserActionable.programFolderNotFound(startedFrom);
   }
-  private static boolean isBinName(String name){
-    return name.equals(FearlessId.binFolder) || name.equals(FearlessId.binFolder+".app");
-  }
-  //Manager folder resolution: read where the code sits, then follow the convention of
-  //that place. No probing of what is writable: a writability probe answers about this
-  //instant, and the answer moves the user's data the first time an antivirus, a backup
-  //tool or a permission change makes the probe say otherwise. A location is stable.
-  //No setting either: the folder is fearless+versionId, and only this rule places it.
   private static Path resolveManagerDir(){
     var host= InstallLocation.isInstalled(binDir) ? InstallLocation.userDataHome() : codeDir();
-    return host.resolve(FearlessId.dataFolder);
+    return host.resolve("fearlessData");
   }
   //The folder holding the program folder. Reached only when the program folder is NOT in
   //an installed-programs location, so Fearless was unpacked here and owns this folder:
