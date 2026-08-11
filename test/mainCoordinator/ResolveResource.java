@@ -24,6 +24,7 @@ public record ResolveResource(Path assetRoot, Path artefactRoot, Optional<Path> 
   static public final Path coordinatorJars= coordinatorSrc.getParent().resolve("externalJars"); 
 
   static public final Path portableFolderOut= LocalResources.portableFolderOut;
+  static public final Path managedFolderOut= LocalResources.managedFolderOut;
   static public final Path badZipCorpous= LocalResources.badZipCorpous;
   static public final Path packaging= LocalResources.packaging;
 

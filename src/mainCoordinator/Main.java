@@ -49,13 +49,7 @@ public final class Main{
       System.err.print(UserExit.crash(t));
     }
   }
-  private static void checkFlags(){
-    var a= System.getProperty(JavacTool.launcherKey);
-    var b= System.getProperty(JavacTool.appDirKey);
-    if (a == null || b == null){ throw UserExit.mustUseLauncher(); }
-    if (!Path.of(b).isAbsolute()){ throw UserExit.mustUseLauncher(); }
- 
-  }
+  private static void checkFlags(){ LauncherProps.reqAppDir(); }
   private static void run(String[] args) throws InvocationTargetException, InterruptedException, ExecutionException{
     var appDir= reqAppDir();
     Optional<Path> launch= launchPath(args);
@@ -122,7 +116,7 @@ public final class Main{
       area.append(s);
     });
   }  
-  public static boolean hasConsoleFlag(){ return JavacTool.consoleKey.equals(System.getProperty(JavacTool.launcherKey)); }
+  public static boolean hasConsoleFlag(){ return LauncherProps.hasConsoleFlag(); }
   private static Optional<Path> launchPath(String[] args){
     return Stream.of(args)
       .filter(a->!a.startsWith("-psn_"))
@@ -134,7 +128,7 @@ public final class Main{
     catch(RuntimeException ex){ throw UserExit.badLaunchArg(s); }
     return p.toAbsolutePath().normalize();
   }
-  private static Path reqAppDir(){ return Path.of(System.getProperty(JavacTool.appDirKey)); }
+  private static Path reqAppDir(){ return LauncherProps.reqAppDir(); }
 }
 class Utf8Sink extends OutputStream{
   private final Consumer<String> out;
