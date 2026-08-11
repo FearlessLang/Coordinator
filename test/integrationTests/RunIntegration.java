@@ -14,8 +14,9 @@ public class RunIntegration {
     System.setProperty(JavacTool.appDirKey,ResolveResource.stLibPath.getParent()
       .resolve("fearlessArtefact","fearless","app").toString());
     var c= new Coordinator(){
-      public Path rtPath(){    return ResolveResource.stLibRTPath; }  
+      public Path rtPath(){    return ResolveResource.stLibRTPath; }
       public Path stLibPath(){ return ResolveResource.stLibPath; }
+      public Path modsPath(){  return ResolveResource.coordinatorJars; }
     };
     try { c.main(ResolveResource.integrationTests.resolve(name));}
     catch (InterruptedException e){ Assertions.fail(e);}
