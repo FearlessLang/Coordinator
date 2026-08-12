@@ -45,4 +45,18 @@ public final class RuntimeBroken {
         ErrorText.freshCopyThenReport()
       ));
   }
+  public static UserProblem programFolderNotFound(Path startedFrom, String expectedDirName){
+    return UserProblem.processExits("""
+      Fearless could not find its own program folder.
+
+      This copy of Fearless appears to have been moved, renamed, or damaged:
+      no folder named "%s" exists above
+      %s
+
+      %s""".formatted(
+        expectedDirName,
+        ErrorText.path(startedFrom.toString()),
+        ErrorText.freshCopyThenReport()
+      ));
+  }
 }

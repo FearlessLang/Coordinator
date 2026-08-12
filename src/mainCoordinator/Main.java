@@ -46,7 +46,11 @@ public final class Main{
     if (!res.isAbsolute()){ throw UserExit.mustUseLauncher(); }
     return res;
   }
-
+  public static String reqVersionId(){//also used in manager, TODO: refactor
+    var versionId= System.getProperty(JavacTool.versionIdKey);
+    if (versionId == null){ throw UserExit.mustUseLauncher(); }
+    return versionId;
+  }
   public static void main(String[] args){
     reqAppDir();
     try{ if (!hasConsoleFlag()){ hookStd(); } run(args); }
