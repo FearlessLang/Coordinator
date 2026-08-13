@@ -193,80 +193,71 @@ Other rules (everywhere)
     + "- Keep only normal files and folders here."
     );
   }
-  public static UserExit needsExtension(RefParent kid){ return needsExtension(showRel(kid)); }
-  public static UserExit needsExtension(String kid){
-    return UserExit.fail(kid,
+  public static UserExit needsExtension(RefParent kid){
+    return UserExit.fail(showRel(kid),
       "- This file has no extension.\n"
     + "  Files normally must be named like \"name.ext\" (one dot).",
       "- Rename it to have a single extension (example: \"foo.txt\", \"source.fear\").\n"
     + "- Rename it to a well-known extensionless file (example: \"readme\")."
     );
   }
-  public static UserExit visibleMustStartWithLetterOrUnderscore(RefParent kid){ return visibleMustStartWithLetterOrUnderscore(showRel(kid)); }
-  public static UserExit visibleMustStartWithLetterOrUnderscore(String kid){
-    return UserExit.fail(kid,
+  public static UserExit visibleMustStartWithLetterOrUnderscore(RefParent kid){
+    return UserExit.fail(showRel(kid),
       "- A visible folder/file name starts with an invalid character.\n"
     + "  Visible names must start with a lowercase letter (a-z) or underscore (_).",
       "- Rename it to start with a-z or _.\n"
     + "  Examples: \"foo\", \"_tmp\", \"foo1\"."
     );
   }
-  public static UserExit visibleInvalidChar(RefParent kid, char c){ return visibleInvalidChar(showRel(kid),c); }
-  public static UserExit visibleInvalidChar(String kid, char c){
-    return UserExit.fail(kid,
+  public static UserExit visibleInvalidChar(RefParent kid, char c){
+    return UserExit.fail(showRel(kid),
       "- A visible folder/file name contains an unsupported character: '"+c+"'.\n"
     + "  Visible names may use only lowercase letters (a-z), digits (0-9), and underscore (_).",
       "- Rename it to use only lowercase letters, digits, and underscores.\n"
     + "  Examples: \"foo_bar2\", \"src1\", \"_cache\"."
     );
   }
-  public static UserExit visibleNoDoubleUnderscore(RefParent kid){ return visibleNoDoubleUnderscore(showRel(kid)); }
-  public static UserExit visibleNoDoubleUnderscore(String kid){
-    return UserExit.fail(kid,
+  public static UserExit visibleNoDoubleUnderscore(RefParent kid){
+    return UserExit.fail(showRel(kid),
       "- A visible folder/file name contains a double underscore (__).\n"
     + "  Double underscores are reserved to avoid accidental collisions and confusion.",
       "- Rename it to remove '__'.\n"
     + "  Example: change \"foo__bar\" to \"foo_bar\"."
     );
   }
-  public static UserExit windowsReservedName(RefParent kid){ return windowsReservedName(showRel(kid)); }
-  public static UserExit windowsReservedName(String kid){
-    return UserExit.fail(kid,
+  public static UserExit windowsReservedName(RefParent kid){
+    return UserExit.fail(showRel(kid),
       "- A visible folder/file name is reserved on Windows (device name).\n"
     + "  Even if you add an extension, Windows treats it as the same reserved name.",
       "- Rename the folder/file so its base name is not a Windows device name.\n"
     + "  Reserved device name: \"con\", \"prn\", \"aux\", \"nul\", \"com1\"..\"com9\", \"lpt1\"..\"lpt9\"s."
     );
   }
-  public static UserExit missingExtension(RefParent kid){ return missingExtension(showRel(kid)); }
-  public static UserExit missingExtension(String kid){
-    return UserExit.fail(kid,
+  public static UserExit missingExtension(RefParent kid){
+    return UserExit.fail(showRel(kid),
       "- The file name ends with a dot.\n"
     + "  That means the extension is missing.",
       "- Rename it to \"name.ext\" with one dot.\n"
     + "  Example: change \"foo.\" to \"foo.txt\"."
     );
   }
-  public static UserExit multiDotExtNotAllowed(RefParent kid){ return multiDotExtNotAllowed(showRel(kid)); }
-  public static UserExit multiDotExtNotAllowed(String kid){
-    return UserExit.fail(kid,
+  public static UserExit multiDotExtNotAllowed(RefParent kid){
+    return UserExit.fail(showRel(kid),
       "- This file name has more than one dot in the extension part.\n"
     + "  Most files must use exactly one dot: \"name.ext\".",
       "- Rename it to use a single extension, OR\n"
     + "- Rename it to use a well-known extensionless file (example: \"tar.gz\")."
     );
   }
-  public static UserExit extLenMustBe1To16(RefParent kid){ return extLenMustBe1To16(showRel(kid)); }
-  public static UserExit extLenMustBe1To16(String kid){
-    return UserExit.fail(kid,
+  public static UserExit extLenMustBe1To16(RefParent kid){
+    return UserExit.fail(showRel(kid),
       "- The file extension is too long.\n"
     + "  Extensions must be 1..16 characters.",
       "- Use a shorter extension (1..16 characters), using only lowercase letters and digits."
     );
   }
-  public static UserExit extInvalidChar(RefParent kid, char c){ return extInvalidChar(showRel(kid),c); }
-  public static UserExit extInvalidChar(String kid, char c){
-    return UserExit.fail(kid,
+  public static UserExit extInvalidChar(RefParent kid, char c){
+    return UserExit.fail(showRel(kid),
       "- The file extension contains an unsupported character: "+Message.displayChar(c)+".\n"
     + "  Extensions may use only lowercase letters (a-z) and digits (0-9).",
       "- Rename the file to use an extension made only of lowercase letters and digits.\n"
@@ -286,9 +277,8 @@ Other rules (everywhere)
       "- Remove it, and keep only normal files and folders."
     );
   }
-  public static UserExit invisibleNoTrailingDotOrSpace(RefParent kid, String name){ return invisibleNoTrailingDotOrSpace(showRel(kid),name); }
-  public static UserExit invisibleNoTrailingDotOrSpace(String kid, String name){
-    return UserExit.fail(kid,
+  public static UserExit invisibleNoTrailingDotOrSpace(RefParent kid, String name){
+    return UserExit.fail(showRel(kid),
       "- A protected name segment ends with a dot or a space.\n"
     + "  Some systems/tools trim these, which causes collisions.\n"
     + "  Bad segment: "+disp(name)+"",
@@ -302,17 +292,15 @@ Other rules (everywhere)
       "- Rename the segment to remove the invalid characters."
     );
   }
-  public static UserExit invisibleNoControlChars(RefParent kid, int cp, String name){ return invisibleNoControlChars(showRel(kid),cp,name); }
-  public static UserExit invisibleNoControlChars(String kid, int cp, String name){
-    return UserExit.fail(kid,
+  public static UserExit invisibleNoControlChars(RefParent kid, int cp, String name){
+    return UserExit.fail(showRel(kid),
       "- A protected name segment contains a control character.\n"
      + "  Character: " + Message.displayChar(cp)+"\n"
      + "  Segment: " + disp(name) + "",
       "- Rename the segment to remove the control character."
-    );}  
-  public static UserExit invisibleNoWindowsBadChars(RefParent kid, char bad, String name){ return invisibleNoWindowsBadChars(showRel(kid),bad,name); }
-  public static UserExit invisibleNoWindowsBadChars(String kid, char bad, String name){
-    return UserExit.fail(kid,
+    );}
+  public static UserExit invisibleNoWindowsBadChars(RefParent kid, char bad, String name){
+    return UserExit.fail(showRel(kid),
       "- A protected name segment contains a character that Windows forbids.\n"
     + "  Bad char: `"+bad+"`\n"
     + "  Segment: "+disp(name),
@@ -320,22 +308,20 @@ Other rules (everywhere)
     + "  Forbidden on Windows: < > : \" / \\ | ? *"
     );
   }
-  public static UserExit invisibleWindowsReservedDeviceName(RefParent kid, String base, String name){ return invisibleWindowsReservedDeviceName(showRel(kid),base,name); }
-  public static UserExit invisibleWindowsReservedDeviceName(String kid, String base, String name){
-    return UserExit.fail(kid,
+  public static UserExit invisibleWindowsReservedDeviceName(RefParent kid, String base, String name){
+    return UserExit.fail(showRel(kid),
       "- A protected name segment uses a Windows reserved device name.\n"
     + "  Bad base: "+disp(base)+" in segment: "+disp(name)+"",
       "- Rename it so the base name is not a Windows device name.\n"
     + "  Reserved device name: \"con\", \"prn\", \"aux\", \"nul\", \"com1\"..\"com9\", \"lpt1\"..\"lpt9\"."
     );
   }
-  public static UserExit hiddenSiblingNamesCollide(RefParent kid, String prev, String name, boolean caseOnly, boolean nfcOnly){ return hiddenSiblingNamesCollide(showRel(kid),prev,name,caseOnly,nfcOnly); }
-  public static UserExit hiddenSiblingNamesCollide(String kid, String prev, String name, boolean caseOnly, boolean nfcOnly){
+  public static UserExit hiddenSiblingNamesCollide(RefParent kid, String prev, String name, boolean caseOnly, boolean nfcOnly){
       String reason=
       caseOnly ? "Names differ only by case."
       : nfcOnly  ? "Names differ only by Unicode normalization (NFC)."
       :            "Names collide after Unicode NFC normalization and case-folding.";
-    return UserExit.fail(kid,
+    return UserExit.fail(showRel(kid),
       "- Two protected names in the same folder collide.\n"
     + "  Name 1: "+disp(prev)+"\n"
     + "  Name 2: "+disp(name)+"\n"
