@@ -171,8 +171,7 @@ Other rules (everywhere)
 - Only normal files and folders are allowed.
 """.formatted(tickList(allowedNoExtFilesS), tickList(allowedMultiDotExtsS));
   }
-  public static UserExit pathTooLong(RefParent kid){ throw Bug.todo(); }
-  public static UserExit pathTooLong(Path kid){
+  public static UserExit pathTooLong(RefParent kid){
     return UserExit.fail(showRel(kid),
       "- The path is longer than 200 characters.\n"
     + "  Long paths often fail on Windows and in some tools.",
@@ -195,7 +194,6 @@ Other rules (everywhere)
     );
   }
   public static UserExit needsExtension(RefParent kid){ return needsExtension(showRel(kid)); }
-  public static UserExit needsExtension(Path kid){ return needsExtension(showRel(kid));}
   public static UserExit needsExtension(String kid){
     return UserExit.fail(kid,
       "- This file has no extension.\n"
@@ -205,7 +203,6 @@ Other rules (everywhere)
     );
   }
   public static UserExit visibleMustStartWithLetterOrUnderscore(RefParent kid){ return visibleMustStartWithLetterOrUnderscore(showRel(kid)); }
-  public static UserExit visibleMustStartWithLetterOrUnderscore(Path kid){ return visibleMustStartWithLetterOrUnderscore(showRel(kid)); }
   public static UserExit visibleMustStartWithLetterOrUnderscore(String kid){
     return UserExit.fail(kid,
       "- A visible folder/file name starts with an invalid character.\n"
@@ -215,7 +212,6 @@ Other rules (everywhere)
     );
   }
   public static UserExit visibleInvalidChar(RefParent kid, char c){ return visibleInvalidChar(showRel(kid),c); }
-  public static UserExit visibleInvalidChar(Path kid, char c){ return visibleInvalidChar(showRel(kid),c); }
   public static UserExit visibleInvalidChar(String kid, char c){
     return UserExit.fail(kid,
       "- A visible folder/file name contains an unsupported character: '"+c+"'.\n"
@@ -225,7 +221,6 @@ Other rules (everywhere)
     );
   }
   public static UserExit visibleNoDoubleUnderscore(RefParent kid){ return visibleNoDoubleUnderscore(showRel(kid)); }
-  public static UserExit visibleNoDoubleUnderscore(Path kid){ return visibleNoDoubleUnderscore(showRel(kid)); }
   public static UserExit visibleNoDoubleUnderscore(String kid){
     return UserExit.fail(kid,
       "- A visible folder/file name contains a double underscore (__).\n"
@@ -235,7 +230,6 @@ Other rules (everywhere)
     );
   }
   public static UserExit windowsReservedName(RefParent kid){ return windowsReservedName(showRel(kid)); }
-  public static UserExit windowsReservedName(Path kid){ return windowsReservedName(showRel(kid)); }
   public static UserExit windowsReservedName(String kid){
     return UserExit.fail(kid,
       "- A visible folder/file name is reserved on Windows (device name).\n"
@@ -245,7 +239,6 @@ Other rules (everywhere)
     );
   }
   public static UserExit missingExtension(RefParent kid){ return missingExtension(showRel(kid)); }
-  public static UserExit missingExtension(Path kid){ return missingExtension(showRel(kid)); }
   public static UserExit missingExtension(String kid){
     return UserExit.fail(kid,
       "- The file name ends with a dot.\n"
@@ -255,7 +248,6 @@ Other rules (everywhere)
     );
   }
   public static UserExit multiDotExtNotAllowed(RefParent kid){ return multiDotExtNotAllowed(showRel(kid)); }
-  public static UserExit multiDotExtNotAllowed(Path kid){ return multiDotExtNotAllowed(showRel(kid)); }
   public static UserExit multiDotExtNotAllowed(String kid){
     return UserExit.fail(kid,
       "- This file name has more than one dot in the extension part.\n"
@@ -265,7 +257,6 @@ Other rules (everywhere)
     );
   }
   public static UserExit extLenMustBe1To16(RefParent kid){ return extLenMustBe1To16(showRel(kid)); }
-  public static UserExit extLenMustBe1To16(Path kid){ return extLenMustBe1To16(showRel(kid)); }
   public static UserExit extLenMustBe1To16(String kid){
     return UserExit.fail(kid,
       "- The file extension is too long.\n"
@@ -274,7 +265,6 @@ Other rules (everywhere)
     );
   }
   public static UserExit extInvalidChar(RefParent kid, char c){ return extInvalidChar(showRel(kid),c); }
-  public static UserExit extInvalidChar(Path kid, char c){ return extInvalidChar(showRel(kid),c); }
   public static UserExit extInvalidChar(String kid, char c){
     return UserExit.fail(kid,
       "- The file extension contains an unsupported character: "+Message.displayChar(c)+".\n"
@@ -297,7 +287,6 @@ Other rules (everywhere)
     );
   }
   public static UserExit invisibleNoTrailingDotOrSpace(RefParent kid, String name){ return invisibleNoTrailingDotOrSpace(showRel(kid),name); }
-public static UserExit invisibleNoTrailingDotOrSpace(Path kid, String name){ return invisibleNoTrailingDotOrSpace(showRel(kid),name); }
   public static UserExit invisibleNoTrailingDotOrSpace(String kid, String name){
     return UserExit.fail(kid,
       "- A protected name segment ends with a dot or a space.\n"
@@ -306,8 +295,7 @@ public static UserExit invisibleNoTrailingDotOrSpace(Path kid, String name){ ret
       "- Rename the segment so it does not end with '.' or space."
     );
   }
-  public static UserExit invisibleInvalidSurrogate(RefParent kid, String name){ throw Bug.of(); }
-  public static UserExit invisibleInvalidSurrogate(Path kid, String name){
+  public static UserExit invisibleInvalidSurrogate(RefParent kid, String name){
     return UserExit.fail(showRel(kid),
       "- A protected name segment contains invalid Unicode.\n"
     + "  Bad segment: "+disp(name),
@@ -315,7 +303,6 @@ public static UserExit invisibleNoTrailingDotOrSpace(Path kid, String name){ ret
     );
   }
   public static UserExit invisibleNoControlChars(RefParent kid, int cp, String name){ return invisibleNoControlChars(showRel(kid),cp,name); }
-  public static UserExit invisibleNoControlChars(Path kid, int cp, String name){ return invisibleNoControlChars(showRel(kid),cp,name); }
   public static UserExit invisibleNoControlChars(String kid, int cp, String name){
     return UserExit.fail(kid,
       "- A protected name segment contains a control character.\n"
@@ -324,7 +311,6 @@ public static UserExit invisibleNoTrailingDotOrSpace(Path kid, String name){ ret
       "- Rename the segment to remove the control character."
     );}  
   public static UserExit invisibleNoWindowsBadChars(RefParent kid, char bad, String name){ return invisibleNoWindowsBadChars(showRel(kid),bad,name); }
-  public static UserExit invisibleNoWindowsBadChars(Path kid, char bad, String name){ return invisibleNoWindowsBadChars(showRel(kid),bad,name); }
   public static UserExit invisibleNoWindowsBadChars(String kid, char bad, String name){
     return UserExit.fail(kid,
       "- A protected name segment contains a character that Windows forbids.\n"
@@ -335,7 +321,6 @@ public static UserExit invisibleNoTrailingDotOrSpace(Path kid, String name){ ret
     );
   }
   public static UserExit invisibleWindowsReservedDeviceName(RefParent kid, String base, String name){ return invisibleWindowsReservedDeviceName(showRel(kid),base,name); }
-  public static UserExit invisibleWindowsReservedDeviceName(Path kid, String base, String name){ return invisibleWindowsReservedDeviceName(showRel(kid),base,name); }
   public static UserExit invisibleWindowsReservedDeviceName(String kid, String base, String name){
     return UserExit.fail(kid,
       "- A protected name segment uses a Windows reserved device name.\n"
@@ -345,7 +330,6 @@ public static UserExit invisibleNoTrailingDotOrSpace(Path kid, String name){ ret
     );
   }
   public static UserExit hiddenSiblingNamesCollide(RefParent kid, String prev, String name, boolean caseOnly, boolean nfcOnly){ return hiddenSiblingNamesCollide(showRel(kid),prev,name,caseOnly,nfcOnly); }
-  public static UserExit hiddenSiblingNamesCollide(Path kid, String prev, String name, boolean caseOnly, boolean nfcOnly){ return hiddenSiblingNamesCollide(showRel(kid),prev,name,caseOnly,nfcOnly); }
   public static UserExit hiddenSiblingNamesCollide(String kid, String prev, String name, boolean caseOnly, boolean nfcOnly){
       String reason=
       caseOnly ? "Names differ only by case."
@@ -360,8 +344,7 @@ public static UserExit invisibleNoTrailingDotOrSpace(Path kid, String name){ ret
     + "- Avoid differences that are only case changes or Unicode-equivalent spellings."
     );
   }
-  public static UserExit extensionlessMaskExtension(RefParent kid,RefParent noExtKid){throw Bug.todo(); }
-  public static UserExit extensionlessMaskExtension(Path kid,Path noExtKid){
+  public static UserExit extensionlessMaskExtension(RefParent kid,RefParent noExtKid){
     return UserExit.fail(showRel(kid),
       "- Both an allowed extensionless file and an extended file share the same base name.\n"
     + "  Extensionless file:\n  "
