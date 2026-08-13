@@ -7,14 +7,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import coordinatorMessages.UserExit;
+import userMessages.Report;
 import tools.SourceOracle;
 
 public final class RealSourceOracleWithZip implements SourceOracle{
   private final List<Ref> allFiles;
   private final Map<URI,Ref> byUri;
   public RealSourceOracleWithZip(Path root){
-    if (!Files.isDirectory(root)){ throw UserExit.rootNotDirectory(); }
+    if (!Files.isDirectory(root)){ throw Report.rootNotDirectory(); }
     allFiles= new BuildWithZip(root).build();
     byUri= allFiles.stream().collect(Collectors.toUnmodifiableMap(r->r.fearURI().normalize(), r->r));
   }

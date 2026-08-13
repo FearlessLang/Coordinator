@@ -14,6 +14,8 @@ import java.util.List;
 import java.util.Locale;
 
 import tools.Fs;
+import userMessages.UserError;
+import userMessages.Violation;
 
 import static java.lang.foreign.ValueLayout.ADDRESS;
 import static java.lang.foreign.ValueLayout.JAVA_CHAR;
@@ -50,8 +52,8 @@ public class NativeLocaleForcer {
       if (Fs.isWindows()){ forceWindowsEnglish(); return; }
       forcePosixEnglish();
     }
-    //catch (Throwable t){ throw RuntimeBroken.vmOrLinkageFailure(t); }//eventually should be this or something throwing a user level error in Fearless
-    catch (Throwable t){ throw new Error(t); }//for now, similarly to other thrown errors.
+    catch (UserError e){ throw e; }
+    catch (Throwable t){ throw Violation.couldNotForceEnglish("The call into the operating system failed.", t); }
   }
   private static void forceWindowsEnglish() throws Throwable {
     forceWindowsUiLanguage();
@@ -60,7 +62,7 @@ public class NativeLocaleForcer {
   private static void forcePosixEnglish() throws Throwable {
     if (Fs.isMac()){ setCLocale(0); return; }//MACOS_LC_ALL
     if (Fs.isLinux()){ setCLocale(6); return; }//LINUX_LC_ALL
-    throw new Error("Unsupported operating system for POSIX LC_ALL constant: " + System.getProperty("os.name"));
+    throw Violation.unsupportedOperatingSystem();
   }
   // char* setlocale(int category, const char* locale);
   // Returns NULL when the request is rejected; per the fail-loudly policy (and unlike
@@ -71,7 +73,7 @@ public class NativeLocaleForcer {
       FunctionDescriptor.of(ADDRESS, JAVA_INT, ADDRESS));
     try (var arena= Arena.ofConfined()){
       var res= (MemorySegment) setlocale.invokeExact(lcAll, arena.allocateFrom("C"));
-      if (MemorySegment.NULL.equals(res)){ throw new Error("The C runtime rejected setlocale(LC_ALL, \"C\")"); }
+      if (MemorySegment.NULL.equals(res)){ throw Violation.couldNotForceEnglish("The C runtime rejected setlocale(LC_ALL, \"C\")"); }
     }
   }
   private static void forceWindowsUiLanguage() throws Throwable {
@@ -102,8 +104,8 @@ public class NativeLocaleForcer {
     var languages= arena.allocateFrom(EN_US+"\0", StandardCharsets.UTF_16LE);
     var count= arena.allocate(JAVA_INT);
     int ok= (int) set.invokeExact(callState, 8/*MUI_LANGUAGE_NAME*/, languages, count);
-    if (ok == 0){ throw new Error("Windows rejected the process UI language call (GetLastError=" + lastError(callState) + ")"); }
-    if (count.get(JAVA_INT, 0) != 1){ throw new Error("Windows accepted process UI language call but did not set exactly one language"); }
+    if (ok == 0){ throw Violation.couldNotForceEnglish("Windows rejected the process UI language call (GetLastError=" + lastError(callState) + ")"); }
+    if (count.get(JAVA_INT, 0) != 1){ throw Violation.couldNotForceEnglish("Windows accepted process UI language call but did not set exactly one language"); }
   }
   private static void verifyUiLanguage(MethodHandle get, Arena arena, MemorySegment callState) throws Throwable {
     var count= arena.allocate(JAVA_INT);
@@ -112,11 +114,11 @@ public class NativeLocaleForcer {
     bufferChars.set(JAVA_INT, 0, MAX_PROCESS_UI_LANGUAGE_CHARS);
     int ok= (int) get.invokeExact(callState, 8/*MUI_LANGUAGE_NAME*/, count, buffer, bufferChars);
     if (ok == 0){
-      throw new Error("Windows process UI language read failed (GetLastError=" + lastError(callState) + ")");
+      throw Violation.couldNotForceEnglish("Windows process UI language read failed (GetLastError=" + lastError(callState) + ")");
     }
     var languages= parseDoubleNullTerminatedUtf16(buffer);
     if (languages.size() == 1 && EN_US.equals(languages.get(0))){ return; }
-    throw new Error("Fearless set the Windows process UI language to en-US, but Windows reported the language as " + languages + " instead");
+    throw Violation.couldNotForceEnglish("Fearless set the Windows process UI language to en-US, but Windows reported the language as " + languages + " instead");
   }
   private static int lastError(MemorySegment callState){
     VarHandle h= Linker.Option.captureStateLayout()

@@ -15,10 +15,9 @@ import java.nio.file.FileSystems;
 import java.nio.file.WatchService;
 
 import fileSupport.StringFiles;
-import managerMessages.EnvironmentBroken;
-import managerMessages.ExternalInterference;
-import managerMessages.InternalBug;
-import managerMessages.UserProblem;
+import userMessages.Violation;
+import userMessages.UserError;
+import utils.Bug;
 
 import static java.nio.file.StandardWatchEventKinds.ENTRY_CREATE;
 
@@ -47,7 +46,7 @@ public class Manager {
       msgDir.register(watcher, ENTRY_CREATE);//Can take up to 2 seconds in Mac; accepted
       return watcher;
     }
-    catch(IOException|UnsupportedOperationException|SecurityException e){ throw EnvironmentBroken.couldNotWatchMessageFolder(e); }
+    catch(IOException|UnsupportedOperationException|SecurityException e){ throw Violation.couldNotWatchMessageFolder(e); }
   }
   private static List<Path> list(Path dir, String glob) throws IOException {
     var files= new ArrayList<Path>();
@@ -66,28 +65,28 @@ public class Manager {
     var key= watcher.take();
     key.pollEvents();//events must be consumed before reset, or the key requeues immediately
     drainToGui(gui,msgDir);
-    if (!key.reset()){ throw ExternalInterference.messageFolderNotWatchable(); }
+    if (!key.reset()){ throw Violation.messageFolderNotWatchable(); }
   }
   private static void drainToGui(ManagerGui gui, Path msgDir){
     //Called only from the single watcher worker (including once at its start):
     //never concurrently, so no synchronization is needed. If a second caller
     //is ever added, make this synchronized.
     //Reading a message file is delegated to fileSupport (it throws its own
-    //UserProblem); the IOException below covers listing and removing files.
+    //UserError); the IOException below covers listing and removing files.
     try {
       var messages= drainMessageFiles(msgDir);
       if (messages.isEmpty()){ return; }
       gui.addMessages(messages);
       gui.showManager();
     }
-    catch(IOException e){ throw ExternalInterference.couldNotDrainMessageFolder(e); }
+    catch(IOException e){ throw Violation.couldNotDrainMessageFolder(e); }
   }
   private static List<String> drainMessageFiles(Path msgDir) throws IOException {
     var files= list(msgDir, "*.msg");
     files.sort(Comparator.comparing(file -> file.getFileName().toString()));//names start with zero padded millis: oldest first
     var messages= new ArrayList<String>();
     for(var file: files){
-      var message= StringFiles.read(file, UserProblem.managerFatalOnFileError());
+      var message= StringFiles.read(file, UserError.onFileError());
       messages.add(message.isBlank() ? "(started with no argument)" : message);
       Files.deleteIfExists(file);
     }
@@ -110,18 +109,18 @@ public class Manager {
 //Note: A worker stopped by shutdownNow records a problem that nobody ever reads; this is harmless.
 class Stop {
   private final CountDownLatch latch= new CountDownLatch(1);
-  private final AtomicReference<UserProblem> failure= new AtomicReference<>();
+  private final AtomicReference<RuntimeException> failure= new AtomicReference<>();
   void quit(){ latch.countDown(); }
   Runnable worker(Runnable task){ return () -> runWorker(task); }
   private void runWorker(Runnable task){
-    try { task.run(); fail(InternalBug.managerWorkerStopped()); }
-    catch(UserProblem problem){ fail(problem); }
-    catch(Throwable t){ fail(InternalBug.managerWorkerFailed(t)); }
+    try { task.run(); fail(Bug.of("A manager worker stopped, but it must run for the whole life of the manager process")); }
+    catch(UserError problem){ fail(problem); }
+    catch(Throwable t){ fail(Bug.of(t)); }
   }
-  private void fail(UserProblem problem){ failure.compareAndSet(null, problem); latch.countDown(); }
+  private void fail(RuntimeException problem){ failure.compareAndSet(null, problem); latch.countDown(); }
   void await(){
     try { latch.await(); }
-    catch(InterruptedException e){ throw InternalBug.managerInterrupted(e); }
+    catch(InterruptedException e){ throw Bug.of(e); }
     var problem= failure.get();
     if (problem != null){ throw problem; }
   }

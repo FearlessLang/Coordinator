@@ -5,7 +5,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
-import managerMessages.EnvironmentBroken;
+import userMessages.Violation;
 import tools.Fs;
 import utils.Bug;
 
@@ -32,7 +32,7 @@ final class InstallLocation {
     if (Fs.isWindows()){ return fromEnv("LOCALAPPDATA", home.resolve("AppData").resolve("Local")); }
     if (Fs.isMac()){ return home.resolve("Library").resolve("Application Support"); }
     if (Fs.isLinux()){ return fromEnv("XDG_DATA_HOME", home.resolve(".local").resolve("share")); }
-    throw EnvironmentBroken.unsupportedOperatingSystem();
+    throw Violation.unsupportedOperatingSystem();
   }
   private static List<Path> installRoots(){
     var res= new ArrayList<Path>();
@@ -58,7 +58,7 @@ final class InstallLocation {
       res.add(userHome().resolve(".local").resolve("lib"));
       return res;
     }
-    throw EnvironmentBroken.unsupportedOperatingSystem();
+    throw Violation.unsupportedOperatingSystem();
   }
   private static Path userHome(){
     var home= System.getProperty("user.home");

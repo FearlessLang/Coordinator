@@ -11,7 +11,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.opentest4j.AssertionFailedError;
 
-import coordinatorMessages.UserExit;
+import userMessages.UserError;
+import userMessages.Report;
 import realSourceOracle.RealSourceOracleWithZip;
 import testHelperFs.FsDsl;
 import static testHelperFs.FsDsl.*;
@@ -33,7 +34,7 @@ _pkg/z.zip/a.fear
 iii
 2
 ""","""
-<put the expected UserExit message here>
+<put the expected UserError message here>
 """);}
 
 @Test void err_zip_duplicate_entry_name2(@TempDir Path tmp){ runErrIOE(tmp, """
@@ -680,10 +681,10 @@ We check this so that you[###]
 
   @Test void err_visible_symlink_forbidden(@TempDir Path tmp) throws Exception{
     Path root= tmp.resolve("root").toAbsolutePath().normalize();
-    UserExit.root= root;
+    UserError.root= root;
     Files.createDirectories(root.resolve("_pkg"));
     Files.createSymbolicLink(root.resolve("_pkg/link.fear"), root.resolve("_pkg/missing.fear"));
-    var ex= assertThrows(UserExit.class, ()->new RealSourceOracleWithZip(root));
+    var ex= assertThrows(UserError.class, ()->new RealSourceOracleWithZip(root));
     utils.Err.strCmp("""
 Invalid path in this project folder.
 
@@ -704,10 +705,10 @@ We check this so that you[###]
 
   @Test void err_invisible_symlink_forbidden(@TempDir Path tmp) throws Exception{
     Path root= tmp.resolve("root").toAbsolutePath().normalize();
-    UserExit.root= root;
+    UserError.root= root;
     Files.createDirectories(root.resolve("_pkg/.d"));
     Files.createSymbolicLink(root.resolve("_pkg/.d/link"), root.resolve("_pkg/.d/missing"));
-    var ex= assertThrows(UserExit.class, ()->new RealSourceOracleWithZip(root));
+    var ex= assertThrows(UserError.class, ()->new RealSourceOracleWithZip(root));
     utils.Err.strCmp("""
 Invalid path in this project folder.
 
@@ -784,12 +785,12 @@ We check this so that you[###]
   // so this exercises the message factory directly rather than through a real scan.
   @Test void err_invisible_invalid_surrogate_message(@TempDir Path tmp) throws Exception{
     Path root= tmp.resolve("root").toAbsolutePath().normalize();
-    UserExit.root= root;
+    UserError.root= root;
     Files.createDirectories(root.resolve("_pkg"));
     Files.writeString(root.resolve("_pkg/a.fear"), "X");
     var oracle= new RealSourceOracleWithZip(root);
     var ref= oracle.allFiles().get(0);
-    var ex= UserExit.invisibleInvalidSurrogate(ref, ".x\uD800y");
+    var ex= Report.invisibleInvalidSurrogate(ref, ".x\uD800y");
     utils.Err.strCmp("""
 Invalid path in this project folder.
 

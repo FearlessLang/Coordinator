@@ -12,16 +12,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.UUID;
 
-import coordinatorMessages.UserExit;
 import fileSupport.NativeLocaleForcer;
 import fileSupport.StringFiles;
 import mainCoordinator.Main;
-import managerMessages.EnvironmentBusy;
-import managerMessages.ErrorContext;
-import managerMessages.InternalBug;
-import managerMessages.RuntimeBroken;
-import managerMessages.UserActionable;
-import managerMessages.UserProblem;
+import userMessages.Violation;
+import userMessages.UserError;
 import tools.Fs;
 import tools.JavacTool;
 import utils.Bug;
@@ -36,7 +31,7 @@ public class ManagerMain {
   //channel object became garbage, the JVM could close it and release the lock
   //while the manager is still running.
   private static FileLock managerLock;
-  //Set early in run(..), and mirrored into ErrorContext so that error messages
+  //Set early in run(..), and mirrored into UserError so that error messages
   //always show the paths this run actually used.
   static Path binDir;
   static Path managerDir;
@@ -47,13 +42,12 @@ public class ManagerMain {
     var exitCode= 0;
     //TODO: throw user problem if called with more then one arg
     try { run(args.length==0 ? "" : args[0]); }
-    catch(UserProblem e){ exitCode= 1; displayWithFallBack(e); }
-    catch(UserExit e){ exitCode= 1; displayWithFallBack(UserProblem.fromFearless(e)); }
-    catch(VirtualMachineError|LinkageError e){ exitCode= 2; displayWithFallBack(RuntimeBroken.vmOrLinkageFailure(e)); }
-    catch(Throwable t){ exitCode= 3; displayWithFallBack(InternalBug.unhandledThrowable(t)); }
+    catch(UserError e){ exitCode= 1; displayWithFallBack(e); }
+    catch(VirtualMachineError|LinkageError e){ exitCode= 2; displayWithFallBack(Violation.vmOrLinkageFailure(e)); }
+    catch(Throwable t){ exitCode= 3; displayWithFallBack(UserError.crashed(t)); }
     System.exit(exitCode);//see the resource policy above: this ends workers, window and lock
   }
-  private static void displayWithFallBack(UserProblem e){
+  private static void displayWithFallBack(UserError e){
     try { e.display(); }
     catch(InterruptedException ie){ e.displayStderr(ie); }
   }
@@ -62,16 +56,17 @@ public class ManagerMain {
   private static void run(String message){
     binDir= locateBinDir();
     managerDir= resolveManagerDir();
-    ErrorContext.set(msgDir(), lockFile());//from here on, messages can name the real folders
+    UserError.setManagerPaths(msgDir(), lockFile());//from here on, messages can name the real folders
     createManagerFolder(managerDir);
     leaveMessage(msgDir(), message);
     try { managerLock= FileChannel.open(lockFile(), CREATE, WRITE).tryLock(); }
     catch(OverlappingFileLockException e){ throw Bug.unreachable(); }//only possible from a second thread of THIS process; but we control this process
-    catch(IOException e){ throw UserActionable.couldNotUseInstanceLock(e); }
+    catch(IOException e){ throw Violation.couldNotUseInstanceLock(e); }
     if (managerLock == null){ return; }//an owner exists; it will drain our message file.
     //Accepted race: if the owner dies right after our failed tryLock, before
     //draining, our message waits in the folder and is shown by the NEXT
     //manager start. Messages are never lost, only delayed.
+    UserError.becameManagerOwner();//from here on, a failure ends the manager, not just this process
     Manager.runOwner(msgDir());
   }
   //heuristic to navigate the path upwards
@@ -83,7 +78,7 @@ public class ManagerMain {
       if (name == null){ break; }//a root has no name and cannot be our folder
       if (name.toString().equals(expectedDirName)){ return dir; }
     }
-    throw RuntimeBroken.programFolderNotFound(startedFrom, expectedDirName);
+    throw Violation.programFolderNotFound(startedFrom, expectedDirName);
   }
   private static Path resolveManagerDir(){
     var host= InstallLocation.isInstalled(binDir) ? InstallLocation.userDataHome() : codeDir();
@@ -101,7 +96,7 @@ public class ManagerMain {
   //separate check could be more truthful than attempting the exact operation we need.
   private static void createManagerFolder(Path dir){
     try { Files.createDirectories(dir.resolve("messages")); }
-    catch(IOException|UnsupportedOperationException|SecurityException e){ throw UserActionable.couldNotCreateManagerFolder(dir, e); }
+    catch(IOException|UnsupportedOperationException|SecurityException e){ throw Violation.couldNotCreateManagerFolder(dir, e); }
   }
   //Write to a .tmp name, then atomically rename it to .msg: the owner drains
   //only *.msg, so it can never observe a half written file. A crash in between
@@ -111,8 +106,8 @@ public class ManagerMain {
   private static void leaveMessage(Path msgDir, String message){
     var name= "%020d-%s".formatted(System.currentTimeMillis(), UUID.randomUUID());
     var tmp= msgDir.resolve(name+".tmp");
-    StringFiles.writeNew(tmp, message, UserProblem.processExitsOnFileError());
+    StringFiles.writeNew(tmp, message, UserError.onFileError());
     try { Files.move(tmp, msgDir.resolve(name+".msg"), ATOMIC_MOVE); }
-    catch(IOException e){ throw EnvironmentBusy.couldNotLeaveStartMessage(e); }
+    catch(IOException e){ throw Violation.couldNotLeaveStartMessage(e); }
   }
 }

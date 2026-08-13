@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import apiJson.ApiJson;
-import coordinatorMessages.CacheCorruptionError;
+import userMessages.Violation;
 import core.AllLs;
 import core.E.Literal;
 import core.M;
@@ -32,13 +32,13 @@ public interface OutputOracle{
   default OtherPackages addCachedPkgApi(OtherPackages other, String pkg){
     var path= rootDir().resolve(pkg+".json");
     var api= new OutputHelper().pgkApiFromJSon(path);
-    if (api.isEmpty()){ throw CacheCorruptionError.missingPkgApiFile(path); }
+    if (api.isEmpty()){ throw Violation.cacheMissingPkgApiFile(path); }
     return other.mergeWith(api.get(), other.stamp());
   }//READS the pkg info and adds to other; Does not update the disk. Just reads info
   default OtherPackages startCachedPkgApi(String pkg,Map<String,Map<String,String>> map,long stamp){
     var path= rootDir().resolve(pkg+".json");
     var api= new OutputHelper().pgkApiFromJSon(path);
-    if (api.isEmpty()){ throw CacheCorruptionError.missingPkgApiFile(path); }
+    if (api.isEmpty()){ throw Violation.cacheMissingPkgApiFile(path); }
     return OtherPackages.start(map,api.get(),stamp);
   }
   default long commitPkgApi(String pkg, List<Literal> core, long minExclusiveMillis){
@@ -67,7 +67,7 @@ class OutputHelper{
     if (!Fs.of(()->Files.exists(p))){ return Optional.empty(); }
     var s= Fs.readUtf8(p);
     var allowed= s.chars().allMatch(c -> Fs.allowed.indexOf(c) >= 0);
-    if (!allowed){ CacheCorruptionError.invalidCachedFile(p, "Non-whitelisted char"); }
+    if (!allowed){ throw Violation.cacheInvalidFile(p, "Non-whitelisted char"); }
     var out= new LimitedJsonParser(s, p).apiJsonToMap();
     return Optional.of(out);
   }
@@ -80,7 +80,7 @@ class OutputHelper{
     if (!Fs.of(()->Files.exists(p))){ return Optional.empty(); }
     var s= Fs.readUtf8(p);
     var allowed= s.chars().allMatch(c -> Fs.allowed.indexOf(c) >= 0);
-    if (!allowed){ CacheCorruptionError.invalidCachedFile(p, "Non-whitelisted char"); }
+    if (!allowed){ throw Violation.cacheInvalidFile(p, "Non-whitelisted char"); }
     var out= new LimitedJsonParser(s,p).obj2();
     return Optional.of(out);
   }
