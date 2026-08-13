@@ -11,7 +11,7 @@ import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.IntStream;
-import coordinatorMessages.CacheCorruptionError;
+import userMessages.Violation;
 import core.B;
 import core.E.Literal;
 import core.M;
@@ -171,6 +171,6 @@ final class LimitedJsonParser{
     i++; return true;
   }
   private RuntimeException err(String msg){
-    return CacheCorruptionError.invalidCachedFile(forErr,msg+" at "+i);
+    return Violation.cacheInvalidFile(forErr,msg+" at "+i);
   }
 }

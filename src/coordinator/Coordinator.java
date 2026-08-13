@@ -10,8 +10,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
 
-import coordinatorMessages.UserExit;
-import coordinatorMessages.UserTreeError;
+import userMessages.Report;
 import core.FearlessException;
 import core.OtherPackages;
 import core.E.Literal;
@@ -40,7 +39,7 @@ public interface Coordinator {
   
   default List<Literal> frontend(String pkgName, List<Ref> files, SourceOracle oracle, OtherPackages other,Map<String,String> vres){
     try{ return new FrontendLogicMain().of(pkgName,vres, files, oracle, other); }
-    catch(FearlessException fe){ throw new UserExit(fe.render(oracle)); }
+    catch(FearlessException fe){ throw Report.sourceError(fe.render(oracle)); }
   }
   default void backend(String pkgName, List<Literal> core, SourceOracle oracle, OtherPackages other, OutputOracle out){
     new NaiveBackendLogicMain().of(pkgName,oracle,other,core,out.rootDir(),rtPath());
@@ -59,7 +58,7 @@ class Helper{
     SourceOracle o= coordinator.sourceOracle(path);
     long maxStamp= o.allFiles().stream()
       .filter(Helper::isFear).mapToLong(Ref::lastModified)
-      .max().orElseThrow(()->UserTreeError.emptyProject(path));
+      .max().orElseThrow(()->Report.projectEmpty(path));
     o.allFiles().stream().filter(Helper::isFear).forEach(Helper::pkgName);//err if not under a pkg
     var map= new LinkedHashMap<String,List<Ref>>();
     for(Ref u:o.allFiles()){ pkgNameOpt(u).ifPresent(pn->map.computeIfAbsent(pn,_->new ArrayList<>()).add(u)); }
@@ -95,25 +94,25 @@ class Helper{
   static Layer mapFromRanks(Coordinator coordinator, List<Ref> allRanks, SourceOracle o, OutputOracle out, long maxStamp){
     Map<String,Map<String,String>> res; try {res= new FrontendLogicMain()
       .parseRankFiles(allRanks,o, Comparator.comparingInt(Helper::rankNumber));}
-    catch(FearlessException fe){ throw new UserExit(fe.render(o)); }
+    catch(FearlessException fe){ throw Report.sourceError(fe.render(o)); }
     long baseStamp= out.commitMap(res, maxStamp);
     return new BaseLayer(coordinator,res,baseStamp);
   }
   static int rankNumber(Ref u){
     var name= u.toString();
-    if(!u.toString().endsWith(".fear")){ throw UserTreeError.malformedRankFileName(u); }
+    if(!u.toString().endsWith(".fear")){ throw Report.projectMalformedRankFileName(u); }
     var stem= Fs.fileNameWithoutExtension(name);
     for(int i=0;i<ranks.size();i++){
       var pref= ranks.get(i);
       int base= (i+1)*1000;
       if(stem.equals(pref)){ return base+999; } // shortcut: _rank_app.fear == _rank_app999.fear
       if(!stem.startsWith(pref)){ continue; }
-      if(stem.length()!=pref.length()+3){ throw UserTreeError.malformedRankFileName(u); }
+      if(stem.length()!=pref.length()+3){ throw Report.projectMalformedRankFileName(u); }
       var digits= stem.substring(pref.length());
-      if(!digits.chars().allMatch(Character::isDigit)){ throw UserTreeError.malformedRankFileName(u); }
+      if(!digits.chars().allMatch(Character::isDigit)){ throw Report.projectMalformedRankFileName(u); }
       return base+Integer.parseInt(digits);
     }
-    throw UserTreeError.malformedRankFileName(u);
+    throw Report.projectMalformedRankFileName(u);
   }
   private static final List<String> ranks= List.of(
     "_rank_base","_rank_core","_rank_driver","_rank_worker","_rank_framework","_rank_accumulator","_rank_tool","_rank_app");
@@ -122,12 +121,12 @@ class Helper{
     var pkg= pkgName(u.getFirst());
     var rankFiles= u.stream()
       .filter(ui->ui.toString().contains("/_rank_")).toList();
-    if (rankFiles.isEmpty()){ throw UserTreeError.missingRankFile(pkg, root); }
-    if (rankFiles.size() > 1){ throw UserTreeError.multipleRankFiles(pkg, rankFiles); }
+    if (rankFiles.isEmpty()){ throw Report.projectMissingRankFile(pkg, root); }
+    if (rankFiles.size() > 1){ throw Report.projectMultipleRankFiles(pkg, rankFiles); }
     rankNumber(rankFiles.getFirst());//err malformed rank file name is malformed
     return rankFiles.getFirst();
   }
-  static String pkgName(Ref u){ return pkgNameOpt(u).orElseThrow(()->UserTreeError.noPackageSegment(u)); }
+  static String pkgName(Ref u){ return pkgNameOpt(u).orElseThrow(()->Report.projectNoPackageSegment(u)); }
 
   static Optional<String> pkgNameOpt(Ref u){//TODO: finalize the real whitelist
     List<String> whiteListAfterPkg= List.of("_asset","_dbg");
@@ -135,9 +134,9 @@ class Helper{
       .filter(s->s.startsWith("_") && !s.contains("."))
       .toList();
     if (candidates.isEmpty()){ return Optional.empty(); }
-    if (whiteListAfterPkg.contains(candidates.getFirst())){ throw UserTreeError.reservedBeforePkg(u,candidates.getFirst()); }    
+    if (whiteListAfterPkg.contains(candidates.getFirst())){ throw Report.projectReservedBeforePkg(u,candidates.getFirst()); }    
     var onlyGood= candidates.stream().skip(1).allMatch(s->whiteListAfterPkg.contains(s));
     if (onlyGood){ return Optional.of(candidates.getFirst().substring(1)); } 
-    throw UserTreeError.ambiguousPackageSegment(u, candidates);    
+    throw Report.projectAmbiguousPackageSegment(u, candidates);    
   }
 }

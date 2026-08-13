@@ -7,7 +7,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.opentest4j.AssertionFailedError;
 
-import coordinatorMessages.UserExit;
+import userMessages.UserError;
 import mainCoordinator.ResolveResource;
 import realSourceOracle.RealSourceOracleWithZip;
 import testHelperFs.FsDsl;
@@ -17,8 +17,8 @@ public class BadZipsTest {
   static Path root= ResolveResource.badZipCorpous;
   public static void runErrIOE(String in, String expected){
     Path input= root.resolve(in);
-    UserExit.root= root;
-    var ex= assertThrows(UserExit.class, ()->new RealSourceOracleWithZip(input));
+    UserError.root= root;
+    var ex= assertThrows(UserError.class, ()->new RealSourceOracleWithZip(input));
     String res= FsDsl.dumpErr(input,ex);
     utils.Err.strCmp(expected, res);
   }

@@ -9,7 +9,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
-import coordinatorMessages.UserExit;
+import userMessages.Report;
 import tools.Fs;
 import tools.SourceOracle;
 import utils.Push;
@@ -55,7 +55,7 @@ public final class ZipWellFormedness{
     return Collections.unmodifiableList(out);
   }
   private static void reqCollect(Path diskZip, Path root, Path local, List<String> steps, int depth, ArrayList<ZipEntry> out){
-    if (depth > maxZipNesting){ throw UserExit.zipNestingTooDeep(diskZip, steps, depth, maxZipNesting); }
+    if (depth > maxZipNesting){ throw Report.zipNestingTooDeep(diskZip, steps, depth, maxZipNesting); }
     var names= ZipLocator.entryNames(diskZip, steps);
     for (var name: names){ singleName(diskZip, root, local, steps, depth, out, name); }
   }

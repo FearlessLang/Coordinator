@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.stream.Stream;
-import coordinatorMessages.UserExit;
+import userMessages.Report;
 import tools.Fs;
 import tools.SourceOracle;
 import tools.SourceOracle.Ref;
@@ -37,12 +37,12 @@ record Tree(
     var rel= root.relativize(abs);
     var pe= new PathEntry(root, rel);
     if (Files.isSymbolicLink(abs)){ throw isInvisible(pe)
-      ? UserExit.invisibleSymlinkForbidden(abs)
-      : UserExit.symlinkForbidden(abs);
+      ? Report.invisibleSymlinkForbidden(abs)
+      : Report.symlinkForbidden(abs);
     }
     if (!isRegularFile(abs) && !isDiskZip(abs, rel)){ throw isInvisible(pe)
-      ? UserExit.invisibleOnlyRegularFilesAndDirs(abs)
-      : UserExit.onlyRegularFilesAndDirs(abs);
+      ? Report.invisibleOnlyRegularFilesAndDirs(abs)
+      : Report.onlyRegularFilesAndDirs(abs);
     }
     if (isDiskZip(abs, rel)){ collectBodyDiskZip(root, rel); return; }
     for (RefParent p= pe; p.parent()!=p; p= p.parent()){ addKid(p); }
@@ -58,9 +58,9 @@ record Tree(
       if (isDirectory(abs)){ dirs.add(rel); }
       if (!isDiskZip(abs, rel)){ return; }
       var es= ZipWellFormedness.allEntryPaths(root, rel);
-      if (es.isEmpty()){ throw UserExit.emptyExpandedZip(rel); }
+      if (es.isEmpty()){ throw Report.emptyExpandedZip(rel); }
     }));
-    for (var d: dirs){ if (!nonEmpty.contains(d)){ throw UserExit.emptyDirectory(d); } }
+    for (var d: dirs){ if (!nonEmpty.contains(d)){ throw Report.emptyDirectory(d); } }
   }
   private boolean isDirectory(Path abs){ return Files.isDirectory(abs, LinkOption.NOFOLLOW_LINKS); }
   private static boolean isRegularFile(Path abs){ return Files.isRegularFile(abs, LinkOption.NOFOLLOW_LINKS); }
@@ -103,16 +103,16 @@ final class BuildWithZip{
     });
     return List.copyOf(t.visibleFiles());
   }
-  void checkTooLong(RefParent kid){     if (kid.fearPath().length() > 200 + SourceOracle.root.length()){ throw UserExit.pathTooLong(kid); } }
+  void checkTooLong(RefParent kid){     if (kid.fearPath().length() > 200 + SourceOracle.root.length()){ throw Report.pathTooLong(kid); } }
   private void checkIndividualVisibleSegment(RefParent kid){
     checkTooLong(kid);
     var name= Fs.fileNameWithExtension(kid.fearPath());
     int d0= name.indexOf('.');
     if (d0 == 0){ checkIndividualInvisibleSegment(kid); return; }
     boolean isFile= kid instanceof Ref;
-    var validNoExt= !isFile || UserExit.allowedNoExtFilesS.contains(name);
+    var validNoExt= !isFile || Report.allowedNoExtFiles.contains(name);
     var badNoExt= isFile && d0 < 0 && !validNoExt;
-    if (badNoExt){ throw UserExit.needsExtension(kid); }
+    if (badNoExt){ throw Report.needsExtension(kid); }
     if (validNoExt){ checkVisibleAtom(kid, name); return; }
     assert d0 > 0;
     checkVisibleAtom(kid, name.substring(0, d0));
@@ -121,29 +121,29 @@ final class BuildWithZip{
   private void checkVisibleAtom(RefParent kid, String atom){
     char c0= atom.charAt(0);
     var letterOr_= c0 == '_' || ('a' <= c0 && c0 <= 'z');
-    if (!letterOr_){ throw UserExit.visibleMustStartWithLetterOrUnderscore(kid); }
+    if (!letterOr_){ throw Report.visibleMustStartWithLetterOrUnderscore(kid); }
     for (int i= 1; i < atom.length(); i++){
       char c= atom.charAt(i);
       boolean ok= ('a' <= c && c <= 'z') || ('0' <= c && c <= '9') || c == '_';
-      if (!ok){ throw UserExit.visibleInvalidChar(kid, c); }
+      if (!ok){ throw Report.visibleInvalidChar(kid, c); }
       var double_ = c == '_' && atom.charAt(i - 1) == '_';
-      if (double_){ throw UserExit.visibleNoDoubleUnderscore(kid); }
+      if (double_){ throw Report.visibleNoDoubleUnderscore(kid); }
     }
-    if (winReserved.contains(atom)){ throw UserExit.windowsReservedName(kid); }
+    if (winReserved.contains(atom)){ throw Report.windowsReservedName(kid); }
   }
   private void checkExt(RefParent kid, String tail){
-    if (tail.isEmpty()){ throw UserExit.missingExtension(kid); }
+    if (tail.isEmpty()){ throw Report.missingExtension(kid); }
     int d= tail.indexOf('.');
     if (d < 0){ checkExtSeg(kid, tail); return; }
-    if (!UserExit.allowedMultiDotExtsS.contains(tail)){ throw UserExit.multiDotExtNotAllowed(kid); }
+    if (!Report.allowedMultiDotExts.contains(tail)){ throw Report.multiDotExtNotAllowed(kid); }
   }
   private void checkExtSeg(RefParent kid, String seg){
     int n= seg.length();
-    if (n < 1 || n > 16){ throw UserExit.extLenMustBe1To16(kid); }
+    if (n < 1 || n > 16){ throw Report.extLenMustBe1To16(kid); }
     for (int i= 0; i < n; i++){
       char c= seg.charAt(i);
       boolean ok= ('a' <= c && c <= 'z') || ( '0' <= c && c <= '9' );
-      if (!ok){ throw UserExit.extInvalidChar(kid, c); }
+      if (!ok){ throw Report.extInvalidChar(kid, c); }
     }
   }
   private static final Set<String> winReserved= Set.of(
@@ -157,17 +157,17 @@ final class BuildWithZip{
     assert Tree.isInvisible(kid);
     checkTooLong(kid);
     var name= Fs.fileNameWithExtension(kid.fearPath());
-    if (name.endsWith(".") || name.endsWith(" ")){ throw UserExit.invisibleNoTrailingDotOrSpace(kid, name); }
+    if (name.endsWith(".") || name.endsWith(" ")){ throw Report.invisibleNoTrailingDotOrSpace(kid, name); }
     for (int i= 0; i < name.length(); ){
       int cp= name.codePointAt(i);
-      if (0xD800 <= cp && cp <= 0xDFFF){ throw UserExit.invisibleInvalidSurrogate(kid, name); }
-      if (Character.isISOControl(cp)){ throw UserExit.invisibleNoControlChars(kid, cp, name); }
-      if (winBadChars.indexOf(cp) >= 0){ throw UserExit.invisibleNoWindowsBadChars(kid, (char)cp, name); }
+      if (0xD800 <= cp && cp <= 0xDFFF){ throw Report.invisibleInvalidSurrogate(kid, name); }
+      if (Character.isISOControl(cp)){ throw Report.invisibleNoControlChars(kid, cp, name); }
+      if (winBadChars.indexOf(cp) >= 0){ throw Report.invisibleNoWindowsBadChars(kid, (char)cp, name); }
       i += Character.charCount(cp);
     }
     int d= name.indexOf('.');
     var base= (d < 0 ? name : name.substring(0, d)).toLowerCase(Locale.ROOT);
-    if (!base.isEmpty() && winReserved.contains(base)){ throw UserExit.invisibleWindowsReservedDeviceName(kid, base, name); }
+    if (!base.isEmpty() && winReserved.contains(base)){ throw Report.invisibleWindowsReservedDeviceName(kid, base, name); }
   }
   private void checkCollectiveInvisible(Set<RefParent> kids){
     var seenKeyToName= new HashMap<String,String>();
@@ -184,7 +184,7 @@ final class BuildWithZip{
     var prevNfc= Normalizer.normalize(prev, Form.NFC);
     boolean caseOnly= lowPrev.equals(lowName) && !prevNfc.equals(nfc);
     boolean nfcOnly= prevNfc.equals(nfc) && !lowPrev.equals(lowName);
-    throw UserExit.hiddenSiblingNamesCollide(kid, prev, name, caseOnly, nfcOnly);
+    throw Report.hiddenSiblingNamesCollide(kid, prev, name, caseOnly, nfcOnly);
   }
   private void checkCollectiveVisible(Set<RefParent> kids){
     var dotKids= new ArrayList<RefParent>();
@@ -194,7 +194,7 @@ final class BuildWithZip{
     for (var kid: visKids){
       var name= Fs.fileNameWithExtension(kid.fearPath());
       if (name.indexOf('.') >= 0){ continue; }
-      if (!UserExit.allowedNoExtFilesS.contains(name)){ continue; }
+      if (!Report.allowedNoExtFiles.contains(name)){ continue; }
       if (!(kid instanceof Ref)){ continue; } // directory
       checkNoExtBaseClash(visKids, kid, name);
     }
@@ -206,7 +206,7 @@ final class BuildWithZip{
       int d0= name.indexOf('.');
       if (d0 < 0){ continue; }
       if (!name.substring(0, d0).equals(base)){ continue; }
-      throw UserExit.extensionlessMaskExtension(kid, noExtKid);
+      throw Report.extensionlessMaskExtension(kid, noExtKid);
     }
   }
 }

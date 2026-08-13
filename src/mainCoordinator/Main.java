@@ -30,9 +30,8 @@ import javax.swing.JTextArea;
 import javax.swing.SwingUtilities;
 
 import coordinator.Coordinator;
-import coordinatorMessages.CacheCorruptionError;
-import coordinatorMessages.UserExit;
-import coordinatorMessages.UserTreeError;
+import userMessages.UserError;
+import userMessages.Violation;
 import tools.Fs;
 import tools.JavacTool;
 
@@ -41,25 +40,23 @@ public final class Main{
   public static Path reqAppDir(){//also used in manager, TODO: refactor
     var launcher= System.getProperty(JavacTool.launcherKey);
     var appDir= System.getProperty(JavacTool.appDirKey);
-    if (launcher == null || appDir == null){ throw UserExit.mustUseLauncher(); }
+    if (launcher == null || appDir == null){ throw Violation.mustUseLauncher(); }
     var res= Path.of(appDir);
-    if (!res.isAbsolute()){ throw UserExit.mustUseLauncher(); }
+    if (!res.isAbsolute()){ throw Violation.mustUseLauncher(); }
     return res;
   }
   public static String reqVersionId(){//also used in manager, TODO: refactor
     var versionId= System.getProperty(JavacTool.versionIdKey);
-    if (versionId == null){ throw UserExit.mustUseLauncher(); }
+    if (versionId == null){ throw Violation.mustUseLauncher(); }
     return versionId;
   }
   public static void main(String[] args){
     reqAppDir();
     try{ if (!hasConsoleFlag()){ hookStd(); } run(args); }
-    catch(UserExit e){ System.err.print(e.getMessage()); }
-    catch(UserTreeError e){ System.err.print(e.getMessage()); }
-    catch(CacheCorruptionError e){ System.err.print(e.getMessage()); }
+    catch(UserError e){ System.err.print(e.getMessage()); }
     catch(Throwable t){ 
       System.err.println(t.getClass().getCanonicalName());
-      System.err.print(UserExit.crash(t));
+      System.err.print(UserError.crash(t));
     }
   }
   private static void run(String[] args) throws InvocationTargetException, InterruptedException, ExecutionException{
@@ -98,7 +95,7 @@ public final class Main{
     macSpawnOk.incrementAndGet();
   }
   private static void hookStd() throws InvocationTargetException, InterruptedException, ExecutionException{
-    if (!Desktop.isDesktopSupported()){ throw UserExit.desktopUnsupported(); }
+    if (!Desktop.isDesktopSupported()){ throw Violation.desktopUnsupported(); }
     assert !SwingUtilities.isEventDispatchThread();
     FutureTask<Consumer<String>> task= new FutureTask<>(Main::initGui);
     SwingUtilities.invokeAndWait(task);
@@ -137,7 +134,7 @@ public final class Main{
   private static Path normalize(String s){
     assert !s.isEmpty();
     Path p; try{ p= s.startsWith("file:")?Path.of(URI.create(s)):Path.of(s); }
-    catch(RuntimeException ex){ throw UserExit.badLaunchArg(s); }
+    catch(RuntimeException ex){ throw Violation.badLaunchArg(s, hasConsoleFlag()); }
     return p.toAbsolutePath().normalize();
   }
 }

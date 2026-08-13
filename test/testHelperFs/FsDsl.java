@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
-import coordinatorMessages.UserExit;
+import userMessages.UserError;
 import realSourceOracle.RealSourceOracleWithZip;
 import tools.SourceOracle;
 
@@ -183,17 +183,17 @@ public final class FsDsl{
   }
   public static String runOk(Path tmp, String spec){
     Path root= tmp.resolve("root");
-    UserExit.root= root;
+    UserError.root= root;
     mkdirs(root);
     materialize(root, spec);
     return dump(new RealSourceOracleWithZip(root));
   }
   public static void runErrIOE(Path tmp, String spec, String expected){
     Path root= tmp.resolve("root").toAbsolutePath().normalize();
-    UserExit.root= root;
+    UserError.root= root;
     mkdirs(root);
     materialize(root, spec);
-    var ex= assertThrows(UserExit.class, ()->new RealSourceOracleWithZip(root));
+    var ex= assertThrows(UserError.class, ()->new RealSourceOracleWithZip(root));
     String res= dumpErr(root, ex);
     utils.Err.strCmp(expected, res);
   }  

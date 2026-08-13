@@ -11,8 +11,8 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.zip.ZipInputStream;
 
-import coordinatorMessages.CacheCorruptionError;
-import coordinatorMessages.UserExit;
+import userMessages.Violation;
+import userMessages.Report;
 import tools.Fs;
 import tools.ReadZip;
 
@@ -25,7 +25,7 @@ final class ZipLocator{
   }
   public static byte[] entryBytes(Path diskZip, List<String> steps, String entryName){
     var res= fetch(diskZip, steps, bytes -> readHere(diskZip, steps, bytes).get(entryName));
-    if (res == null){ throw CacheCorruptionError.canNotFindExpected(diskZip, steps, entryName); }
+    if (res == null){ throw Violation.cacheCanNotFindZipEntry(diskZip, steps, entryName); }
     return res;
   }
   private static <T> T fetch(Path diskZip, List<String> steps, Function<byte[],T> onFinal){
@@ -33,9 +33,9 @@ final class ZipLocator{
   }
   private static ReadZip readZip(Path diskZip, List<String> steps){
     return new ReadZip(
-      n -> UserExit.zipBadEntryName(diskZip, steps, n),
-      a -> UserExit.zipDuplicateEntryName(diskZip, steps, a),
-      n -> UserExit.nestedZipTooBig(diskZip, steps, n)
+      n -> Report.zipBadEntryName(diskZip, steps, n),
+      a -> Report.zipDuplicateEntryName(diskZip, steps, a),
+      n -> Report.zipEntryTooBig(diskZip, steps, n)
     );
   }
   private static ZipInputStream zipStream(Path diskZip, byte[] bytes) throws IOException{
@@ -47,7 +47,7 @@ final class ZipLocator{
     byte[] bytes= null; int rounds= 0;
     for (var step: steps){ rounds++;
       bytes= readHere(diskZip, steps.subList(0, rounds), bytes).get(step);
-      if (bytes == null){ throw CacheCorruptionError.canNotFindExpected(diskZip, steps.subList(0, rounds), step); }
+      if (bytes == null){ throw Violation.cacheCanNotFindZipEntry(diskZip, steps.subList(0, rounds), step); }
     }
     return onFinal.apply(bytes);
   }

@@ -7,7 +7,7 @@ import java.nio.file.Path;
 import javax.imageio.ImageIO;
 
 import mainCoordinator.Main;
-import managerMessages.RuntimeBroken;
+import userMessages.Violation;
 
 final class FearlessIcon {
   private static Image image= read(Main.reqAppDir().resolve("icon.png"));
@@ -15,9 +15,9 @@ final class FearlessIcon {
   private static Image read(Path file){
     try {
       var res= ImageIO.read(file.toFile());
-      if (res == null){ throw RuntimeBroken.couldNotDecodeIcon(file); }//ImageIO answers null when no reader claims the file
+      if (res == null){ throw Violation.couldNotDecodeIcon(file); }//ImageIO answers null when no reader claims the file
       return res;
     }
-    catch(IOException e){ throw RuntimeBroken.couldNotLoadIcon(file, e); }
+    catch(IOException e){ throw Violation.couldNotLoadIcon(file, e); }
   }
 }

@@ -24,7 +24,7 @@ import javax.swing.JTextArea;
 import javax.swing.SwingUtilities;
 import javax.swing.WindowConstants;
 
-import managerMessages.EnvironmentBroken;
+import userMessages.Violation;
 
 final class ManagerGui {
   private static final Duration tickDelay= Duration.ofSeconds(1);//the label shows seconds, so tick every second
@@ -71,7 +71,7 @@ final class ManagerGui {
       SwingUtilities.invokeAndWait(() -> result.set(new ManagerGui(onQuit)));
       return result.get();
     }
-    catch(InterruptedException|InvocationTargetException e){ throw EnvironmentBroken.couldNotStartGui(e); }
+    catch(InterruptedException|InvocationTargetException e){ throw Violation.couldNotStartGui(e); }
   }
   void showManager(){
     SwingUtilities.invokeLater(() -> {
