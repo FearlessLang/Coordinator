@@ -2,6 +2,7 @@ package sourceOracleTests;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 
 import org.junit.jupiter.api.Assertions;
@@ -10,6 +11,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.opentest4j.AssertionFailedError;
 
+import coordinatorMessages.UserExit;
+import realSourceOracle.RealSourceOracleWithZip;
 import testHelperFs.FsDsl;
 import static testHelperFs.FsDsl.*;
 
@@ -255,6 +258,27 @@ What went wrong
 How to fix
 - Rename it to start with a-z or _.
   Examples: "foo", "_tmp", "foo1".
+
+We check this so that you[###]
+""");}
+
+  @Test void err_visible_invalid_char(@TempDir Path tmp){ runErrIOE(tmp, """
+_pkg/fo-o.fear
+iii
+X
+""","""
+Invalid path in this project folder.
+
+Root: [###]
+Path: "_pkg/fo-o.fear"
+
+What went wrong
+- A visible folder/file name contains an unsupported character: '-'.
+  Visible names may use only lowercase letters (a-z), digits (0-9), and underscore (_).
+
+How to fix
+- Rename it to use only lowercase letters, digits, and underscores.
+  Examples: "foo_bar2", "src1", "_cache".
 
 We check this so that you[###]
 """);}
@@ -653,4 +677,133 @@ How to fix
 
 We check this so that you[###]
 """);}
+
+  @Test void err_visible_symlink_forbidden(@TempDir Path tmp) throws Exception{
+    Path root= tmp.resolve("root").toAbsolutePath().normalize();
+    UserExit.root= root;
+    Files.createDirectories(root.resolve("_pkg"));
+    Files.createSymbolicLink(root.resolve("_pkg/link.fear"), root.resolve("_pkg/missing.fear"));
+    var ex= assertThrows(UserExit.class, ()->new RealSourceOracleWithZip(root));
+    utils.Err.strCmp("""
+Invalid path in this project folder.
+
+Root: [###]
+Path: "<root>/_pkg/link.fear"
+
+What went wrong
+- This path is a symbolic link.
+  Symbolic links behave differently across systems and tools, so we forbid them.
+
+How to fix
+- Replace the symbolic link with a real file/folder.
+- If you need the linked content, copy it into the repository.
+
+We check this so that you[###]
+""", FsDsl.dumpErr(root, ex));
+  }
+
+  @Test void err_invisible_symlink_forbidden(@TempDir Path tmp) throws Exception{
+    Path root= tmp.resolve("root").toAbsolutePath().normalize();
+    UserExit.root= root;
+    Files.createDirectories(root.resolve("_pkg/.d"));
+    Files.createSymbolicLink(root.resolve("_pkg/.d/link"), root.resolve("_pkg/.d/missing"));
+    var ex= assertThrows(UserExit.class, ()->new RealSourceOracleWithZip(root));
+    utils.Err.strCmp("""
+Invalid path in this project folder.
+
+Root: [###]
+Path: "<root>/_pkg/.d/link"
+
+What went wrong
+- This protected path is a symbolic link.
+  Even though protected paths are ignored, symbolic links can cause surprises across systems/tools.
+
+How to fix
+- Replace the symbolic link with a real file/folder, or remove it.
+
+We check this so that you[###]
+""", FsDsl.dumpErr(root, ex));
+  }
+
+  @Test void err_extensionless_masks_extension(@TempDir Path tmp){ runErrIOE(tmp, """
+_pkg/readme
+iii
+X
+jjj
+_pkg/readme.md
+iii
+Y
+""","""
+Invalid path in this project folder.
+
+Root: [###]
+Path: "_pkg/readme.md"
+
+What went wrong
+- Both an allowed extensionless file and an extended file share the same base name.
+  Extensionless file:
+  Root: [###]
+  Path: "_pkg/readme"
+
+  Extended file:
+  Root: [###]
+  Path: "_pkg/readme.md"
+
+  This is confusing in file browsers (extensions may be hidden).
+
+How to fix
+- Rename one of them so they are clearly distinct.
+
+We check this so that you[###]
+""");}
+
+  @Test void err_path_too_long(@TempDir Path tmp){
+    String longName= "a".repeat(200);
+    runErrIOE(tmp, ("""
+_pkg/%s.fear
+iii
+X
+""").formatted(longName), ("""
+Invalid path in this project folder.
+
+Root: [###]
+Path: "_pkg/%s.fear"
+
+What went wrong
+- The path is longer than 200 characters.
+  Long paths often fail on Windows and in some tools.
+
+How to fix
+- Shorten folder/file names, or move this content closer to the project root.
+
+We check this so that you[###]
+""").formatted(longName));
+  }
+
+  // Real filesystem paths can't carry a raw UTF-16 surrogate through UTF-8 encoding,
+  // so this exercises the message factory directly rather than through a real scan.
+  @Test void err_invisible_invalid_surrogate_message(@TempDir Path tmp) throws Exception{
+    Path root= tmp.resolve("root").toAbsolutePath().normalize();
+    UserExit.root= root;
+    Files.createDirectories(root.resolve("_pkg"));
+    Files.writeString(root.resolve("_pkg/a.fear"), "X");
+    var oracle= new RealSourceOracleWithZip(root);
+    var ref= oracle.allFiles().get(0);
+    var ex= UserExit.invisibleInvalidSurrogate(ref, ".x\uD800y");
+    utils.Err.strCmp("""
+Invalid path in this project folder.
+
+Root: [###]
+Path: "_pkg/a.fear"
+
+What went wrong
+- A protected name segment contains invalid Unicode.
+  Bad segment: ".x" [HIGH SURROGATE U+D800] "y"
+
+How to fix
+- Rename the segment to remove the invalid characters.
+
+We check this so that you[###]
+""", ex.getMessage());
+  }
 }
