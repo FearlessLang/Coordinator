@@ -295,6 +295,18 @@ or version control system (git).
     );
   }
 
+  //-- auto-loaded assets
+  public static UserError autoloadedNamesCollide(RefParent kid, String prev, String name, String typeName){
+    return fail(showRel(kid),
+      "- Auto-loading both of these files would produce two declarations of the same type name.\n"
+    + "  Name 1: "+disp(prev)+"\n"
+    + "  Name 2: "+disp(name)+"\n"
+    + "  Reason: Both would auto-load as the type "+disp(typeName)+".",
+      "- Rename one of them so they are clearly distinct.\n"
+    + "- Avoid two assets whose folder and file name produce the same auto-loaded type name."
+    );
+  }
+
   //-- zips, which we read as if they were folders
   public static UserError zipBadEntryName(Path diskZip, List<String> steps, String entryName){
     return directFail(showZipRel(diskZip, steps, entryName),

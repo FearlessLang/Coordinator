@@ -2,10 +2,10 @@ package realSourceOracle;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import tools.SourceOracle;
+import userMessages.Report;
 import utils.Push;
 
 public record SourceOracleWithAutoload(SourceOracle base, Ref autoload, URI autoloadUri, List<Ref> allFiles)
@@ -39,18 +39,22 @@ public record SourceOracleWithAutoload(SourceOracle base, Ref autoload, URI auto
   }
   private static String generate(SourceOracle base, String pkgName, List<AutoloadHandler> handlers){
     var out= new StringBuilder();
-    var declared= new ArrayList<String>();
+    var declaredBy= new LinkedHashMap<String,Ref>();
     for (var ref: base.allFiles()){
       if (!ref.fearPath().contains("/"+pkgName+"/")){ continue; }
       for (var h: handlers){
-        var a= h.generate(ref, pkgName, Collections.unmodifiableList(declared));
+        var a= h.generate(ref, pkgName);
         if (a.text().isEmpty()){ continue; }
+        a.declaredTypes().forEach(type->checkNotDeclared(declaredBy, ref, type));
         out.append(a.text());
         if (!a.text().endsWith("\n")){ out.append('\n'); }
-        declared.addAll(a.declaredTypes());
       }
     }
     return out.toString();
+  }
+  private static void checkNotDeclared(LinkedHashMap<String,Ref> declaredBy, Ref ref, String type){
+    var prev= declaredBy.putIfAbsent(type, ref);
+    if (prev != null){ throw Report.autoloadedNamesCollide(ref, prev.fearPath(), ref.fearPath(), type); }
   }
   public static Ref syntheticRef(String pkgName, String text){
     return new SyntheticRef(SourceOracle.root+pkgName+autoloadFileSuffix, text);

@@ -8,7 +8,7 @@ import tools.SourceOracle;
 import utils.Pop;
 
 public interface AutoloadHandler{
-  AutoloadedRes generate(SourceOracle.Ref ref, String pkgName, List<String> alreadyDeclaredTypes);
+  AutoloadedRes generate(SourceOracle.Ref ref, String pkgName);
   static List<String> componentsAfterPackage(String pkgName,SourceOracle.Ref ref){
     var cs= components(ref);
     int i= cs.indexOf(pkgName);
