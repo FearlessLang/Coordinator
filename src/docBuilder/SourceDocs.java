@@ -59,6 +59,7 @@ final class SourceDocs{
               add(l,i+1,s.substring(i+3),s.substring(0,i).isBlank());
               i= s.length();
             }
+            else if (s.startsWith("//",i)){ i= s.length(); }
             else if (s.startsWith("/*",i)){ mode= Mode.Block; i += 2; }
             else if (s.charAt(i) == '"'){ mode= Mode.DoubleString; i += 1; }
             else if (s.charAt(i) == '`'){ mode= Mode.BacktickString; i += 1; }
