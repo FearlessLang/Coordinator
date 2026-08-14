@@ -2,6 +2,7 @@ package treeErrorTests;
 
 import java.net.URI;
 import java.nio.file.Path;
+import java.util.List;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -9,6 +10,7 @@ import org.opentest4j.AssertionFailedError;
 
 import coordinator.Coordinator;
 import tools.SourceOracle;
+import userMessages.Report;
 
 /// The project layout errors: no package folder, ambiguous package folder, and the
 /// rank file rules. All of them are decided from the file NAMES alone, before anything
@@ -69,6 +71,8 @@ before a package name is specified.
   @Test void ambiguousPackageSegment(){ runErr("""
 This path contains more than one folder whose name starts with "_":
   fear:/src/_bla/_beer/bar.fear
+
+Candidates: "_bla", "_beer"
 
 Exactly one "_pkg" folder must define the package.
 [###]
@@ -131,4 +135,17 @@ How to fix it:
 """,
     "_pka/_rank_app999.fear","map a as pkc in pkb;",
     "_pkd/_rank_app999.fear","map a as pkb in pkb;"); }
+
+  @Test void ambiguousPackageSegmentMessageMustNameTheActualCandidates(){
+    record FakeRef(String fearPath) implements SourceOracle.Ref{
+      @Override public byte[] loadBytes(){ return new byte[0]; }
+      @Override public long lastModified(){ return 0; }
+      @Override public String toString(){ return fearPath; }
+    }
+    SourceOracle.Ref file= new FakeRef("fear:/src/x/y/bar.fear"); // deliberately unrelated to the candidates below
+    var candidates= List.of("_zzcandidateone","_zzcandidatetwo");
+    var msg= Report.projectAmbiguousPackageSegment(file, candidates).getMessage();
+    Assertions.assertTrue(msg.contains("_zzcandidateone"), msg);
+    Assertions.assertTrue(msg.contains("_zzcandidatetwo"), msg);
+  }
 }

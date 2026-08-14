@@ -391,6 +391,8 @@ Here both "foo.fear" and "bar.fear" are in package "bla".
 This path contains more than one folder whose name starts with "_":
   %s
 
+Candidates: %s
+
 Exactly one "_pkg" folder must define the package.
 
 Example showing this ambiguity:
@@ -416,7 +418,7 @@ Valid alternatives:
       +-- bla/
           +-- _beer/
               +-- bar.fear
-      """.formatted(file, candidates));
+      """.formatted(file, Join.of(candidates.stream().map(c->disp(c)), "",", ","")));
   }
   public static UserError projectMissingRankFile(String pkg, Path pkgRoot){ return new UserError("""
 Missing rank file for a package.
