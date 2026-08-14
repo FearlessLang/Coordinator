@@ -5,7 +5,7 @@ import java.util.List;
 import tools.SourceOracle;
 
 public final class ImageAutoloadHandler implements AutoloadHandler{
-  @Override public AutoloadedRes generate(SourceOracle.Ref ref, String pkgName, List<String> alreadyDeclaredTypes){
+  @Override public AutoloadedRes generate(SourceOracle.Ref ref, String pkgName){
     if (!isImage(ref.fearPath())){ return AutoloadedRes.none(); }
     var type= AutoloadHandler.standardTypeName(pkgName, ref);
     return new AutoloadedRes(
