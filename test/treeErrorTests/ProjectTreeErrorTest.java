@@ -62,12 +62,6 @@ That folder name, without the leading "_", defines the package name.
 """,
     "src/foo.fear",""); }
 
-  @Test void reservedBeforePkg(){ runErr("""
-No folder or file can be named "_asset"
-before a package name is specified.
-""",
-    "src/_asset/foo.fear",""); }
-
   @Test void ambiguousPackageSegment(){ runErr("""
 This path contains more than one folder whose name starts with "_":
   fear:/src/_bla/_beer/bar.fear

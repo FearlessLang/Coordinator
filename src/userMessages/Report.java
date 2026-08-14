@@ -361,11 +361,6 @@ Folder:
  "%s"
 """.formatted(root));
   }
-  public static UserError projectReservedBeforePkg(Ref file, String reserved){
-    return new UserError("""
-No folder or file can be named %s
-before a package name is specified.
-    """.formatted(disp(reserved)));}
 
   public static UserError projectNoPackageSegment(Ref file){ return new UserError("""
 This file must be placed inside a package.

@@ -128,15 +128,12 @@ class Helper{
   }
   static String pkgName(Ref u){ return pkgNameOpt(u).orElseThrow(()->Report.projectNoPackageSegment(u)); }
 
-  static Optional<String> pkgNameOpt(Ref u){//TODO: finalize the real whitelist
-    List<String> whiteListAfterPkg= List.of("_asset","_dbg");
+  static Optional<String> pkgNameOpt(Ref u){
     var candidates= Stream.of(u.toString().split("/"))
       .filter(s->s.startsWith("_") && !s.contains("."))
       .toList();
     if (candidates.isEmpty()){ return Optional.empty(); }
-    if (whiteListAfterPkg.contains(candidates.getFirst())){ throw Report.projectReservedBeforePkg(u,candidates.getFirst()); }    
-    var onlyGood= candidates.stream().skip(1).allMatch(s->whiteListAfterPkg.contains(s));
-    if (onlyGood){ return Optional.of(candidates.getFirst().substring(1)); } 
-    throw Report.projectAmbiguousPackageSegment(u, candidates);    
+    if (candidates.size() == 1){ return Optional.of(candidates.getFirst().substring(1)); }
+    throw Report.projectAmbiguousPackageSegment(u, candidates);
   }
 }
