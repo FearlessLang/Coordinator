@@ -4,21 +4,29 @@ import java.nio.file.Path;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import org.opentest4j.AssertionFailedError;
 
 import coordinator.Coordinator;
 import mainCoordinator.ResolveResource;
+import testHelperFs.FsDsl;
 import tools.JavacTool;
+import userMessages.UserError;
 
 public class RunIntegration {
-  void testOk(String name){
+  static{ utils.Err.setUp(AssertionFailedError.class, Assertions::assertEquals, Assertions::assertTrue); }
+
+  Coordinator coordinator(){
     System.setProperty(JavacTool.appDirKey,ResolveResource.stLibPath.getParent()
       .resolve("fearlessArtefact","fearless","app").toString());
-    var c= new Coordinator(){
+    return new Coordinator(){
       public Path rtPath(){    return ResolveResource.stLibRTPath; }
       public Path stLibPath(){ return ResolveResource.stLibPath; }
       public Path modsPath(){  return ResolveResource.coordinatorJars; }
     };
-    try { c.main(ResolveResource.integrationTests.resolve(name));}
+  }
+  void testOk(String name){
+    try { coordinator().main(ResolveResource.integrationTests.resolve(name));}
     catch (InterruptedException e){ Assertions.fail(e);}
   }
   @Test void helloWorld(){ testOk("helloWorld");}
@@ -31,4 +39,44 @@ public class RunIntegration {
   @Test void testingNorms(){ testOk("testingNorms");}
   //@Test void testGui1(){ testOk("testGui1");}
 
+  // Two assets that generate the same auto-loaded type name (here "foo.txt" and "foo.png",
+  // both auto-loading as "Foo") must be rejected end-to-end, before the frontend ever sees
+  // the synthetic autoloaded_assets.fear file, with a message naming the two real files
+  // instead of blaming a file the user never wrote.
+  @Test void assetAutoloadNameCollision(@TempDir Path tmp) throws InterruptedException{
+    Path root= tmp.resolve("root");
+    UserError.root= root;
+    FsDsl.materialize(root, """
+_col/_rank_app.fear
+iii
+
+jjj
+_col/foo.txt
+iii
+hello
+jjj
+_col/foo.png
+iii
+ignored
+""");
+    var ex= Assertions.assertThrows(UserError.class, ()->coordinator().main(root));
+    utils.Err.strCmp("""
+Invalid path in this project folder.
+
+Root: [###]
+Path: "_col/foo.txt"
+
+What went wrong
+- Auto-loading both of these files would produce two declarations of the same type name.
+  Name 1: "fear:/_col/foo.png"
+  Name 2: "fear:/_col/foo.txt"
+  Reason: Both would auto-load as the type "Foo".
+
+How to fix
+- Rename one of them so they are clearly distinct.
+- Avoid two assets whose folder and file name produce the same auto-loaded type name.
+
+We check this so that you[###]
+""", ex.getMessage());
+  }
 }

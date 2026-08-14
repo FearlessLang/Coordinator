@@ -14,15 +14,24 @@ import org.opentest4j.AssertionFailedError;
 import userMessages.UserError;
 import userMessages.Report;
 import realSourceOracle.RealSourceOracleWithZip;
+import realSourceOracle.SourceOracleWithAutoload;
 import testHelperFs.FsDsl;
 import static testHelperFs.FsDsl.*;
 
 final class RealSourceOracleWithZipDslTest{
 
   static{ utils.Err.setUp(AssertionFailedError.class, Assertions::assertEquals, Assertions::assertTrue); }
-  
+
   private void testOk(Path tmp,String in,String out){
     assertEquals(out, FsDsl.runOk(tmp, in));
+  }
+  private void autoloadErr(Path tmp, String pkgName, String spec, String expected){
+    Path root= tmp.resolve("root").toAbsolutePath().normalize();
+    UserError.root= root;
+    FsDsl.materialize(root, spec);
+    var base= new RealSourceOracleWithZip(root);
+    var ex= assertThrows(UserError.class, ()->SourceOracleWithAutoload.of(base, pkgName));
+    utils.Err.strCmp(expected, ex.getMessage());
   }
 //Java can not create the broken zip
 @Disabled @Test void err_zip_duplicate_entry_name(@TempDir Path tmp){ runErrIOE(tmp, """
@@ -806,5 +815,81 @@ How to fix
 
 We check this so that you[###]
 """, ex.getMessage());
+  }
+
+  // Two assets that generate the same auto-loaded type name must be rejected, naming both
+  // real files, instead of silently declaring that type twice in the synthetic
+  // autoloaded_assets.fear file (see realSourceOracle.SourceOracleWithAutoload.generate).
+  @Test void err_asset_autoload_name_collision(@TempDir Path tmp){ autoloadErr(tmp, "_assets", """
+_assets/foo.txt
+iii
+hello
+jjj
+_assets/foo.png
+iii
+ignored
+""","""
+Invalid path in this project folder.
+
+Root: [###]
+Path: "_assets/foo.txt"
+
+What went wrong
+- Auto-loading both of these files would produce two declarations of the same type name.
+  Name 1: "fear:/_assets/foo.png"
+  Name 2: "fear:/_assets/foo.txt"
+  Reason: Both would auto-load as the type "Foo".
+
+How to fix
+- Rename one of them so they are clearly distinct.
+- Avoid two assets whose folder and file name produce the same auto-loaded type name.
+
+We check this so that you[###]
+"""); }
+
+  @Test void err_asset_autoload_name_collision_same_handler(@TempDir Path tmp){ autoloadErr(tmp, "_assets", """
+_assets/foo.png
+iii
+1
+jjj
+_assets/foo.jpg
+iii
+2
+""","""
+Invalid path in this project folder.
+
+Root: [###]
+Path: "_assets/foo.png"
+
+What went wrong
+- Auto-loading both of these files would produce two declarations of the same type name.
+  Name 1: "fear:/_assets/foo.jpg"
+  Name 2: "fear:/_assets/foo.png"
+  Reason: Both would auto-load as the type "Foo".
+
+How to fix
+- Rename one of them so they are clearly distinct.
+- Avoid two assets whose folder and file name produce the same auto-loaded type name.
+
+We check this so that you[###]
+"""); }
+
+  @Test void ok_asset_autoload_no_collision_for_distinct_names(@TempDir Path tmp){
+    Path root= tmp.resolve("root");
+    UserError.root= root;
+    FsDsl.materialize(root, """
+_assets/foo.txt
+iii
+hello
+jjj
+_assets/bar.txt
+iii
+world
+""");
+    var base= new RealSourceOracleWithZip(root);
+    var res= SourceOracleWithAutoload.of(base, "_assets");
+    var generated= res.newRefs().getFirst().loadString();
+    assertTrue(generated.contains("Foo: base.TxtFile{"), generated);
+    assertTrue(generated.contains("Bar: base.TxtFile{"), generated);
   }
 }
