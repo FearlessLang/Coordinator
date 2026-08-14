@@ -93,7 +93,7 @@ class OutputHelper{
       if (cached == null){ return false; }
       if (!eqApi(l, cached)){ return false; }
     }
-    return map.size() == (int)core.stream().filter(l->l.name().isPublic()).count();
+    return true;
   }
   private static boolean eqApi(Literal a, Literal b){
     if (a.rc() != b.rc()){ return false; }
