@@ -143,4 +143,28 @@ final class RecompilationCacheTest{
     assertNotEquals(stampC, out.pkgApiStamp("c"));
     assertEquals(RC.mut, stub.lastOtherSeen.get("c").__of(aName).rc());
   }
+
+  @Test void layerStampMustTrackTheFreshestSiblingNotJustTheLastOneMerged(@TempDir Path tmp){
+    long start= System.currentTimeMillis();
+    OutputOracle out= ()->tmp;
+    var stub= new ScriptedCoordinator();
+    stub.fixedOutput("a", List.of(literal("A1", RC.imm)));
+    stub.fixedOutput("b", List.of(literal("B1", RC.imm)));
+    var pkgs= new LinkedHashMap<String,List<Ref>>();
+    pkgs.put("a", refs("a", start-MARGIN));
+    pkgs.put("b", refs("b", start-MARGIN));
+    var layer= new MiddleLayer(stub, fixedBase(start-MARGIN), pkgs);
+    layer.compile(emptySrc, out);
+
+    long afterBuild1= System.currentTimeMillis();
+    pkgs.put("a", refs("a", afterBuild1+TOUCH));
+    pkgs.put("b", refs("b", afterBuild1+TOUCH/2));
+    var result= layer.compile(emptySrc, out);
+
+    assertEquals(2, stub.calls("a"));
+    assertEquals(2, stub.calls("b"));
+    long newStampA= afterBuild1+TOUCH;
+    long newStampB= afterBuild1+TOUCH/2;
+    assertEquals(Math.max(newStampA, newStampB), result.stamp());
+  }
 }
