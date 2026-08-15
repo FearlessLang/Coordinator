@@ -33,9 +33,9 @@ record MiddleLayer(Coordinator coordinator, Layer next, LinkedHashMap<String,Lis
         files= Push.of(files.stream().filter(f->f.fearPath().endsWith(".fear")).toList(),rich.newRefs());
         List<Literal> core= coordinator.frontend(pkg, files, rich.oracle(), other,other.virtualizationMap().getOrDefault(pkg,Map.of()));
         coordinator.backend(pkg, core, rich.oracle(), other, out);
-        long newStamp= out.commitPkgApi(pkg, core, maxIn); // newStamp will be maxIn if there was no reason to commit. 
+        long newStamp= out.commitPkgApi(pkg, core, maxIn); // newStamp will be maxIn if there was no reason to commit.
         var map= AllLs.of(core).values().stream().collect(Collectors.toUnmodifiableMap (Literal::name, d->d));
-        nextOther = nextOther.mergeWith(map,newStamp);
+        nextOther = nextOther.mergeWith(map,Math.max(nextOther.stamp(),newStamp));
       }};
     pkgs.forEach(res::compilePkg);
     return res.nextOther;
