@@ -688,6 +688,33 @@ How to fix
 We check this so that you[###]
 """);}
 
+  @Test void err_real_folder_collides_with_zip_expanded_folder(@TempDir Path tmp){ runErrIOE(tmp, """
+_pkg/z/foo.fear
+iii
+X
+jjj
+_pkg/z.zip/foo.fear
+iii
+Y
+""","""
+Invalid path in this project folder.
+
+Root: [###]
+Path: "_pkg/z/foo.fear"
+
+What went wrong
+- Expanding zip files into folders makes this path exist twice, from two
+  different places in the project:
+  - "the entry foo.fear inside the zip _pkg/z.zip"
+  - "a real file/folder at _pkg/z/foo.fear"
+
+How to fix
+- Rename one of them, or move/rename the zip file involved, so this path is no
+  longer produced twice.
+
+We check this so that you[###]
+""");}
+
   @Test void err_visible_symlink_forbidden(@TempDir Path tmp) throws Exception{
     Path root= tmp.resolve("root").toAbsolutePath().normalize();
     UserError.root= root;

@@ -353,6 +353,16 @@ Remove this entry from the zip, or store its content as normal files instead.
 This zip file contains no entries.
 This is most likely a mistake.
 """);}
+  public static UserError zipExpandedPathCollides(RefParent kid, String first, String second){
+    return fail(showRel(kid),
+      "- Expanding zip files into folders makes this path exist twice, from two\n"
+    + "  different places in the project:\n"
+    + "  - "+disp(first)+"\n"
+    + "  - "+disp(second),
+      "- Rename one of them, or move/rename the zip file involved, so this path is no\n"
+    + "  longer produced twice."
+    );
+  }
 
   //-- project layout: which folder defines a package, and the rank file of each package
   public static UserError projectEmpty(Path root){ return new UserError("""

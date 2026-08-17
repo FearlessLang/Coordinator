@@ -191,6 +191,7 @@ final class BuildWithZip{
     var visKids= new ArrayList<RefParent>();
     for (var kid: kids){ (Fs.fileNameWithExtension(kid.fearPath()).startsWith(".") ? dotKids : visKids).add(kid); }
     if (!dotKids.isEmpty()){ checkCollectiveInvisible(new LinkedHashSet<>(dotKids)); }
+    checkNoDuplicateFearPath(visKids);
     for (var kid: visKids){
       var name= Fs.fileNameWithExtension(kid.fearPath());
       if (name.indexOf('.') >= 0){ continue; }
@@ -199,6 +200,23 @@ final class BuildWithZip{
       checkNoExtBaseClash(visKids, kid, name);
     }
   }
+  private void checkNoDuplicateFearPath(List<RefParent> visKids){
+    var seen= new LinkedHashMap<String,RefParent>();
+    for (var kid: visKids){
+      var prev= seen.putIfAbsent(kid.fearPath(), kid);
+      if (prev != null){ throw Report.zipExpandedPathCollides(kid, describeSource(prev), describeSource(kid)); }
+    }
+  }
+  private static String describeSource(RefParent r){
+    if (r instanceof PathEntry p){ return "a real file/folder at "+diskPath(p.local()); }
+    if (r instanceof ZipEntry z){
+      var chain= new ArrayList<>(z.zips());
+      chain.add(z.lastZips());
+      return "the entry "+String.join(" -> ",chain)+" inside the zip "+diskPath(z.local());
+    }
+    throw new AssertionError(r.getClass());
+  }
+  private static String diskPath(Path local){ return local.toString().replace('\\','/'); }
   private void checkNoExtBaseClash(List<RefParent> visKids, RefParent noExtKid, String base){
     for (var kid: visKids){
       if (kid.equals(noExtKid)){ continue; }
