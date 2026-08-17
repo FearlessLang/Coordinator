@@ -54,4 +54,20 @@ recursivelly unzipped, it would clearly go over the OS path lenght limit.
 
 We check this so that you[###]
 """); }
+@Test void zip4(){ runErrIOE("zip4","""
+Root: [###]
+Path: "zip4/file_used_as_folder.zip"
+Entry: "readme"
+
+
+This zip contains an entry called "readme",
+and also this other entry nested under it, as if it were a folder:
+  "readme/notes.txt"
+
+An entry cannot be both a file and a folder in the same zip.
+Different tools disagree on which one should be used: some show the file and
+hide what is nested under it, others expand it as a folder and hide the file.
+
+We check this so that you[###]
+"""); }
 }

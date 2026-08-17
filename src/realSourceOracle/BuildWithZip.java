@@ -44,9 +44,15 @@ record Tree(
       ? Report.invisibleOnlyRegularFilesAndDirs(abs)
       : Report.onlyRegularFilesAndDirs(abs);
     }
-    if (isDiskZip(abs, rel)){ collectBodyDiskZip(root, rel); return; }
+    if (isDiskZip(abs, rel)){ reqNoSiblingFileForZipName(rel); collectBodyDiskZip(root, rel); return; }
     for (RefParent p= pe; p.parent()!=p; p= p.parent()){ addKid(p); }
     if (isRegularFile(abs) && !isInvisible(pe)){ visibleFiles.add(pe); }
+  }
+  private void reqNoSiblingFileForZipName(Path rel){
+    var name= rel.getFileName().toString();
+    var siblingRel= rel.resolveSibling(name.substring(0, name.length()-4));
+    if (!isRegularFile(root.resolve(siblingRel))){ return; }
+    throw Report.zipNameClashesWithFile(new PathEntry(root, rel), new PathEntry(root, siblingRel));
   }
   private void reqNoEmptyDirs(){
     var dirs= new LinkedHashSet<Path>();

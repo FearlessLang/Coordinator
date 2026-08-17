@@ -22,12 +22,25 @@ public final class ZipWellFormedness{
     assert root.isAbsolute() && !local.isAbsolute();
     var out= new ArrayList<ZipEntry>();
     reqCollect(root.resolve(local),root,local, List.of(), 0, out);
+    reqNoFileUsedAsDirectory(out);
     return Collections.unmodifiableList(out);
   }
   private static void reqCollect(Path diskZip, Path root, Path local, List<String> steps, int depth, ArrayList<ZipEntry> out){
     if (depth > maxZipNesting){ throw Report.zipNestingTooDeep(diskZip, steps, depth, maxZipNesting); }
     var names= ZipLocator.entryNames(diskZip, steps);
     for (var name: names){ singleName(diskZip, root, local, steps, depth, out, name); }
+  }
+  private static void reqNoFileUsedAsDirectory(List<ZipEntry> out){
+    for (var e: out){
+      var nested= out.stream().filter(o->isProperPrefix(e.segments(), o.segments())).findFirst();
+      if (nested.isEmpty()){ continue; }
+      var extra= nested.get().segments().subList(e.segments().size(), nested.get().segments().size());
+      var nestedDisplay= e.lastZips()+"/"+String.join("/", extra);
+      throw Report.zipFileUsedAsDirectory(e.root().resolve(e.local()), e.zips(), e.lastZips(), nestedDisplay);
+    }
+  }
+  private static boolean isProperPrefix(List<String> prefix, List<String> full){
+    return full.size() > prefix.size() && full.subList(0, prefix.size()).equals(prefix);
   }
   private static void singleName(Path diskZip, Path root, Path local, List<String> steps, int depth, ArrayList<ZipEntry> out, String name){
     out.add(new ZipEntry(root, local, zipsToSegments(steps, name),steps,name));
