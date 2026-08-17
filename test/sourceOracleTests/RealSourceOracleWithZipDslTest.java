@@ -170,6 +170,39 @@ V
 
 """);}
 
+  @Test void ok_protected_folder_of_a_git_repository_may_hold_empty_directories(@TempDir Path tmp){ testOk(tmp, """
+.git/refs/tags/
+iii
+jjj
+.git/objects/info/
+iii
+jjj
+.git/config
+iii
+[core]
+jjj
+_pkg/a.fear
+iii
+A
+""","""
+--- fear:/_pkg/a.fear
+A
+
+""");}
+
+  @Test void ok_protected_folder_may_hold_an_empty_zip(@TempDir Path tmp){ testOk(tmp, """
+.tool_cache/e.zip
+iii
+jjj
+_pkg/a.fear
+iii
+A
+""","""
+--- fear:/_pkg/a.fear
+A
+
+""");}
+
   @Test void err_empty_directory(@TempDir Path tmp){ runErrIOE(tmp, """
 _pkg/
 iii
@@ -831,27 +864,17 @@ We check this so that you[###]
 """, FsDsl.dumpErr(root, ex));
   }
 
-  @Test void err_invisible_symlink_forbidden(@TempDir Path tmp) throws Exception{
+  @Test void ok_invisible_symlink_is_ignored(@TempDir Path tmp) throws Exception{
     Path root= tmp.resolve("root").toAbsolutePath().normalize();
     UserError.root= root;
     Files.createDirectories(root.resolve("_pkg/.d"));
+    Files.writeString(root.resolve("_pkg/a.fear"), "A");
+    Files.writeString(root.resolve("_pkg/.d/real.txt"), "R");
     Files.createSymbolicLink(root.resolve("_pkg/.d/link"), root.resolve("_pkg/.d/missing"));
-    var ex= assertThrows(UserError.class, ()->new RealSourceOracleWithZip(root));
-    utils.Err.strCmp("""
-Invalid path in this project folder.
-
-Root: [###]
-Path: "<root>/_pkg/.d/link"
-
-What went wrong
-- This protected path is a symbolic link.
-  Even though protected paths are ignored, symbolic links can cause surprises across systems/tools.
-
-How to fix
-- Replace the symbolic link with a real file/folder, or remove it.
-
-We check this so that you[###]
-""", FsDsl.dumpErr(root, ex));
+    assertEquals("""
+--- fear:/_pkg/a.fear
+A
+""", FsDsl.dump(new RealSourceOracleWithZip(root)));
   }
 
   @Test void err_extensionless_masks_extension(@TempDir Path tmp){ runErrIOE(tmp, """
