@@ -229,6 +229,19 @@ or version control system (git).
       "- Rename one of them so they are clearly distinct."
     );
   }
+  public static UserError zipNameClashesWithFile(RefParent zipKid, RefParent fileKid){
+    return fail(showRel(zipKid),
+      "- A zip file and a plain file share the same base name.\n"
+    + "  Zip file:\n  "
+    + showRel(zipKid).replace("\nPath:", "\n  Path:")+"\n"
+    + "  Plain file:\n  "
+    + showRel(fileKid).replace("\nPath:", "\n  Path:")+"\n"
+    + "  Fearless expands each zip file into a folder named after it (without the\n"
+    + "  \".zip\"); that folder would have the exact same name as this file.",
+      "- Rename one of them, or move/rename the zip file, so this name is no longer\n"
+    + "  produced twice."
+    );
+  }
 
   //-- protected ("dot") names: ignored by Fearless, but still checked out by other tools
   public static UserError invisibleSymlinkForbidden(Path kid){
@@ -331,6 +344,16 @@ Invalid entry names (based on the exact text of the entry name):
       "This zip contains more than one entry called "+UserError.printEntryName(entryName)
      +"\nDifferent tools disagree on which one should be used.\n"
      +"Using it may even means that different content is seen in different moments.\n(Schizophrenic ZIP file)");
+  }
+  public static UserError zipFileUsedAsDirectory(Path diskZip, List<String> steps, String entryName, String nestedEntryName){
+    return directFail(showZipRel(diskZip, steps, entryName),
+      "This zip contains an entry called "+disp(entryName)+",\n"
+     +"and also this other entry nested under it, as if it were a folder:\n"
+     +"  "+disp(nestedEntryName)+"\n"
+     +"\n"
+     +"An entry cannot be both a file and a folder in the same zip.\n"
+     +"Different tools disagree on which one should be used: some show the file and\n"
+     +"hide what is nested under it, others expand it as a folder and hide the file.");
   }
   public static UserError zipNestingTooDeep(Path diskZip, List<String> steps, int depth, int maxDepth){
     assert !steps.isEmpty();

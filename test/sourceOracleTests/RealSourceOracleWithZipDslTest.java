@@ -674,18 +674,43 @@ _pkg/z.zip/a/b.txt
 iii
 Y
 ""","""
-Invalid path in this project folder.
-
 Root: [###]
-Path: "_pkg/z/a"
+Path: "_pkg/z.zip"
+Entry: "a"
 
-What went wrong
-- This file has no extension.
-  Files normally must be named like "name.ext" (one dot).
 
-How to fix
-- Rename it to have a single extension (example: "foo.txt", "source.fear").
-- Rename it to a well-known extensionless file (example: "readme").
+This zip contains an entry called "a",
+and also this other entry nested under it, as if it were a folder:
+  "a/b.txt"
+
+An entry cannot be both a file and a folder in the same zip.
+Different tools disagree on which one should be used: some show the file and
+hide what is nested under it, others expand it as a folder and hide the file.
+
+We check this so that you[###]
+""");}
+
+  @Test void err_zip_file_used_as_directory_with_allowed_no_ext_name(@TempDir Path tmp){ runErrIOE(tmp, """
+_pkg/z.zip/readme
+iii
+X
+jjj
+_pkg/z.zip/readme/b.txt
+iii
+Y
+""","""
+Root: [###]
+Path: "_pkg/z.zip"
+Entry: "readme"
+
+
+This zip contains an entry called "readme",
+and also this other entry nested under it, as if it were a folder:
+  "readme/b.txt"
+
+An entry cannot be both a file and a folder in the same zip.
+Different tools disagree on which one should be used: some show the file and
+hide what is nested under it, others expand it as a folder and hide the file.
 
 We check this so that you[###]
 """);}
@@ -719,6 +744,65 @@ What went wrong
 How to fix
 - Rename one of them, or move/rename the zip file involved, so this path is no
   longer produced twice.
+
+We check this so that you[###]
+""");}
+
+  @Test void err_real_file_clashes_with_zip_file_same_base_name(@TempDir Path tmp){ runErrIOE(tmp, """
+_pkg/readme
+iii
+X
+jjj
+_pkg/readme.zip/x.txt
+iii
+Y
+""","""
+Invalid path in this project folder.
+
+Root: [###]
+Path: "_pkg/readme.zip"
+
+What went wrong
+- A zip file and a plain file share the same base name.
+  Zip file:
+  Root: [###]
+  Path: "_pkg/readme.zip"
+
+  Plain file:
+  Root: [###]
+  Path: "_pkg/readme"
+
+  Fearless expands each zip file into a folder named after it (without the
+  ".zip"); that folder would have the exact same name as this file.
+
+How to fix
+- Rename one of them, or move/rename the zip file, so this name is no longer
+  produced twice.
+
+We check this so that you[###]
+""");}
+
+  @Test void err_zip_file_used_as_directory_via_nested_zip(@TempDir Path tmp){ runErrIOE(tmp, """
+_pkg/z.zip/readme
+iii
+X
+jjj
+_pkg/z.zip/readme.zip/x.txt
+iii
+Y
+""","""
+Root: [###]
+Path: "_pkg/z.zip"
+Entry: "readme"
+
+
+This zip contains an entry called "readme",
+and also this other entry nested under it, as if it were a folder:
+  "readme/x.txt"
+
+An entry cannot be both a file and a folder in the same zip.
+Different tools disagree on which one should be used: some show the file and
+hide what is nested under it, others expand it as a folder and hide the file.
 
 We check this so that you[###]
 """);}
