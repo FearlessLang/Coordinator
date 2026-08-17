@@ -181,7 +181,7 @@ or version control system (git).
       "- A visible folder/file name is reserved on Windows (device name).\n"
     + "  Even if you add an extension, Windows treats it as the same reserved name.",
       "- Rename the folder/file so its base name is not a Windows device name.\n"
-    + "  Reserved device name: \"con\", \"prn\", \"aux\", \"nul\", \"com1\"..\"com9\", \"lpt1\"..\"lpt9\"s."
+    + "  Reserved device name: \"con\", \"prn\", \"aux\", \"nul\", \"com1\"..\"com9\", \"lpt1\"..\"lpt9\"."
     );
   }
   public static UserError missingExtension(RefParent kid){
