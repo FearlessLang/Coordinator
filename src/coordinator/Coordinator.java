@@ -56,16 +56,14 @@ class Helper{
   static boolean isFear(Ref u){ return u.toString().endsWith(".fear"); }
   static void main(Coordinator coordinator, Path path) throws InterruptedException{
     SourceOracle o= coordinator.sourceOracle(path);
-    long maxStamp= o.allFiles().stream()
-      .filter(Helper::isFear).mapToLong(Ref::lastModified)
-      .max().orElseThrow(()->Report.projectEmpty(path));
+    if (o.allFiles().stream().noneMatch(Helper::isFear)){ throw Report.projectEmpty(path); }
     o.allFiles().stream().filter(Helper::isFear).forEach(Helper::pkgName);//err if not under a pkg
     var map= new LinkedHashMap<String,List<Ref>>();
     for(Ref u:o.allFiles()){ pkgNameOpt(u).ifPresent(pn->map.computeIfAbsent(pn,_->new ArrayList<>()).add(u)); }
     List<Ref> allRanks= map.values().stream().map(u->Helper.okPkgContent(u,path)).toList();
     var pOut= path.resolve(".fearless_out");
     OutputOracle out= ()->pOut;
-    Layer l= mapFromRanks(coordinator,allRanks,o,out,maxStamp);
+    Layer l= mapFromRanks(coordinator,allRanks,o,out);
     l = layers(coordinator,map,l,allRanks.stream()
       .sorted(Comparator.comparingInt(Helper::rankNumber).thenComparing(Object::toString)).toList());
     //--probe to remove
@@ -91,11 +89,11 @@ class Helper{
     }
     return pkgs.isEmpty() ? l : new MiddleLayer(coordinator,l, pkgs);    
   }
-  static Layer mapFromRanks(Coordinator coordinator, List<Ref> allRanks, SourceOracle o, OutputOracle out, long maxStamp){
+  static Layer mapFromRanks(Coordinator coordinator, List<Ref> allRanks, SourceOracle o, OutputOracle out){
     Map<String,Map<String,String>> res; try {res= new FrontendLogicMain()
       .parseRankFiles(allRanks,o, Comparator.comparingInt(Helper::rankNumber));}
     catch(FearlessException fe){ throw Report.sourceError(fe.render(o)); }
-    long baseStamp= out.commitMap(res, maxStamp);
+    long baseStamp= out.commitMap(res, allRanks.stream().mapToLong(Ref::lastModified).max().getAsLong());
     return new BaseLayer(coordinator,res,baseStamp);
   }
   static int rankNumber(Ref u){
