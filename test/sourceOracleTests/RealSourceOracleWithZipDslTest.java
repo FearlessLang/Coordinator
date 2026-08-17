@@ -2,8 +2,10 @@ package sourceOracleTests;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.zip.ZipOutputStream;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Disabled;
@@ -924,5 +926,34 @@ world
     var generated= res.newRefs().getFirst().loadString();
     assertTrue(generated.contains("Foo: base.TxtFile{"), generated);
     assertTrue(generated.contains("Bar: base.TxtFile{"), generated);
+  }
+
+  // A .fear file with invalid UTF-8 bytes fails loudly (Files.readString is strict) when
+  // read directly off disk. The same bytes, read through a zip entry, must fail the same
+  // way: FrontendLogicMain.of calls Ref.loadString() on every source file regardless of
+  // whether it came from disk or from inside a zip, so silently swallowing the invalid
+  // bytes into U+FFFD instead of failing would feed corrupted source text to the parser.
+  @Test void err_zip_entry_invalid_utf8_matches_disk_entry(@TempDir Path tmp) throws Exception{
+    byte[] bad= { (byte)0xFF, (byte)0xFE, 'X' };
+
+    Path diskRoot= tmp.resolve("disk").toAbsolutePath().normalize();
+    UserError.root= diskRoot;
+    Files.createDirectories(diskRoot.resolve("_pkg"));
+    Files.write(diskRoot.resolve("_pkg/a.fear"), bad);
+    var diskRef= new RealSourceOracleWithZip(diskRoot).allFiles().stream()
+      .filter(r->r.fearPath().equals("fear:/_pkg/a.fear")).findFirst().get();
+    assertThrows(UncheckedIOException.class, diskRef::loadString);
+
+    Path zipRoot= tmp.resolve("zip").toAbsolutePath().normalize();
+    UserError.root= zipRoot;
+    Files.createDirectories(zipRoot.resolve("_pkg"));
+    try (var zos= new ZipOutputStream(Files.newOutputStream(zipRoot.resolve("_pkg/z.zip")))){
+      zos.putNextEntry(new java.util.zip.ZipEntry("a.fear"));
+      zos.write(bad);
+      zos.closeEntry();
+    }
+    var zipRef= new RealSourceOracleWithZip(zipRoot).allFiles().stream()
+      .filter(r->r.fearPath().equals("fear:/_pkg/z/a.fear")).findFirst().get();
+    assertThrows(UncheckedIOException.class, zipRef::loadString);
   }
 }
