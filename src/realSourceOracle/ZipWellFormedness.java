@@ -1,17 +1,12 @@
 package realSourceOracle;
 
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 
 import userMessages.Report;
-import tools.Fs;
-import tools.SourceOracle;
 import utils.Push;
 
 //A segment is the 'folder like' single unit
@@ -21,31 +16,6 @@ import utils.Push;
 //     The last keeps the extension, even it is .zip
 
 //Here Both PathEntry and ZipEntry can be used as Ref for a RealSourceOracle extends SourceOracle
-record PathEntry(Path root, Path local) implements SourceOracle.Ref{
-  @Override public String fearPath(){ return "fear:/"+localSegments(local).stream().collect(Collectors.joining("/")); }
-  @Override public byte[] loadBytes(){ return Fs.of(()->Files.readAllBytes(root.resolve(local))); }
-  @Override public String loadString(){ return Fs.readUtf8(root.resolve(local)); }
-  @Override public long lastModified(){ return Fs.lastModified(root.resolve(local)); }
-  @Override public String toString(){ return fearPath(); }
-  static List<String> localSegments(Path local){
-    return StreamSupport.stream(local.spliterator(),false).map(Path::toString).toList();
-  }
-}
-record ZipEntry(Path root, Path local, List<String> segments, List<String> zips, String lastZips) implements SourceOracle.Ref{
-  @Override public String fearPath(){
-    return "fear:/"+Stream.concat(localSegments(local).stream(), segments.stream())
-      .collect(Collectors.joining("/"));
-  }
-  @Override public byte[] loadBytes(){ return ZipLocator.entryBytes(root.resolve(local), zips,lastZips); }
-  @Override public long lastModified(){ return Fs.of(()->Files.getLastModifiedTime(root.resolve(local)).toMillis()); }
-  static List<String> localSegments(Path local){
-    List<String> res= StreamSupport.stream(local.spliterator(),false).map(Path::toString).toList();
-    var last= res.getLast();
-    assert last.endsWith(".zip");
-    return Push.of(res.subList(0, res.size()-1), last.substring(0, last.length()-4));
-  }
-  @Override public String toString(){ return fearPath(); }
-}
 public final class ZipWellFormedness{
   private static final int maxZipNesting= 64;
   public static List<ZipEntry> allEntryPaths(Path root, Path local){

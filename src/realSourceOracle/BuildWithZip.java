@@ -18,7 +18,6 @@ import tools.Fs;
 import tools.SourceOracle;
 import tools.SourceOracle.Ref;
 import tools.SourceOracle.RefParent;
-import utils.Bug;
 record Tree(
   Path root,
   ArrayList<Ref> visibleFiles,
@@ -205,13 +204,8 @@ final class BuildWithZip{
     var seen= new LinkedHashMap<String,RefParent>();
     for (var kid: visKids){
       var prev= seen.putIfAbsent(kid.fearPath(), kid);
-      if (prev != null){ throw Report.zipExpandedPathCollides(kid, origin(prev), origin(kid)); }
+      if (prev != null){ throw Report.zipExpandedPathCollides(kid, prev, kid); }
     }
-  }
-  private static Report.PathOrigin origin(RefParent r){
-    if (r instanceof PathEntry p){ return Report.PathOrigin.real(p.local()); }
-    if (r instanceof ZipEntry z){ return Report.PathOrigin.zip(z.root().resolve(z.local()), z.zips(), z.lastZips()); }
-    throw Bug.unreachable();
   }
   private void checkNoExtBaseClash(List<RefParent> visKids, RefParent noExtKid, String base){
     for (var kid: visKids){

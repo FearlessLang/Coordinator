@@ -7,8 +7,11 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import metaParser.Message;
+import realSourceOracle.PathEntry;
+import realSourceOracle.ZipEntry;
 import tools.SourceOracle.Ref;
 import tools.SourceOracle.RefParent;
+import utils.Bug;
 import utils.Join;
 import utils.Pop;
 
@@ -353,11 +356,7 @@ Remove this entry from the zip, or store its content as normal files instead.
 This zip file contains no entries.
 This is most likely a mistake.
 """);}
-  public record PathOrigin(boolean isZip, Path path, List<String> zipSteps, String zipEntry){
-    public static PathOrigin real(Path local){ return new PathOrigin(false, local, List.of(), ""); }
-    public static PathOrigin zip(Path diskZip, List<String> steps, String entry){ return new PathOrigin(true, diskZip, steps, entry); }
-  }
-  public static UserError zipExpandedPathCollides(RefParent kid, PathOrigin first, PathOrigin second){
+  public static UserError zipExpandedPathCollides(RefParent kid, RefParent first, RefParent second){
     return fail(showRel(kid),
       "- Expanding zip files into folders makes this path exist twice, from two\n"
     + "  different places in the project:\n"
@@ -367,10 +366,13 @@ This is most likely a mistake.
     + "  longer produced twice."
     );
   }
-  private static String originBlock(PathOrigin o){
-    if (!o.isZip()){ return "  Real file/folder:\n  "+showRel(o.path()).strip().replace("\nPath:","\n  Path:"); }
-    return "  Entry inside a zip, expanded as a folder:\n  "
-      + showZipRel(o.path(), o.zipSteps(), o.zipEntry()).strip().replace("\nPath:","\n  Path:").replace("\nEntry:","\n  Entry:");
+  private static String originBlock(RefParent r){
+    if (r instanceof PathEntry p){ return "  Real file/folder:\n  "+showRel(p.local()).strip().replace("\nPath:","\n  Path:"); }
+    if (r instanceof ZipEntry z){
+      return "  Entry inside a zip, expanded as a folder:\n  "
+        + showZipRel(z.root().resolve(z.local()), z.zips(), z.lastZips()).strip().replace("\nPath:","\n  Path:").replace("\nEntry:","\n  Entry:");
+    }
+    throw Bug.unreachable();
   }
 
   //-- project layout: which folder defines a package, and the rank file of each package
