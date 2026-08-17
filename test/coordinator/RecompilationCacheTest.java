@@ -219,6 +219,48 @@ final class RecompilationCacheTest{
     assertNotEquals(stampB, result.stamp());
   }
 
+  private static List<Ref> twoRefs(long mtime){
+    return List.of(
+      new FakeRef(SourceOracle.root+"_a/a.fear", mtime),
+      new FakeRef(SourceOracle.root+"_a/b.fear", mtime));
+  }
+
+  @Test void deletingASourceFileMustRecompileThePackage(@TempDir Path tmp){
+    long start= System.currentTimeMillis();
+    OutputOracle out= ()->tmp;
+    var stub= new ScriptedCoordinator();
+    stub.fixedOutput("a", List.of(literal("A1", RC.imm)));
+    var pkgs= new LinkedHashMap<String,List<Ref>>();
+    pkgs.put("a", twoRefs(start-MARGIN));
+    var layer= new MiddleLayer(stub, fixedBase(start-MARGIN), pkgs);
+
+    layer.compile(emptySrc, out);
+    assertEquals(1, stub.calls("a"));
+    layer.compile(emptySrc, out);
+    assertEquals(1, stub.calls("a"));
+
+    pkgs.put("a", refs("a", start-MARGIN));
+    layer.compile(emptySrc, out);
+    assertEquals(2, stub.calls("a"));
+  }
+
+  @Test void addingASourceFileWithAnOldMtimeMustRecompileThePackage(@TempDir Path tmp){
+    long start= System.currentTimeMillis();
+    OutputOracle out= ()->tmp;
+    var stub= new ScriptedCoordinator();
+    stub.fixedOutput("a", List.of(literal("A1", RC.imm)));
+    var pkgs= new LinkedHashMap<String,List<Ref>>();
+    pkgs.put("a", refs("a", start-MARGIN));
+    var layer= new MiddleLayer(stub, fixedBase(start-MARGIN), pkgs);
+
+    layer.compile(emptySrc, out);
+    assertEquals(1, stub.calls("a"));
+
+    pkgs.put("a", twoRefs(start-MARGIN));
+    layer.compile(emptySrc, out);
+    assertEquals(2, stub.calls("a"));
+  }
+
   private static final TName aName= new TName("A1", 0, Pos.unknown);
   private static final TName bName= new TName("B1", 0, Pos.unknown);
 
@@ -395,6 +437,28 @@ final class RecompilationCacheTest{
     assertEquals(1, c.calls("b"));
 
     touch(aRank, System.currentTimeMillis()+TOUCH);
+    c.main(project);
+    assertEquals(2, c.calls("a"));
+    assertEquals(1, c.calls("b"));
+  }
+
+  @Test void deletingAFileFromOnePackageMustRecompileOnlyThatPackage(@TempDir Path tmp) throws InterruptedException{
+    var project= tmp.resolve("project");
+    var stdLib= tmp.resolve("stdLib");
+    var mods= tmp.resolve("mods");
+    var extra= project.resolve("_a/extra.fear");
+    Fs.writeUtf8(project.resolve("_a/_rank_core.fear"), "");
+    Fs.writeUtf8(extra, "");
+    Fs.writeUtf8(project.resolve("_b/_rank_core.fear"), "");
+    Fs.writeUtf8(stdLib.resolve("x.fear"), "");
+    Fs.writeUtf8(mods.resolve("dummy.jar"), "");
+    var c= new RecordingCoordinator(stdLib, mods);
+
+    c.main(project);
+    assertEquals(1, c.calls("a"));
+    assertEquals(1, c.calls("b"));
+
+    Fs.ofV(()->Files.delete(extra));
     c.main(project);
     assertEquals(2, c.calls("a"));
     assertEquals(1, c.calls("b"));

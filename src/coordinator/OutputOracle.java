@@ -17,14 +17,20 @@ import core.M;
 import core.OtherPackages;
 import core.TName;
 import tools.Fs;
+import tools.SourceOracle.Ref;
 
 public interface OutputOracle{
   Path rootDir();
   default long baseApiStamp(){ return Fs.lastModified(rootDir().resolve("base.json")); }
   default long mapStamp(){ return Fs.lastModified(rootDir().resolve("_map.json")); }
   default long pkgApiStamp(String pkg){ return Fs.lastModified(rootDir().resolve(pkg+".json")); }
-  default long builtStamp(String pkg){ return Fs.lastModified(rootDir().resolve(pkg+".built")); }
-  default void commitBuilt(String pkg, long minExclusiveMillis){ Fs.writeUtf8(rootDir().resolve(pkg+".built"), "", minExclusiveMillis); }
+  private Path builtPath(String pkg){ return rootDir().resolve(pkg+".built"); }
+  default boolean stillBuilt(String pkg, List<Ref> files, long minMillis){
+    return Fs.lastModified(builtPath(pkg)) >= minMillis && Fs.readUtf8(builtPath(pkg)).equals(OutputHelper.fileList(files));
+  }
+  default void commitBuilt(String pkg, List<Ref> files, long minExclusiveMillis){
+    Fs.writeUtf8(builtPath(pkg), OutputHelper.fileList(files), minExclusiveMillis);
+  }
   
   default void write(String path, Consumer<Consumer<String>> dataProducer){
     Fs.ofV(()->{try (BufferedWriter writer = Files.newBufferedWriter(rootDir().resolve(path))){
@@ -61,6 +67,7 @@ public interface OutputOracle{
 }
 
 class OutputHelper{
+  static String fileList(List<Ref> files){ return Join.of(files.stream().map(Ref::fearPath).sorted(),"","\n",""); }
   String toJSon(Map<String,Map<String,String>> map){
     if (map.isEmpty()){ return "{}"; }
     return obj(map, m->obj(m, s->"\""+s+"\""));
