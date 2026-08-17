@@ -413,7 +413,7 @@ What went wrong
 
 How to fix
 - Rename the folder/file so its base name is not a Windows device name.
-  Reserved device name: "con", "prn", "aux", "nul", "com1".."com9", "lpt1".."lpt9"s.
+  Reserved device name: "con", "prn", "aux", "nul", "com1".."com9", "lpt1".."lpt9".
 
 We check this so that you[###]
 """);}
