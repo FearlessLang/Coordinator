@@ -23,6 +23,8 @@ public interface OutputOracle{
   default long baseApiStamp(){ return Fs.lastModified(rootDir().resolve("base.json")); }
   default long mapStamp(){ return Fs.lastModified(rootDir().resolve("_map.json")); }
   default long pkgApiStamp(String pkg){ return Fs.lastModified(rootDir().resolve(pkg+".json")); }
+  default long builtStamp(String pkg){ return Fs.lastModified(rootDir().resolve(pkg+".built")); }
+  default void commitBuilt(String pkg, long minExclusiveMillis){ Fs.writeUtf8(rootDir().resolve(pkg+".built"), "", minExclusiveMillis); }
   
   default void write(String path, Consumer<Consumer<String>> dataProducer){
     Fs.ofV(()->{try (BufferedWriter writer = Files.newBufferedWriter(rootDir().resolve(path))){
@@ -33,7 +35,7 @@ public interface OutputOracle{
     var path= rootDir().resolve(pkg+".json");
     var api= new OutputHelper().pgkApiFromJSon(path);
     if (api.isEmpty()){ throw Violation.cacheMissingPkgApiFile(path); }
-    return other.mergeWith(api.get(), other.stamp());
+    return other.mergeWith(api.get(), Math.max(other.stamp(), Fs.lastModified(path)));
   }//READS the pkg info and adds to other; Does not update the disk. Just reads info
   default OtherPackages startCachedPkgApi(String pkg,Map<String,Map<String,String>> map,long stamp){
     var path= rootDir().resolve(pkg+".json");
@@ -45,14 +47,14 @@ public interface OutputOracle{
     var path= rootDir().resolve(pkg+".json");
     var res= new OutputHelper().pgkApiFromJSon(path);
     if (res.isEmpty()){ return Fs.writeUtf8(path, ApiJson.toJSon(core),-1); }
-    if (new OutputHelper().consistent(res.get(),core)){ return minExclusiveMillis; }
+    if (new OutputHelper().consistent(res.get(),core)){ return Fs.lastModified(path); }
     return Fs.writeUtf8(path, ApiJson.toJSon(core),minExclusiveMillis);
     }
   default long commitMap(Map<String,Map<String,String>> map, long minExclusiveMillis){
     var path= rootDir().resolve("_map.json");
     var res= new OutputHelper().mapFromJSon(path);
     if (res.isEmpty()){ return Fs.writeUtf8(path, new OutputHelper().toJSon(map),-1); }
-    if (res.get().equals(map)){ return minExclusiveMillis; }
+    if (res.get().equals(map)){ return Fs.lastModified(path); }
     return Fs.writeUtf8(path, new OutputHelper().toJSon(map),minExclusiveMillis);
   }
   //commitMap only write if different from the old, and in that case it will bumps mtime strictly above minExclusiveMillis
