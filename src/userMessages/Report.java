@@ -353,20 +353,25 @@ Remove this entry from the zip, or store its content as normal files instead.
 This zip file contains no entries.
 This is most likely a mistake.
 """);}
-  public static UserError zipExpandedPathCollides(RefParent kid, boolean firstIsZip, String first, boolean secondIsZip, String second){
+  public record PathOrigin(boolean isZip, Path path, List<String> zipSteps, String zipEntry){
+    public static PathOrigin real(Path local){ return new PathOrigin(false, local, List.of(), ""); }
+    public static PathOrigin zip(Path diskZip, List<String> steps, String entry){ return new PathOrigin(true, diskZip, steps, entry); }
+  }
+  public static UserError zipExpandedPathCollides(RefParent kid, PathOrigin first, PathOrigin second){
     return fail(showRel(kid),
       "- Expanding zip files into folders makes this path exist twice, from two\n"
     + "  different places in the project:\n"
-    + "  "+placeLabel(firstIsZip)+":\n"
-    + indentBlock(first)+"\n\n"
-    + "  "+placeLabel(secondIsZip)+":\n"
-    + indentBlock(second),
+    + originBlock(first)+"\n\n"
+    + originBlock(second),
       "- Rename one of them, or move/rename the zip file involved, so this path is no\n"
     + "  longer produced twice."
     );
   }
-  private static String placeLabel(boolean isZip){ return isZip ? "Entry inside a zip, expanded as a folder" : "Real file/folder"; }
-  private static String indentBlock(String block){ return "  "+block.strip().replace("\n","\n  "); }
+  private static String originBlock(PathOrigin o){
+    if (!o.isZip()){ return "  Real file/folder:\n  "+showRel(o.path()).strip().replace("\nPath:","\n  Path:"); }
+    return "  Entry inside a zip, expanded as a folder:\n  "
+      + showZipRel(o.path(), o.zipSteps(), o.zipEntry()).strip().replace("\nPath:","\n  Path:").replace("\nEntry:","\n  Entry:");
+  }
 
   //-- project layout: which folder defines a package, and the rank file of each package
   public static UserError projectEmpty(Path root){ return new UserError("""
