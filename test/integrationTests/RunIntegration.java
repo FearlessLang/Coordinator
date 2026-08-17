@@ -79,4 +79,21 @@ How to fix
 We check this so that you[###]
 """, ex.getMessage());
   }
+
+  @Test void twoTypeNamesDifferingOnlyByCaseMustStillBuildOnASecondRun(@TempDir Path tmp) throws InterruptedException{
+    Path root= tmp.resolve("root");
+    UserError.root= root;
+    FsDsl.materialize(root, """
+_col/_rank_app.fear
+iii
+use base.Main as Main;
+use base.Void as Void;
+Foo:{ .foo:Void->{} }
+FOo:{ .fOo:Void->{} }
+Hello:Main{s->base.Debug#(`hi`)}
+""");
+    var c= coordinator();
+    c.main(root);
+    c.main(root);
+  }
 }

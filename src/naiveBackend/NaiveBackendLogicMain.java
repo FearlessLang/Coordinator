@@ -2,7 +2,9 @@ package naiveBackend;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 
 import core.OtherPackages;
 import docBuilder.HtmlDocBuilder;
@@ -20,6 +22,7 @@ public class NaiveBackendLogicMain {
     if (pkgName.equals("base")){
     	Fs.copyTreeFlat(rtPath, outPath);
     }
+    assert foldDistinct(outPath);
     var classes= rootDir.resolve("gen_java","_classes");
     Fs.ensureDir(classes);
     Fs.cleanDirContents(classes);
@@ -28,5 +31,16 @@ public class NaiveBackendLogicMain {
     var javacOut= Fs.of(()->JavacTool.compileTree(outPath, classes,post,rootDir.resolve("gen_java",pkgName+".jar")));
     assert javacOut.isEmpty(): javacOut;
     docs.complete();
+    Fs.rmTree(outPath); Fs.rmTree(classes);//comment out this line to keep the generated .java and .class files for debugging
+  }
+  private static boolean foldDistinct(Path dir){
+    var seen= new HashMap<String,String>();
+    return Fs.walk(dir, s->s.map(p->p.getFileName().toString()).allMatch(n->foldFree(seen,n)));
+  }
+  private static boolean foldFree(HashMap<String,String> seen, String name){
+    var prev= seen.putIfAbsent(name.toLowerCase(Locale.ROOT), name);
+    assert prev == null || prev.equals(name):
+      "Generated names differ only by case, so they are one file on Windows and macOS: "+prev+" and "+name;
+    return true;
   }
 }

@@ -2,6 +2,7 @@ package naiveBackend;
 
 import static offensiveUtils.Require.*;
 
+import java.math.BigInteger;
 import java.nio.file.*;
 import java.util.*;
 import java.util.function.Consumer;
@@ -31,6 +32,7 @@ public class Backend{
   private static final TName captureFreeName= new TName("base.CaptureFree",0,Pos.unknown);
   boolean captureFree(Literal l){ return l.cs().stream().anyMatch(c->c.name().equals(captureFreeName)); }
   private static final TName mainName= new TName("base.Main", 0,Pos.unknown);
+  private static final TName systemName= new TName("base._System", 0,Pos.unknown);
   boolean implementsBaseMain(Literal l){ return l.cs().stream().anyMatch(c->c.name().equals(mainName)); }
   public List<Consumer<Path>> produceJavaCode(){
     docs.packageLocation(pkgName,out.getParent().resolve(pkgName+".html"));
@@ -96,8 +98,17 @@ public class Backend{
     assert head.indexOf('\'')==-1: "prime (') must be trailing only: "+s;
     return head + "$p" + k;
   }  
-  String decTypeName(TName n){ return encodeTrailingPrimes(n.simpleName())+"$"+n.arity(); }
-  String typeName(TName n){ return encodeTrailingPrimes(n.s())+"$"+n.arity(); }
+  String decTypeName(TName n){ return encodeTrailingPrimes(n.simpleName())+"$"+caseTag(n.simpleName())+"$"+n.arity(); }
+  String typeName(TName n){ return encodeTrailingPrimes(n.s())+"$"+caseTag(n.simpleName())+"$"+n.arity(); }
+  static String caseTag(String s){
+    var bits= new StringBuilder("1");
+    for (int i= 0; i < s.length(); i++){
+      char c= s.charAt(i);
+      if ('A' <= c && c <= 'Z'){ bits.append('1'); }
+      if ('a' <= c && c <= 'z'){ bits.append('0'); }
+    }
+    return new BigInteger(bits.toString(),2).toString(36);
+  }
   Path ifaceFile(Literal l, Path dest){ return dest.resolve(decTypeName(l.name())+".java"); }
   String mangledMethodName(RC rc, MName m){ return rc.name()+"$"+methodBaseName(m)+"$"+m.arity(); }
   String methodBaseName(MName m){
@@ -111,7 +122,7 @@ public class Backend{
       .append("package ").append(pkgName).append(";\n\n")
       .append("public final class Main{\n  static{ base.Util.installParentLifeline(); }\n  public static void main(String[] args){\n");
     mains.stream().sorted().forEach(n->
-      sb.append("    base.Util.topLevel(()->").append(n).append(".instance.imm$main$1(new base._System$0()));\n")
+      sb.append("    base.Util.topLevel(()->").append(n).append(".instance.imm$main$1(new "+typeName(systemName)+"()));\n")
     );
     Fs.writeUtf8(out.resolve("Main.java"), sb.append("  }\n}\n").toString());
   }
