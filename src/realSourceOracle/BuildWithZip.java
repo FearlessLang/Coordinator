@@ -14,6 +14,7 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.stream.Stream;
 import userMessages.Report;
+import userMessages.UserError;
 import tools.Fs;
 import tools.SourceOracle;
 import tools.SourceOracle.Ref;
@@ -204,19 +205,16 @@ final class BuildWithZip{
     var seen= new LinkedHashMap<String,RefParent>();
     for (var kid: visKids){
       var prev= seen.putIfAbsent(kid.fearPath(), kid);
-      if (prev != null){ throw Report.zipExpandedPathCollides(kid, describeSource(prev), describeSource(kid)); }
+      if (prev != null){ throw Report.zipExpandedPathCollides(kid,
+        prev instanceof ZipEntry, showSource(prev),
+        kid instanceof ZipEntry, showSource(kid)); }
     }
   }
-  private static String describeSource(RefParent r){
-    if (r instanceof PathEntry p){ return "a real file/folder at "+diskPath(p.local()); }
-    if (r instanceof ZipEntry z){
-      var chain= new ArrayList<>(z.zips());
-      chain.add(z.lastZips());
-      return "the entry "+String.join(" -> ",chain)+" inside the zip "+diskPath(z.local());
-    }
+  private static String showSource(RefParent r){
+    if (r instanceof PathEntry p){ return UserError.showRel(p.local()); }
+    if (r instanceof ZipEntry z){ return UserError.showZipRel(z.root().resolve(z.local()), z.zips(), z.lastZips()); }
     throw new AssertionError(r.getClass());
   }
-  private static String diskPath(Path local){ return local.toString().replace('\\','/'); }
   private void checkNoExtBaseClash(List<RefParent> visKids, RefParent noExtKid, String base){
     for (var kid: visKids){
       if (kid.equals(noExtKid)){ continue; }

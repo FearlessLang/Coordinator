@@ -705,8 +705,14 @@ Path: "_pkg/z/foo.fear"
 What went wrong
 - Expanding zip files into folders makes this path exist twice, from two
   different places in the project:
-  - "the entry foo.fear inside the zip _pkg/z.zip"
-  - "a real file/folder at _pkg/z/foo.fear"
+  Entry inside a zip, expanded as a folder:
+  Root: [###]
+  Path: "_pkg/z.zip"
+  Entry: "foo.fear"
+
+  Real file/folder:
+  Root: [###]
+  Path: "_pkg/z/foo.fear"
 
 How to fix
 - Rename one of them, or move/rename the zip file involved, so this path is no
