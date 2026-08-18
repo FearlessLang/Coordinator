@@ -213,7 +213,10 @@ final class BuildWithZip{
     var seen= new LinkedHashMap<String,RefParent>();
     for (var kid: visKids){
       var prev= seen.putIfAbsent(kid.fearPath(), kid);
-      if (prev != null){ throw Report.zipExpandedPathCollides(kid, prev, kid); }
+      if (prev == null){ continue; }
+      var zip= prev instanceof PathEntry ? kid : prev;
+      var real= prev instanceof PathEntry ? prev : kid;
+      throw Report.zipExpandedPathCollides(kid, zip, real);
     }
   }
   private void checkNoExtBaseClash(List<RefParent> visKids, RefParent noExtKid, String base){

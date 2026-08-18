@@ -3,11 +3,13 @@ package sourceOracleTests;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.UncheckedIOException;
+import java.nio.file.AccessDeniedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.zip.ZipOutputStream;
 
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -840,11 +842,16 @@ hide what is nested under it, others expand it as a folder and hide the file.
 We check this so that you[###]
 """);}
 
+  private static void createSymbolicLinkOrSkip(Path link, Path target) throws Exception{
+    try { Files.createSymbolicLink(link, target); }
+    catch(AccessDeniedException e){ Assumptions.abort("OS denies creating symbolic links here"); }
+  }
+
   @Test void err_visible_symlink_forbidden(@TempDir Path tmp) throws Exception{
     Path root= tmp.resolve("root").toAbsolutePath().normalize();
     UserError.root= root;
     Files.createDirectories(root.resolve("_pkg"));
-    Files.createSymbolicLink(root.resolve("_pkg/link.fear"), root.resolve("_pkg/missing.fear"));
+    createSymbolicLinkOrSkip(root.resolve("_pkg/link.fear"), root.resolve("_pkg/missing.fear"));
     var ex= assertThrows(UserError.class, ()->new RealSourceOracleWithZip(root));
     utils.Err.strCmp("""
 Invalid path in this project folder.
@@ -870,7 +877,7 @@ We check this so that you[###]
     Files.createDirectories(root.resolve("_pkg/.d"));
     Files.writeString(root.resolve("_pkg/a.fear"), "A");
     Files.writeString(root.resolve("_pkg/.d/real.txt"), "R");
-    Files.createSymbolicLink(root.resolve("_pkg/.d/link"), root.resolve("_pkg/.d/missing"));
+    createSymbolicLinkOrSkip(root.resolve("_pkg/.d/link"), root.resolve("_pkg/.d/missing"));
     assertEquals("""
 --- fear:/_pkg/a.fear
 A
