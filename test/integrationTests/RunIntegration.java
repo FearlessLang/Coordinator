@@ -11,6 +11,7 @@ import coordinator.Coordinator;
 import mainCoordinator.ResolveResource;
 import testHelperFs.FsDsl;
 import java.util.List;
+import tools.Fs;
 import tools.JavaTool;
 import tools.JavacTool;
 import userMessages.UserError;
@@ -27,8 +28,13 @@ public class RunIntegration {
       public Path modsPath(){  return ResolveResource.coordinatorJars; }
     };
   }
+  static Path freshIntegrationRoot(String name){
+    var root= ResolveResource.integrationTests.resolve(name);
+    Fs.rmTree(root.resolve(".fearless_out"));
+    return root;
+  }
   void testOk(String name){
-    try { coordinator().main(ResolveResource.integrationTests.resolve(name));}
+    try { coordinator().main(freshIntegrationRoot(name));}
     catch (InterruptedException e){ Assertions.fail(e);}
   }
   @Test void helloWorld(){ testOk("helloWorld");}
@@ -94,7 +100,7 @@ We check this so that you[###]
           List.of("--enable-native-access=ALL-UNNAMED","-DfearlessUser.dir="+o.rootDir().getParent().getParent()),
           o.rootDir().resolve("gen_java"), pkgName+".Main"));
       }
-    }.main(ResolveResource.integrationTests.resolve("helloStackTraces"));
+    }.main(freshIntegrationRoot("helloStackTraces"));
     utils.Err.strCmp("""
 AAAAh
 imm Bar.bar error line: 8 in file _hello/_rank_app.fear
