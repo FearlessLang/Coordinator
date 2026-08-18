@@ -498,6 +498,32 @@ How to fix
 We check this so that you[###]
 """);}
 
+  //Same name, same rule, but the protected path is a zip sitting on disk: Tree.collectFile
+  //returns on a protected zip BEFORE addKid, so that zip is never a kid of its folder and
+  //none of the protected-name checks (characters, reserved device names, case/NFC sibling
+  //collisions, path length) ever see it. ".a:b.txt" is rejected, ".a:b.zip" is accepted.
+  @Test void err_invisible_disk_zip_windows_bad_char_colon(@TempDir Path tmp){ runErrIOE(tmp, """
+.a:b.zip/x.txt
+iii
+X
+""","""
+Invalid path in this project folder.
+
+Root: [###]
+Path: ".a:b.zip"
+
+What went wrong
+- A protected name segment contains a character that Windows forbids.
+  Bad char: `:`
+  Segment: ".a:b.zip"
+
+How to fix
+- Rename the segment to remove Windows-forbidden characters.
+  Forbidden on Windows: < > : " / \\ | ? *
+
+We check this so that you[###]
+""");}
+
   @Test void err_invisible_control_char_in_zip(@TempDir Path tmp){ runErrIOE(tmp, """
 _pkg/z.zip/.d/a\u0001b.txt
 iii

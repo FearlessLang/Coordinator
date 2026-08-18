@@ -8,11 +8,13 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import userMessages.Report;
 import core.FearlessException;
 import core.OtherPackages;
+import core.TName;
 import core.E.Literal;
 import main.FrontendLogicMain;
 import naiveBackend.NaiveBackendLogicMain;
@@ -131,7 +133,10 @@ class Helper{
       .filter(s->s.startsWith("_") && !s.contains("."))
       .toList();
     if (candidates.isEmpty()){ return Optional.empty(); }
-    if (candidates.size() == 1){ return Optional.of(candidates.getFirst().substring(1)); }
-    throw Report.projectAmbiguousPackageSegment(u, candidates);
+    if (candidates.size() != 1){ throw Report.projectAmbiguousPackageSegment(u, candidates); }
+    var pkg= candidates.getFirst().substring(1);
+    if (!pkgNameP.matcher(pkg).matches()){ throw Report.projectBadPackageName(u, candidates.getFirst()); }
+    return Optional.of(pkg);
   }
+  private static final Pattern pkgNameP= Pattern.compile(TName.pkgNameRegex);
 }

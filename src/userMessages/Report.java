@@ -423,6 +423,32 @@ Valid examples (folders may appear before and after the package folder):
 Here both "foo.fear" and "bar.fear" are in package "bla".
 """.formatted(disp(file.fearPath())));
   }
+  public static UserError projectBadPackageName(Ref file, String segment){ return new UserError("""
+This folder does not name a valid package.
+Folder:
+  %s
+
+Package name: %s
+
+A folder whose name starts with "_" defines a package: the name after the "_"
+is the package name. It must start with a lowercase letter, then use only
+lowercase letters (a-z), digits (0-9) and underscore (_), and must not be a
+Windows reserved device name: "con", "prn", "aux", "nul", "com1".."com9",
+"lpt1".."lpt9".
+
+The package name also becomes a folder name and a file name in the generated
+code, so a name Windows reserves would not survive there.
+
+Valid examples:
+  "_bla" is the package "bla"
+  "_my_pkg2" is the package "my_pkg2"
+  "_console" is the package "console"
+""".formatted(disp(pkgFolder(file, segment)), disp(segment.substring(1))));
+  }
+  private static String pkgFolder(Ref file, String segment){
+    var s= file.fearPath();
+    return s.substring(0, s.indexOf("/"+segment+"/")+segment.length()+1);
+  }
   public static UserError projectAmbiguousPackageSegment(Ref file, List<String> candidates){ return new UserError("""
 This path contains more than one folder whose name starts with "_":
   %s

@@ -45,8 +45,7 @@ record Tree(
       ? Report.invisibleOnlyRegularFilesAndDirs(abs)
       : Report.onlyRegularFilesAndDirs(abs);
     }
-    if (zip && isInvisible(pe)){ return; }
-    if (zip){ reqNoSiblingFileForZipName(rel); collectBodyDiskZip(root, rel); return; }
+    if (zip && !isInvisible(pe)){ reqNoSiblingFileForZipName(rel); collectBodyDiskZip(root, rel); return; }
     for (RefParent p= pe; p.parent()!=p; p= p.parent()){ addKid(p); }
     if (isRegularFile(abs) && !isInvisible(pe)){ visibleFiles.add(pe); }
   }
