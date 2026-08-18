@@ -178,7 +178,7 @@ public final class Violation {
         reported(cause)
       ), cause);
   }
-  public static UserError couldNotUseInstanceLock(Throwable cause){
+  public static UserError couldNotUseInstanceLock(Path lockFile, Throwable cause){
     return new UserError("""
       Fearless could not use the file that marks the manager process.
 
@@ -195,7 +195,7 @@ public final class Violation {
       %s
       """.formatted(
         managerFolderIntro(),
-        path(UserError.lockFile()),
+        path(lockFile.toString()),
         reported(cause),
         blockingPrograms()
       ), cause);
@@ -204,7 +204,7 @@ public final class Violation {
   //already exists; the text must not claim that one does.
   //Only the final atomic rename is reported here: writing the message file
   //itself is delegated to fileSupport, which explains its own failures.
-  public static UserError couldNotLeaveStartMessage(Throwable cause){
+  public static UserError couldNotLeaveStartMessage(Path msgDir, Throwable cause){
     return new UserError("""
       Fearless could not leave its start message.
 
@@ -223,12 +223,12 @@ public final class Violation {
       blocking the folder.
       %s""".formatted(
         managerFolderIntro(),
-        path(UserError.messageFolder()),
+        path(msgDir.toString()),
         reported(cause),
         blockingPrograms()
       ), cause);
   }
-  public static UserError couldNotWatchMessageFolder(Throwable cause){
+  public static UserError couldNotWatchMessageFolder(Path msgDir, Throwable cause){
     return new UserError("""
       Fearless could not watch its manager folder.
 
@@ -240,11 +240,11 @@ public final class Violation {
 
       %s""".formatted(
         managerFolderIntro(),
-        path(UserError.messageFolder()),
+        path(msgDir.toString()),
         reported(cause)
       ), cause);
   }
-  public static UserError messageFolderNotWatchable(){
+  public static UserError messageFolderNotWatchable(Path msgDir){
     return new UserError("""
       Fearless can no longer watch its manager folder.
 
@@ -259,12 +259,12 @@ public final class Violation {
       operating system may have stopped sending file-change notifications
       for it.""".formatted(
         managerFolderIntro(),
-        path(UserError.messageFolder())
+        path(msgDir.toString())
       ));
   }
   //Reading a message file is delegated to fileSupport; this covers the
   //remaining folder operations of a drain: listing, and removing files.
-  public static UserError couldNotDrainMessageFolder(Throwable cause){
+  public static UserError couldNotDrainMessageFolder(Path msgDir, Throwable cause){
     return new UserError("""
       Fearless could not list its manager folder, or could not remove a
       message file from it.
@@ -275,7 +275,7 @@ public final class Violation {
       using it, or the folder itself may be blocked.
 
       %s""".formatted(
-        path(UserError.messageFolder()),
+        path(msgDir.toString()),
         reported(cause)
       ), cause);
   }
