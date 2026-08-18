@@ -40,16 +40,10 @@ public final class UserError extends RuntimeException{
   UserError(String msg){ super(msg); }
   UserError(String msg, Throwable cause){ super(msg, cause); }
 
-  //The paths this run actually used, so that a message always shows the folders that
-  //were really involved. Main and ManagerMain set them as soon as they know them; a
-  //failure before that point carries its own path as an argument, so the placeholders
-  //below are never what a user reads.
+  //The project root this run actually used, so that a message always shows the folder
+  //that was really involved. Tests set it to whatever fake root they use; a real run
+  //keeps the default, since Fearless is launched from inside the project folder.
   public static Path root= Path.of(".").toAbsolutePath();
-  private static Path msgDir= Path.of("<not yet known>");
-  private static Path lockFile= Path.of("<not yet known>");
-  public static void setManagerPaths(Path msgDir, Path lock){ UserError.msgDir= msgDir; UserError.lockFile= lock; }
-  static String messageFolder(){ return msgDir.toString(); }
-  static String lockFile(){ return lockFile.toString(); }
 
   //Set by ManagerMain at the single point where this process becomes the manager
   //owner. Read only when a message is displayed: what this process is about to do is

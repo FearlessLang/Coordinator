@@ -31,8 +31,7 @@ public class ManagerMain {
   //channel object became garbage, the JVM could close it and release the lock
   //while the manager is still running.
   private static FileLock managerLock;
-  //Set early in run(..), and mirrored into UserError so that error messages
-  //always show the paths this run actually used.
+  //Set early in run(..).
   static Path binDir;
   static Path managerDir;
   static Path msgDir(){ return managerDir.resolve("messages"); }
@@ -56,12 +55,11 @@ public class ManagerMain {
   private static void run(String message){
     binDir= locateBinDir();
     managerDir= resolveManagerDir();
-    UserError.setManagerPaths(msgDir(), lockFile());//from here on, messages can name the real folders
     createManagerFolder(managerDir);
     leaveMessage(msgDir(), message);
     try { managerLock= FileChannel.open(lockFile(), CREATE, WRITE).tryLock(); }
     catch(OverlappingFileLockException e){ throw Bug.unreachable(); }//only possible from a second thread of THIS process; but we control this process
-    catch(IOException e){ throw Violation.couldNotUseInstanceLock(e); }
+    catch(IOException e){ throw Violation.couldNotUseInstanceLock(lockFile(), e); }
     if (managerLock == null){ return; }//an owner exists; it will drain our message file.
     //Accepted race: if the owner dies right after our failed tryLock, before
     //draining, our message waits in the folder and is shown by the NEXT
@@ -108,6 +106,6 @@ public class ManagerMain {
     var tmp= msgDir.resolve(name+".tmp");
     StringFiles.writeNew(tmp, message, UserError.onFileError());
     try { Files.move(tmp, msgDir.resolve(name+".msg"), ATOMIC_MOVE); }
-    catch(IOException e){ throw Violation.couldNotLeaveStartMessage(e); }
+    catch(IOException e){ throw Violation.couldNotLeaveStartMessage(msgDir, e); }
   }
 }

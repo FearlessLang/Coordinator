@@ -46,7 +46,7 @@ public class Manager {
       msgDir.register(watcher, ENTRY_CREATE);//Can take up to 2 seconds in Mac; accepted
       return watcher;
     }
-    catch(IOException|UnsupportedOperationException|SecurityException e){ throw Violation.couldNotWatchMessageFolder(e); }
+    catch(IOException|UnsupportedOperationException|SecurityException e){ throw Violation.couldNotWatchMessageFolder(msgDir, e); }
   }
   private static List<Path> list(Path dir, String glob) throws IOException {
     var files= new ArrayList<Path>();
@@ -65,7 +65,7 @@ public class Manager {
     var key= watcher.take();
     key.pollEvents();//events must be consumed before reset, or the key requeues immediately
     drainToGui(gui,msgDir);
-    if (!key.reset()){ throw Violation.messageFolderNotWatchable(); }
+    if (!key.reset()){ throw Violation.messageFolderNotWatchable(msgDir); }
   }
   private static void drainToGui(ManagerGui gui, Path msgDir){
     //Called only from the single watcher worker (including once at its start):
@@ -79,7 +79,7 @@ public class Manager {
       gui.addMessages(messages);
       gui.showManager();
     }
-    catch(IOException e){ throw Violation.couldNotDrainMessageFolder(e); }
+    catch(IOException e){ throw Violation.couldNotDrainMessageFolder(msgDir, e); }
   }
   private static List<String> drainMessageFiles(Path msgDir) throws IOException {
     var files= list(msgDir, "*.msg");
