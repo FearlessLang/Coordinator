@@ -10,6 +10,8 @@ import org.opentest4j.AssertionFailedError;
 import coordinator.Coordinator;
 import mainCoordinator.ResolveResource;
 import testHelperFs.FsDsl;
+import java.util.List;
+import tools.JavaTool;
 import tools.JavacTool;
 import userMessages.UserError;
 
@@ -78,5 +80,43 @@ How to fix
 
 We check this so that you[###]
 """, ex.getMessage());
+  }
+
+  @Test void aStackTraceNamesTheFearlessTypesMethodsAndLines() throws InterruptedException{
+    var out= new StringBuilder();
+    var paths= coordinator();
+    new Coordinator(){
+      public Path rtPath(){    return paths.rtPath(); }
+      public Path stLibPath(){ return paths.stLibPath(); }
+      public Path modsPath(){  return paths.modsPath(); }
+      @Override public void runAllMains(String pkgName, coordinator.OutputOracle o) throws InterruptedException{
+        out.append(JavaTool.runMainFromJars(
+          List.of("--enable-native-access=ALL-UNNAMED","-DfearlessUser.dir="+o.rootDir().getParent().getParent()),
+          o.rootDir().resolve("gen_java"), pkgName+".Main"));
+      }
+    }.main(ResolveResource.integrationTests.resolve("helloStackTraces"));
+    utils.Err.strCmp("""
+AAAAh
+imm Bar.bar error line: 8 in file _hello/_rank_app.fear
+imm Foo.foo error line: 7 in file _hello/_rank_app.fear
+imm Hello.main(_) error line: 6 in file _hello/_rank_app.fear
+""", out.toString());
+  }
+
+  @Test void twoTypeNamesDifferingOnlyByCaseMustStillBuildOnASecondRun(@TempDir Path tmp) throws InterruptedException{
+    Path root= tmp.resolve("root");
+    UserError.root= root;
+    FsDsl.materialize(root, """
+_col/_rank_app.fear
+iii
+use base.Main as Main;
+use base.Void as Void;
+Foo:{ .foo:Void->{} }
+FOo:{ .fOo:Void->{} }
+Hello:Main{s->base.Debug#(`hi`)}
+""");
+    var c= coordinator();
+    c.main(root);
+    c.main(root);
   }
 }

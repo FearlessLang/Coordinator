@@ -32,8 +32,8 @@ class TestBuildBase {
       List<Literal> core= frontend(pkgName,o.allFiles(),o,other,Map.of());
       Fs.copyTreeFlat(modsPath(),out.rootDir().resolve("gen_java"));
       backend(pkgName,core,o,other,out);
-      var classes= out.rootDir().resolve("gen_java","_classes");
-      var runOut= JavaTool.runMain(List.of("-DfearlessUser.dir="+out.rootDir().getParent()),classes,modsPath(),pkgName+".Main");
+      var jars= out.rootDir().resolve("gen_java");
+      var runOut= JavaTool.runMainFromJars(List.of("-DfearlessUser.dir="+out.rootDir().getParent()),jars,pkgName+".Main");
       assertEquals("", runOut);
     }
   };

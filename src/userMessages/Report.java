@@ -87,6 +87,7 @@ While scanning the project, we reject any path that could cause trouble later, i
   - have a single extension "name.ext" with exactly one dot
   - use an extension made of lowercase letters and digits, length 1..16 characters
   - stay within a reasonable total path length of 200 characters
+- Folders must not be empty.
 
 Exceptions (explicit allowlists)
 - A small set of well-known files are allowed to have no extension:
@@ -103,6 +104,9 @@ But we still require them to be safe to check out using a relaxed set of checks:
   - no name ending with '.' or a space
   - not using Windows reserved device names
   - no two items in the same folder that differ only by case or by Unicode-equivalent spellings
+  - a total path length of 200 characters
+Nothing else about a protected path is checked: it may be empty, it may be a
+symbolic link, and a zip inside it is never opened.
 
 Other rules (everywhere)
 - Symbolic links are not allowed.
@@ -244,13 +248,6 @@ or version control system (git).
   }
 
   //-- protected ("dot") names: ignored by Fearless, but still checked out by other tools
-  public static UserError invisibleSymlinkForbidden(Path kid){
-    return fail(showRel(kid),
-      "- This protected path is a symbolic link.\n"
-    + "  Even though protected paths are ignored, symbolic links can cause surprises across systems/tools.",
-      "- Replace the symbolic link with a real file/folder, or remove it."
-    );
-  }
   public static UserError invisibleOnlyRegularFilesAndDirs(Path kid){
     return fail(showRel(kid),
       "- This protected path is not a normal file or folder.",

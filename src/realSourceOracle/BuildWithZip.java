@@ -36,15 +36,17 @@ record Tree(
   private void collectFile(Path abs){
     var rel= root.relativize(abs);
     var pe= new PathEntry(root, rel);
-    if (Files.isSymbolicLink(abs)){ throw isInvisible(pe)
-      ? Report.invisibleSymlinkForbidden(abs)
-      : Report.symlinkForbidden(abs);
+    if (Files.isSymbolicLink(abs)){
+      if (isInvisible(pe)){ return; }
+      throw Report.symlinkForbidden(abs);
     }
-    if (!isRegularFile(abs) && !isDiskZip(abs, rel)){ throw isInvisible(pe)
+    var zip= isDiskZip(abs, rel);
+    if (!isRegularFile(abs) && !zip){ throw isInvisible(pe)
       ? Report.invisibleOnlyRegularFilesAndDirs(abs)
       : Report.onlyRegularFilesAndDirs(abs);
     }
-    if (isDiskZip(abs, rel)){ reqNoSiblingFileForZipName(rel); collectBodyDiskZip(root, rel); return; }
+    if (zip && isInvisible(pe)){ return; }
+    if (zip){ reqNoSiblingFileForZipName(rel); collectBodyDiskZip(root, rel); return; }
     for (RefParent p= pe; p.parent()!=p; p= p.parent()){ addKid(p); }
     if (isRegularFile(abs) && !isInvisible(pe)){ visibleFiles.add(pe); }
   }
@@ -61,6 +63,7 @@ record Tree(
     Fs.walkV(root, s->s.filter(p->!p.equals(root)).forEach(abs->{
       var rel= root.relativize(abs);
       nonEmpty.add(parentOrEmpty(rel));
+      if (isInvisible(new PathEntry(root, rel))){ return; }
       if (isDirectory(abs)){ dirs.add(rel); }
       if (!isDiskZip(abs, rel)){ return; }
       var es= ZipWellFormedness.allEntryPaths(root, rel);
