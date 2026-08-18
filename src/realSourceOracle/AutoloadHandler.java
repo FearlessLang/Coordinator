@@ -4,7 +4,9 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import core.TName;
 import tools.SourceOracle;
+import userMessages.Report;
 import utils.Pop;
 
 public interface AutoloadHandler{
@@ -28,14 +30,19 @@ public interface AutoloadHandler{
   }
   static String standardTypeName(String pkgName,SourceOracle.Ref ref){
     var cs= componentsAfterPackage(pkgName,ref);
-    return Pop.right(cs).stream()
+    var res= Pop.right(cs).stream()
       .map(AutoloadHandler::capFirst)
       .collect(Collectors.joining())
       +capFirst(dropExt(cs.getLast()));
+    if (!TName.isTypeName(res)){ throw Report.autoloadedNameNotAType(ref, res); }
+    return res;
   }
   static String capFirst(String s){
-    char c= s.charAt(0);
+    int i= 0;
+    while (i < s.length() && s.charAt(i) == '_'){ i++; }
+    if (i == s.length()){ return s; }
+    char c= s.charAt(i);
     if ('a' > c || c > 'z'){ return s; }
-    return ""+(char)(c - 'a' + 'A')+s.substring(1);
+    return s.substring(0,i)+(char)(c - 'a' + 'A')+s.substring(i+1);
   }
 }

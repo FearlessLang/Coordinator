@@ -320,6 +320,16 @@ or version control system (git).
     );
   }
 
+  public static UserError autoloadedNameNotAType(RefParent kid, String typeName){
+    return fail(showRel(kid),
+      "- Auto-loading this file would declare a type called "+disp(typeName)+".\n"
+    + "  That is not a Fearless type name: after any leading underscores, a type name\n"
+    + "  must start with an uppercase letter.",
+      "- Rename the file so that its name starts with a letter.\n"
+    + "  Examples: \"notes.txt\" auto-loads as \"Notes\", \"_notes.txt\" as \"_Notes\"."
+    );
+  }
+
   //-- zips, which we read as if they were folders
   public static UserError zipBadEntryName(Path diskZip, List<String> steps, String entryName){
     return directFail(showZipRel(diskZip, steps, entryName),
