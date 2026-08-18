@@ -77,6 +77,45 @@ Is "bar.fear" in package "bla" or in package "beer"?
 """,
     "src/_bla/_beer/bar.fear",""); }
 
+  //The folder name after the "_" is the package name, and it also becomes a folder and a
+  //file name in the generated code. "con" passes every rule of the project scanner, which
+  //only rejects a folder literally called "con".
+  @Test void windowsReservedPackageName(){ runErr("""
+This folder does not name a valid package.
+Folder:
+  "fear:/src/_con"
+
+Package name: "con"
+
+A folder whose name starts with "_" defines a package: the name after the "_"
+is the package name. It must start with a lowercase letter, then use only
+lowercase letters (a-z), digits (0-9) and underscore (_), and must not be a
+Windows reserved device name: "con", "prn", "aux", "nul", "com1".."com9",
+"lpt1".."lpt9".
+[###]
+""",
+    "src/_con/foo.fear",""); }
+
+  @Test void emptyPackageName(){ runErr("""
+This folder does not name a valid package.
+Folder:
+  "fear:/src/_"
+
+Package name: ""
+[###]
+""",
+    "src/_/foo.fear",""); }
+
+  @Test void packageNameStartingWithADigit(){ runErr("""
+This folder does not name a valid package.
+Folder:
+  "fear:/src/_1abc"
+
+Package name: "1abc"
+[###]
+""",
+    "src/_1abc/foo.fear",""); }
+
   @Test void missingRankFile(){ runErr("""
 Missing rank file for a package.
 
