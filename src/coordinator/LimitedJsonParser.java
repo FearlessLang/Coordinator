@@ -8,8 +8,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Supplier;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.IntStream;
 import userMessages.Violation;
 import core.B;
@@ -25,12 +23,10 @@ import core.TSpan;
 import utils.Pos;
 
 final class LimitedJsonParser{
-  private static final Pattern nameP= Pattern.compile(TName.pkgNameRegex);
   private final String s;
-  private final Matcher m;
   private int i= 0;
   Path forErr;
-  LimitedJsonParser(String s, Path forErr){ this.s= s; this.forErr= forErr; this.m= nameP.matcher(s); }
+  LimitedJsonParser(String s, Path forErr){ this.s= s; this.forErr= forErr; }
   Map<String,Map<String,String>> obj2(){
     var out= obj(this::obj1); ws();
     if (i != s.length()){ throw err("Trailing junk"); }
@@ -48,11 +44,9 @@ final class LimitedJsonParser{
     }
   }
   private String name(){
-    ws(); req('"');
-    m.region(i, s.length());
-    if (!m.lookingAt()){ throw err("Expected name"); }
-    i= m.end(); req('"');
-    return m.group();
+    var res= str();
+    if (!TName.isPkgName(res)){ throw err("Expected name"); }
+    return res;
   }
   Map<TName,Literal> apiJsonToMap(){
     var xs= arr(); ws();

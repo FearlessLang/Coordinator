@@ -8,7 +8,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import userMessages.Report;
@@ -135,8 +134,7 @@ class Helper{
     if (candidates.isEmpty()){ return Optional.empty(); }
     if (candidates.size() != 1){ throw Report.projectAmbiguousPackageSegment(u, candidates); }
     var pkg= candidates.getFirst().substring(1);
-    if (!pkgNameP.matcher(pkg).matches()){ throw Report.projectBadPackageName(u, candidates.getFirst()); }
+    if (!TName.isPkgName(pkg)){ throw Report.projectBadPackageName(u, candidates.getFirst()); }
     return Optional.of(pkg);
   }
-  private static final Pattern pkgNameP= Pattern.compile(TName.pkgNameRegex);
 }

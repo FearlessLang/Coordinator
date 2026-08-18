@@ -1,6 +1,8 @@
 package integrationTests;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.FileTime;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -9,6 +11,7 @@ import org.opentest4j.AssertionFailedError;
 
 import coordinator.Coordinator;
 import mainCoordinator.ResolveResource;
+import realSourceOracle.SourceOracleWithAutoload;
 import testHelperFs.FsDsl;
 import java.util.List;
 import tools.Fs;
@@ -86,6 +89,87 @@ How to fix
 
 We check this so that you[###]
 """, ex.getMessage());
+  }
+
+  @Test void anAssetWhoseNameStartsWithUnderscoreAutoLoadsAsAPrivateType(@TempDir Path tmp) throws InterruptedException{
+    Path root= tmp.resolve("root");
+    UserError.root= root;
+    FsDsl.materialize(root, """
+_col/_rank_app.fear
+iii
+use base.Main as Main;
+Hello:Main{s->base.Debug#(_Notes.path)}
+jjj
+_col/_notes.txt
+iii
+hello
+""");
+    coordinator().main(root);
+  }
+
+  @Test void anAssetWhoseNameForgesNoValidTypeIsReportedAgainstTheRealFile(@TempDir Path tmp){
+    Path root= tmp.resolve("root");
+    UserError.root= root;
+    FsDsl.materialize(root, """
+_col/_rank_app.fear
+iii
+use base.Main as Main;
+Hello:Main{s->base.Debug#(`hi`)}
+jjj
+_col/_1.txt
+iii
+hello
+""");
+    var ex= Assertions.assertThrows(UserError.class, ()->coordinator().main(root));
+    Assertions.assertFalse(ex.getMessage().contains(SourceOracleWithAutoload.autoloadFileSuffix), ex.getMessage());
+    utils.Err.strCmp("""
+Invalid path in this project folder.
+
+Root: [###]
+Path: "_col/_1.txt"
+
+What went wrong
+- Auto-loading this file would declare a type called "_1".
+  That is not a Fearless type name: after any leading underscores, a type name
+  must start with an uppercase letter.
+
+How to fix
+- Rename the file so that its name starts with a letter.
+  Examples: "notes.txt" auto-loads as "Notes", "_notes.txt" as "_Notes".
+
+We check this so that you[###]
+""", ex.getMessage());
+  }
+
+  @Test void aRealApiPreservingEditMustNotRebuildTheDependentPackage(@TempDir Path tmp) throws Exception{
+    Path root= tmp.resolve("root");
+    UserError.root= root;
+    FsDsl.materialize(root, """
+_a/_rank_core.fear
+iii
+use base.Str as Str;
+Greeting:{ .hi: Str -> `hi` }
+jjj
+_b/_rank_app.fear
+iii
+use base.Main as Main;
+use a.Greeting as Greeting;
+Hello:Main{s->base.Debug#(Greeting.hi)}
+""");
+    var c= coordinator();
+    c.main(root);
+    var out= root.resolve(".fearless_out");
+    long aBuilt= Fs.lastModified(out.resolve("a.built"));
+    long aJson= Fs.lastModified(out.resolve("a.json"));
+    long bBuilt= Fs.lastModified(out.resolve("b.built"));
+    var aSrc= root.resolve("_a/_rank_core.fear");
+    Fs.writeUtf8(aSrc, Fs.readUtf8(aSrc).replace("`hi`","`ho`"));
+    Files.setLastModifiedTime(aSrc, FileTime.fromMillis(System.currentTimeMillis()+500));
+    c.main(root);
+
+    Assertions.assertNotEquals(aBuilt, Fs.lastModified(out.resolve("a.built")));
+    Assertions.assertEquals(aJson, Fs.lastModified(out.resolve("a.json")));
+    Assertions.assertEquals(bBuilt, Fs.lastModified(out.resolve("b.built")));
   }
 
   @Test void aStackTraceNamesTheFearlessTypesMethodsAndLines() throws InterruptedException{
