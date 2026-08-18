@@ -21,6 +21,8 @@ import userMessages.Report;
 public class ProjectTreeErrorTest {
   static{ utils.Err.setUp(AssertionFailedError.class, Assertions::assertEquals, Assertions::assertTrue); }
 
+  static final Path fakeRoot= Path.of("unused","project","root");
+
   /// Runs the coordinator over an in memory project made of the given
   /// path/content pairs, and returns the message of the error it fails with.
   static String errMsg(String... pathThenContent){
@@ -35,7 +37,7 @@ public class ProjectTreeErrorTest {
       @Override public Path stLibPath(){ return Path.of("unused"); }
       @Override public SourceOracle sourceOracle(Path path){ return oracle; }
     };
-    try { c.main(Path.of("/unused/project/root")); }
+    try { c.main(fakeRoot); }
     catch(RuntimeException e){ return e.getMessage(); }
     catch(InterruptedException e){ throw new AssertionError(e); }
     return Assertions.fail("Expected an error, but the project was accepted");
@@ -47,8 +49,8 @@ public class ProjectTreeErrorTest {
   @Test void emptyProject(){ runErr("""
 The fearless project folder contains no *.fear files
 Folder:
- "/unused/project/root"
-""",
+ "%s"
+""".formatted(fakeRoot),
     "readme.txt","hi"); }
 
   @Test void noPackageSegment(){ runErr("""
