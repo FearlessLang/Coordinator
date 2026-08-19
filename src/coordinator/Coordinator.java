@@ -28,15 +28,15 @@ public interface Coordinator {
   Path rtPath();  
   Path stLibPath();
 
-  default void runAllMains(String pkgName,OutputOracle out) throws InterruptedException{
+  default String runAllMains(String pkgName,OutputOracle out) throws InterruptedException{
     var jars= out.rootDir().resolve("gen_java");    
     var data= List.of(
       "--enable-native-access=ALL-UNNAMED",
       "-DfearlessUser.dir="+jars.getParent().getParent());
-    JavaTool.runMainFromJars(data,jars,pkgName+".Main");
+    return JavaTool.runMainFromJars(data,jars,pkgName+".Main");
   }
   default SourceOracle sourceOracle(Path path){ return new RealSourceOracleWithZip(path); }
-  default void main(Path path) throws InterruptedException{ Helper.main(this, path); }
+  default String main(Path path) throws InterruptedException{ return Helper.main(this, path); }
   
   default List<Literal> frontend(String pkgName, List<Ref> files, SourceOracle oracle, OtherPackages other,Map<String,String> vres){
     try{ return new FrontendLogicMain().of(pkgName,vres, files, oracle, other); }
@@ -55,7 +55,7 @@ public interface Coordinator {
 }
 class Helper{
   static boolean isFear(Ref u){ return u.toString().endsWith(".fear"); }
-  static void main(Coordinator coordinator, Path path) throws InterruptedException{
+  static String main(Coordinator coordinator, Path path) throws InterruptedException{
     SourceOracle o= coordinator.sourceOracle(path);
     if (o.allFiles().stream().noneMatch(Helper::isFear)){ throw Report.projectEmpty(path); }
     o.allFiles().stream().filter(Helper::isFear).forEach(Helper::pkgName);//err if not under a pkg
@@ -74,7 +74,9 @@ class Helper{
     //--
     Fs.copyTreeFlat(coordinator.modsPath(),out.rootDir().resolve("gen_java"));
     l.compile(o, out);
-    for(var p: l.pkgs().keySet()){ coordinator.runAllMains(p,out); }
+    var sb= new StringBuilder();
+    for(var p: l.pkgs().keySet()){ sb.append(coordinator.runAllMains(p,out)); }
+    return sb.toString();
   }
   static Layer layers(Coordinator coordinator, Map<String,List<Ref>> map, Layer l, List<Ref> ranks){
     int lastNum= rankNumber(ranks.getFirst());

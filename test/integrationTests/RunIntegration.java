@@ -36,12 +36,21 @@ public class RunIntegration {
     Fs.rmTree(root.resolve(".fearless_out"));
     return root;
   }
+  String run(String name){
+    try { return coordinator().main(freshIntegrationRoot(name));}
+    catch (InterruptedException e){ return Assertions.fail(e);}
+  }
   void testOk(String name){
-    try { coordinator().main(freshIntegrationRoot(name));}
-    catch (InterruptedException e){ Assertions.fail(e);}
+    var out= run(name);
+    var fails= out.lines().filter(l->l.startsWith("Test failure ")).toList();
+    Assertions.assertTrue(fails.isEmpty(), ()->"Fearless unit tests failed in "+name+":\n"+String.join("\n",fails));
   }
   @Test void helloWorld(){ testOk("helloWorld");}
-  @Test void testUnitTests(){ testOk("testUnitTests");}
+  //testUnitTests is the project that checks the failure report itself, so it must fail
+  @Test void testUnitTests(){
+    var fails= run("testUnitTests").lines().filter(l->l.startsWith("Test failure ")).toList();
+    utils.Err.strCmp("Test failure MyTests at line: 5 in file: _hello/_rank_app.fear [###]", String.join("\n",fails));
+  }
   @Test void map_a_to_pkc(){ testOk("map_a_to_pkc");}
   @Test void helloStackTraces(){ testOk("helloStackTraces");}
   @Test void testingStandardLibrary(){ testOk("testingStandardLibrary");}
@@ -172,25 +181,13 @@ Hello:Main{s->base.Debug#(Greeting.hi)}
     Assertions.assertEquals(bBuilt, Fs.lastModified(out.resolve("b.built")));
   }
 
-  @Test void aStackTraceNamesTheFearlessTypesMethodsAndLines() throws InterruptedException{
-    var out= new StringBuilder();
-    var paths= coordinator();
-    new Coordinator(){
-      public Path rtPath(){    return paths.rtPath(); }
-      public Path stLibPath(){ return paths.stLibPath(); }
-      public Path modsPath(){  return paths.modsPath(); }
-      @Override public void runAllMains(String pkgName, coordinator.OutputOracle o) throws InterruptedException{
-        out.append(JavaTool.runMainFromJars(
-          List.of("--enable-native-access=ALL-UNNAMED","-DfearlessUser.dir="+o.rootDir().getParent().getParent()),
-          o.rootDir().resolve("gen_java"), pkgName+".Main"));
-      }
-    }.main(freshIntegrationRoot("helloStackTraces"));
+  @Test void aStackTraceNamesTheFearlessTypesMethodsAndLines(){
     utils.Err.strCmp("""
 AAAAh
 imm Bar.bar error line: 8 in file _hello/_rank_app.fear
 imm Foo.foo error line: 7 in file _hello/_rank_app.fear
 imm Hello.main(_) error line: 6 in file _hello/_rank_app.fear
-""", out.toString());
+""", run("helloStackTraces"));
   }
 
   @Test void twoTypeNamesDifferingOnlyByCaseMustStillBuildOnASecondRun(@TempDir Path tmp) throws InterruptedException{

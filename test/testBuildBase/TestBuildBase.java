@@ -24,7 +24,7 @@ class TestBuildBase {
     @Override public Path stLibPath(){ return ResolveResource.stLibPath; }
     @Override public Path modsPath(){  return ResolveResource.coordinatorJars; }
 
-    @Override public void main(Path path) throws InterruptedException{
+    @Override public String main(Path path) throws InterruptedException{
       OutputOracle out= ()->ResolveResource.stLibDebugOut;
       var pkgName= "base";
       var other= OtherPackages.empty();
@@ -35,6 +35,7 @@ class TestBuildBase {
       var jars= out.rootDir().resolve("gen_java");
       var runOut= JavaTool.runMainFromJars(List.of("-DfearlessUser.dir="+out.rootDir().getParent()),jars,pkgName+".Main");
       assertEquals("", runOut);
+      return runOut;
     }
   };
   @Test void test(){
