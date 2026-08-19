@@ -407,7 +407,7 @@ final class RecompilationCacheTest{
     @Override public Path rtPath(){ return Path.of("unused"); }
     @Override public Path stLibPath(){ return stdLib; }
     @Override public Path modsPath(){ return mods; }
-    @Override public void runAllMains(String pkgName, OutputOracle out){}
+    @Override public String runAllMains(String pkgName, OutputOracle out){ return ""; }
     @Override public List<Literal> frontend(String pkgName, List<Ref> files, SourceOracle oracle, OtherPackages other, Map<String,String> vres){
       frontendCalls.merge(pkgName, 1, Integer::sum);
       return List.of();
