@@ -141,16 +141,19 @@ Each package must contain exactly one rank file.
     "src/_bla/_rank_app.fear","",
     "src/_bla/_rank_core.fear",""); }
 
-  @Test void malformedRankFileName(){ runErr("""
-Malformed rank file name.
-File:
-  "fear:/src/_bla/_rank_bogus.fear"
+  @Test void aRankShapedNameWithAnUnknownRankGivesTheSameErrorRegardlessOfExtension(){ runErr("""
+"_rank_" is a reserved file name prefix.
+Package:
+  "bla"
 
-Each package folder must contain exactly one file whose name follows this pattern:
-  "_rank_<rankName>.fear"
-[###]
+These names start with "_rank_" but are not the package's rank file:
+  "fear:/src/_bla/_rank_bla.fear", "fear:/src/_bla/_rank_bla.txt"
+
+"_rank_" is reserved for the package's own single rank file, named:
+  "_rank_<rankName>.fear" or "_rank_<rankName><NNN>.fear"
 """,
-    "src/_bla/_rank_bogus.fear",""); }
+    "src/_bla/_rank_bla.fear","",
+    "src/_bla/_rank_bla.txt",""); }
 
   //Two rank files of the SAME rank map the same virtual name to different real
   //packages, so neither can override the other. Reported as a well formedness error.
@@ -182,8 +185,6 @@ These names start with "_rank_" but are not the package's rank file:
 
 "_rank_" is reserved for the package's own single rank file, named:
   "_rank_<rankName>.fear" or "_rank_<rankName><NNN>.fear"
-
-Rename them so they do not start with "_rank_".
 """,
       "src/_bla/_rank_app.fear","",
       "src/_bla/_rank_notes.txt","hello"); }
@@ -195,8 +196,6 @@ Folder:
 
 Package name: "base"
 
-"base" is reserved: it is the name of the Fearless standard library package.
-
 Rename the folder to use a different package name.
 """,
     "src/_base/foo.fear",""); }
@@ -207,11 +206,6 @@ Folder:
   "fear:/src/_rank"
 
 Package name: "rank"
-
-"rank" is reserved: it would create a package folder "_rank", easily
-confused with the "_rank_<rankName>.fear" rank-file naming convention used
-inside every package (and with the autoloaded names generated from a
-package's own folder structure).
 
 Rename the folder to use a different package name.
 """,

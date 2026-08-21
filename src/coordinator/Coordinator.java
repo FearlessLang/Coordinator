@@ -24,6 +24,7 @@ import tools.JavaTool;
 import tools.JavacTool;
 import tools.SourceOracle;
 import tools.SourceOracle.Ref;
+import utils.Bug;
 
 public interface Coordinator {
   Path rtPath();  
@@ -100,34 +101,33 @@ class Helper{
     long baseStamp= out.commitMap(res, allRanks.stream().mapToLong(Ref::lastModified).max().getAsLong());
     return new BaseLayer(coordinator,res,baseStamp);
   }
-  static int rankNumber(Ref u){
-    var name= u.toString();
-    if(!u.toString().endsWith(".fear")){ throw Report.projectMalformedRankFileName(u); }
-    var stem= Fs.fileNameWithoutExtension(name);
+  static Optional<Integer> rankNumberOpt(Ref u){
+    if(!u.toString().endsWith(".fear")){ return Optional.empty(); }
+    var stem= Fs.fileNameWithoutExtension(u.toString());
     for(int i=0;i<ranks.size();i++){
       var pref= ranks.get(i);
       int base= (i+1)*1000;
-      if(stem.equals(pref)){ return base+999; } // shortcut: _rank_app.fear == _rank_app999.fear
+      if(stem.equals(pref)){ return Optional.of(base+999); } // shortcut: _rank_app.fear == _rank_app999.fear
       if(!stem.startsWith(pref)){ continue; }
-      if(stem.length()!=pref.length()+3){ throw Report.projectMalformedRankFileName(u); }
+      if(stem.length()!=pref.length()+3){ return Optional.empty(); }
       var digits= stem.substring(pref.length());
-      if(!digits.chars().allMatch(Character::isDigit)){ throw Report.projectMalformedRankFileName(u); }
-      return base+Integer.parseInt(digits);
+      if(!digits.chars().allMatch(Character::isDigit)){ return Optional.empty(); }
+      return Optional.of(base+Integer.parseInt(digits));
     }
-    throw Report.projectMalformedRankFileName(u);
+    return Optional.empty();
   }
+  static int rankNumber(Ref u){ return rankNumberOpt(u).orElseThrow(Bug::unreachable); }
   private static final List<String> ranks= List.of(
     "_rank_base","_rank_core","_rank_driver","_rank_worker","_rank_framework","_rank_accumulator","_rank_tool","_rank_app");
-    
+
   static boolean hasReservedRankPrefix(Ref u){ return Fs.fileNameWithExtension(u.toString()).startsWith("_rank_"); }
   static Ref okPkgContent(List<Ref> u, Path root){
     var pkg= pkgName(u.getFirst());
     var reserved= u.stream().filter(Helper::hasReservedRankPrefix).toList();
-    var nonFear= reserved.stream().filter(ui->!isFear(ui)).toList();
-    if (!nonFear.isEmpty()){ throw Report.projectReservedRankPrefix(pkg, nonFear); }
+    var invalidShape= reserved.stream().filter(ui->rankNumberOpt(ui).isEmpty()).toList();
+    if (!invalidShape.isEmpty()){ throw Report.projectReservedRankPrefix(pkg, invalidShape); }
     if (reserved.isEmpty()){ throw Report.projectMissingRankFile(pkg, root); }
     if (reserved.size() > 1){ throw Report.projectMultipleRankFiles(pkg, reserved); }
-    rankNumber(reserved.getFirst());//err malformed rank file name is malformed
     return reserved.getFirst();
   }
   static String pkgName(Ref u){ return pkgNameOpt(u).orElseThrow(()->Report.projectNoPackageSegment(u)); }

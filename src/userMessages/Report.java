@@ -470,20 +470,9 @@ Folder:
 
 Package name: %s
 
-%s
-
 Rename the folder to use a different package name.
-""".formatted(disp(pkgFolder(file, segment)), disp(segment.substring(1)), reservedPackageReason(segment.substring(1))));
+""".formatted(disp(pkgFolder(file, segment)), disp(segment.substring(1))));
   }
-  private static String reservedPackageReason(String pkg){ return switch(pkg){
-    case "base" -> "\"base\" is reserved: it is the name of the Fearless standard library package.";
-    case "rank" -> ""
-      + "\"rank\" is reserved: it would create a package folder \"_rank\", easily\n"
-      + "confused with the \"_rank_<rankName>.fear\" rank-file naming convention used\n"
-      + "inside every package (and with the autoloaded names generated from a\n"
-      + "package's own folder structure).";
-    default -> throw Bug.unreachable();
-  };}
   public static UserError projectAmbiguousPackageSegment(Ref file, List<String> candidates){ return new UserError("""
 This path contains more than one folder whose name starts with "_":
   %s
@@ -557,8 +546,6 @@ These names start with "_rank_" but are not the package's rank file:
 
 "_rank_" is reserved for the package's own single rank file, named:
   "_rank_<rankName>.fear" or "_rank_<rankName><NNN>.fear"
-
-Rename them so they do not start with "_rank_".
 """.formatted(disp(pkg), Join.of(files.stream().map(f->disp(f.toString())), "",", ","")));
   }
   public static UserError projectMultipleRankFiles(String pkg, List<Ref> rankFiles){ return new UserError("""
@@ -571,27 +558,6 @@ Rank files:
 
 Each package must contain exactly one rank file.
 """.formatted(disp(pkg), Join.of(rankFiles.stream().map(f->disp(f.toString())), "",", ","")));
-  }
-  public static UserError projectMalformedRankFileName(Ref rankFile){ return new UserError("""
-Malformed rank file name.
-File:
-  %s
-
-Each package folder must contain exactly one file whose name follows this pattern:
-  "_rank_<rankName>.fear"
-or
-  "_rank_<rankName><NNN>.fear"
-
-<rankName> is one of:
-  base, core, driver, worker, framework, accumulator, tool, app
-<NNN> are digits
-
-Examples:
-  _rank_app.fear
-  _rank_core043.fear
-  _rank_worker999.fear
-
-""".formatted(disp(rankFile.toString())));
   }
 
   //-- the user's Fearless source. The frontend explains these itself, in the language of
