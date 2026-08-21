@@ -100,13 +100,12 @@ public final class HtmlDocBuilder implements DocBuilder{
 
   Stream<MethodRef> matchingMethods(T.C provider, Literal sup, M m){
     return sup.ms().stream()
-      .filter(sm->sameSelector(sm,m))
+      .filter(sm->sameMethod(sm,m))
       .map(sm->MethodRef.provider(provider,sm));
   }
 
-  boolean sameSelector(M a, M b){
-    return a.sig().m().s().equals(b.sig().m().s())
-      && a.sig().m().arity() == b.sig().m().arity();
+  boolean sameMethod(M a, M b){
+    return a.sig().rc() == b.sig().rc() && a.sig().m().equals(b.sig().m());
   }
 
   Optional<Literal> literal(TName n){
