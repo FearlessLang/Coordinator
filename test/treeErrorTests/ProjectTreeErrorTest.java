@@ -141,19 +141,28 @@ Each package must contain exactly one rank file.
     "src/_bla/_rank_app.fear","",
     "src/_bla/_rank_core.fear",""); }
 
-  @Test void aRankShapedNameWithAnUnknownRankGivesTheSameErrorRegardlessOfExtension(){ runErr("""
-"_rank_" is a reserved file name prefix.
-Package:
-  "bla"
+  @Test void malformedRankFileName(){ runErr("""
+Malformed rank file name.
+File:
+  "fear:/src/_bla/_rank_bogus.fear"
 
-These names start with "_rank_" but are not the package's rank file:
-  "fear:/src/_bla/_rank_bla.fear", "fear:/src/_bla/_rank_bla.txt"
-
-"_rank_" is reserved for the package's own single rank file, named:
-  "_rank_<rankName>.fear" or "_rank_<rankName><NNN>.fear"
+Each package folder must contain exactly one file whose name follows this pattern:
+  "_rank_<rankName>.fear"
+[###]
 """,
-    "src/_bla/_rank_bla.fear","",
-    "src/_bla/_rank_bla.txt",""); }
+    "src/_bla/_rank_bogus.fear",""); }
+
+  @Test void aMalformedRankFileNameTakesPriorityOverMultipleRankFiles(){ runErr("""
+Malformed rank file name.
+File:
+  "fear:/src/_bla/_rank_bogus.fear"
+
+Each package folder must contain exactly one file whose name follows this pattern:
+  "_rank_<rankName>.fear"
+[###]
+""",
+    "src/_bla/_rank_app.fear","",
+    "src/_bla/_rank_bogus.fear",""); }
 
   //Two rank files of the SAME rank map the same virtual name to different real
   //packages, so neither can override the other. Reported as a well formedness error.
@@ -174,17 +183,15 @@ How to fix it:
     "_pka/_rank_app999.fear","map a as pkc in pkb;",
     "_pkd/_rank_app999.fear","map a as pkb in pkb;"); }
 
-  @Test void aPlainResourceFileNamedLikeARankFileIsRejectedWithADedicatedMessage(){
+  @Test void aPlainResourceFileNamedLikeARankFileIsAlsoAMalformedRankFileName(){
     runErr("""
-"_rank_" is a reserved file name prefix.
-Package:
-  "bla"
-
-These names start with "_rank_" but are not the package's rank file:
+Malformed rank file name.
+File:
   "fear:/src/_bla/_rank_notes.txt"
 
-"_rank_" is reserved for the package's own single rank file, named:
-  "_rank_<rankName>.fear" or "_rank_<rankName><NNN>.fear"
+Each package folder must contain exactly one file whose name follows this pattern:
+  "_rank_<rankName>.fear"
+[###]
 """,
       "src/_bla/_rank_app.fear","",
       "src/_bla/_rank_notes.txt","hello"); }
@@ -195,8 +202,6 @@ Folder:
   "fear:/src/_base"
 
 Package name: "base"
-
-Rename the folder to use a different package name.
 """,
     "src/_base/foo.fear",""); }
 
@@ -206,8 +211,6 @@ Folder:
   "fear:/src/_rank"
 
 Package name: "rank"
-
-Rename the folder to use a different package name.
 """,
     "src/_rank/foo.fear",""); }
 

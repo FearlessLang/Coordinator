@@ -469,8 +469,6 @@ Folder:
   %s
 
 Package name: %s
-
-Rename the folder to use a different package name.
 """.formatted(disp(pkgFolder(file, segment)), disp(segment.substring(1))));
   }
   public static UserError projectAmbiguousPackageSegment(Ref file, List<String> candidates){ return new UserError("""
@@ -536,18 +534,6 @@ Example of a valid package folder:
               +-- bar.fear
 """.formatted(disp(pkg), pkg));
   }
-  public static UserError projectReservedRankPrefix(String pkg, List<Ref> files){ return new UserError("""
-"_rank_" is a reserved file name prefix.
-Package:
-  %s
-
-These names start with "_rank_" but are not the package's rank file:
-  %s
-
-"_rank_" is reserved for the package's own single rank file, named:
-  "_rank_<rankName>.fear" or "_rank_<rankName><NNN>.fear"
-""".formatted(disp(pkg), Join.of(files.stream().map(f->disp(f.toString())), "",", ","")));
-  }
   public static UserError projectMultipleRankFiles(String pkg, List<Ref> rankFiles){ return new UserError("""
 Multiple rank files for the same package.
 Package:
@@ -558,6 +544,27 @@ Rank files:
 
 Each package must contain exactly one rank file.
 """.formatted(disp(pkg), Join.of(rankFiles.stream().map(f->disp(f.toString())), "",", ","")));
+  }
+  public static UserError projectMalformedRankFileName(Ref rankFile){ return new UserError("""
+Malformed rank file name.
+File:
+  %s
+
+Each package folder must contain exactly one file whose name follows this pattern:
+  "_rank_<rankName>.fear"
+or
+  "_rank_<rankName><NNN>.fear"
+
+<rankName> is one of:
+  base, core, driver, worker, framework, accumulator, tool, app
+<NNN> are digits
+
+Examples:
+  _rank_app.fear
+  _rank_core043.fear
+  _rank_worker999.fear
+
+""".formatted(disp(rankFile.toString())));
   }
 
   //-- the user's Fearless source. The frontend explains these itself, in the language of
