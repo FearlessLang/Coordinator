@@ -7,13 +7,21 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.net.URI;
 import java.util.List;
+import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 
 import core.E.Literal;
+import core.M;
+import core.MName;
+import core.OtherPackages;
 import core.RC;
+import core.Sig;
 import core.Src;
+import core.T;
 import core.TName;
+import core.TSpan;
+import tools.SourceOracle;
 import utils.Pos;
 
 final class DocBuilderTest{
@@ -116,5 +124,66 @@ final class DocBuilderTest{
   @Test void idProducesDistinctIdsForDistinctOperatorSelectors(){
     assertNotEquals(HtmlDocRenderer.id("+"), HtmlDocRenderer.id("-"));
     assertNotEquals(HtmlDocRenderer.id("=="), HtmlDocRenderer.id("!="));
+  }
+
+  private static Src freshSrc(){
+    return new Src(new Src.SrcObj(){
+      @Override public Pos pos(){ return Pos.unknown; }
+      @Override public TSpan span(){ return TSpan.fromPos(Pos.unknown,1); }
+    });
+  }
+  private static T retVoid(){
+    return new T.RCC(RC.imm, new T.C(new TName("base.Void",0,Pos.unknown), List.of()), TSpan.fromPos(Pos.unknown,1));
+  }
+  private static M fooMethodAt(RC rc, TName origin, TSpan span){
+    var sig= new Sig(rc, new MName(".foo",0), List.of(), List.of(), retVoid(), origin, false, span);
+    return new M(sig, List.of(), Optional.empty());
+  }
+  private static M fooMethod(RC rc, TName origin){
+    return fooMethodAt(rc, origin, TSpan.fromPos(Pos.unknown,1));
+  }
+  private static Literal namedType(String name, List<T.C> cs, List<M> ms){
+    return new Literal(RC.imm, new TName(name,0,Pos.unknown), List.of(), cs, "this", ms, freshSrc(), false);
+  }
+
+  @Test void inheritedMethodsOnlyMatchesTheSupertypeMethodWithTheSameReceiverCapability(){
+    var supName= new TName("pkg.Sup",0,Pos.unknown);
+    var subName= new TName("pkg.Sub",0,Pos.unknown);
+    var supMut= fooMethod(RC.mut, supName);
+    var supImm= fooMethod(RC.imm, supName);
+    var sup= namedType("pkg.Sup", List.of(), List.of(supMut, supImm));
+    var subMut= fooMethod(RC.mut, subName);
+    var sub= namedType("pkg.Sub", List.of(new T.C(supName, List.of())), List.of(subMut));
+
+    SourceOracle oracle= List::of;
+    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(sup, sub));
+    var refs= builder.inheritedMethods(sub, subMut);
+
+    assertEquals(1, refs.size());
+    assertTrue(refs.getFirst().method()==supMut);
+  }
+
+  @Test void aSingleDeclarationWithNoExplicitRcIsDuplicatedPerRequiredRcAndEachVariantMatchesItsOwnSupertypeCounterpart(){
+    var supName= new TName("pkg.Sup",0,Pos.unknown);
+    var subName= new TName("pkg.Sub",0,Pos.unknown);
+    var supMut= fooMethod(RC.mut, supName);
+    var supImm= fooMethod(RC.imm, supName);
+    var sup= namedType("pkg.Sup", List.of(), List.of(supMut, supImm));
+
+    var subMut= fooMethod(RC.mut, subName);
+    var subImm= fooMethod(RC.imm, subName);
+    var sub= namedType("pkg.Sub", List.of(new T.C(supName, List.of())), List.of(subMut, subImm));
+
+    SourceOracle oracle= List::of;
+    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(sup, sub));
+    builder.visitLiteral(sup);
+    builder.visitLiteral(sub);
+
+    var doc= builder.type(sub).methods.getFirst();
+    assertEquals(1, builder.type(sub).methods.size());
+    assertEquals(2, doc.variants.size());
+    assertEquals(2, doc.inheritedFrom.size());
+    assertTrue(doc.inheritedFrom.stream().anyMatch(r->r.method()==supMut));
+    assertTrue(doc.inheritedFrom.stream().anyMatch(r->r.method()==supImm));
   }
 }
