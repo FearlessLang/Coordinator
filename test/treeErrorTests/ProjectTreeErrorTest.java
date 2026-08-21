@@ -171,6 +171,52 @@ How to fix it:
     "_pka/_rank_app999.fear","map a as pkc in pkb;",
     "_pkd/_rank_app999.fear","map a as pkb in pkb;"); }
 
+  @Test void aPlainResourceFileNamedLikeARankFileIsRejectedWithADedicatedMessage(){
+    runErr("""
+"_rank_" is a reserved file name prefix.
+Package:
+  "bla"
+
+These names start with "_rank_" but are not the package's rank file:
+  "fear:/src/_bla/_rank_notes.txt"
+
+"_rank_" is reserved for the package's own single rank file, named:
+  "_rank_<rankName>.fear" or "_rank_<rankName><NNN>.fear"
+
+Rename them so they do not start with "_rank_".
+""",
+      "src/_bla/_rank_app.fear","",
+      "src/_bla/_rank_notes.txt","hello"); }
+
+  @Test void basePackageNameIsReserved(){ runErr("""
+This folder names a reserved package.
+Folder:
+  "fear:/src/_base"
+
+Package name: "base"
+
+"base" is reserved: it is the name of the Fearless standard library package.
+
+Rename the folder to use a different package name.
+""",
+    "src/_base/foo.fear",""); }
+
+  @Test void rankPackageNameIsReserved(){ runErr("""
+This folder names a reserved package.
+Folder:
+  "fear:/src/_rank"
+
+Package name: "rank"
+
+"rank" is reserved: it would create a package folder "_rank", easily
+confused with the "_rank_<rankName>.fear" rank-file naming convention used
+inside every package (and with the autoloaded names generated from a
+package's own folder structure).
+
+Rename the folder to use a different package name.
+""",
+    "src/_rank/foo.fear",""); }
+
   @Test void ambiguousPackageSegmentMessageMustNameTheActualCandidates(){
     record FakeRef(String fearPath) implements SourceOracle.Ref{
       @Override public byte[] loadBytes(){ return new byte[0]; }

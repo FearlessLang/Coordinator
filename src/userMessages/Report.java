@@ -88,6 +88,10 @@ While scanning the project, we reject any path that could cause trouble later, i
   - use an extension made of lowercase letters and digits, length 1..16 characters
   - stay within a reasonable total path length of 200 characters
 - Folders must not be empty.
+- Reserved names:
+  - a package name of `base` or `rank` is reserved and cannot be used
+  - inside a package, only its own rank file may start with `_rank_`;
+    no other file may use that prefix
 
 Exceptions (explicit allowlists)
 - A small set of well-known files are allowed to have no extension:
@@ -459,6 +463,27 @@ Valid examples:
     var s= file.fearPath();
     return s.substring(0, s.indexOf("/"+segment+"/")+segment.length()+1);
   }
+  public static UserError projectReservedPackageName(Ref file, String segment){ return new UserError("""
+This folder names a reserved package.
+Folder:
+  %s
+
+Package name: %s
+
+%s
+
+Rename the folder to use a different package name.
+""".formatted(disp(pkgFolder(file, segment)), disp(segment.substring(1)), reservedPackageReason(segment.substring(1))));
+  }
+  private static String reservedPackageReason(String pkg){ return switch(pkg){
+    case "base" -> "\"base\" is reserved: it is the name of the Fearless standard library package.";
+    case "rank" -> ""
+      + "\"rank\" is reserved: it would create a package folder \"_rank\", easily\n"
+      + "confused with the \"_rank_<rankName>.fear\" rank-file naming convention used\n"
+      + "inside every package (and with the autoloaded names generated from a\n"
+      + "package's own folder structure).";
+    default -> throw Bug.unreachable();
+  };}
   public static UserError projectAmbiguousPackageSegment(Ref file, List<String> candidates){ return new UserError("""
 This path contains more than one folder whose name starts with "_":
   %s
@@ -521,6 +546,20 @@ Example of a valid package folder:
           +-- sub/
               +-- bar.fear
 """.formatted(disp(pkg), pkg));
+  }
+  public static UserError projectReservedRankPrefix(String pkg, List<Ref> files){ return new UserError("""
+"_rank_" is a reserved file name prefix.
+Package:
+  %s
+
+These names start with "_rank_" but are not the package's rank file:
+  %s
+
+"_rank_" is reserved for the package's own single rank file, named:
+  "_rank_<rankName>.fear" or "_rank_<rankName><NNN>.fear"
+
+Rename them so they do not start with "_rank_".
+""".formatted(disp(pkg), Join.of(files.stream().map(f->disp(f.toString())), "",", ","")));
   }
   public static UserError projectMultipleRankFiles(String pkg, List<Ref> rankFiles){ return new UserError("""
 Multiple rank files for the same package.

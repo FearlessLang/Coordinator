@@ -8,6 +8,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Stream;
 
 import userMessages.Report;
@@ -118,17 +119,20 @@ class Helper{
   private static final List<String> ranks= List.of(
     "_rank_base","_rank_core","_rank_driver","_rank_worker","_rank_framework","_rank_accumulator","_rank_tool","_rank_app");
     
+  static boolean hasReservedRankPrefix(Ref u){ return Fs.fileNameWithExtension(u.toString()).startsWith("_rank_"); }
   static Ref okPkgContent(List<Ref> u, Path root){
     var pkg= pkgName(u.getFirst());
-    var rankFiles= u.stream()
-      .filter(ui->ui.toString().contains("/_rank_")).toList();
-    if (rankFiles.isEmpty()){ throw Report.projectMissingRankFile(pkg, root); }
-    if (rankFiles.size() > 1){ throw Report.projectMultipleRankFiles(pkg, rankFiles); }
-    rankNumber(rankFiles.getFirst());//err malformed rank file name is malformed
-    return rankFiles.getFirst();
+    var reserved= u.stream().filter(Helper::hasReservedRankPrefix).toList();
+    var nonFear= reserved.stream().filter(ui->!isFear(ui)).toList();
+    if (!nonFear.isEmpty()){ throw Report.projectReservedRankPrefix(pkg, nonFear); }
+    if (reserved.isEmpty()){ throw Report.projectMissingRankFile(pkg, root); }
+    if (reserved.size() > 1){ throw Report.projectMultipleRankFiles(pkg, reserved); }
+    rankNumber(reserved.getFirst());//err malformed rank file name is malformed
+    return reserved.getFirst();
   }
   static String pkgName(Ref u){ return pkgNameOpt(u).orElseThrow(()->Report.projectNoPackageSegment(u)); }
 
+  private static final Set<String> reservedPkgNames= Set.of("base","rank");
   static Optional<String> pkgNameOpt(Ref u){
     var candidates= Stream.of(u.toString().split("/"))
       .filter(s->s.startsWith("_") && !s.contains("."))
@@ -137,6 +141,7 @@ class Helper{
     if (candidates.size() != 1){ throw Report.projectAmbiguousPackageSegment(u, candidates); }
     var pkg= candidates.getFirst().substring(1);
     if (!TName.isPkgName(pkg)){ throw Report.projectBadPackageName(u, candidates.getFirst()); }
+    if (reservedPkgNames.contains(pkg)){ throw Report.projectReservedPackageName(u, candidates.getFirst()); }
     return Optional.of(pkg);
   }
 }
