@@ -152,6 +152,18 @@ Each package folder must contain exactly one file whose name follows this patter
 """,
     "src/_bla/_rank_bogus.fear",""); }
 
+  @Test void aMalformedRankFileNameTakesPriorityOverMultipleRankFiles(){ runErr("""
+Malformed rank file name.
+File:
+  "fear:/src/_bla/_rank_bogus.fear"
+
+Each package folder must contain exactly one file whose name follows this pattern:
+  "_rank_<rankName>.fear"
+[###]
+""",
+    "src/_bla/_rank_app.fear","",
+    "src/_bla/_rank_bogus.fear",""); }
+
   //Two rank files of the SAME rank map the same virtual name to different real
   //packages, so neither can override the other. Reported as a well formedness error.
   @Test void mapConflict(){ runErr("""
@@ -170,6 +182,37 @@ How to fix it:
 """,
     "_pka/_rank_app999.fear","map a as pkc in pkb;",
     "_pkd/_rank_app999.fear","map a as pkb in pkb;"); }
+
+  @Test void aPlainResourceFileNamedLikeARankFileIsAlsoAMalformedRankFileName(){
+    runErr("""
+Malformed rank file name.
+File:
+  "fear:/src/_bla/_rank_notes.txt"
+
+Each package folder must contain exactly one file whose name follows this pattern:
+  "_rank_<rankName>.fear"
+[###]
+""",
+      "src/_bla/_rank_app.fear","",
+      "src/_bla/_rank_notes.txt","hello"); }
+
+  @Test void basePackageNameIsReserved(){ runErr("""
+This folder names a reserved package.
+Folder:
+  "fear:/src/_base"
+
+Package name: "base"
+""",
+    "src/_base/foo.fear",""); }
+
+  @Test void rankPackageNameIsReserved(){ runErr("""
+This folder names a reserved package.
+Folder:
+  "fear:/src/_rank"
+
+Package name: "rank"
+""",
+    "src/_rank/foo.fear",""); }
 
   @Test void ambiguousPackageSegmentMessageMustNameTheActualCandidates(){
     record FakeRef(String fearPath) implements SourceOracle.Ref{

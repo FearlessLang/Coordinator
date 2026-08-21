@@ -88,6 +88,10 @@ While scanning the project, we reject any path that could cause trouble later, i
   - use an extension made of lowercase letters and digits, length 1..16 characters
   - stay within a reasonable total path length of 200 characters
 - Folders must not be empty.
+- Reserved names:
+  - a package name of `base` or `rank` is reserved and cannot be used
+  - inside a package, only its own rank file may start with `_rank_`;
+    no other file may use that prefix
 
 Exceptions (explicit allowlists)
 - A small set of well-known files are allowed to have no extension:
@@ -458,6 +462,14 @@ Valid examples:
   private static String pkgFolder(Ref file, String segment){
     var s= file.fearPath();
     return s.substring(0, s.indexOf("/"+segment+"/")+segment.length()+1);
+  }
+  public static UserError projectReservedPackageName(Ref file, String segment){ return new UserError("""
+This folder names a reserved package.
+Folder:
+  %s
+
+Package name: %s
+""".formatted(disp(pkgFolder(file, segment)), disp(segment.substring(1))));
   }
   public static UserError projectAmbiguousPackageSegment(Ref file, List<String> candidates){ return new UserError("""
 This path contains more than one folder whose name starts with "_":
