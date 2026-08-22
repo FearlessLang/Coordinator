@@ -163,6 +163,25 @@ final class DocBuilderTest{
     assertTrue(refs.getFirst().method()==supMut);
   }
 
+  @Test void inheritedMethodsListsEveryProviderAlongAnOverrideChainEvenTheShadowedOne(){
+    var baseName= new TName("pkg.Base",0,Pos.unknown);
+    var midName= new TName("pkg.Mid",0,Pos.unknown);
+    var baseSame= fooMethod(RC.imm, baseName);
+    var base= namedType("pkg.Base", List.of(), List.of(baseSame));
+    var midSame= fooMethod(RC.imm, midName);
+    var mid= namedType("pkg.Mid", List.of(new T.C(baseName, List.of())), List.of(midSame));
+    var top= namedType("pkg.Top",
+      List.of(new T.C(midName, List.of()), new T.C(baseName, List.of())), List.of());
+
+    SourceOracle oracle= List::of;
+    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(base, mid, top));
+    var refs= builder.inheritedMethods(top, midSame);
+
+    assertEquals(2, refs.size());
+    assertTrue(refs.stream().anyMatch(r->r.method()==midSame));
+    assertTrue(refs.stream().anyMatch(r->r.method()==baseSame));
+  }
+
   @Test void aSingleDeclarationWithNoExplicitRcIsDuplicatedPerRequiredRcAndEachVariantMatchesItsOwnSupertypeCounterpart(){
     var supName= new TName("pkg.Sup",0,Pos.unknown);
     var subName= new TName("pkg.Sub",0,Pos.unknown);
