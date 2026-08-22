@@ -90,6 +90,8 @@ public final class HtmlDocBuilder implements DocBuilder{
 
   Pos methodPos(M m){ return m.sig().span().pos(); }
 
+  //owner.cs() is fully flattened, so an overridden ancestor still gets its own entry here:
+  //by design, "From:" shows every provider along the chain, shadowed ones included.
   List<MethodRef> inheritedMethods(Literal owner, M m){
     var res= new LinkedHashMap<MethodRefKey,MethodRef>();
     owner.cs().stream()
