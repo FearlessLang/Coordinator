@@ -76,7 +76,7 @@ class Helper{
     Fs.copyTreeFlat(coordinator.modsPath(),out.rootDir().resolve("gen_java"));
     l.compile(o, out);
     var sb= new StringBuilder();
-    for(var p: l.pkgs().keySet()){ sb.append(coordinator.runAllMains(p,out)); }
+    for(var p: l.pkgs().keySet()){ sb.append(coordinator.runAllMains(p,out)); }//by design: only the highest rank number's packages have their Main run
     return sb.toString();
   }
   static Layer layers(Coordinator coordinator, Map<String,List<Ref>> map, Layer l, List<Ref> ranks){

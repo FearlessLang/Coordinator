@@ -181,6 +181,46 @@ Hello:Main{s->base.Debug#(Greeting.hi)}
     Assertions.assertEquals(bBuilt, Fs.lastModified(out.resolve("b.built")));
   }
 
+  // Confirms expected behaviour: only the packages at the highest rank number get their Main run.
+  @Test void onlyTheHighestRankPackageMainRuns(@TempDir Path tmp) throws InterruptedException{
+    Path root= tmp.resolve("root");
+    UserError.root= root;
+    FsDsl.materialize(root, """
+_a/_rank_core.fear
+iii
+use base.Main as Main;
+Hello:Main{s->base.Debug#(`from core`)}
+jjj
+_z/_rank_app.fear
+iii
+use base.Main as Main;
+Hello:Main{s->base.Debug#(`from app`)}
+""");
+    var out= coordinator().main(root);
+    Assertions.assertTrue(out.contains("from app"), out);
+    Assertions.assertFalse(out.contains("from core"), out);
+  }
+
+  // Confirms expected behaviour: packages tied for that highest rank number all run.
+  @Test void allPackagesAtTheHighestRankRun(@TempDir Path tmp) throws InterruptedException{
+    Path root= tmp.resolve("root");
+    UserError.root= root;
+    FsDsl.materialize(root, """
+_a/_rank_app.fear
+iii
+use base.Main as Main;
+Hello:Main{s->base.Debug#(`from a`)}
+jjj
+_z/_rank_app.fear
+iii
+use base.Main as Main;
+Hello:Main{s->base.Debug#(`from z`)}
+""");
+    var out= coordinator().main(root);
+    Assertions.assertTrue(out.contains("from a"), out);
+    Assertions.assertTrue(out.contains("from z"), out);
+  }
+
   @Test void aStackTraceNamesTheFearlessTypesMethodsAndLines(){
     utils.Err.strCmp("""
 AAAAh
