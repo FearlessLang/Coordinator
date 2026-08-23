@@ -86,9 +86,12 @@ final class SourceDocs{
     }
   }
 
+  //textColumn is where the stored text really starts in the line, so an error can put
+  //its carets under the offending characters: past the "///" and the space clean drops.
   void add(int line, int column, String text, boolean pureLine, boolean example){
+    var clean= clean(text);
     docsByLine.computeIfAbsent(line,_ -> new ArrayList<>())
-      .add(new DocOcc(uri,line,column,clean(text),pureLine,example));
+      .add(new DocOcc(uri,line,column,column+3+(text.length()-clean.length()),clean,pureLine,example));
   }
 
   static String clean(String s){ return s.startsWith(" ") ? s.substring(1) : s; }

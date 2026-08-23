@@ -576,4 +576,33 @@ Examples:
   //-- the user's Fearless source. The frontend explains these itself, in the language of
   //the language: parse errors, well formedness, types. Here they only become terminal.
   public static UserError sourceError(String rendered){ return new UserError(rendered); }
+
+  public static UserError docReferences(List<String> problems){ return new UserError("""
+Broken reference in a doc comment.
+
+%s
+
+Inside a doc comment, a single backtick marks a reference, and all of it must
+be a name. Documentation is generated on every build, so a reference that
+names nothing is an error, the same as any other broken name.
+
+A reference is one of:
+  `Foo`             a type
+  `pkg.Foo`         a type of another package
+  `.foo`            a method, on any type that has it
+  `Foo.foo`         a method of one type
+  `this`            the type being documented
+  `x`               a parameter of the method being documented
+  `this.foo`        a method of the type being documented
+  `x.foo`           a method of the type of the parameter x
+  `++`  `Foo++`     an operator method, named like any other method
+Add an arity when the name alone matches several declarations:
+  `Foo[_,_]`        the two parameter version of the type
+  `.foo(_,_)`       the two argument version of the method
+  `Foo++(_,_)`      the two argument version of the operator
+
+To show code that is not a name, use two backticks or more:
+  ``this.foo(x)``   shown as code, never checked, never a link
+""".formatted(String.join("\n\n",problems)));
+  }
 }
