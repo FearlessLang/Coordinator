@@ -14,7 +14,6 @@ import java.util.UUID;
 
 import fileSupport.NativeLocaleForcer;
 import fileSupport.StringFiles;
-import mainCoordinator.Main;
 import userMessages.Violation;
 import userMessages.UserError;
 import tools.Fs;
@@ -69,8 +68,8 @@ public class ManagerMain {
   }
   //heuristic to navigate the path upwards
   private static Path locateBinDir(){
-    var expectedDirName= JavacTool.appNameFor(Main.reqVersionId())+(Fs.isMac() ? ".app" : "");
-    Path startedFrom= Main.reqAppDir().toAbsolutePath().normalize();//TODO: is this absolute needed?
+    var expectedDirName= JavacTool.appNameFor(JavacTool.reqVersionId(Violation::mustUseLauncher))+(Fs.isMac() ? ".app" : "");
+    Path startedFrom= JavacTool.reqAppDir(Violation::mustUseLauncher).toAbsolutePath().normalize();//TODO: is this absolute needed?
     for(var dir= startedFrom; dir != null; dir= dir.getParent()){
       Path name= dir.getFileName();
       if (name == null){ break; }//a root has no name and cannot be our folder
@@ -80,7 +79,7 @@ public class ManagerMain {
   }
   private static Path resolveManagerDir(){
     var host= InstallLocation.isInstalled(binDir) ? InstallLocation.userDataHome() : codeDir();
-    return host.resolve(JavacTool.dataDirNameFor(Main.reqVersionId()));
+    return host.resolve(JavacTool.dataDirNameFor(JavacTool.reqVersionId(Violation::mustUseLauncher)));
   }
   //The folder holding the program folder. Reached only when the program folder is NOT in
   //an installed-programs location, so Fearless was unpacked here and owns this folder:

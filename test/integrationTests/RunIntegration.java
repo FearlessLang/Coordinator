@@ -230,6 +230,63 @@ imm Hello.main(_) error line: 6 in file _hello/_rank_app.fear
 """, run("helloStackTraces"));
   }
 
+  @Test void virtualizationMapMentionsAPackageThatDoesNotExist(@TempDir Path tmp) throws InterruptedException{
+    Path root= tmp.resolve("root");
+    UserError.root= root;
+    FsDsl.materialize(root, """
+_pka/_rank_app999.fear
+iii
+use base.Main as Main;
+map a as nonexistentpkg in pkb;
+Hello:Main{s->base.Debug#(pkb.B.text)}
+jjj
+_pkb/_rank_app200.fear
+iii
+use base.Str as Str;
+B:{.text:Str->a.C.text;}
+""");
+    var ex= Assertions.assertThrows(RuntimeException.class, ()->coordinator().main(root));
+    utils.Err.strCmp("""
+In file: fear:/_pkb/_rank_app200.fear
+
+002| B:{.text:Str->a.C.text;}
+   |               ^^^^^^^^^^
+
+While inspecting a type name
+Package "nonexistentpkg" does not exist.
+Visible packages: "base".
+Error 7 WellFormedness
+""", ex.getMessage());
+  }
+
+  @Test void useOfAHigherRankPackageIsReportedAsUndeclaredNotAsAnOrderingProblem(@TempDir Path tmp) throws InterruptedException{
+    Path root= tmp.resolve("root");
+    UserError.root= root;
+    FsDsl.materialize(root, """
+_a/_rank_core.fear
+iii
+use base.Main as Main;
+use z.Greeting as Greeting;
+Hello:Main{s->base.Debug#(Greeting.hi)}
+jjj
+_z/_rank_app.fear
+iii
+use base.Str as Str;
+Greeting:{ .hi: Str -> `hi` }
+""");
+    var ex= Assertions.assertThrows(RuntimeException.class, ()->coordinator().main(root));
+    utils.Err.strCmp("""
+In file: fear:/_a/_rank_core.fear
+
+002| use z.Greeting as Greeting;
+   |     ^^^^^^^^^^
+
+While inspecting package header
+"use" directive refers to undeclared name: type "Greeting" is not declared in package "z".
+Error 7 WellFormedness
+""", ex.getMessage());
+  }
+
   @Test void twoTypeNamesDifferingOnlyByCaseMustStillBuildOnASecondRun(@TempDir Path tmp) throws InterruptedException{
     Path root= tmp.resolve("root");
     UserError.root= root;

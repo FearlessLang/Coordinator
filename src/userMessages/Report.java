@@ -577,5 +577,3 @@ Examples:
   //the language: parse errors, well formedness, types. Here they only become terminal.
   public static UserError sourceError(String rendered){ return new UserError(rendered); }
 }
-//TODO: test cases where virtualization map mentions not existing stuff
-//TODO: test cases where dependency order is violated. Both cases are likely giving bad unreadable errors.
