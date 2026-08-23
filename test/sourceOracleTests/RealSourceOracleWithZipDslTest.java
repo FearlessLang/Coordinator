@@ -239,9 +239,32 @@ iii
 ""","""
 Root: [###]
 Path: "_pkg/e.zip"
-This zip file contains no entries.
-This is most likely a mistake.
+Entry: "d"
 
+
+This zip contains a folder entry called "d", but it is empty.
+Different systems handle empty directories differently, and they may not be
+supported by compression tools (zip) or version control systems (git).
+
+We check this so that you[###]
+""");}
+
+  @Test void err_empty_directory_inside_a_non_empty_zip(@TempDir Path tmp){ runErrIOE(tmp, """
+_pkg/e.zip/a.fear
+iii
+A
+jjj
+_pkg/e.zip/d/
+iii
+""","""
+Root: [###]
+Path: "_pkg/e.zip"
+Entry: "d"
+
+
+This zip contains a folder entry called "d", but it is empty.
+Different systems handle empty directories differently, and they may not be
+supported by compression tools (zip) or version control systems (git).
 
 We check this so that you[###]
 """);}

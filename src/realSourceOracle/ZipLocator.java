@@ -35,7 +35,8 @@ final class ZipLocator{
     return new ReadZip(
       n -> Report.zipBadEntryName(diskZip, steps, n),
       a -> Report.zipDuplicateEntryName(diskZip, steps, a),
-      n -> Report.zipEntryTooBig(diskZip, steps, n)
+      n -> Report.zipEntryTooBig(diskZip, steps, n),
+      n -> Report.zipEmptyDirectoryEntry(diskZip, steps, n)
     );
   }
   private static ZipInputStream zipStream(Path diskZip, byte[] bytes) throws IOException{
