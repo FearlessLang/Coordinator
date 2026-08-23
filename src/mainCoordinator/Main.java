@@ -37,21 +37,8 @@ import tools.JavacTool;
 
 public final class Main{
   private static final AtomicInteger macSpawnOk= new AtomicInteger(0);
-  public static Path reqAppDir(){//also used in manager, TODO: refactor
-    var launcher= System.getProperty(JavacTool.launcherKey);
-    var appDir= System.getProperty(JavacTool.appDirKey);
-    if (launcher == null || appDir == null){ throw Violation.mustUseLauncher(); }
-    var res= Path.of(appDir);
-    if (!res.isAbsolute()){ throw Violation.mustUseLauncher(); }
-    return res;
-  }
-  public static String reqVersionId(){//also used in manager, TODO: refactor
-    var versionId= System.getProperty(JavacTool.versionIdKey);
-    if (versionId == null){ throw Violation.mustUseLauncher(); }
-    return versionId;
-  }
   public static void main(String[] args){
-    reqAppDir();
+    JavacTool.reqAppDir(Violation::mustUseLauncher);
     try{ if (!hasConsoleFlag()){ hookStd(); } run(args); }
     catch(UserError e){ System.err.print(e.getMessage()); }
     catch(Throwable t){ 
@@ -60,7 +47,7 @@ public final class Main{
     }
   }
   private static void run(String[] args) throws InvocationTargetException, InterruptedException, ExecutionException{
-    var appDir= reqAppDir();
+    var appDir= JavacTool.reqAppDir(Violation::mustUseLauncher);
     Optional<Path> launch= launchPath(args);
     if (Fs.isMac() && !hasConsoleFlag()){ registerMacSpawnHandler(appDir); }
     if (!launch.isPresent()){
@@ -109,7 +96,7 @@ public final class Main{
     area.setFont(new Font(Font.MONOSPACED, Font.BOLD, 18));
     var frame= new JFrame("Fearless output");
     Fs.ofV(()->{
-      var icon= ImageIO.read(reqAppDir().resolve("icon.png").toFile());
+      var icon= ImageIO.read(JavacTool.reqAppDir(Violation::mustUseLauncher).resolve("icon.png").toFile());
       frame.setIconImage(icon);
       if (Taskbar.isTaskbarSupported()){
         var tb= Taskbar.getTaskbar();

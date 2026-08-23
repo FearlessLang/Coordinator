@@ -6,11 +6,11 @@ import java.nio.file.Path;
 
 import javax.imageio.ImageIO;
 
-import mainCoordinator.Main;
+import tools.JavacTool;
 import userMessages.Violation;
 
 final class FearlessIcon {
-  private static Image image= read(Main.reqAppDir().resolve("icon.png"));
+  private static Image image= read(JavacTool.reqAppDir(Violation::mustUseLauncher).resolve("icon.png"));
   static Image image(){ return image; }//TODO: refactor this file into an enum with needed resources
   private static Image read(Path file){
     try {
