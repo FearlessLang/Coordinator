@@ -2,15 +2,17 @@ package sourceOracleTests;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.io.ByteArrayOutputStream;
 import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.AccessDeniedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.zip.CRC32;
 import java.util.zip.ZipOutputStream;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Assumptions;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.opentest4j.AssertionFailedError;
@@ -20,6 +22,7 @@ import userMessages.Report;
 import realSourceOracle.RealSourceOracleWithZip;
 import realSourceOracle.SourceOracleWithAutoload;
 import testHelperFs.FsDsl;
+import tools.Fs;
 import static testHelperFs.FsDsl.*;
 
 final class RealSourceOracleWithZipDslTest{
@@ -37,18 +40,49 @@ final class RealSourceOracleWithZipDslTest{
     var ex= assertThrows(UserError.class, ()->SourceOracleWithAutoload.of(base, pkgName));
     utils.Err.strCmp(expected, ex.getMessage());
   }
-//Java can not create the broken zip
-@Disabled @Test void err_zip_duplicate_entry_name(@TempDir Path tmp){ runErrIOE(tmp, """
-_pkg/z.zip/a.fear
-iii
-1
-jjj
-_pkg/z.zip/a.fear
-iii
-2
-""","""
-<put the expected UserError message here>
-""");}
+  //ZipOutputStream refuses to write two entries with the same name (ZipException: duplicate
+  //entry), so this fixture is hand assembled instead of going through FsDsl: a zip written by
+  //another tool can still contain one.
+  @Test void err_zip_duplicate_entry_name(@TempDir Path tmp){
+    Path root= tmp.resolve("root").toAbsolutePath().normalize();
+    UserError.root= root;
+    Fs.ensureDir(root.resolve("_pkg"));
+    Fs.ofV(()->Files.write(root.resolve("_pkg/z.zip"), rawDuplicateEntryZip("a.fear","1","2")));
+    var ex= assertThrows(UserError.class, ()->new RealSourceOracleWithZip(root));
+    utils.Err.strCmp("""
+Root: [###]
+Path: "_pkg/z.zip"
+Entry: "a.fear"
+
+
+This zip contains more than one entry called Entry: "a.fear"
+
+Different tools disagree on which one should be used.
+Using it may even means that different content is seen in different moments.
+(Schizophrenic ZIP file)
+
+We check this so that you[###]
+""", FsDsl.dumpErr(root, ex));
+  }
+  private static byte[] rawDuplicateEntryZip(String name, String content1, String content2){
+    var out= new ByteArrayOutputStream();
+    writeLocalEntry(out, name, content1);
+    writeLocalEntry(out, name, content2);
+    return out.toByteArray();
+  }
+  private static void writeLocalEntry(ByteArrayOutputStream out, String name, String content){
+    var nameBytes= name.getBytes(StandardCharsets.UTF_8);
+    var data= content.getBytes(StandardCharsets.UTF_8);
+    var crc= new CRC32(); crc.update(data);
+    writeInt(out, 0x04034b50L);
+    writeShort(out, 20); writeShort(out, 0); writeShort(out, 0); writeShort(out, 0); writeShort(out, 0x21);
+    writeInt(out, crc.getValue()); writeInt(out, data.length); writeInt(out, data.length);
+    writeShort(out, nameBytes.length); writeShort(out, 0);
+    out.writeBytes(nameBytes);
+    out.writeBytes(data);
+  }
+  private static void writeShort(ByteArrayOutputStream out, int v){ out.write(v & 0xff); out.write((v>>8) & 0xff); }
+  private static void writeInt(ByteArrayOutputStream out, long v){ for(int i= 0; i < 4; i++){ out.write((int)((v>>(8*i)) & 0xff)); } }
 
 @Test void err_zip_duplicate_entry_name2(@TempDir Path tmp){ runErrIOE(tmp, """
 _pkg/z.zip/a.fear
