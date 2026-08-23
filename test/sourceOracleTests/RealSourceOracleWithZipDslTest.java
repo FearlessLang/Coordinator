@@ -290,6 +290,36 @@ How to fix
 We check this so that[###]
 """);}
 
+  // BuildWithZip.checkIndividualVisibleSegment checks "is this name a dotted file, or one
+  // of the whitelisted extensionless names" (badNoExt) BEFORE checking the name's characters
+  // (checkVisibleAtom) - but only for a name with NO dot. A dotted name is checked the other
+  // way around: checkVisibleAtom runs on the atom before checkExt ever looks at the
+  // extension. So an extensionless name that is invalid for a character/case reason (not
+  // merely "unknown") is misdiagnosed as "no extension" instead of the real problem, and one
+  // of the two suggested fixes ("add an extension", e.g. renaming to "README.txt") does not
+  // actually fix it: checkVisibleAtom then runs and rejects the very same uppercase "R".
+  // A real GitHub checkout's own "README" (uppercase, no extension - very common) hits this.
+  @Test void err_bad_char_extensionless_file_is_misreported_as_needing_an_extension(@TempDir Path tmp){ runErrIOE(tmp, """
+_pkg/README
+iii
+X
+""","""
+Invalid path in this project folder.
+
+Root: [###]
+Path: "_pkg/README"
+
+What went wrong
+- A visible folder/file name starts with an invalid character.
+  Visible names must start with a lowercase letter (a-z) or underscore (_).
+
+How to fix
+- Rename it to start with a-z or _.
+  Examples: "foo", "_tmp", "foo1".
+
+We check this so that you[###]
+""");}
+
   @Test void err_visible_must_start_with_letter_or_underscore(@TempDir Path tmp){ runErrIOE(tmp, """
 _pkg/1a.fear
 iii
