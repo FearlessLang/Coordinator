@@ -71,6 +71,33 @@ final class DocBuilderTest{
     assertEquals(List.of("first line of doc","second line of doc"), before.stream().map(DocOcc::text).toList());
   }
 
+  @Test void aRunnableExampleLineBetweenAProseDocAndItsDeclarationIsStillReachedAsAPureDoc(){
+    var text= ""
+      + "/// description of foo\n"
+      + "//>   .check{foo.assertEq(1)}\n"
+      + "Foo: Bar {\n"
+      + "}\n";
+    var docs= new SourceDocs(file, text);
+    var before= docs.docsAt(Pos.of(file,3,1), true);
+    assertEquals(List.of("description of foo","  .check{foo.assertEq(1)}"), before.stream().map(DocOcc::text).toList());
+    assertFalse(before.get(0).example(), "the /// line is prose, not an example");
+    assertTrue(before.get(1).example(), "the //> line is a runnable example");
+  }
+
+  @Test void severalRunnableExampleLinesAllReachTheDeclarationInSourceOrder(){
+    var text= ""
+      + "/// description of foo\n"
+      + "//>   .check{foo.assertEq(1)}\n"
+      + "//>   .checkDetErr({_ -> True}, {bar})\n"
+      + "Foo: Bar {\n"
+      + "}\n";
+    var docs= new SourceDocs(file, text);
+    var before= docs.docsAt(Pos.of(file,4,1), true);
+    assertEquals(
+      List.of("description of foo","  .check{foo.assertEq(1)}","  .checkDetErr({_ -> True}, {bar})"),
+      before.stream().map(DocOcc::text).toList());
+  }
+
   @Test void aTrailingInlineDocCommentOnTheDeclarationLineIsFound(){
     var text= "Foo: Bar { /// trailing doc\n";
     var docs= new SourceDocs(file, text);
@@ -111,6 +138,22 @@ final class DocBuilderTest{
   @Test void aDocCommentThatLooksLikeAScriptTagIsFullyNeutralized(){
     var rendered= HtmlDocRenderer.h("<script>alert(1)</script>");
     assertEquals("&lt;script&gt;alert(1)&lt;/script&gt;", rendered);
+  }
+
+  @Test void renderExamplesWrapsRunnableExampleLinesInAnExpandableDetailsBlock(){
+    var sb= new StringBuilder();
+    var renderer= new HtmlDocRenderer("pkg", java.util.Map.of(), List.of());
+    renderer.renderExamples(sb, List.of(".check{1.assertEq(1)}"));
+    var rendered= sb.toString();
+    assertTrue(rendered.contains("<details class=\"examples\">"), "examples must render as an expandable details block: "+rendered);
+    assertTrue(rendered.contains("<pre class=\"example\">.check{1.assertEq(1)}</pre>"), rendered);
+  }
+
+  @Test void renderExamplesRendersNothingWhenThereAreNoExamples(){
+    var sb= new StringBuilder();
+    var renderer= new HtmlDocRenderer("pkg", java.util.Map.of(), List.of());
+    renderer.renderExamples(sb, List.of());
+    assertEquals("", sb.toString());
   }
 
   @Test void idPassesThroughPlainAsciiIdentifiersUnchanged(){

@@ -56,7 +56,11 @@ final class SourceDocs{
         switch(mode){
           case Normal -> {
             if (s.startsWith("///",i)){
-              add(l,i+1,s.substring(i+3),s.substring(0,i).isBlank());
+              add(l,i+1,s.substring(i+3),s.substring(0,i).isBlank(),false);
+              i= s.length();
+            }
+            else if (s.startsWith("//>",i)){
+              add(l,i+1,s.substring(i+3),s.substring(0,i).isBlank(),true);
               i= s.length();
             }
             else if (s.startsWith("//",i)){ i= s.length(); }
@@ -82,9 +86,9 @@ final class SourceDocs{
     }
   }
 
-  void add(int line, int column, String text, boolean pureLine){
+  void add(int line, int column, String text, boolean pureLine, boolean example){
     docsByLine.computeIfAbsent(line,_ -> new ArrayList<>())
-      .add(new DocOcc(uri,line,column,clean(text),pureLine));
+      .add(new DocOcc(uri,line,column,clean(text),pureLine,example));
   }
 
   static String clean(String s){ return s.startsWith(" ") ? s.substring(1) : s; }
