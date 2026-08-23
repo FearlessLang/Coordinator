@@ -23,9 +23,6 @@ final class ZipLocator{
   public static List<String> entryNames(Path diskZip, List<String> steps){
     return fetch(diskZip, steps, bytes -> List.copyOf(readHere(diskZip, steps, bytes).keySet()));
   }
-  public static List<String> dirEntryNames(Path diskZip, List<String> steps){
-    return fetch(diskZip, steps, bytes -> List.copyOf(readZip(diskZip, steps).dirNames(()->zipStream(diskZip, bytes))));
-  }
   public static byte[] entryBytes(Path diskZip, List<String> steps, String entryName){
     var res= fetch(diskZip, steps, bytes -> readHere(diskZip, steps, bytes).get(entryName));
     if (res == null){ throw Violation.cacheCanNotFindZipEntry(diskZip, steps, entryName); }
@@ -38,7 +35,8 @@ final class ZipLocator{
     return new ReadZip(
       n -> Report.zipBadEntryName(diskZip, steps, n),
       a -> Report.zipDuplicateEntryName(diskZip, steps, a),
-      n -> Report.zipEntryTooBig(diskZip, steps, n)
+      n -> Report.zipEntryTooBig(diskZip, steps, n),
+      n -> Report.zipEmptyDirectoryEntry(diskZip, steps, n)
     );
   }
   private static ZipInputStream zipStream(Path diskZip, byte[] bytes) throws IOException{

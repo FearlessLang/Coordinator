@@ -391,12 +391,11 @@ This zip file contains no entries.
 This is most likely a mistake.
 """);}
   public static UserError zipEmptyDirectoryEntry(Path diskZip, List<String> steps, String entryName){
-    return directFail(showZipRel(diskZip, steps, entryName),"""
-This directory is empty.
-Different systems handleds empty directories differently,
-and they may not be supported by compression tools (zip)
-or version control system (git).
-""");}
+    return directFail(showZipRel(diskZip, steps, entryName),
+      "This zip contains a folder entry called "+disp(entryName)+", but it is empty.\n"
+     +"Different systems handle empty directories differently, and they may not be\n"
+     +"supported by compression tools (zip) or version control systems (git).");
+  }
   public static UserError zipExpandedPathCollides(RefParent kid, RefParent first, RefParent second){
     return fail(showRel(kid),
       "- Expanding zip files into folders makes this path exist twice, from two\n"

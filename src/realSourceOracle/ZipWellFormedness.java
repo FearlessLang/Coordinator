@@ -28,13 +28,7 @@ public final class ZipWellFormedness{
   private static void reqCollect(Path diskZip, Path root, Path local, List<String> steps, int depth, ArrayList<ZipEntry> out){
     if (depth > maxZipNesting){ throw Report.zipNestingTooDeep(diskZip, steps, depth, maxZipNesting); }
     var names= ZipLocator.entryNames(diskZip, steps);
-    reqNoEmptyDirEntry(diskZip, steps, names);
     for (var name: names){ singleName(diskZip, root, local, steps, depth, out, name); }
-  }
-  private static void reqNoEmptyDirEntry(Path diskZip, List<String> steps, List<String> names){
-    for (var dir: ZipLocator.dirEntryNames(diskZip, steps)){
-      if (names.stream().noneMatch(n->n.startsWith(dir+"/"))){ throw Report.zipEmptyDirectoryEntry(diskZip, steps, dir); }
-    }
   }
   private static void reqNoFileUsedAsDirectory(List<ZipEntry> out){
     for (var e: out){

@@ -242,11 +242,9 @@ Path: "_pkg/e.zip"
 Entry: "d"
 
 
-This directory is empty.
-Different systems handleds empty directories differently,
-and they may not be supported by compression tools (zip)
-or version control system (git).
-
+This zip contains a folder entry called "d", but it is empty.
+Different systems handle empty directories differently, and they may not be
+supported by compression tools (zip) or version control systems (git).
 
 We check this so that you[###]
 """);}
@@ -264,11 +262,9 @@ Path: "_pkg/e.zip"
 Entry: "d"
 
 
-This directory is empty.
-Different systems handleds empty directories differently,
-and they may not be supported by compression tools (zip)
-or version control system (git).
-
+This zip contains a folder entry called "d", but it is empty.
+Different systems handle empty directories differently, and they may not be
+supported by compression tools (zip) or version control systems (git).
 
 We check this so that you[###]
 """);}
