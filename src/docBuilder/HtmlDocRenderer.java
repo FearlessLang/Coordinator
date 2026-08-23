@@ -48,6 +48,7 @@ final class HtmlDocRenderer{
       .append(".method summary::-webkit-details-marker{margin-right:.35em}\n")
       .append(".sig{font-family:monospace;white-space:pre-wrap;font-size:1.08em;font-weight:600}\n")
       .append(".variant{font-family:monospace;white-space:pre-wrap}\n")
+      .append(".example{font-family:monospace;white-space:pre-wrap}\n")
       .append(".doc{margin:.35em 0 .35em 1.3em;color:#333;font-size:.94em}\n")
       .append(".missing{color:#777;font-style:italic}\n")
       .append(".from,.variants{color:#555}\n")
@@ -153,15 +154,25 @@ final class HtmlDocRenderer{
   void renderDoc(StringBuilder sb, Object owner, List<DocOcc> docs, Map<DocOcc,Object> claims){
     var visible= docs.stream()
       .filter(c->!c.inline() || claims.get(c) == owner)
-      .map(DocOcc::text)
       .toList();
     if (visible.isEmpty()){
       sb.append("<p class=\"doc missing\">No documentation yet.</p>\n");
       return;
     }
-    sb.append("<div class=\"doc\">\n");
-    visible.forEach(s->sb.append("<p>").append(h(s)).append("</p>\n"));
-    sb.append("</div>\n");
+    var prose= visible.stream().filter(c->!c.example()).map(DocOcc::text).toList();
+    if (!prose.isEmpty()){
+      sb.append("<div class=\"doc\">\n");
+      prose.forEach(s->sb.append("<p>").append(h(s)).append("</p>\n"));
+      sb.append("</div>\n");
+    }
+    renderExamples(sb,visible.stream().filter(DocOcc::example).map(DocOcc::text).toList());
+  }
+
+  void renderExamples(StringBuilder sb, List<String> examples){
+    if (examples.isEmpty()){ return; }
+    sb.append("<details class=\"examples\"><summary>Example</summary>\n<pre class=\"example\">")
+      .append(examples.stream().map(HtmlDocRenderer::h).collect(Collectors.joining("\n")))
+      .append("</pre></details>\n");
   }
 
   void renderVariants(StringBuilder sb, String title, List<?> variants){
