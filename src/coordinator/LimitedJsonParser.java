@@ -67,6 +67,7 @@ final class LimitedJsonParser{
     var cs= asArr(a.get(3)).stream().map(x->cFrom(asArr(x))).toList();
     var ms= asArr(a.get(4)).stream().map(x->mFrom(asArr(x))).toList();
     //We need also the non public for subtyping reasoning//if (!tn.isPublic()){ throw err("Non-public type in api json: "+nameS); }
+    //thisName is not part of the api json (ms carry no bodies here), so "this" is just a placeholder value never read back.
     return new Literal(rc, tn, bs, cs, "this", ms, dummySrc(), false);
   }
   private M mFrom(List<Object> a){
