@@ -290,6 +290,27 @@ How to fix
 We check this so that[###]
 """);}
 
+  @Test void err_bad_char_extensionless_file_is_misreported_as_needing_an_extension(@TempDir Path tmp){ runErrIOE(tmp, """
+_pkg/README
+iii
+X
+""","""
+Invalid path in this project folder.
+
+Root: [###]
+Path: "_pkg/README"
+
+What went wrong
+- A visible folder/file name starts with an invalid character.
+  Visible names must start with a lowercase letter (a-z) or underscore (_).
+
+How to fix
+- Rename it to start with a-z or _.
+  Examples: "foo", "_tmp", "foo1".
+
+We check this so that you[###]
+""");}
+
   @Test void err_visible_must_start_with_letter_or_underscore(@TempDir Path tmp){ runErrIOE(tmp, """
 _pkg/1a.fear
 iii
