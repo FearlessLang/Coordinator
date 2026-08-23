@@ -117,12 +117,11 @@ final class BuildWithZip{
     var name= Fs.fileNameWithExtension(kid.fearPath());
     int d0= name.indexOf('.');
     if (d0 == 0){ checkIndividualInvisibleSegment(kid); return; }
-    boolean isFile= kid instanceof Ref;
-    var validNoExt= !isFile || Report.allowedNoExtFiles.contains(name);
-    var badNoExt= isFile && d0 < 0 && !validNoExt;
-    if (badNoExt){ throw Report.needsExtension(kid); }
-    if (validNoExt){ checkVisibleAtom(kid, name); return; }
-    assert d0 > 0;
+    if (d0 < 0){
+      checkVisibleAtom(kid, name);
+      if (kid instanceof Ref && !Report.allowedNoExtFiles.contains(name)){ throw Report.needsExtension(kid); }
+      return;
+    }
     checkVisibleAtom(kid, name.substring(0, d0));
     checkExt(kid, name.substring(d0 + 1, name.length()));
   }
