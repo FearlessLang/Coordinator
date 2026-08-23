@@ -130,6 +130,6 @@ record ImportedKey(String origin, String rc, String name, int arity){
   }
 }
 
-record DocOcc(URI file, int line, int column, String text, boolean pureLine, boolean example){
+record DocOcc(URI file, int line, int column, int textColumn, String text, boolean pureLine, boolean example){
   boolean inline(){ return !pureLine; }
 }

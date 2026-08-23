@@ -7,10 +7,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.net.URI;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.OptionalInt;
 
 import org.junit.jupiter.api.Test;
 
+import core.B;
 import core.E.Literal;
 import core.M;
 import core.MName;
@@ -142,7 +145,7 @@ final class DocBuilderTest{
 
   @Test void renderExamplesWrapsRunnableExampleLinesInAnExpandableDetailsBlock(){
     var sb= new StringBuilder();
-    var renderer= new HtmlDocRenderer("pkg", java.util.Map.of(), List.of());
+    var renderer= new HtmlDocRenderer("pkg", java.util.Map.of(), List.of(), OtherPackages.empty(), java.util.Map.of());
     renderer.renderExamples(sb, List.of(".check{1.assertEq(1)}"));
     var rendered= sb.toString();
     assertTrue(rendered.contains("<details class=\"examples\">"), "examples must render as an expandable details block: "+rendered);
@@ -151,7 +154,7 @@ final class DocBuilderTest{
 
   @Test void renderExamplesRendersNothingWhenThereAreNoExamples(){
     var sb= new StringBuilder();
-    var renderer= new HtmlDocRenderer("pkg", java.util.Map.of(), List.of());
+    var renderer= new HtmlDocRenderer("pkg", java.util.Map.of(), List.of(), OtherPackages.empty(), java.util.Map.of());
     renderer.renderExamples(sb, List.of());
     assertEquals("", sb.toString());
   }
@@ -184,6 +187,18 @@ final class DocBuilderTest{
   }
   private static M fooMethod(RC rc, TName origin){
     return fooMethodAt(rc, origin, TSpan.fromPos(Pos.unknown,1));
+  }
+  private static List<B> twoBounds(){
+    return List.of(new B("X1",java.util.EnumSet.of(RC.imm)), new B("X2",java.util.EnumSet.of(RC.imm)));
+  }
+  private static M namedMethod(String selector, TName origin){
+    var sig= new Sig(RC.imm, new MName(selector,0), List.of(), List.of(), retVoid(), origin, false, TSpan.fromPos(Pos.unknown,1));
+    return new M(sig, List.of(), Optional.empty());
+  }
+  private static M methodTaking(String selector, TName origin, String paramName, TName paramType){
+    var t= new T.RCC(RC.imm, new T.C(paramType, List.of()), TSpan.fromPos(Pos.unknown,1));
+    var sig= new Sig(RC.imm, new MName(selector,1), List.of(), List.of(t), retVoid(), origin, false, TSpan.fromPos(Pos.unknown,1));
+    return new M(sig, List.of(paramName), Optional.empty());
   }
   private static Literal namedType(String name, List<T.C> cs, List<M> ms){
     return new Literal(RC.imm, new TName(name,0,Pos.unknown), List.of(), cs, "this", ms, freshSrc(), false);
@@ -247,5 +262,201 @@ final class DocBuilderTest{
     assertEquals(2, doc.inheritedFrom.size());
     assertTrue(doc.inheritedFrom.stream().anyMatch(r->r.method()==supMut));
     assertTrue(doc.inheritedFrom.stream().anyMatch(r->r.method()==supImm));
+  }
+
+  @Test void aBareTypeNameThatMatchesTwoLocalArityVariantsIsAmbiguous(){
+    var one= namedType("pkg.Pair", List.of(), List.of());
+    var two= new Literal(RC.imm, new TName("pkg.Pair",2,Pos.unknown), twoBounds(), List.of(), "this", List.of(), freshSrc(), false);
+    SourceOracle oracle= List::of;
+    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(one,two));
+    builder.visitLiteral(one);
+    builder.visitLiteral(two);
+    var resolver= new DocResolver("pkg", builder.types, OtherPackages.empty());
+
+    var link= resolver.resolveType(new DocRef.TypeName(Optional.empty(),"Pair",OptionalInt.empty()));
+
+    assertTrue(link.isPresent());
+    assertTrue(link.get() instanceof DocLink.Ambiguous);
+    assertEquals(2, ((DocLink.Ambiguous)link.get()).options().size());
+  }
+
+  @Test void anExplicitArityResolvesAWouldBeAmbiguousTypeNamePrecisely(){
+    var one= namedType("pkg.Pair", List.of(), List.of());
+    var two= new Literal(RC.imm, new TName("pkg.Pair",2,Pos.unknown), twoBounds(), List.of(), "this", List.of(), freshSrc(), false);
+    SourceOracle oracle= List::of;
+    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(one,two));
+    builder.visitLiteral(one);
+    builder.visitLiteral(two);
+    var resolver= new DocResolver("pkg", builder.types, OtherPackages.empty());
+
+    var link= resolver.resolveType(new DocRef.TypeName(Optional.empty(),"Pair",OptionalInt.of(2)));
+
+    assertTrue(link.get() instanceof DocLink.Resolved);
+    assertEquals(two.name(), ((DocLink.Resolved)link.get()).hit().owner());
+  }
+
+  @Test void aBareSelectorDeclaredByTwoDifferentLocalTypesIsAmbiguous(){
+    var aName= new TName("pkg.A",0,Pos.unknown);
+    var bName= new TName("pkg.B",0,Pos.unknown);
+    var a= namedType("pkg.A", List.of(), List.of(namedMethod(".bar",aName)));
+    var b= namedType("pkg.B", List.of(), List.of(namedMethod(".bar",bName)));
+    SourceOracle oracle= List::of;
+    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(a,b));
+    builder.visitLiteral(a);
+    builder.visitLiteral(b);
+    var resolver= new DocResolver("pkg", builder.types, OtherPackages.empty());
+
+    var link= resolver.resolve(new DocRef.MethodName(Optional.empty(),".bar",OptionalInt.empty()), Scope.of(a));
+
+    assertTrue(link.get() instanceof DocLink.Ambiguous);
+    assertEquals(2, ((DocLink.Ambiguous)link.get()).options().size());
+  }
+
+  @Test void aQualifiedMethodOnAForeignTypeResolvesThroughAnInheritedSupertypeMethod(){
+    var supName= new TName("other.Sup",0,Pos.unknown);
+    var subName= new TName("other.Sub",0,Pos.unknown);
+    var sup= namedType("other.Sup", List.of(), List.of(namedMethod(".bar",supName)));
+    var sub= namedType("other.Sub", List.of(new T.C(supName,List.of())), List.of());
+    var other= OtherPackages.start(Map.of(), List.of(sup,sub), 0L);
+    var resolver= new DocResolver("pkg", List.of(), other);
+
+    var link= resolver.resolve(new DocRef.MethodName(Optional.of(new DocRef.TypeName(Optional.of("other"),"Sub",OptionalInt.empty())),".bar",OptionalInt.empty()), Scope.of(sub));
+
+    assertTrue(link.isPresent());
+    assertTrue(link.get() instanceof DocLink.Resolved);
+    assertEquals(subName, ((DocLink.Resolved)link.get()).hit().owner());
+  }
+
+  //"this" and the parameter names are what the doc author actually writes; they mean
+  //the type being documented and the type of that parameter.
+  @Test void thisNamesTheTypeBeingDocumented(){
+    var owner= namedType("pkg.Holder", List.of(), List.of());
+    var resolver= new DocResolver("pkg", List.of(), OtherPackages.empty());
+    var link= resolver.resolve(new DocRef.LocalName("this"), Scope.of(owner));
+    assertEquals(owner.name(), ((DocLink.Resolved)link.get()).hit().owner());
+  }
+
+  @Test void aParameterNameLinksToItsOwnType(){
+    var ownerName= new TName("pkg.Holder",0,Pos.unknown);
+    var paramType= new TName("pkg.Thing",0,Pos.unknown);
+    var m= methodTaking(".take", ownerName, "elem", paramType);
+    var owner= namedType("pkg.Holder", List.of(), List.of(m));
+    var resolver= new DocResolver("pkg", List.of(), OtherPackages.empty());
+
+    var link= resolver.resolve(new DocRef.LocalName("elem"), Scope.of(owner, m));
+
+    assertEquals(paramType, ((DocLink.Resolved)link.get()).hit().owner());
+  }
+
+  @Test void aNameThatIsNotAParameterOfThisMethodIsUnresolved(){
+    var ownerName= new TName("pkg.Holder",0,Pos.unknown);
+    var m= methodTaking(".take", ownerName, "elem", new TName("pkg.Thing",0,Pos.unknown));
+    var owner= namedType("pkg.Holder", List.of(), List.of(m));
+    var resolver= new DocResolver("pkg", List.of(), OtherPackages.empty());
+    assertTrue(resolver.resolve(new DocRef.LocalName("e"), Scope.of(owner, m)).isEmpty(),
+      "a doc naming a parameter the signature does not declare must be reported");
+  }
+
+  @Test void aParameterIsOnlyInScopeForItsOwnMethod(){
+    var ownerName= new TName("pkg.Holder",0,Pos.unknown);
+    var m= methodTaking(".take", ownerName, "elem", new TName("pkg.Thing",0,Pos.unknown));
+    var owner= namedType("pkg.Holder", List.of(), List.of(m));
+    var resolver= new DocResolver("pkg", List.of(), OtherPackages.empty());
+    assertTrue(resolver.resolve(new DocRef.LocalName("elem"), Scope.of(owner)).isEmpty(),
+      "a parameter must not be in scope in the type level documentation");
+  }
+
+  @Test void aMethodOnThisResolvesAgainstTheTypeBeingDocumented(){
+    var ownerName= new TName("pkg.Holder",0,Pos.unknown);
+    var bar= namedMethod(".bar", ownerName);
+    var owner= namedType("pkg.Holder", List.of(), List.of(bar));
+    SourceOracle oracle= List::of;
+    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(owner));
+    builder.visitLiteral(owner);
+    var resolver= new DocResolver("pkg", builder.types, OtherPackages.empty());
+
+    var ref= new DocRef.MethodName(Optional.of(new DocRef.LocalName("this")),".bar",OptionalInt.empty());
+    var link= resolver.resolve(ref, Scope.of(owner));
+
+    assertEquals(ownerName, ((DocLink.Resolved)link.get()).hit().owner());
+  }
+
+  @Test void aMethodThatTheDocumentedTypeDoesNotHaveIsUnresolved(){
+    var owner= namedType("pkg.Holder", List.of(), List.of());
+    SourceOracle oracle= List::of;
+    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(owner));
+    builder.visitLiteral(owner);
+    var resolver= new DocResolver("pkg", builder.types, OtherPackages.empty());
+    var ref= new DocRef.MethodName(Optional.of(new DocRef.LocalName("this")),".nope",OptionalInt.empty());
+    assertTrue(resolver.resolve(ref, Scope.of(owner)).isEmpty());
+  }
+
+  @Test void aReferenceThatMatchesNothingAnywhereIsUnresolved(){
+    var resolver= new DocResolver("pkg", List.of(), OtherPackages.empty());
+    assertTrue(resolver.resolveType(new DocRef.TypeName(Optional.empty(),"NowhereToBeFound",OptionalInt.empty())).isEmpty());
+  }
+
+  @Test void anUnqualifiedNameFoundOnlyInAThirdPackageStillResolves(){
+    var other= OtherPackages.start(Map.of(), List.of(namedType("third.Widget", List.of(), List.of())), 0L);
+    var resolver= new DocResolver("pkg", List.of(), other);
+    var link= resolver.resolveType(new DocRef.TypeName(Optional.empty(),"Widget",OptionalInt.empty()));
+    assertTrue(link.get() instanceof DocLink.Resolved);
+  }
+
+  @Test void aLocalTypeWinsOverASameNamedTypeInAnotherPackage(){
+    var local= namedType("pkg.Widget", List.of(), List.of());
+    var other= OtherPackages.start(Map.of(), List.of(namedType("third.Widget", List.of(), List.of())), 0L);
+    SourceOracle oracle= List::of;
+    var builder= new HtmlDocBuilder(oracle, other, List.of(local));
+    builder.visitLiteral(local);
+    var resolver= new DocResolver("pkg", builder.types, other);
+
+    var link= resolver.resolveType(new DocRef.TypeName(Optional.empty(),"Widget",OptionalInt.empty()));
+
+    assertTrue(link.get() instanceof DocLink.Resolved);
+    assertEquals(local.name(), ((DocLink.Resolved)link.get()).hit().owner());
+  }
+
+  //Two ways a link can point at nothing: its disambiguation section was never emitted,
+  //or it names a type/method the renderer skips as not visible. Both look identical to
+  //a reader, who clicks and sees the start page, so both are checked over real output.
+  @Test void everyInPageLinkHasSomethingToLandOn(){
+    var html= renderedFixture();
+    var linked= idsIn(html, "href=\"#");
+    var ids= idsIn(html, "id=\"");
+    assertFalse(linked.isEmpty(), "this fixture must actually produce in-page links");
+    assertEquals(List.of(), linked.stream().distinct().filter(l->!ids.contains(l)).toList(),
+      "every in-page link must have a matching id");
+  }
+
+  @Test void aDisambiguationPageNeverOffersAMethodOfATypeThatIsNotRendered(){
+    var html= renderedFixture();
+    assertFalse(html.contains("Hidden"), "an undocumented anonymous literal must not reach the page: "+html);
+  }
+
+  private static String renderedFixture(){
+    var aName= new TName("pkg.A",0,Pos.unknown);
+    var bName= new TName("pkg.B",0,Pos.unknown);
+    var hiddenName= new TName("pkg.Hidden",0,Pos.unknown);
+    var a= namedType("pkg.A", List.of(), List.of(namedMethod(".bar",aName)));
+    var b= namedType("pkg.B", List.of(), List.of(namedMethod(".bar",bName)));
+    //an anonymous literal with no docs: never rendered, so never a link target
+    var hidden= new Literal(RC.imm, hiddenName, List.of(), List.of(), "this",
+      List.of(namedMethod(".bar",hiddenName)), freshSrc(), true);
+    SourceOracle oracle= List::of;
+    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(a,b,hidden));
+    builder.visitLiteral(a);
+    builder.visitLiteral(b);
+    builder.visitLiteral(hidden);
+    return new HtmlDocRenderer("pkg", Map.of(), builder.types, OtherPackages.empty(), Map.of()).render();
+  }
+
+  private static List<String> idsIn(String html, String prefix){
+    var res= new java.util.ArrayList<String>();
+    for (int i= html.indexOf(prefix); i >= 0; i= html.indexOf(prefix,i+1)){
+      var from= i+prefix.length();
+      res.add(html.substring(from, html.indexOf('"', from)));
+    }
+    return res;
   }
 }
