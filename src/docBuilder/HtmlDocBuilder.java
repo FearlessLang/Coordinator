@@ -87,6 +87,7 @@ public final class HtmlDocBuilder implements DocBuilder{
     var resolver= new DocResolver(pkgName,types,other);
     var spans= new IdentityHashMap<DocOcc,List<ResolvedSpan>>();
     var problems= new ArrayList<String>();
+    orphans(problems);
     docGroups().forEach(g->linkGroup(resolver,g,spans,problems));
     if (!problems.isEmpty()){ throw Report.docReferences(problems); }
     Fs.writeUtf8(htmlPath,new HtmlDocRenderer(pkgName,uses,types,other,spans).render());
@@ -132,6 +133,28 @@ public final class HtmlDocBuilder implements DocBuilder{
     spans.put(occ,res);
   }
 
+  //documentation that reached no declaration is documentation nobody will ever read,
+  //and the usual cause is a /// or //> written with one mark too few, which ends the
+  //block silently. Reported per run of lines, at the run.
+  void orphans(List<String> problems){
+    sources.values().stream()
+      .flatMap(s->s.orphanRuns().stream())
+      .forEach(run->problems.add(orphan(run)));
+  }
+
+  String orphan(List<DocOcc> run){
+    var first= run.getFirst();
+    var last= run.getLast();
+    var span= new Span(first.file(), first.line(), first.column(),
+      last.line(), last.textColumn()+last.text().length());
+    return Message.of(oracle::loadString, List.of(new Frame("the documentation of package "+pkgName, span)), notAttached);
+  }
+
+  static final String notAttached=
+    "This documentation is attached to nothing.\n"
+   +"A /// or //> block documents the declaration right below it, and nothing else\n"
+   +"may come between them. A line starting with // ends the block, so check whether\n"
+   +"one of these was meant to start with /// instead.";
   static final String notAName=
     "This is written as a reference, but it is not a name.\n"
    +"Use two backticks or more to show it as code instead.";

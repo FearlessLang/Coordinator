@@ -68,6 +68,7 @@ final class HtmlDocRenderer{
       .append(".variant{font-family:monospace;white-space:pre-wrap}\n")
       .append(".example{font-family:monospace;white-space:pre-wrap;background:#f2f2f2;padding:.5em .7em;border-radius:.25em;border:1px solid #e0e0e0;overflow-x:auto}\n")
       .append(".doc{margin:.35em 0 .35em 1.3em;color:#333;font-size:.94em}\n")
+      .append(".doc p{white-space:pre-wrap;margin:.5em 0}\n")
       .append(".missing{color:#777;font-style:italic}\n")
       .append(".from,.variants{color:#555}\n")
       .append("details{margin:.5em 0}\n")
@@ -240,7 +241,7 @@ final class HtmlDocRenderer{
     var prose= visible.stream().filter(c->!c.example()).toList();
     if (!prose.isEmpty()){
       sb.append("<div class=\"doc\">\n");
-      prose.forEach(occ->sb.append("<p>").append(renderText(occ)).append("</p>\n"));
+      renderProse(sb,prose);
       sb.append("</div>\n");
     }
     renderExamples(sb,visible.stream().filter(DocOcc::example).map(DocOcc::text).toList());
@@ -251,6 +252,26 @@ final class HtmlDocRenderer{
     sb.append("<details class=\"examples\"><summary><span class=\"disclosure\">&#9656;</span>runnable example</summary>\n<pre class=\"example\">")
       .append(examples.stream().map(HtmlDocRenderer::h).collect(Collectors.joining("\n")))
       .append("</pre></details>\n");
+  }
+
+  //an empty doc line is where the author put a paragraph break; the lines between two
+  //of them are one paragraph, kept on their own lines so that a list stays a list and
+  //an indented line stays indented (the doc block is rendered with pre-wrap).
+  void renderProse(StringBuilder sb, List<DocOcc> prose){
+    var para= new java.util.ArrayList<DocOcc>();
+    for (var occ: prose){
+      if (occ.text().isBlank()){ endParagraph(sb,para); continue; }
+      para.add(occ);
+    }
+    endParagraph(sb,para);
+  }
+
+  void endParagraph(StringBuilder sb, List<DocOcc> para){
+    if (para.isEmpty()){ return; }
+    sb.append("<p>")
+      .append(para.stream().map(this::renderText).collect(Collectors.joining("\n")))
+      .append("</p>\n");
+    para.clear();
   }
 
   String renderText(DocOcc occ){

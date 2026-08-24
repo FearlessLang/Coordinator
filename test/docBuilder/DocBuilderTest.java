@@ -110,6 +110,56 @@ final class DocBuilderTest{
     assertTrue(found.get(0).inline(), "a doc comment following code on the same line must be inline, not pure");
   }
 
+  //documentation that reaches no declaration is documentation nobody reads: the usual
+  //cause is a /// or //> written with one mark too few, which ends the block silently.
+  @Test void aDocCommentThatReachesNoDeclarationIsReported(){
+    var text= ""
+      + "/// orphaned by the line below\n"
+      + "//  one slash short\n"
+      + "/// attached\n"
+      + "Foo: Bar {\n"
+      + "}\n";
+    var docs= new SourceDocs(file, text);
+    docs.docsAt(Pos.of(file,4,1), true);
+    var runs= docs.orphanRuns();
+    assertEquals(1, runs.size(), "the run above the // line is attached to nothing");
+    assertEquals(List.of("orphaned by the line below"), runs.getFirst().stream().map(DocOcc::text).toList());
+  }
+
+  @Test void aDocBlockThatReachesItsDeclarationLeavesNoOrphan(){
+    var text= "/// attached\nFoo: Bar {\n}\n";
+    var docs= new SourceDocs(file, text);
+    docs.docsAt(Pos.of(file,2,1), true);
+    assertTrue(docs.orphanRuns().isEmpty());
+  }
+
+  @Test void anEmptyLineInsideADocBlockEndsTheParagraphNotTheBlock(){
+    var text= "/// first\n\n/// second\nFoo: Bar {\n}\n";
+    var docs= new SourceDocs(file, text);
+    var res= docs.docsAt(Pos.of(file,4,1), true);
+    assertEquals(List.of("first","","second"), res.stream().map(DocOcc::text).toList());
+    assertTrue(docs.orphanRuns().isEmpty(), "an empty line must not detach what is above it");
+  }
+
+  @Test void anEmptyLineBetweenRunnableExamplesReadsAsAnEmptyExample(){
+    var text= "//> one\n\n//> two\nFoo: Bar {\n}\n";
+    var docs= new SourceDocs(file, text);
+    var res= docs.docsAt(Pos.of(file,4,1), true);
+    assertEquals(3, res.size());
+    assertTrue(res.get(1).text().isBlank() && res.get(1).example(),
+      "between two //> lines the empty line is an example line, not prose");
+  }
+
+  //trimming an empty line off the end of a block is about what to show; the line was
+  //still reached by the declaration and must not be reported as attached to nothing.
+  @Test void anEmptyDocLineAtTheEndOfABlockIsTrimmedButStillAttached(){
+    var text= "/// doc\n///\nFoo: Bar {\n}\n";
+    var docs= new SourceDocs(file, text);
+    var res= docs.docsAt(Pos.of(file,3,1), true);
+    assertEquals(List.of("doc"), res.stream().map(DocOcc::text).toList());
+    assertTrue(docs.orphanRuns().isEmpty());
+  }
+
   private static Literal literal(String name, RC rc){
     return new Literal(rc, new TName(name, 0, Pos.unknown), List.of(), List.of(), "this", List.of(), Src.syntetic, false);
   }

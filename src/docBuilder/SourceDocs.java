@@ -15,25 +15,63 @@ final class SourceDocs{
   final URI uri;
   final List<String> lines;
   final Map<Integer,List<DocOcc>> docsByLine= new HashMap<>();
+  final Set<DocOcc> attached= Collections.newSetFromMap(new IdentityHashMap<>());
 
   List<DocOcc> docsAt(Pos pos, boolean includeBefore){
     assert pos.line() > 0 && pos.line() <= lines.size(): pos;
     var res= new ArrayList<DocOcc>();
     if (includeBefore){ collectBefore(pos.line(),res); }
     inlineAfter(pos.line(),pos.column()).ifPresent(res::add);
+    attached.addAll(res);
     return res;
   }
 
+  //every /// and //> that no declaration took, as runs of consecutive lines
+  List<List<DocOcc>> orphanRuns(){
+    var lost= docsByLine.values().stream()
+      .flatMap(List::stream)
+      .filter(d->!attached.contains(d))
+      .sorted(Comparator.comparingInt(DocOcc::line).thenComparingInt(DocOcc::column))
+      .toList();
+    var res= new ArrayList<List<DocOcc>>();
+    for (var d: lost){
+      var last= res.isEmpty() ? null : res.getLast().getLast();
+      if (last != null && d.line()-last.line() <= 1){ res.getLast().add(d); continue; }
+      res.add(new ArrayList<>(List.of(d)));
+    }
+    return res;
+  }
+
+  //An empty line inside a block reads as an empty doc line of whatever kind surrounds
+  //it, so it ends a paragraph without ending the block. The ones at either end of the
+  //block separate nothing and are dropped. Anything else ends the block, and whatever
+  //documentation is left above it is then attached to nothing, which is an error.
   void collectBefore(int line, List<DocOcc> res){
     var before= new ArrayList<DocOcc>();
     for (int l= line-1; l >= 1; l -= 1){
       var pure= pureDocs(l);
       if (!pure.isEmpty()){ before.addAll(pure); continue; }
-      if (lines.get(l-1).isBlank()){ continue; }
-      break;
+      if (!lines.get(l-1).isBlank()){ break; }
+      before.add(new DocOcc(uri,l,1,1,"",true,contextIsExample(before)));
     }
     Collections.reverse(before);
-    res.addAll(before);
+    //everything collected is attached, including an empty line trimmed off the end:
+    //trimming is about what to show, not about what the block reached.
+    attached.addAll(before);
+    res.addAll(trimBlanks(before));
+  }
+
+  //the line just below the empty one, which is the last one collected walking up
+  static boolean contextIsExample(List<DocOcc> before){
+    return !before.isEmpty() && before.getLast().example();
+  }
+
+  static List<DocOcc> trimBlanks(List<DocOcc> ds){
+    int from= 0;
+    int to= ds.size();
+    while (from < to && ds.get(from).text().isBlank()){ from += 1; }
+    while (to > from && ds.get(to-1).text().isBlank()){ to -= 1; }
+    return ds.subList(from,to);
   }
 
   List<DocOcc> pureDocs(int line){
