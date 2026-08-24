@@ -43,47 +43,145 @@ final class HtmlDocRenderer{
     var claims= inlineClaims(shown);
     var sb= new StringBuilder(16_000)
       .append("<!doctype html>\n<html>\n<head>\n<meta charset=\"utf-8\">\n")
+      .append("<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">\n")
       .append("<title>").append(h(pkgName)).append("</title>\n")
-      .append("<style>\n")
-      .append("body{font-family:sans-serif;margin:0;line-height:1.35}\n")
-      .append(".layout{display:flex;min-height:100vh}\n")
-      .append(".toc{width:18em;max-height:100vh;overflow:auto;position:sticky;top:0;padding:1.2em;border-right:1px solid #ccc;box-sizing:border-box}\n")
-      .append(".toc h2{margin-top:0}\n")
-      .append(".toc ul{list-style:none;padding-left:0}\n")
-      .append(".toc li{margin:.35em 0}\n")
-      .append(".toc a{text-decoration:none;color:#0645ad}\n")
-      .append("main{padding:2em;max-width:80em;box-sizing:border-box}\n")
-      .append("h1{border-bottom:1px solid #bbb;padding-bottom:.3em}\n")
-      .append(".type{margin:2em 0;padding:1em;border:1px solid #ccc;border-radius:.5em;display:none}\n")
-      .append(".method{margin:.25em 0 0 1.5em;padding:.15em .4em;border-left:3px solid #ddd}\n")
-      //only the method's own summary: a descendant selector would also strip the
-      //marker off the nested example/variant summaries inside it.
-      .append(".method>summary{list-style:none;cursor:text}\n")
-      .append(".method>summary::-webkit-details-marker{display:none}\n")
-      .append(".examples>summary{list-style:none;cursor:pointer}\n")
-      .append(".examples>summary::-webkit-details-marker{display:none}\n")
-      .append(".disclosure{display:inline-block;cursor:pointer;margin-right:.35em;transition:transform .1s}\n")
-      .append("details[open]>summary .disclosure{transform:rotate(90deg)}\n")
-      .append(".sig{font-family:monospace;white-space:pre-wrap;font-size:1.08em;font-weight:600}\n")
-      .append(".variant{font-family:monospace;white-space:pre-wrap}\n")
-      .append(".example{font-family:monospace;white-space:pre-wrap;background:#f2f2f2;padding:.5em .7em;border-radius:.25em;border:1px solid #e0e0e0;overflow-x:auto}\n")
-      .append(".doc{margin:.35em 0 .35em 1.3em;color:#333;font-size:.94em}\n")
-      .append(".doc p{white-space:pre-wrap;margin:.5em 0}\n")
-      .append(".missing{color:#777;font-style:italic}\n")
-      .append(".from,.variants{color:#555}\n")
-      .append("details{margin:.5em 0}\n")
-      .append("code{background:#f2f2f2;padding:.05em .3em;border-radius:.25em}\n")
-      .append("code a{color:#0645ad}\n")
-      .append(".type.active{display:block}\n")
-      .append("</style>\n</head>\n<body>\n<div class=\"layout\">\n");
+      .append("<style>\n").append(css).append("</style>\n")
+      .append("</head>\n<body>\n<div class=\"layout\">\n");
     renderToc(sb,shown);
-    sb.append("<main>\n<h1>Package ").append(h(pkgName)).append("</h1>\n")
-      .append("<p id=\"welcome\">Pick a type from the list on the left.</p>\n");
+    sb.append("<main>\n");
+    renderHeader(sb,shown);
     shown.forEach(t->renderType(sb,t,claims));
     pages.values().forEach(p->renderPage(sb,p));
     sb.append(router());
     return sb.append("</main>\n</div>\n</body>\n</html>\n").toString();
   }
+
+  void renderHeader(StringBuilder sb, List<TypeDoc> shown){
+    sb.append("<header class=\"hdr\">").append(mark)
+      .append("<div><p class=\"eyebrow\">package</p><h1>").append(h(pkgName)).append("</h1></div>")
+      .append("</header>\n")
+      .append("<p id=\"welcome\" class=\"welcome\">")
+      .append(shown.size()).append(" types. Pick one from the list on the left.</p>\n");
+  }
+
+  //the Fearless mark: the blue to orange square of the icon, with its white F
+  static final String mark= ""
+    + "<svg class=\"mark\" viewBox=\"0 0 64 64\" width=\"38\" height=\"38\" aria-hidden=\"true\">"
+    + "<defs><linearGradient id=\"fearless\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"0.3\">"
+    + "<stop offset=\"0\" stop-color=\"#2068a8\"/><stop offset=\"1\" stop-color=\"#e88028\"/>"
+    + "</linearGradient></defs>"
+    + "<rect x=\"1\" y=\"1\" width=\"62\" height=\"62\" rx=\"14\" fill=\"url(#fearless)\"/>"
+    + "<rect x=\"18\" y=\"12\" width=\"10\" height=\"40\" rx=\"5\" fill=\"#fff\"/>"
+    + "<rect x=\"18\" y=\"12\" width=\"30\" height=\"10\" rx=\"5\" fill=\"#fff\"/>"
+    + "<rect x=\"18\" y=\"27\" width=\"24\" height=\"10\" rx=\"5\" fill=\"#fff\"/>"
+    + "</svg>";
+
+  static final String css= """
+:root{
+  --blue:#2068a8; --blue-deep:#1a5486; --orange:#c07020; --orange-bright:#e88028;
+  --fg:#1f2328; --fg-muted:#57606a; --fg-faint:#818b98;
+  --bg:#ffffff; --bg-soft:#f6f8fa; --bg-code:#f1f4f7;
+  --border:#d6dde4; --border-soft:#e8ecf0;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --blue:#69b0ee; --blue-deep:#8ec7f5; --orange:#e0954f; --orange-bright:#f0a860;
+    --fg:#e6edf3; --fg-muted:#9fadba; --fg-faint:#7d8894;
+    --bg:#0f1419; --bg-soft:#161c23; --bg-code:#1b222b;
+    --border:#2d3742; --border-soft:#232b34;
+  }
+}
+*{box-sizing:border-box}
+body{
+  margin:0; line-height:1.55; color:var(--fg); background:var(--bg);
+  font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  font-size:15px;
+}
+a{color:var(--blue); text-decoration:none}
+a:hover{text-decoration:underline}
+.layout{display:flex; align-items:flex-start}
+/* the list of types, its own scroll so the page never scrolls it away */
+.toc{
+  width:19em; flex:none; position:sticky; top:0; height:100vh; overflow:auto;
+  padding:1.1em .9em; background:var(--bg-soft); border-right:1px solid var(--border);
+}
+.toc input{
+  width:100%; padding:.45em .6em; margin-bottom:.9em; font:inherit; font-size:.92em;
+  color:var(--fg); background:var(--bg); border:1px solid var(--border); border-radius:.4em;
+}
+.toc input:focus{outline:none; border-color:var(--blue)}
+.toc ul{list-style:none; margin:0; padding:0}
+.toc li{margin:1px 0}
+.toc a{
+  display:block; padding:.28em .55em; border-radius:.35em; border-left:3px solid transparent;
+  color:var(--fg-muted); font-size:.93em; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.toc a:hover{background:var(--border-soft); color:var(--fg); text-decoration:none}
+.toc a.sel{background:var(--bg); border-left-color:var(--orange); color:var(--blue); font-weight:600}
+main{flex:1; min-width:0; padding:2.2em 2.6em 6em; max-width:64em}
+.hdr{display:flex; align-items:center; gap:.85em; padding-bottom:1em; border-bottom:1px solid var(--border)}
+.hdr h1{margin:0; font-size:1.65em; letter-spacing:-.01em}
+.eyebrow{
+  margin:0; font-size:.7em; font-weight:600; letter-spacing:.12em;
+  text-transform:uppercase; color:var(--fg-faint);
+}
+.welcome{color:var(--fg-muted)}
+/* one type at a time: the router shows the section the hash names */
+.type{display:none; margin:1.6em 0}
+.type.active{display:block}
+.type>h2{
+  margin:.2em 0 .1em; font-size:1.3em; color:var(--blue-deep);
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+}
+.type>h3{
+  margin:1.8em 0 .4em; font-size:.78em; font-weight:600; letter-spacing:.1em;
+  text-transform:uppercase; color:var(--fg-faint); border-bottom:1px solid var(--border-soft);
+  padding-bottom:.35em;
+}
+.extends{margin:.5em 0 0; font-size:.92em; color:var(--fg-muted)}
+.method{margin:0; padding:.45em .2em; border-top:1px solid var(--border-soft)}
+.method:first-of-type{border-top:none}
+.method:target{background:var(--bg-soft); border-radius:.4em}
+.method>summary{list-style:none; cursor:text}
+.method>summary::-webkit-details-marker{display:none}
+.examples>summary{list-style:none; cursor:pointer; color:var(--orange); font-size:.86em; font-weight:600}
+.examples>summary::-webkit-details-marker{display:none}
+.variants>summary{cursor:pointer}
+.disclosure{
+  display:inline-block; width:1em; cursor:pointer; color:var(--fg-faint);
+  transition:transform .12s ease; user-select:none;
+}
+.disclosure:hover{color:var(--blue)}
+details[open]>summary .disclosure{transform:rotate(90deg)}
+.sig{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  white-space:pre-wrap; font-size:.95em; font-weight:600; color:var(--fg);
+}
+.doc{margin:.3em 0 .3em 1.6em; color:var(--fg-muted); font-size:.95em}
+.doc p{white-space:pre-wrap; margin:.55em 0}
+.missing{color:var(--fg-faint); font-style:italic}
+.from,.variants{color:var(--fg-faint); font-size:.88em}
+details{margin:.4em 0}
+code{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  font-size:.92em; background:var(--bg-code); border:1px solid var(--border-soft);
+  padding:.05em .32em; border-radius:.3em;
+}
+.example,.variant{
+  font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  white-space:pre-wrap; font-size:.88em; margin:.4em 0 .2em;
+  background:var(--bg-code); border:1px solid var(--border-soft);
+  border-left:3px solid var(--orange); border-radius:.3em;
+  padding:.6em .8em; overflow-x:auto; color:var(--fg);
+}
+.variant{border-left-color:var(--border)}
+/* every declaration a name could mean, when it names more than one */
+.options{list-style:none; margin:.6em 0; padding:0}
+.options li{padding:.4em .1em; border-top:1px solid var(--border-soft)}
+.options li:first-child{border-top:none}
+.opt-doc{color:var(--fg-muted); font-size:.92em}
+.disambig>h2{font-family:inherit; font-size:1.15em; color:var(--fg)}
+""";
 
   //a hash may name a section, or an id nested inside one: show the owning section,
   //then scroll to the precise target once it is no longer hidden.
@@ -91,18 +189,30 @@ final class HtmlDocRenderer{
     + "<script>\n"
     + "(function(){\n"
     + "  var secs= document.querySelectorAll('.type');\n"
+    + "  var links= document.querySelectorAll('#toclist a');\n"
+    + "  var items= document.querySelectorAll('#toclist li');\n"
+    + "  var filter= document.getElementById('filter');\n"
     + "  var welcome= document.getElementById('welcome');\n"
     + "  function route(){\n"
     + "    var hash= decodeURIComponent(location.hash.slice(1));\n"
     + "    var target= hash ? document.getElementById(hash) : null;\n"
     + "    var active= target && (target.classList.contains('type') ? target : target.closest('.type'));\n"
     + "    secs.forEach(function(el){ el.classList.toggle('active', el===active); });\n"
+    + "    links.forEach(function(a){\n"
+    + "      a.classList.toggle('sel', !!active && a.getAttribute('href')==='#'+active.id);\n"
+    + "    });\n"
     + "    welcome.style.display= active ? 'none' : '';\n"
     + "    if (active && target!==active){ target.scrollIntoView(); }\n"
     + "    else { window.scrollTo(0,0); }\n"
     + "  }\n"
     + "  window.addEventListener('hashchange', route);\n"
     + "  route();\n"
+    + "  filter.addEventListener('input', function(){\n"
+    + "    var q= filter.value.toLowerCase();\n"
+    + "    items.forEach(function(li){\n"
+    + "      li.style.display= li.textContent.toLowerCase().indexOf(q) < 0 ? 'none' : '';\n"
+    + "    });\n"
+    + "  });\n"
     + "  document.querySelectorAll('.method>summary').forEach(function(s){\n"
     + "    s.addEventListener('click', function(e){\n"
     + "      if (!e.target.closest('.disclosure') && !e.target.closest('a')){ e.preventDefault(); }\n"
@@ -146,7 +256,9 @@ final class HtmlDocRenderer{
   }
 
   void renderToc(StringBuilder sb, List<TypeDoc> shown){
-    sb.append("<nav class=\"toc\">\n<h2>Types</h2>\n<ul>\n");
+    sb.append("<nav class=\"toc\">\n")
+      .append("<input id=\"filter\" type=\"search\" placeholder=\"Filter types\" autocomplete=\"off\">\n")
+      .append("<ul id=\"toclist\">\n");
     shown.forEach(t->sb.append("<li><a href=\"#")
       .append(typeId(t)).append("\">")
       .append(h(shortTitle(t))).append("</a></li>\n"));
@@ -158,7 +270,7 @@ final class HtmlDocRenderer{
       .append("<h2>").append(h(typeTitle(t))).append("</h2>\n");
     renderDoc(sb,t,t.docs,claims);
     if (!t.main().cs().isEmpty()){
-      sb.append("<p><b>Extends:</b> ")
+      sb.append("<p class=\"extends\"><b>Extends:</b> ")
         .append(t.main().cs().stream()
           .map(c->typeLink(c))
           .collect(Collectors.joining(", ")))
@@ -301,8 +413,8 @@ final class HtmlDocRenderer{
   }
 
   void renderPage(StringBuilder sb, DocLink.Ambiguous p){
-    sb.append("<section class=\"type\" id=\"").append(disambigId(p.pageId())).append("\">\n")
-      .append("<h2>Several match ").append(h(p.title())).append("</h2>\n<ul>\n");
+    sb.append("<section class=\"type disambig\" id=\"").append(disambigId(p.pageId())).append("\">\n")
+      .append("<h2>Several match ").append(h(p.title())).append("</h2>\n<ul class=\"options\">\n");
     p.options().forEach(c->sb.append("<li>").append(renderCandidate(c)).append("</li>\n"));
     sb.append("</ul>\n</section>\n");
   }
@@ -316,7 +428,7 @@ final class HtmlDocRenderer{
     }
     sb.append("</a>");
     c.localMethod().ifPresent(m->m.docs.stream().filter(d->!d.example()).findFirst()
-      .ifPresent(d->sb.append(" — ").append(h(d.text()))));
+      .ifPresent(d->sb.append(" <span class=\"opt-doc\">— ").append(h(d.text())).append("</span>")));
     return sb.toString();
   }
 
