@@ -56,7 +56,70 @@ public class RunIntegration {
   @Test void testingStandardLibrary(){ testOk("testingStandardLibrary");}
   @Test void testDocs(){ testOk("testDocs");}
   @Test void testAssets(){ testOk("testAssets");}
-  @Test void testingNorms(){ testOk("testingNorms");}
+  // testingNorms holds no fearless unit tests: a cache hit and a recomputation return
+  // the very same value, so nothing about caching can be asserted on results alone.
+  // Each cached body there prints one Debug line, so the trace below is the assertion:
+  // a line appearing once across several calls is what says the cache actually held.
+  @Test void testingNorms(){
+    utils.Err.strCmp("""
+Summing 1 and 2
+3
+Summing 3 and 4
+7
+3
+3
+7
+ToInfo HelloStringInfo
+ToInfo AnotherInfo
+OutInfo "HelloStringInfo"
+OutInfo "AnotherInfo"
+"HelloStringInfo""AnotherInfo""HelloStringInfo""HelloStringInfo""AnotherInfo""HelloStringInfo"
+6
+InReprStr10
+!10!
+InReprStr20
+!20!
+InReprStr220
+!20 - 10!
+!20 - 10!
+InReprStr230
+!30 - 10!
+InReprStr30
+!30!
+memoCat
+naming
+cat
+cat
+cat
+Bar.baz called
+cleaned
+Bar.baz called
+memoCat
+naming
+cat
+memoCat
+naming
+cat
+naming
+cat
+summingList
+6
+6
+summingList
+7
+sizing
+71
+71
+sizing
+71
+zeroF
+42
+42
+zeroMemo
+7
+7
+""", run("testingNorms"));
+  }
   //@Test void testGui1(){ testOk("testGui1");}
 
   // Two assets that generate the same auto-loaded type name (here "foo.txt" and "foo.png",
