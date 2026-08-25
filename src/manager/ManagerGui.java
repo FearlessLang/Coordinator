@@ -104,15 +104,23 @@ final class ManagerGui {
     }
   }
   boolean askBecomeDefault(){
+    return ask("""
+      Your desktop does not open Fearless projects with this Fearless.
+      Make this Fearless the one that opens them?""");
+  }
+  boolean askPickByHand(){
+    return ask("""
+      Your desktop keeps the answer you gave by hand for Fearless projects,
+      and lets only another answer given by hand take its place.
+      Show the window where Fearless can be picked?""");
+  }
+  private boolean ask(String question){
     var result= new AtomicReference<Boolean>();
-    try { SwingUtilities.invokeAndWait(() -> result.set(promptBecomeDefault())); }
+    try { SwingUtilities.invokeAndWait(() -> result.set(confirm(question))); }
     catch(InterruptedException|InvocationTargetException e){ throw Violation.couldNotStartGui(e); }
     return result.get();
   }
-  private boolean promptBecomeDefault(){
-    var question= """
-      Your desktop does not open Fearless projects with this Fearless.
-      Make this Fearless the one that opens them?""";
+  private boolean confirm(String question){
     return JOptionPane.showConfirmDialog(frame, question, "Fearless", JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION;
   }
   void explain(UserError problem){

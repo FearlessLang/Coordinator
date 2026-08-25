@@ -65,7 +65,7 @@ final class FileAssociation{
     if (Fs.isLinux()){ tried= linuxMakeDefault(binDir, versionId, launcher, icon); }
     if (Fs.isWindows()){ tried= winMakeDefault(launcher, versionId); }
     if (!canBecomeDefault(versionId)){ return; }
-    var handPicked= Fs.isWindows() ? regValue(userChoice,"ProgId") : Optional.<String>empty();
+    var handPicked= answerGivenByHand();
     if (handPicked.isPresent()){ throw Violation.fearlessProjectsOpenWithYourOwnChoice(handPicked.get()); }
     throw Violation.fearlessProjectsStillOpenWith(shownDefault(), tried);
   }
@@ -96,6 +96,21 @@ final class FileAssociation{
     var imported= req(List.of("reg","import",file.toString()));
     Fs.ofV(()->Files.deleteIfExists(file));
     return imported;
+  }
+  //The answer the desktop remembers is the user's own, given by hand, and only
+  //another answer given by hand takes its place: no program writes it, and no
+  //program removes it. The most Fearless can do is open the window where it is
+  //given, on a file of the type the answer is about.
+  static Optional<String> answerGivenByHand(){
+    if (!Fs.isWindows()){ return Optional.empty(); }
+    return regValue(userChoice,"ProgId");
+  }
+  static List<String> pickCommand(Path file){
+    return List.of("rundll32.exe","shell32.dll,OpenAs_RunDLL",file.toAbsolutePath().toString());
+  }
+  static void pickByHand(Path file){
+    assert Fs.isWindows();
+    exec(pickCommand(file));
   }
   static final String userChoice= "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts\\"+ext+"\\UserChoice";
   private static String winDefault(){
