@@ -324,10 +324,12 @@ public final class Violation {
       Your system was asked to make this copy of Fearless the one that opens
       a Fearless project, and it did not.
 
-      Fearless keeps running: only the double-click shortcut is missing, and
-      you can still set it by hand from your file browser (right click a
-      Fearless project file, then "Open with", and choose to always use
-      Fearless).
+      A system can guard the program you last chose by hand, and let only you
+      change it, by hand as well: right click a Fearless project file, choose
+      "Open with", then Fearless, and ask to always use it. Fearless is now
+      offered there under its own name.
+
+      Fearless keeps running: only the double-click shortcut is missing.
 
       Reported reason:
       %s""".formatted(reported));
