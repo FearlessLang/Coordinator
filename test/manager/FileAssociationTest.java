@@ -35,11 +35,23 @@ final class FileAssociationTest{
     assertTrue(lines.contains("[HKEY_CURRENT_USER\\Software\\Classes\\.fearless]"), lines.toString());
     assertTrue(lines.contains("@=\"Fearless.Project.0_001\""), lines.toString());
     assertTrue(lines.contains("@=\"C:\\\\fearlessBin0_001\\\\fearlessBin0_001w.exe,0\""), lines.toString());
-    assertEquals(4, lines.stream().filter(l->l.startsWith("[HKEY_CURRENT_USER")).count(), lines.toString());
+    assertEquals(5, lines.stream().filter(l->l.startsWith("[HKEY_CURRENT_USER")).count(), lines.toString());
   }
   @Test void theChoiceWindowsRemembersIsLookedForWhereWindowsKeepsIt(){
     assertEquals("HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts\\.fearless\\UserChoice",
       FileAssociation.userChoice);
+  }
+  @Test void theRegistryFileOffersFearlessByNameInTheOpenWithList(){
+    var lines= FileAssociation.regFile(winLauncher,"0_001").lines().toList();
+    assertTrue(lines.contains("[HKEY_CURRENT_USER\\Software\\Classes\\.fearless\\OpenWithProgids]"), lines.toString());
+    assertTrue(lines.contains("\"Fearless.Project.0_001\"=\"\""), lines.toString());
+  }
+  @Test void theRememberedChoiceIsUnlockedByItsOwnerThenRemoved(){
+    var script= FileAssociation.unprotectScript();
+    assertTrue(script.contains("$key = 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts\\.fearless\\UserChoice'"), script);
+    assertTrue(script.contains("$rule.AccessControlType -eq 'Deny'"), script);
+    assertTrue(script.contains("Remove-Item -LiteralPath $key -Force"), script);
+    assertTrue(script.indexOf("Set-Acl") < script.indexOf("Remove-Item"), script);
   }
   @Test void theRegistryFileUsesTheLineEndingsWindowsWrites(){
     var reg= FileAssociation.regFile(winLauncher,"0_001");

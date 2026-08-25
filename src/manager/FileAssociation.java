@@ -44,10 +44,13 @@ final class FileAssociation{
       + regEntry(classes+id, "Fearless project")
       + regEntry(classes+id+"\\DefaultIcon", launcher+",0")
       + regEntry(classes+id+"\\shell\\open\\command", "\""+launcher+"\" \"%1\"")
-      + regEntry(classes+ext, id);
+      + regEntry(classes+ext, id)
+      + regEntry(classes+ext+"\\OpenWithProgids", id, "");
   }
-  private static String regEntry(String key, String data){
-    return "\r\n["+key+"]\r\n@=\""+regData(data)+"\"\r\n";
+  private static String regEntry(String key, String data){ return regEntry(key,"",data); }
+  private static String regEntry(String key, String name, String data){
+    var shown= name.isEmpty() ? "@" : "\""+regData(name)+"\"";
+    return "\r\n["+key+"]\r\n"+shown+"=\""+regData(data)+"\"\r\n";
   }
   private static String regData(String data){ return data.replace("\\","\\\\").replace("\"","\\\""); }
   static boolean canBecomeDefault(String versionId){
@@ -85,11 +88,11 @@ final class FileAssociation{
     req(List.of("xdg-mime", "default", desktopName(versionId), mimeType));
   }
   private static void winMakeDefault(Path launcher, String versionId){
-    clearUserChoice();
     var file= Fs.of(()->Files.createTempFile("fearless",".reg"));
     Fs.ofV(()->Files.write(file, ("\uFEFF"+regFile(launcher,versionId)).getBytes(StandardCharsets.UTF_16LE)));
     req(List.of("reg","import",file.toString()));
     Fs.ofV(()->Files.deleteIfExists(file));
+    clearUserChoice();
   }
   static final String userChoice= "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts\\"+ext+"\\UserChoice";
   private static String winDefault(){
@@ -97,7 +100,24 @@ final class FileAssociation{
   }
   private static void clearUserChoice(){
     if (regValue(userChoice,"ProgId").isEmpty()){ return; }
-    req(List.of("reg","delete",userChoice,"/f"));
+    exec(List.of("reg","delete",userChoice,"/f"));
+    if (regValue(userChoice,"ProgId").isEmpty()){ return; }
+    runScript(unprotectScript());
+  }
+  static String unprotectScript(){
+    return """
+      $key = '%s'
+      $acl = Get-Acl -LiteralPath $key
+      foreach ($rule in @($acl.Access)){ if ($rule.AccessControlType -eq 'Deny'){ $acl.RemoveAccessRule($rule) | Out-Null } }
+      Set-Acl -LiteralPath $key -AclObject $acl
+      Remove-Item -LiteralPath $key -Force
+      """.formatted("HKCU:"+userChoice.substring("HKCU".length()));
+  }
+  private static void runScript(String script){
+    var file= Fs.of(()->Files.createTempFile("fearless",".ps1"));
+    Fs.ofV(()->Files.writeString(file, script, StandardCharsets.UTF_8));
+    exec(List.of("powershell","-NoProfile","-ExecutionPolicy","Bypass","-File",file.toString()));
+    Fs.ofV(()->Files.deleteIfExists(file));
   }
   private static Optional<String> regValue(String key, String name){
     var cmd= name.isEmpty()
