@@ -317,6 +317,25 @@ public final class Violation {
       ));
   }
 
+  public static UserError couldNotOpenFearlessProjects(List<String> command, String reported){
+    return new UserError("""
+      Fearless could not become the program that opens Fearless projects.
+
+      Your desktop was asked to make this copy of Fearless the one that opens
+      a Fearless project, and it refused.
+
+      Fearless keeps running: only the double-click shortcut is missing, and
+      you can still set it by hand from the file manager (right click a
+      Fearless project file, then "Open with").
+
+      Reported reason:
+      %s
+      %s""".formatted(
+        Join.of(command.stream(),"  "," ","",""),
+        reported
+      ));
+  }
+
   //-- our own generated files, changed under us
   //Either in generated outputs under ".fearless_out", or in the other files of the
   //project after the initial verification checks. Reaching one of these means another

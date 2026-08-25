@@ -52,6 +52,7 @@ final class FolderNameTest{
     FolderName.makeUnique(project,Set.of("someProject"),_->"my_game");
     assertEquals("my_game", FolderName.compactName(project));
     assertTrue(Files.isRegularFile(project.resolve("my_game.fearless")));
+    assertFalse(Fs.readUtf8(project.resolve("my_game.fearless")).isEmpty());
   }
   @Test void theSuggestedNameIsTheFolderNameMadeAcceptableAndFree(@TempDir Path dir){
     var project= folder(dir,"helloWorld");

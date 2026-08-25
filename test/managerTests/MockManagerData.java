@@ -13,6 +13,7 @@ public final class MockManagerData implements ManagerData{
   @Override public void addRegisteredFolder(Path folder){
     var f= norm(folder);
     if (isRegistered(f)){ return; }
+    assert nestedWith(f).isEmpty();
     entries.add(new Entry(f,-1,-1));
   }
   @Override public void removeRegisteredFolder(Path folder){

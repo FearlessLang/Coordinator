@@ -18,6 +18,8 @@ import java.nio.file.WatchService;
 
 import fileSupport.StringFiles;
 import managerData.ManagerData;
+import tools.JavacTool;
+import userMessages.Report;
 import userMessages.Violation;
 import userMessages.UserError;
 import utils.Bug;
@@ -37,11 +39,18 @@ public class Manager {
     gui.showManager();
     executor.submit(stop.worker(() -> watchMessages(watcher,gui,data,msgDir)));
     executor.submit(stop.worker(gui::tickLoop));//example long lived worker; more will come
+    offerAssociation(gui);
     try { stop.await(); }
     finally { executor.shutdownNow(); }
     //shutdownNow is not resource cleanup: it stops the workers, so that a
     //manager on its way out (quit, or showing its error dialog) cannot keep
     //consuming message files that are meant for the next manager.
+  }
+  private static void offerAssociation(ManagerGui gui){
+    var versionId= JavacTool.reqVersionId(Violation::mustUseLauncher);
+    if (!FileAssociation.canBecomeDefault(versionId)){ return; }
+    if (!gui.askBecomeDefault()){ return; }
+    FileAssociation.makeDefault(ManagerMain.binDir, versionId, FearlessIcon.file());
   }
   private static WatchService watcher(Path msgDir){
     try {
@@ -89,6 +98,8 @@ public class Manager {
   private static void register(ManagerGui gui, ManagerData data, String message){
     var folder= projectFolder(message);
     if (folder.isEmpty() || data.isRegistered(folder.get())){ return; }
+    var nested= data.nestedWith(folder.get());
+    if (nested.isPresent()){ gui.explain(Report.folderNestedWithRegistered(folder.get(),nested.get())); return; }
     gui.nameFolder(data,folder.get());
     data.addRegisteredFolder(folder.get());
   }

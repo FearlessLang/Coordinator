@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -64,6 +65,27 @@ final class ManagerDataTest{
     d.addRegisteredFolder(project);
     assertEquals(project.toAbsolutePath().normalize(), data(dir).registered().getFirst().folder());
     assertEquals(1, Fs.readUtf8(dir.resolve("registered.txt")).lines().count());
+  }
+  @Test void aFolderInsideOrAroundARegisteredOneIsFound(@TempDir Path dir){
+    var project= folder(dir,"someProject");
+    var d= data(dir);
+    d.addRegisteredFolder(project);
+    assertEquals(project, d.nestedWith(project.resolve("inside")).orElseThrow());
+    assertEquals(project, d.nestedWith(dir).orElseThrow());
+    assertEquals(Optional.empty(), d.nestedWith(folder(dir,"otherProject")));
+  }
+  @Test void aRegisteredFolderIsNotNestedWithItself(@TempDir Path dir){
+    var project= folder(dir,"someProject");
+    var d= data(dir);
+    d.addRegisteredFolder(project);
+    assertEquals(Optional.empty(), d.nestedWith(project));
+    d.addRegisteredFolder(project);
+    assertEquals(1, d.registered().size());
+  }
+  @Test void aSiblingNamedLikeAPrefixIsNotNested(@TempDir Path dir){
+    var d= data(dir);
+    d.addRegisteredFolder(folder(dir,"some"));
+    assertEquals(Optional.empty(), d.nestedWith(folder(dir,"someProject")));
   }
   @Test void aChangedFileIsReportedNotGuessed(@TempDir Path dir){
     Fs.writeUtf8(dir.resolve("registered.txt"), "this is not a registered folder\n");

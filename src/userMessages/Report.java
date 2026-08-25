@@ -18,6 +18,7 @@ import utils.Pop;
 import static userMessages.UserError.disp;
 import static userMessages.UserError.showRel;
 import static userMessages.UserError.showZipRel;
+import static userMessages.UserError.path;
 
 /// Report: the user gave us something we cannot accept, and can fix it by changing
 /// what they gave us. Their file and folder names, their zips, their project layout,
@@ -414,6 +415,24 @@ This is most likely a mistake.
     }
     throw Bug.unreachable();
   }
+
+  //-- which project folders the manager keeps track of
+  public static UserError folderNestedWithRegistered(Path folder, Path registered){ return new UserError("""
+Fearless cannot keep track of this project folder.
+
+You started Fearless on:
+%s
+Fearless is already keeping track of:
+%s
+One of the two is inside the other. Fearless keeps track of project folders
+that do not overlap, so that every file belongs to exactly one project.
+
+Use the folder Fearless already keeps track of, or make Fearless forget that
+folder first, and then start Fearless on this one.
+""".formatted(
+    path(folder.toString()),
+    path(registered.toString())
+  ));}
 
   //-- project layout: which folder defines a package, and the rank file of each package
   public static UserError projectEmpty(Path root){ return new UserError("""

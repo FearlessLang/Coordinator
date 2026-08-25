@@ -32,6 +32,7 @@ import managerData.ManagerData;
 import managerIcons.FolderName;
 import managerInfo.FolderInfo;
 import managerList.FolderList;
+import userMessages.UserError;
 import userMessages.Violation;
 
 final class ManagerGui {
@@ -101,6 +102,21 @@ final class ManagerGui {
       var name= answer.strip();
       if (FolderName.isName(folder,name) && !taken.contains(name)){ return name; }
     }
+  }
+  boolean askBecomeDefault(){
+    var result= new AtomicReference<Boolean>();
+    try { SwingUtilities.invokeAndWait(() -> result.set(promptBecomeDefault())); }
+    catch(InterruptedException|InvocationTargetException e){ throw Violation.couldNotStartGui(e); }
+    return result.get();
+  }
+  private boolean promptBecomeDefault(){
+    var question= """
+      Your desktop does not open Fearless projects with this Fearless.
+      Make this Fearless the one that opens them?""";
+    return JOptionPane.showConfirmDialog(frame, question, "Fearless", JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION;
+  }
+  void explain(UserError problem){
+    SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(frame, problem.getMessage(), "Fearless", JOptionPane.WARNING_MESSAGE));
   }
   private void openFolder(ManagerData data, Path folder){
     new FolderInfo(data, folder, folders::refresh).showIn(frame);
