@@ -20,6 +20,7 @@ import fileSupport.StringFiles;
 import managerData.ManagerData;
 import tools.JavacTool;
 import userMessages.Report;
+import userMessages.UserError;
 import userMessages.Violation;
 import userMessages.UserError;
 import utils.Bug;
@@ -50,7 +51,8 @@ public class Manager {
     var versionId= JavacTool.reqVersionId(Violation::mustUseLauncher);
     if (!FileAssociation.canBecomeDefault(versionId)){ return; }
     if (!gui.askBecomeDefault()){ return; }
-    FileAssociation.makeDefault(ManagerMain.binDir, versionId, FearlessIcon.file());
+    try { FileAssociation.makeDefault(ManagerMain.binDir, versionId, FearlessIcon.file()); }
+    catch(UserError e){ gui.explain(e); }
   }
   private static WatchService watcher(Path msgDir){
     try {
