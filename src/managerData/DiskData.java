@@ -28,6 +28,7 @@ public record DiskData(Path managerDir) implements ManagerData{
     var f= norm(folder);
     var all= registered();
     if (all.stream().anyMatch(e->e.folder().equals(f))){ return; }
+    assert nestedWith(f).isEmpty();
     write(Push.of(all,new Entry(f,-1,-1)));
   }
   @Override public void removeRegisteredFolder(Path folder){

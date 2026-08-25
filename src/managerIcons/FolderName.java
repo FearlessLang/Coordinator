@@ -18,6 +18,7 @@ import userMessages.UserError;
 public final class FolderName{
   private FolderName(){}
   static final String ext= ".fearless";
+  public static final String content= "Fearless project: open this file to work on the folder it is in.\n";
   public static String compactName(Path folder){
     var f= folder.toAbsolutePath().normalize();
     var all= fearlessFiles(f);
@@ -43,7 +44,7 @@ public final class FolderName{
     var all= fearlessFiles(folder);
     assert all.size() <= 1;
     var target= folder.resolve(name+ext);
-    if (all.isEmpty()){ Fs.writeUtf8(target,""); return; }
+    if (all.isEmpty()){ Fs.writeUtf8(target,content); return; }
     Fs.ofV(()->Files.move(all.getFirst(),target));
   }
   private static String asName(Path folder, String text){
