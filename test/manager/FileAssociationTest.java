@@ -37,6 +37,10 @@ final class FileAssociationTest{
     assertTrue(lines.contains("@=\"C:\\\\fearlessBin0_001\\\\fearlessBin0_001w.exe,0\""), lines.toString());
     assertEquals(4, lines.stream().filter(l->l.startsWith("[HKEY_CURRENT_USER")).count(), lines.toString());
   }
+  @Test void theChoiceWindowsRemembersIsLookedForWhereWindowsKeepsIt(){
+    assertEquals("HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts\\.fearless\\UserChoice",
+      FileAssociation.userChoice);
+  }
   @Test void theRegistryFileUsesTheLineEndingsWindowsWrites(){
     var reg= FileAssociation.regFile(winLauncher,"0_001");
     assertEquals(reg.split("\r\n",-1).length, reg.split("\n",-1).length);

@@ -321,12 +321,13 @@ public final class Violation {
     return new UserError("""
       Fearless could not become the program that opens Fearless projects.
 
-      Your desktop was asked to make this copy of Fearless the one that opens
-      a Fearless project, and it refused.
+      Your system was asked to make this copy of Fearless the one that opens
+      a Fearless project, and it did not.
 
       Fearless keeps running: only the double-click shortcut is missing, and
-      you can still set it by hand from the file manager (right click a
-      Fearless project file, then "Open with").
+      you can still set it by hand from your file browser (right click a
+      Fearless project file, then "Open with", and choose to always use
+      Fearless).
 
       Reported reason:
       %s""".formatted(reported));
