@@ -105,6 +105,17 @@ final class FileAssociation{
     if (!Fs.isWindows()){ return Optional.empty(); }
     return regValue(userChoice,"ProgId");
   }
+  static final String pickFileContent= """
+    This file is here so that Fearless can show you the window where your desktop
+    asks which program opens a Fearless project. Opening it starts the Fearless
+    manager and does nothing else: the folder it sits in is the manager's own
+    folder, not a project.
+    """;
+  static Path pickFile(Path managerDir){
+    var res= managerDir.resolve("example"+ext);
+    if (!Files.isRegularFile(res)){ Fs.writeUtf8(res, pickFileContent); }
+    return res;
+  }
   static List<String> pickCommand(Path file){
     return List.of("rundll32.exe","shell32.dll,OpenAs_RunDLL",file.toAbsolutePath().toString());
   }
@@ -116,6 +127,38 @@ final class FileAssociation{
   private static String winDefault(){
     return regValue(userChoice,"ProgId").or(()->regValue("HKCU\\Software\\Classes\\"+ext,"")).orElse("");
   }
+  //Forget: remove exactly what makeDefault created, and nothing else. The answer
+  //the desktop remembers is not ours to remove (see answerGivenByHand), so
+  //forgetting stops Fearless from offering itself; it does not touch an answer
+  //already given.
+  static String forget(String versionId){
+    if (Fs.isLinux()){ return linuxForget(versionId); }
+    if (Fs.isWindows()){ return winForget(versionId); }
+    return "";
+  }
+  private static String linuxForget(String versionId){
+    var dataHome= InstallLocation.userDataHome();
+    var mimeHome= dataHome.resolve("mime");
+    var apps= dataHome.resolve("applications");
+    Fs.ofV(()->Files.deleteIfExists(mimeHome.resolve("packages").resolve("fearless-mime.xml")));
+    Fs.ofV(()->Files.deleteIfExists(apps.resolve(desktopName(versionId))));
+    return report(List.of("update-mime-database", mimeHome.toString()))
+      +"\n"+report(List.of("update-desktop-database", apps.toString()));
+  }
+  private static String winForget(String versionId){
+    var classes= "HKCU\\Software\\Classes\\";
+    var id= progId(versionId);
+    var removed= report(List.of("reg","delete",classes+id,"/f"));
+    var unlisted= report(List.of("reg","delete",classes+ext+"\\OpenWithProgids","/v",id,"/f"));
+    if (!id.equals(regValue(classes+ext,"").orElse(""))){ return removed+"\n"+unlisted; }
+    return removed+"\n"+unlisted+"\n"+report(List.of("reg","delete",classes+ext,"/ve","/f"));
+  }
+  static boolean stillOffered(String versionId){
+    if (Fs.isLinux()){ return Files.exists(InstallLocation.userDataHome().resolve("applications").resolve(desktopName(versionId))); }
+    if (Fs.isWindows()){ return regValue("HKCU\\Software\\Classes\\"+progId(versionId),"").isPresent(); }
+    return false;
+  }
+  private static String report(List<String> cmd){ return report(cmd, exec(cmd)); }
   private static String report(List<String> cmd, Optional<Ran> ran){
     var out= ran.map(Ran::out).orElse("The program could not be started.");
     return (String.join(" ",cmd)+"\n"+out).strip();

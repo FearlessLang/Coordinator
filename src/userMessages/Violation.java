@@ -329,6 +329,17 @@ public final class Violation {
       What failed:
       %s""".formatted(reported));
   }
+  public static UserError fearlessIsStillOffered(String reported){
+    return new UserError("""
+      Fearless is still offered as a program that opens Fearless projects.
+
+      Fearless removed what it had registered with your system, and your system
+      goes on offering it. Nothing else changed: the answer your system opens
+      Fearless projects with is untouched, whatever it names.
+
+      What Fearless did, and what your system answered:
+      %s""".formatted(reported));
+  }
   public static UserError fearlessProjectsOpenWithYourOwnChoice(String current){
     return new UserError("""
       Fearless is not yet the program that opens Fearless projects.
