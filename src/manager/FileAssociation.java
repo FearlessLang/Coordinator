@@ -37,14 +37,19 @@ final class FileAssociation{
       MimeType=%s;
       """.formatted(launcher, icon, mimeType);
   }
-  static List<List<String>> winCommands(Path launcher, String versionId){
-    var id= "HKCU\\Software\\Classes\\"+progId(versionId);
-    return List.of(
-      List.of("reg","add",id,"/ve","/d","Fearless project","/f"),
-      List.of("reg","add",id+"\\DefaultIcon","/ve","/d",launcher+",0","/f"),
-      List.of("reg","add",id+"\\shell\\open\\command","/ve","/d","\""+launcher+"\" \"%1\"","/f"),
-      List.of("reg","add","HKCU\\Software\\Classes\\"+ext,"/ve","/d",progId(versionId),"/f"));
+  static String regFile(Path launcher, String versionId){
+    var classes= "HKEY_CURRENT_USER\\Software\\Classes\\";
+    var id= progId(versionId);
+    return "Windows Registry Editor Version 5.00\r\n"
+      + regEntry(classes+id, "Fearless project")
+      + regEntry(classes+id+"\\DefaultIcon", launcher+",0")
+      + regEntry(classes+id+"\\shell\\open\\command", "\""+launcher+"\" \"%1\"")
+      + regEntry(classes+ext, id);
   }
+  private static String regEntry(String key, String data){
+    return "\r\n["+key+"]\r\n@=\""+regData(data)+"\"\r\n";
+  }
+  private static String regData(String data){ return data.replace("\\","\\\\").replace("\"","\\\""); }
   static boolean canBecomeDefault(String versionId){
     if (launcher().isEmpty()){ return false; }
     if (Fs.isLinux()){ return !desktopName(versionId).equals(linuxDefault()); }
@@ -54,7 +59,7 @@ final class FileAssociation{
   static void makeDefault(Path binDir, String versionId, Path icon){
     var launcher= launcher().orElseThrow(Bug::unreachable);
     if (Fs.isLinux()){ linuxMakeDefault(binDir, versionId, launcher, icon); }
-    if (Fs.isWindows()){ winCommands(launcher, versionId).forEach(FileAssociation::req); }
+    if (Fs.isWindows()){ winMakeDefault(launcher, versionId); }
     if (canBecomeDefault(versionId)){ throw Violation.couldNotOpenFearlessProjects("Your system kept the program it was opening them with before."); }
   }
   private static String linuxDefault(){
@@ -74,6 +79,12 @@ final class FileAssociation{
     req(List.of("update-desktop-database", apps.toString()));
     req(List.of("xdg-mime", "default", desktopName(versionId), mimeType));
   }
+  private static void winMakeDefault(Path launcher, String versionId){
+    var file= Fs.of(()->Files.createTempFile("fearless",".reg"));
+    Fs.ofV(()->Files.write(file, ("\uFEFF"+regFile(launcher,versionId)).getBytes(StandardCharsets.UTF_16LE)));
+    req(List.of("reg","import",file.toString()));
+    Fs.ofV(()->Files.deleteIfExists(file));
+  }
   private static String winDefault(){
     var choice= regValue("HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts\\"+ext+"\\UserChoice","ProgId");
     return choice.or(()->regValue("HKCU\\Software\\Classes\\"+ext,"")).orElse("");
@@ -82,15 +93,13 @@ final class FileAssociation{
     var cmd= name.isEmpty()
       ? List.of("reg","query",key,"/ve")
       : List.of("reg","query",key,"/v",name);
-    var shown= name.isEmpty() ? "(Default)" : name;
     return exec(cmd)
       .filter(ran->ran.code() == 0)
-      .flatMap(ran->ran.out().lines().map(String::strip).filter(l->l.startsWith(shown)).findFirst())
-      .map(FileAssociation::regData);
+      .flatMap(ran->ran.out().lines().map(String::strip).filter(l->l.contains("REG_")).findFirst())
+      .map(FileAssociation::regQueried);
   }
-  private static String regData(String line){
-    var type= line.indexOf("REG_");
-    var end= line.indexOf(' ', type);
+  private static String regQueried(String line){
+    var end= line.indexOf(' ', line.indexOf("REG_"));
     return end < 0 ? "" : line.substring(end).strip();
   }
   private static void req(List<String> cmd){

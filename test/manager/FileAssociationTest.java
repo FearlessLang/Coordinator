@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Path;
-import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
@@ -25,16 +24,21 @@ final class FileAssociationTest{
     assertTrue(entry.contains("MimeType=application/x-fearless;"), entry);
     assertTrue(entry.contains("Icon=/home/me/fearlessBin0_001/lib/app/icon.png"), entry);
   }
-  @Test void theRegistryCommandsPointTheExtensionAtTheRunningLauncher(){
-    var cmds= FileAssociation.winCommands(winLauncher,"0_001");
-    var id= "HKCU\\Software\\Classes\\Fearless.Project.0_001";
-    assertEquals(List.of("reg","add",id+"\\shell\\open\\command","/ve","/d",
-      "\"C:\\fearlessBin0_001\\fearlessBin0_001w.exe\" \"%1\"","/f"), cmds.get(2));
-    assertEquals(List.of("reg","add","HKCU\\Software\\Classes\\.fearless","/ve","/d","Fearless.Project.0_001","/f"), cmds.getLast());
-    assertTrue(cmds.stream().allMatch(c->c.getLast().equals("/f")), cmds.toString());
+  @Test void theRegistryFileQuotesTheLauncherItselfAndTheFileHandedToIt(){
+    var lines= FileAssociation.regFile(winLauncher,"0_001").lines().toList();
+    assertEquals("Windows Registry Editor Version 5.00", lines.getFirst());
+    assertTrue(lines.contains("[HKEY_CURRENT_USER\\Software\\Classes\\Fearless.Project.0_001\\shell\\open\\command]"), lines.toString());
+    assertTrue(lines.contains("@=\"\\\"C:\\\\fearlessBin0_001\\\\fearlessBin0_001w.exe\\\" \\\"%1\\\"\""), lines.toString());
   }
-  @Test void theIconOfTheWindowsEntryIsTheLauncherOwnIcon(){
-    var cmds= FileAssociation.winCommands(winLauncher,"0_001");
-    assertTrue(cmds.get(1).contains("C:\\fearlessBin0_001\\fearlessBin0_001w.exe,0"), cmds.get(1).toString());
+  @Test void theRegistryFilePointsTheExtensionAtThisVersion(){
+    var lines= FileAssociation.regFile(winLauncher,"0_001").lines().toList();
+    assertTrue(lines.contains("[HKEY_CURRENT_USER\\Software\\Classes\\.fearless]"), lines.toString());
+    assertTrue(lines.contains("@=\"Fearless.Project.0_001\""), lines.toString());
+    assertTrue(lines.contains("@=\"C:\\\\fearlessBin0_001\\\\fearlessBin0_001w.exe,0\""), lines.toString());
+    assertEquals(4, lines.stream().filter(l->l.startsWith("[HKEY_CURRENT_USER")).count(), lines.toString());
+  }
+  @Test void theRegistryFileUsesTheLineEndingsWindowsWrites(){
+    var reg= FileAssociation.regFile(winLauncher,"0_001");
+    assertEquals(reg.split("\r\n",-1).length, reg.split("\n",-1).length);
   }
 }
