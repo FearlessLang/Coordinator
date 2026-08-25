@@ -112,12 +112,6 @@ final class ManagerGui {
       Your desktop does not open Fearless projects with this Fearless.
       Make this Fearless the one that opens them?""");
   }
-  boolean askPickByHand(){
-    return ask("""
-      Your desktop keeps the answer you gave by hand for Fearless projects,
-      and lets only another answer given by hand take its place.
-      Show the window where Fearless can be picked?""");
-  }
   boolean askForget(){
     return ask("""
       Fearless registered itself with your desktop as a program that opens

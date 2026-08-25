@@ -53,17 +53,10 @@ public class Manager {
     if (!FileAssociation.canBecomeDefault(versionId)){ return; }
     if (!gui.askBecomeDefault()){ return; }
     try { FileAssociation.makeDefault(ManagerMain.binDir, versionId, FearlessIcon.file()); }
-    catch(UserError e){ explainOrPick(gui, versionId, e); }
-  }
-  //The answer the desktop remembers for Fearless projects is the user's own,
-  //given by hand: Fearless cannot write it and cannot remove it. What Fearless
-  //can do is open the window where that answer is given, on a project file of
-  //a folder it already knows, and then look at what the desktop answers.
-  private static void explainOrPick(ManagerGui gui, String versionId, UserError problem){
-    if (FileAssociation.answerGivenByHand().isEmpty()){ gui.explain(problem); return; }
-    if (!gui.askPickByHand()){ gui.explain(problem); return; }
-    FileAssociation.pickByHand(FileAssociation.pickFile(ManagerMain.managerDir));
-    if (FileAssociation.canBecomeDefault(versionId)){ gui.explain(problem); }
+    //Which program opens which kind of file is settled in the system settings, by
+    //the person: no program settles it. So the page that settles it opens, and the
+    //message that says what to do there follows it onto the event thread.
+    catch(UserError e){ FileAssociation.showWhereToChoose(versionId); gui.explain(e); }
   }
   //Runs on the event thread, from the button: a rare, deliberate action, whose
   //dialogs are modal anyway and whose commands are the short ones the offer runs.
@@ -129,8 +122,7 @@ public class Manager {
   static Optional<Path> projectFolder(String message, Path managerDir){
     var folder= folderOf(message);
     //The manager folder is not a project: it holds what the manager remembers,
-    //and the file the desktop's own window is opened on (FileAssociation.pickFile)
-    //lives there, so opening that file must not register it.
+    //not source, so a Fearless started on it registers nothing.
     if (folder.isEmpty() || folder.get().equals(norm(managerDir))){ return Optional.empty(); }
     return folder;
   }

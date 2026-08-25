@@ -3,6 +3,7 @@ package manager;
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 
 import java.io.IOException;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -37,16 +38,27 @@ final class FileAssociation{
       MimeType=%s;
       """.formatted(launcher, icon, mimeType);
   }
+  //Two registrations, and they answer two different questions. The file type says
+  //what opens a .fearless file; the capabilities say that this Fearless is an app,
+  //what it is called, and which types it handles. Only the second puts Fearless on
+  //its own page under Settings, which is the one place a default can be chosen.
   static String regFile(Path launcher, String versionId){
     var classes= "HKEY_CURRENT_USER\\Software\\Classes\\";
+    var app= "HKEY_CURRENT_USER\\Software\\"+appKey(versionId);
     var id= progId(versionId);
     return "Windows Registry Editor Version 5.00\r\n"
       + regEntry(classes+id, "Fearless project")
       + regEntry(classes+id+"\\DefaultIcon", launcher+",0")
       + regEntry(classes+id+"\\shell\\open\\command", "\""+launcher+"\" \"%1\"")
       + regEntry(classes+ext, id)
-      + regEntry(classes+ext+"\\OpenWithProgids", id, "");
+      + regEntry(classes+ext+"\\OpenWithProgids", id, "")
+      + regEntry(app+"\\Capabilities", "ApplicationName", appName(versionId))
+      + regEntry(app+"\\Capabilities\\FileAssociations", ext, id)
+      + regEntry(registeredApplications, appKey(versionId), "Software\\"+appKey(versionId)+"\\Capabilities");
   }
+  static final String registeredApplications= "HKEY_CURRENT_USER\\Software\\RegisteredApplications";
+  static String appKey(String versionId){ return JavacTool.dataDirNameFor(versionId); }
+  static String appName(String versionId){ return "Fearless "+versionId; }
   private static String regEntry(String key, String data){ return regEntry(key,"",data); }
   private static String regEntry(String key, String name, String data){
     var shown= name.isEmpty() ? "@" : "\""+regData(name)+"\"";
@@ -66,7 +78,7 @@ final class FileAssociation{
     if (Fs.isWindows()){ tried= winMakeDefault(launcher, versionId); }
     if (!canBecomeDefault(versionId)){ return; }
     var handPicked= answerGivenByHand();
-    if (handPicked.isPresent()){ throw Violation.fearlessProjectsOpenWithYourOwnChoice(handPicked.get()); }
+    if (handPicked.isPresent()){ throw Violation.fearlessProjectsOpenWithYourOwnChoice(handPicked.get(), appName(versionId)); }
     throw Violation.fearlessProjectsStillOpenWith(shownDefault(), tried);
   }
   private static String shownDefault(){
@@ -105,23 +117,18 @@ final class FileAssociation{
     if (!Fs.isWindows()){ return Optional.empty(); }
     return regValue(userChoice,"ProgId");
   }
-  static final String pickFileContent= """
-    This file is here so that Fearless can show you the window where your desktop
-    asks which program opens a Fearless project. Opening it starts the Fearless
-    manager and does nothing else: the folder it sits in is the manager's own
-    folder, not a project.
-    """;
-  static Path pickFile(Path managerDir){
-    var res= managerDir.resolve("example"+ext);
-    if (!Files.isRegularFile(res)){ Fs.writeUtf8(res, pickFileContent); }
-    return res;
+  //Settings is the only place the answer can be changed: a program cannot write it
+  //and cannot remove it. This opens the page Settings keeps for this Fearless, where
+  //the types it handles are listed and one of them is a Fearless project.
+  static List<String> whereToChooseCommand(String versionId){
+    return List.of("explorer.exe","ms-settings:defaultapps?registeredAppUser="+escaped(appKey(versionId)));
   }
-  static List<String> pickCommand(Path file){
-    return List.of("rundll32.exe","shell32.dll,OpenAs_RunDLL",file.toAbsolutePath().toString());
+  static void showWhereToChoose(String versionId){
+    if (answerGivenByHand().isEmpty()){ return; }
+    exec(whereToChooseCommand(versionId));
   }
-  static void pickByHand(Path file){
-    assert Fs.isWindows();
-    exec(pickCommand(file));
+  private static String escaped(String name){
+    return URLEncoder.encode(name, StandardCharsets.UTF_8).replace("+","%20");
   }
   static final String userChoice= "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts\\"+ext+"\\UserChoice";
   private static String winDefault(){
@@ -150,9 +157,14 @@ final class FileAssociation{
     var id= progId(versionId);
     var removed= report(List.of("reg","delete",classes+id,"/f"));
     var unlisted= report(List.of("reg","delete",classes+ext+"\\OpenWithProgids","/v",id,"/f"));
-    if (!id.equals(regValue(classes+ext,"").orElse(""))){ return removed+"\n"+unlisted; }
-    return removed+"\n"+unlisted+"\n"+report(List.of("reg","delete",classes+ext,"/ve","/f"));
+    var unapp= report(List.of("reg","delete","HKCU\\Software\\"+appKey(versionId),"/f"));
+    var unregistered= report(List.of("reg","delete",hkcu(registeredApplications),"/v",appKey(versionId),"/f"));
+    var all= removed+"\n"+unlisted+"\n"+unapp+"\n"+unregistered;
+    if (!id.equals(regValue(classes+ext,"").orElse(""))){ return all; }
+    return all+"\n"+report(List.of("reg","delete",classes+ext,"/ve","/f"));
   }
+  //reg.exe wants the short root name; a .reg file wants the long one.
+  private static String hkcu(String key){ return "HKCU"+key.substring("HKEY_CURRENT_USER".length()); }
   static boolean stillOffered(String versionId){
     if (Fs.isLinux()){ return Files.exists(InstallLocation.userDataHome().resolve("applications").resolve(desktopName(versionId))); }
     if (Fs.isWindows()){ return regValue("HKCU\\Software\\Classes\\"+progId(versionId),"").isPresent(); }

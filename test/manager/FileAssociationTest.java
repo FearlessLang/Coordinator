@@ -35,7 +35,7 @@ final class FileAssociationTest{
     assertTrue(lines.contains("[HKEY_CURRENT_USER\\Software\\Classes\\.fearless]"), lines.toString());
     assertTrue(lines.contains("@=\"Fearless.Project.0_001\""), lines.toString());
     assertTrue(lines.contains("@=\"C:\\\\fearlessBin0_001\\\\fearlessBin0_001w.exe,0\""), lines.toString());
-    assertEquals(5, lines.stream().filter(l->l.startsWith("[HKEY_CURRENT_USER")).count(), lines.toString());
+    assertEquals(8, lines.stream().filter(l->l.startsWith("[HKEY_CURRENT_USER")).count(), lines.toString());
   }
   @Test void theChoiceWindowsRemembersIsLookedForWhereWindowsKeepsIt(){
     assertEquals("HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts\\.fearless\\UserChoice",
@@ -46,12 +46,23 @@ final class FileAssociationTest{
     assertTrue(lines.contains("[HKEY_CURRENT_USER\\Software\\Classes\\.fearless\\OpenWithProgids]"), lines.toString());
     assertTrue(lines.contains("\"Fearless.Project.0_001\"=\"\""), lines.toString());
   }
-  @Test void theWindowWhereTheAnswerIsGivenOpensOnTheProjectFileItself(){
-    var cmd= FileAssociation.pickCommand(Path.of("some.fearless"));
-    assertEquals("rundll32.exe", cmd.getFirst());
-    assertEquals("shell32.dll,OpenAs_RunDLL", cmd.get(1));
-    assertEquals(Path.of("some.fearless").toAbsolutePath().toString(), cmd.getLast());
-    assertEquals(3, cmd.size(), cmd.toString());
+  @Test void theSettingsPageOpenedIsTheOneThisFearlessIsRegisteredUnder(){
+    var cmd= FileAssociation.whereToChooseCommand("0_001");
+    assertEquals("explorer.exe", cmd.getFirst());
+    assertEquals("ms-settings:defaultapps?registeredAppUser=fearless0_001", cmd.getLast());
+    assertEquals(2, cmd.size(), cmd.toString());
+  }
+  @Test void theRegistryFileSaysThisFearlessIsAnAppAndWhatItOpens(){
+    var lines= FileAssociation.regFile(winLauncher,"0_001").lines().toList();
+    assertTrue(lines.contains("[HKEY_CURRENT_USER\\Software\\fearless0_001\\Capabilities]"), lines.toString());
+    assertTrue(lines.contains("\"ApplicationName\"=\"Fearless 0_001\""), lines.toString());
+    assertTrue(lines.contains("[HKEY_CURRENT_USER\\Software\\fearless0_001\\Capabilities\\FileAssociations]"), lines.toString());
+    assertTrue(lines.contains("\".fearless\"=\"Fearless.Project.0_001\""), lines.toString());
+  }
+  @Test void theRegistryFileListsThisFearlessAmongTheRegisteredApplications(){
+    var lines= FileAssociation.regFile(winLauncher,"0_001").lines().toList();
+    assertTrue(lines.contains("[HKEY_CURRENT_USER\\Software\\RegisteredApplications]"), lines.toString());
+    assertTrue(lines.contains("\"fearless0_001\"=\"Software\\\\fearless0_001\\\\Capabilities\""), lines.toString());
   }
   @Test void theRegistryFileUsesTheLineEndingsWindowsWrites(){
     var reg= FileAssociation.regFile(winLauncher,"0_001");

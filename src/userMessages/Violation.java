@@ -340,22 +340,24 @@ public final class Violation {
       What Fearless did, and what your system answered:
       %s""".formatted(reported));
   }
-  public static UserError fearlessProjectsOpenWithYourOwnChoice(String current){
+  public static UserError fearlessProjectsOpenWithYourOwnChoice(String current, String appName){
     return new UserError("""
       Fearless is not yet the program that opens Fearless projects.
 
-      Fearless registered itself under its own name, and your system still
-      answers that a Fearless project is opened with:
+      Fearless registered itself, and your system still answers that a Fearless
+      project is opened with:
       %s
-      That is the answer you once gave by hand, and your system keeps it for
-      you: it lets only another answer given by hand take its place, and it
-      refuses to let any program, Fearless included, remove it.
+      That answer is yours, and your system keeps it that way: which program
+      opens which kind of file is settled in your system settings, by you, and
+      no program is allowed to settle it, not even to put its own answer back.
 
-      So the last step is yours: right click a Fearless project file, choose
-      "Open with", then Fearless, and ask to always use it.
+      Your settings should now be open on the page your system keeps for
+      %s
+      It lists the kinds of file this Fearless opens. Choose the Fearless
+      project one, and pick Fearless there.
 
       Fearless keeps running: only the double-click shortcut is missing.
-      """.formatted(path(current)));
+      """.formatted(path(current), path(appName)));
   }
   public static UserError fearlessProjectsStillOpenWith(String current, String tried){
     return new UserError("""
