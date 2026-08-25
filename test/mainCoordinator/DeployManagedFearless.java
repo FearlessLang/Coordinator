@@ -1,6 +1,5 @@
 package mainCoordinator;
 
-import tools.JavacTool;
 import tools.PortableApp;
 //This can easily be run from command line as follow:
 //go in the parent directory (Coordinator/test)
@@ -19,7 +18,7 @@ public class DeployManagedFearless{
       ResolveResource.stLibPath,//base
       ResolveResource.stLibRTPath,//rt
       ResolveResource.coordinatorJars,
-      JavacTool.managedAppNameFor(ResolveResource.versionId),
+      "fearlessManaged"+ResolveResource.versionId,
       ResolveResource.versionId,
       "Coordinator/manager.ManagerMain"
     ).build();
