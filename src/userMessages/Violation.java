@@ -321,18 +321,32 @@ public final class Violation {
     return new UserError("""
       Fearless could not become the program that opens Fearless projects.
 
-      Your system was asked to make this copy of Fearless the one that opens
-      a Fearless project, and it did not.
-
-      A system can guard the program you last chose by hand, and let only you
-      change it, by hand as well: right click a Fearless project file, choose
-      "Open with", then Fearless, and ask to always use it. Fearless is now
-      offered there under its own name.
+      A step of asking your system to do so failed, and Fearless stopped there
+      rather than leave the change half made.
 
       Fearless keeps running: only the double-click shortcut is missing.
 
-      Reported reason:
+      What failed:
       %s""".formatted(reported));
+  }
+  public static UserError fearlessProjectsStillOpenWith(String current, String tried){
+    return new UserError("""
+      Fearless is not yet the program that opens Fearless projects.
+
+      Every step succeeded, but your system still answers that a Fearless
+      project is opened with:
+      %s
+      Fearless is registered under its own name, so you can also pick it by
+      hand: right click a Fearless project file, choose "Open with", then
+      Fearless, and ask to always use it.
+
+      Fearless keeps running: only the double-click shortcut is missing.
+
+      What Fearless did last, and what your system answered:
+      %s""".formatted(
+        path(current),
+        tried
+      ));
   }
 
   //-- our own generated files, changed under us

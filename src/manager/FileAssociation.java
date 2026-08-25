@@ -61,10 +61,11 @@ final class FileAssociation{
   }
   static void makeDefault(Path binDir, String versionId, Path icon){
     var launcher= launcher().orElseThrow(Bug::unreachable);
-    if (Fs.isLinux()){ linuxMakeDefault(binDir, versionId, launcher, icon); }
-    if (Fs.isWindows()){ winMakeDefault(launcher, versionId); }
+    var tried= "";
+    if (Fs.isLinux()){ tried= linuxMakeDefault(binDir, versionId, launcher, icon); }
+    if (Fs.isWindows()){ tried= winMakeDefault(launcher, versionId); }
     if (!canBecomeDefault(versionId)){ return; }
-    throw Violation.couldNotOpenFearlessProjects("Your system says a Fearless project is still opened with:\n  "+shownDefault());
+    throw Violation.fearlessProjectsStillOpenWith(shownDefault(), tried);
   }
   private static String shownDefault(){
     var now= Fs.isWindows() ? winDefault() : linuxDefault();
@@ -74,7 +75,7 @@ final class FileAssociation{
     return exec(List.of("xdg-mime","query","default",mimeType))
       .filter(ran->ran.code() == 0).map(ran->ran.out().strip()).orElse("");
   }
-  private static void linuxMakeDefault(Path binDir, String versionId, Path launcher, Path icon){
+  private static String linuxMakeDefault(Path binDir, String versionId, Path launcher, Path icon){
     var dataHome= InstallLocation.userDataHome();
     var mimeHome= dataHome.resolve("mime");
     var apps= dataHome.resolve("applications");
@@ -85,39 +86,48 @@ final class FileAssociation{
     Fs.writeUtf8(apps.resolve(desktopName(versionId)), desktopEntry(launcher, icon));
     req(List.of("update-mime-database", mimeHome.toString()));
     req(List.of("update-desktop-database", apps.toString()));
-    req(List.of("xdg-mime", "default", desktopName(versionId), mimeType));
+    return req(List.of("xdg-mime", "default", desktopName(versionId), mimeType));
   }
-  private static void winMakeDefault(Path launcher, String versionId){
+  private static String winMakeDefault(Path launcher, String versionId){
     var file= Fs.of(()->Files.createTempFile("fearless",".reg"));
     Fs.ofV(()->Files.write(file, ("\uFEFF"+regFile(launcher,versionId)).getBytes(StandardCharsets.UTF_16LE)));
     req(List.of("reg","import",file.toString()));
     Fs.ofV(()->Files.deleteIfExists(file));
-    clearUserChoice();
+    return clearUserChoice();
   }
   static final String userChoice= "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts\\"+ext+"\\UserChoice";
   private static String winDefault(){
     return regValue(userChoice,"ProgId").or(()->regValue("HKCU\\Software\\Classes\\"+ext,"")).orElse("");
   }
-  private static void clearUserChoice(){
-    if (regValue(userChoice,"ProgId").isEmpty()){ return; }
-    exec(List.of("reg","delete",userChoice,"/f"));
-    if (regValue(userChoice,"ProgId").isEmpty()){ return; }
-    runScript(unprotectScript());
+  private static String clearUserChoice(){
+    if (regValue(userChoice,"ProgId").isEmpty()){ return "There was no remembered answer to remove."; }
+    var deleted= report(List.of("reg","delete",userChoice,"/f"));
+    if (regValue(userChoice,"ProgId").isEmpty()){ return deleted; }
+    return deleted+"\n"+runScript(unprotectScript());
+  }
+  private static String report(List<String> cmd){ return report(cmd, exec(cmd)); }
+  private static String report(List<String> cmd, Optional<Ran> ran){
+    var out= ran.map(Ran::out).orElse("The program could not be started.");
+    return (String.join(" ",cmd)+"\n"+out).strip();
   }
   static String unprotectScript(){
     return """
+      $ErrorActionPreference = 'Stop'
+      trap { Write-Output $_.Exception.Message; exit 1 }
       $key = '%s'
       $acl = Get-Acl -LiteralPath $key
+      $acl.SetAccessRuleProtection($true, $true)
       foreach ($rule in @($acl.Access)){ if ($rule.AccessControlType -eq 'Deny'){ $acl.RemoveAccessRule($rule) | Out-Null } }
       Set-Acl -LiteralPath $key -AclObject $acl
       Remove-Item -LiteralPath $key -Force
       """.formatted("HKCU:"+userChoice.substring("HKCU".length()));
   }
-  private static void runScript(String script){
+  private static String runScript(String script){
     var file= Fs.of(()->Files.createTempFile("fearless",".ps1"));
     Fs.ofV(()->Files.writeString(file, script, StandardCharsets.UTF_8));
-    exec(List.of("powershell","-NoProfile","-ExecutionPolicy","Bypass","-File",file.toString()));
+    var out= report(List.of("powershell","-NoProfile","-ExecutionPolicy","Bypass","-File",file.toString()));
     Fs.ofV(()->Files.deleteIfExists(file));
+    return out;
   }
   private static Optional<String> regValue(String key, String name){
     var cmd= name.isEmpty()
@@ -132,10 +142,11 @@ final class FileAssociation{
     var end= line.indexOf(' ', line.indexOf("REG_"));
     return end < 0 ? "" : line.substring(end).strip();
   }
-  private static void req(List<String> cmd){
+  private static String req(List<String> cmd){
     var ran= exec(cmd);
-    var reported= String.join(" ",cmd)+"\n"+ran.map(Ran::out).orElse("The program could not be started.");
+    var reported= report(cmd, ran);
     if (ran.isEmpty() || ran.get().code() != 0){ throw Violation.couldNotOpenFearlessProjects(reported); }
+    return reported;
   }
   private static Optional<Ran> exec(List<String> cmd){
     var pb= new ProcessBuilder(cmd).redirectErrorStream(true);

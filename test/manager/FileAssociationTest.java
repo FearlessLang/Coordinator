@@ -53,6 +53,15 @@ final class FileAssociationTest{
     assertTrue(script.contains("Remove-Item -LiteralPath $key -Force"), script);
     assertTrue(script.indexOf("Set-Acl") < script.indexOf("Remove-Item"), script);
   }
+  @Test void theRememberedChoiceIsTakenOutOfWhatItInheritsBeforeItsDenialsAreDropped(){
+    var script= FileAssociation.unprotectScript();
+    assertTrue(script.indexOf("SetAccessRuleProtection($true, $true)") < script.indexOf("RemoveAccessRule"), script);
+  }
+  @Test void unlockingTheRememberedChoiceStopsAndSpeaksAtTheFirstStepThatFails(){
+    var script= FileAssociation.unprotectScript();
+    assertTrue(script.contains("$ErrorActionPreference = 'Stop'"), script);
+    assertTrue(script.contains("trap { Write-Output $_.Exception.Message; exit 1 }"), script);
+  }
   @Test void theRegistryFileUsesTheLineEndingsWindowsWrites(){
     var reg= FileAssociation.regFile(winLauncher,"0_001");
     assertEquals(reg.split("\r\n",-1).length, reg.split("\n",-1).length);
