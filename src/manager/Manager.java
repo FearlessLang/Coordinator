@@ -17,7 +17,6 @@ import java.nio.file.FileSystems;
 import java.nio.file.WatchService;
 
 import fileSupport.StringFiles;
-import managerIcons.FolderName;
 import managerData.ManagerData;
 import tools.JavacTool;
 import userMessages.Report;
@@ -36,42 +35,43 @@ public class Manager {
     var executor= Executors.newVirtualThreadPerTaskExecutor();
     var watcher= watcher(msgDir);//registered BEFORE the first drain: messages arriving in between queue up, they are not lost
     var stop= new Stop();
-    ManagerGui gui= ManagerGui.create(stop::quit, data);
+    ManagerGui gui= ManagerGui.create(stop::quit, data, Manager::forgetAssociation);
     ManagerTray.install(gui, stop::quit);
     gui.showManager();
     drainToGui(gui,data,msgDir);//before the offer below: the folder this manager was started on is a folder it knows
     executor.submit(stop.worker(() -> watchMessages(watcher,gui,data,msgDir)));
     executor.submit(stop.worker(gui::tickLoop));//example long lived worker; more will come
-    offerAssociation(gui,data);
+    offerAssociation(gui);
     try { stop.await(); }
     finally { executor.shutdownNow(); }
     //shutdownNow is not resource cleanup: it stops the workers, so that a
     //manager on its way out (quit, or showing its error dialog) cannot keep
     //consuming message files that are meant for the next manager.
   }
-  private static void offerAssociation(ManagerGui gui, ManagerData data){
+  private static void offerAssociation(ManagerGui gui){
     var versionId= JavacTool.reqVersionId(Violation::mustUseLauncher);
     if (!FileAssociation.canBecomeDefault(versionId)){ return; }
     if (!gui.askBecomeDefault()){ return; }
     try { FileAssociation.makeDefault(ManagerMain.binDir, versionId, FearlessIcon.file()); }
-    catch(UserError e){ explainOrPick(gui, data, versionId, e); }
+    catch(UserError e){ explainOrPick(gui, versionId, e); }
   }
   //The answer the desktop remembers for Fearless projects is the user's own,
   //given by hand: Fearless cannot write it and cannot remove it. What Fearless
   //can do is open the window where that answer is given, on a project file of
   //a folder it already knows, and then look at what the desktop answers.
-  private static void explainOrPick(ManagerGui gui, ManagerData data, String versionId, UserError problem){
-    var file= projectFile(data);
-    if (FileAssociation.answerGivenByHand().isEmpty() || file.isEmpty()){ gui.explain(problem); return; }
+  private static void explainOrPick(ManagerGui gui, String versionId, UserError problem){
+    if (FileAssociation.answerGivenByHand().isEmpty()){ gui.explain(problem); return; }
     if (!gui.askPickByHand()){ gui.explain(problem); return; }
-    FileAssociation.pickByHand(file.get());
+    FileAssociation.pickByHand(FileAssociation.pickFile(ManagerMain.managerDir));
     if (FileAssociation.canBecomeDefault(versionId)){ gui.explain(problem); }
   }
-  static Optional<Path> projectFile(ManagerData data){
-    return data.registered().stream()
-      .map(e->e.folder().resolve(FolderName.compactName(e.folder())+FileAssociation.ext))
-      .filter(Files::isRegularFile)
-      .findFirst();
+  //Runs on the event thread, from the button: a rare, deliberate action, whose
+  //dialogs are modal anyway and whose commands are the short ones the offer runs.
+  static void forgetAssociation(ManagerGui gui){
+    if (!gui.askForget()){ return; }
+    var versionId= JavacTool.reqVersionId(Violation::mustUseLauncher);
+    var did= FileAssociation.forget(versionId);
+    if (FileAssociation.stillOffered(versionId)){ gui.explain(Violation.fearlessIsStillOffered(did)); }
   }
   private static WatchService watcher(Path msgDir){
     try {
@@ -119,21 +119,30 @@ public class Manager {
     catch(IOException e){ throw Violation.couldNotDrainMessageFolder(msgDir, e); }
   }
   private static void register(ManagerGui gui, ManagerData data, String message){
-    var folder= projectFolder(message);
+    var folder= projectFolder(message, ManagerMain.managerDir);
     if (folder.isEmpty() || data.isRegistered(folder.get())){ return; }
     var nested= data.nestedWith(folder.get());
     if (nested.isPresent()){ gui.explain(Report.folderNestedWithRegistered(folder.get(),nested.get())); return; }
     gui.nameFolder(data,folder.get());
     data.addRegisteredFolder(folder.get());
   }
-  private static Optional<Path> projectFolder(String message){
+  static Optional<Path> projectFolder(String message, Path managerDir){
+    var folder= folderOf(message);
+    //The manager folder is not a project: it holds what the manager remembers,
+    //and the file the desktop's own window is opened on (FileAssociation.pickFile)
+    //lives there, so opening that file must not register it.
+    if (folder.isEmpty() || folder.get().equals(norm(managerDir))){ return Optional.empty(); }
+    return folder;
+  }
+  private static Optional<Path> folderOf(String message){
     Path path;
     try { path= Path.of(message); }
     catch(InvalidPathException e){ return Optional.empty(); }
-    if (Files.isDirectory(path)){ return Optional.of(path); }
+    if (Files.isDirectory(path)){ return Optional.of(norm(path)); }
     if (!Files.isRegularFile(path)){ return Optional.empty(); }
-    return Optional.ofNullable(path.toAbsolutePath().getParent());
+    return Optional.ofNullable(norm(path).getParent());
   }
+  private static Path norm(Path path){ return path.toAbsolutePath().normalize(); }
   private static List<String> drainMessageFiles(Path msgDir) throws IOException {
     var files= list(msgDir, "*.msg");
     files.sort(Comparator.comparing(file -> file.getFileName().toString()));//names start with zero padded millis: oldest first
