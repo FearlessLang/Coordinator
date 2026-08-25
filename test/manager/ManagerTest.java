@@ -30,17 +30,10 @@ final class ManagerTest{
     var managerDir= folder(dir,"manager");
     assertTrue(Manager.projectFolder(managerDir.toString(), managerDir).isEmpty());
   }
-  @Test void theFileTheDesktopWindowOpensOnIsNotAProjectEither(@TempDir Path dir){
+  @Test void aFileInTheManagerFolderIsNotAProjectEither(@TempDir Path dir){
     var managerDir= folder(dir,"manager");
-    var file= FileAssociation.pickFile(managerDir);
+    var file= managerDir.resolve("example.fearless");
+    Fs.writeUtf8(file,"anything");
     assertTrue(Manager.projectFolder(file.toString(), managerDir).isEmpty());
-  }
-  @Test void thatFileIsMadeOnceAndKeptAsItIs(@TempDir Path dir){
-    var managerDir= folder(dir,"manager");
-    var file= FileAssociation.pickFile(managerDir);
-    assertEquals(managerDir.resolve("example.fearless"), file);
-    assertEquals(FileAssociation.pickFileContent, Fs.readUtf8(file));
-    Fs.writeUtf8(file,"changed by someone");
-    assertEquals("changed by someone", Fs.readUtf8(FileAssociation.pickFile(managerDir)));
   }
 }
