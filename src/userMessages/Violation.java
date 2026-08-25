@@ -317,7 +317,7 @@ public final class Violation {
       ));
   }
 
-  public static UserError couldNotOpenFearlessProjects(List<String> command, String reported){
+  public static UserError couldNotOpenFearlessProjects(String reported){
     return new UserError("""
       Fearless could not become the program that opens Fearless projects.
 
@@ -329,11 +329,7 @@ public final class Violation {
       Fearless project file, then "Open with").
 
       Reported reason:
-      %s
-      %s""".formatted(
-        Join.of(command.stream(),"  "," ","",""),
-        reported
-      ));
+      %s""".formatted(reported));
   }
 
   //-- our own generated files, changed under us
