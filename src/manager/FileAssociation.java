@@ -65,6 +65,8 @@ final class FileAssociation{
     if (Fs.isLinux()){ tried= linuxMakeDefault(binDir, versionId, launcher, icon); }
     if (Fs.isWindows()){ tried= winMakeDefault(launcher, versionId); }
     if (!canBecomeDefault(versionId)){ return; }
+    var handPicked= Fs.isWindows() ? regValue(userChoice,"ProgId") : Optional.<String>empty();
+    if (handPicked.isPresent()){ throw Violation.fearlessProjectsOpenWithYourOwnChoice(handPicked.get()); }
     throw Violation.fearlessProjectsStillOpenWith(shownDefault(), tried);
   }
   private static String shownDefault(){
@@ -91,43 +93,17 @@ final class FileAssociation{
   private static String winMakeDefault(Path launcher, String versionId){
     var file= Fs.of(()->Files.createTempFile("fearless",".reg"));
     Fs.ofV(()->Files.write(file, ("\uFEFF"+regFile(launcher,versionId)).getBytes(StandardCharsets.UTF_16LE)));
-    req(List.of("reg","import",file.toString()));
+    var imported= req(List.of("reg","import",file.toString()));
     Fs.ofV(()->Files.deleteIfExists(file));
-    return clearUserChoice();
+    return imported;
   }
   static final String userChoice= "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts\\"+ext+"\\UserChoice";
   private static String winDefault(){
     return regValue(userChoice,"ProgId").or(()->regValue("HKCU\\Software\\Classes\\"+ext,"")).orElse("");
   }
-  private static String clearUserChoice(){
-    if (regValue(userChoice,"ProgId").isEmpty()){ return "There was no remembered answer to remove."; }
-    var deleted= report(List.of("reg","delete",userChoice,"/f"));
-    if (regValue(userChoice,"ProgId").isEmpty()){ return deleted; }
-    return deleted+"\n"+runScript(unprotectScript());
-  }
-  private static String report(List<String> cmd){ return report(cmd, exec(cmd)); }
   private static String report(List<String> cmd, Optional<Ran> ran){
     var out= ran.map(Ran::out).orElse("The program could not be started.");
     return (String.join(" ",cmd)+"\n"+out).strip();
-  }
-  static String unprotectScript(){
-    return """
-      $ErrorActionPreference = 'Stop'
-      trap { Write-Output $_.Exception.Message; exit 1 }
-      $key = '%s'
-      $acl = Get-Acl -LiteralPath $key
-      $acl.SetAccessRuleProtection($true, $true)
-      foreach ($rule in @($acl.Access)){ if ($rule.AccessControlType -eq 'Deny'){ $acl.RemoveAccessRule($rule) | Out-Null } }
-      Set-Acl -LiteralPath $key -AclObject $acl
-      Remove-Item -LiteralPath $key -Force
-      """.formatted("HKCU:"+userChoice.substring("HKCU".length()));
-  }
-  private static String runScript(String script){
-    var file= Fs.of(()->Files.createTempFile("fearless",".ps1"));
-    Fs.ofV(()->Files.writeString(file, script, StandardCharsets.UTF_8));
-    var out= report(List.of("powershell","-NoProfile","-ExecutionPolicy","Bypass","-File",file.toString()));
-    Fs.ofV(()->Files.deleteIfExists(file));
-    return out;
   }
   private static Optional<String> regValue(String key, String name){
     var cmd= name.isEmpty()
