@@ -280,6 +280,43 @@ public final class Violation {
       ), cause);
   }
 
+  public static UserError couldNotSaveRegisteredFolders(Path managerDir, Throwable cause){
+    return new UserError("""
+      Fearless could not save what it remembers about your project folders.
+
+      %s
+      The manager folder is:
+      %s
+      The change was not recorded, so Fearless will not remember it.
+
+      %s
+      %s""".formatted(
+        managerFolderIntro(),
+        path(managerDir.toString()),
+        reported(cause),
+        blockingPrograms()
+      ), cause);
+  }
+  public static UserError registeredFoldersUnreadable(Path managerDir){
+    return new UserError("""
+      Fearless cannot read back what it remembers about your project folders.
+
+      %s
+      The manager folder is:
+      %s
+      Its content is not what Fearless left there: another program changed it,
+      or an earlier Fearless was stopped while saving. Fearless stops here
+      rather than guess what it used to remember.
+
+      While no Fearless program is running, you can delete the manager folder.
+      Fearless then starts again remembering nothing, and starting Fearless on
+      a project folder registers that folder again.
+      """.formatted(
+        managerFolderIntro(),
+        path(managerDir.toString())
+      ));
+  }
+
   //-- our own generated files, changed under us
   //Either in generated outputs under ".fearless_out", or in the other files of the
   //project after the initial verification checks. Reaching one of these means another
