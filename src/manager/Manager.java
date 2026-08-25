@@ -39,6 +39,7 @@ public class Manager {
     ManagerGui gui= ManagerGui.create(stop::quit, data);
     ManagerTray.install(gui, stop::quit);
     gui.showManager();
+    drainToGui(gui,data,msgDir);//before the offer below: the folder this manager was started on is a folder it knows
     executor.submit(stop.worker(() -> watchMessages(watcher,gui,data,msgDir)));
     executor.submit(stop.worker(gui::tickLoop));//example long lived worker; more will come
     offerAssociation(gui,data);
@@ -87,7 +88,6 @@ public class Manager {
     return files;
   }
   private static void watchMessages(WatchService watcher, ManagerGui gui, ManagerData data, Path msgDir){
-    drainToGui(gui,data,msgDir);//first drain: renders our own launch message, and anything left over from a dead manager
     while(true){
       try { tryWatch(watcher,gui,data,msgDir); }
       catch(InterruptedException e){ return; }
@@ -100,9 +100,12 @@ public class Manager {
     if (!key.reset()){ throw Violation.messageFolderNotWatchable(msgDir); }
   }
   private static void drainToGui(ManagerGui gui, ManagerData data, Path msgDir){
-    //Called only from the single watcher worker (including once at its start):
-    //never concurrently, so no synchronization is needed. If a second caller
-    //is ever added, make this synchronized.
+    //Called once from runOwner, before the watcher worker starts, and from then
+    //on only from that single worker: never concurrently, so no synchronization
+    //is needed. If a caller that can overlap those is ever added, make this
+    //synchronized. The first drain renders our own launch message, and anything
+    //left over from a dead manager; it happens after the watcher is registered,
+    //so messages arriving in between queue up rather than being lost.
     //Reading a message file is delegated to fileSupport (it throws its own
     //UserError); the IOException below covers listing and removing files.
     try {
