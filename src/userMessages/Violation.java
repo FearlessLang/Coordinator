@@ -333,12 +333,11 @@ public final class Violation {
     return new UserError("""
       Fearless is not yet the program that opens Fearless projects.
 
-      Every step succeeded, but your system still answers that a Fearless
-      project is opened with:
+      Fearless registered itself under its own name, and your system still
+      answers that a Fearless project is opened with:
       %s
-      Fearless is registered under its own name, so you can also pick it by
-      hand: right click a Fearless project file, choose "Open with", then
-      Fearless, and ask to always use it.
+      You can pick Fearless by hand: right click a Fearless project file,
+      choose "Open with", then Fearless, and ask to always use it.
 
       Fearless keeps running: only the double-click shortcut is missing.
 
