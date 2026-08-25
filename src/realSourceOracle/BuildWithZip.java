@@ -37,17 +37,17 @@ record Tree(
     var rel= root.relativize(abs);
     var pe= new PathEntry(root, rel);
     if (Files.isSymbolicLink(abs)){
-      if (isInvisible(pe)){ return; }
+      if (BuildWithZip.isInvisible(pe)){ return; }
       throw Report.symlinkForbidden(abs);
     }
     var zip= isDiskZip(abs, rel);
-    if (!isRegularFile(abs) && !zip){ throw isInvisible(pe)
+    if (!isRegularFile(abs) && !zip){ throw BuildWithZip.isInvisible(pe)
       ? Report.invisibleOnlyRegularFilesAndDirs(abs)
       : Report.onlyRegularFilesAndDirs(abs);
     }
-    if (zip && !isInvisible(pe)){ reqNoSiblingFileForZipName(rel); collectBodyDiskZip(root, rel); return; }
+    if (zip && !BuildWithZip.isInvisible(pe)){ reqNoSiblingFileForZipName(rel); collectBodyDiskZip(root, rel); return; }
     for (RefParent p= pe; p.parent()!=p; p= p.parent()){ addKid(p); }
-    if (isRegularFile(abs) && !isInvisible(pe)){ visibleFiles.add(pe); }
+    if (isRegularFile(abs) && !BuildWithZip.isInvisible(pe)){ visibleFiles.add(pe); }
   }
   private void reqNoSiblingFileForZipName(Path rel){
     var name= rel.getFileName().toString();
@@ -62,7 +62,7 @@ record Tree(
     Fs.walkV(root, s->s.filter(p->!p.equals(root)).forEach(abs->{
       var rel= root.relativize(abs);
       nonEmpty.add(parentOrEmpty(rel));
-      if (isInvisible(new PathEntry(root, rel))){ return; }
+      if (BuildWithZip.isInvisible(new PathEntry(root, rel))){ return; }
       if (isDirectory(abs)){ dirs.add(rel); }
       if (!isDiskZip(abs, rel)){ return; }
       var es= ZipWellFormedness.allEntryPaths(root, rel);
@@ -76,24 +76,24 @@ record Tree(
     for (var e: ZipWellFormedness.allEntryPaths(root, rel)){
       if (e.segments().getLast().endsWith(".zip")){ continue; }//expanded
       for (RefParent p= e; p.parent()!=p; p= p.parent()){ addKid(p); }
-      if (!isInvisible(e)){ visibleFiles.add(e); }
+      if (!BuildWithZip.isInvisible(e)){ visibleFiles.add(e); }
     }
   }
   private void addKid(RefParent kid){
     var dir= kid.parent();
     if (dir == kid){ return; } // root
-    var m= isInvisible(dir) ? dotKidsByDir : visKidsByDir;
+    var m= BuildWithZip.isInvisible(dir) ? dotKidsByDir : visKidsByDir;
     m.computeIfAbsent(dir, _->new LinkedHashSet<>()).add(kid);
   }
   private static boolean isDiskZip(Path abs, Path rel){ return isRegularFile(abs) && rel.getFileName().toString().endsWith(".zip"); }
   private static Path parentOrEmpty(Path p){ return p.getParent()==null ? Path.of("") : p.getParent(); }
+}
+public final class BuildWithZip{
   public static boolean isInvisible(RefParent r){
     var fp= r.fearPath();
     assert fp.startsWith(SourceOracle.root);
     return Stream.of(fp.substring(SourceOracle.root.length()).split("/")).anyMatch(s->s.startsWith("."));
   }
-}
-final class BuildWithZip{
   private final Tree t;
   BuildWithZip(Path root){
     var r= root.toAbsolutePath().normalize();
@@ -102,17 +102,17 @@ final class BuildWithZip{
   List<Ref> build(){
     t.collect();
     t.visKidsByDir().forEach((_,kids)->{
-      kids.forEach(this::checkIndividualVisibleSegment);
+      kids.forEach(BuildWithZip::checkIndividualVisibleSegment);
       checkCollectiveVisible(kids);
     });
     t.dotKidsByDir().forEach((_,kids)->{
-      kids.forEach(this::checkIndividualInvisibleSegment);
+      kids.forEach(BuildWithZip::checkIndividualInvisibleSegment);
       checkCollectiveInvisible(kids);
     });
     return List.copyOf(t.visibleFiles());
   }
-  void checkTooLong(RefParent kid){     if (kid.fearPath().length() > 200 + SourceOracle.root.length()){ throw Report.pathTooLong(kid); } }
-  private void checkIndividualVisibleSegment(RefParent kid){
+  static void checkTooLong(RefParent kid){     if (kid.fearPath().length() > 200 + SourceOracle.root.length()){ throw Report.pathTooLong(kid); } }
+  public static void checkIndividualVisibleSegment(RefParent kid){
     checkTooLong(kid);
     var name= Fs.fileNameWithExtension(kid.fearPath());
     int d0= name.indexOf('.');
@@ -125,7 +125,7 @@ final class BuildWithZip{
     checkVisibleAtom(kid, name.substring(0, d0));
     checkExt(kid, name.substring(d0 + 1, name.length()));
   }
-  private void checkVisibleAtom(RefParent kid, String atom){
+  private static void checkVisibleAtom(RefParent kid, String atom){
     char c0= atom.charAt(0);
     var letterOr_= c0 == '_' || ('a' <= c0 && c0 <= 'z');
     if (!letterOr_){ throw Report.visibleMustStartWithLetterOrUnderscore(kid); }
@@ -138,13 +138,13 @@ final class BuildWithZip{
     }
     if (winReserved.contains(atom)){ throw Report.windowsReservedName(kid); }
   }
-  private void checkExt(RefParent kid, String tail){
+  private static void checkExt(RefParent kid, String tail){
     if (tail.isEmpty()){ throw Report.missingExtension(kid); }
     int d= tail.indexOf('.');
     if (d < 0){ checkExtSeg(kid, tail); return; }
     if (!Report.allowedMultiDotExts.contains(tail)){ throw Report.multiDotExtNotAllowed(kid); }
   }
-  private void checkExtSeg(RefParent kid, String seg){
+  private static void checkExtSeg(RefParent kid, String seg){
     int n= seg.length();
     if (n < 1 || n > 16){ throw Report.extLenMustBe1To16(kid); }
     for (int i= 0; i < n; i++){
@@ -160,8 +160,8 @@ final class BuildWithZip{
   );
   private static final String winBadChars="<>:\"/\\|?*";
 
-  private void checkIndividualInvisibleSegment(RefParent kid){
-    assert Tree.isInvisible(kid);
+  private static void checkIndividualInvisibleSegment(RefParent kid){
+    assert isInvisible(kid);
     checkTooLong(kid);
     var name= Fs.fileNameWithExtension(kid.fearPath());
     if (name.endsWith(".") || name.endsWith(" ")){ throw Report.invisibleNoTrailingDotOrSpace(kid, name); }
@@ -176,11 +176,11 @@ final class BuildWithZip{
     var base= (d < 0 ? name : name.substring(0, d)).toLowerCase(Locale.ROOT);
     if (!base.isEmpty() && winReserved.contains(base)){ throw Report.invisibleWindowsReservedDeviceName(kid, base, name); }
   }
-  private void checkCollectiveInvisible(Set<RefParent> kids){
+  private static void checkCollectiveInvisible(Set<RefParent> kids){
     var seenKeyToName= new HashMap<String,String>();
     for (var kid: kids){ checkCollectiveInvisibleFocusOn(seenKeyToName, kid); }
   }
-  private void checkCollectiveInvisibleFocusOn(HashMap<String,String> seenKeyToName, RefParent kid){
+  private static void checkCollectiveInvisibleFocusOn(HashMap<String,String> seenKeyToName, RefParent kid){
     var name= Fs.fileNameWithExtension(kid.fearPath());
     var lowName= name.toLowerCase(Locale.ROOT);
     var nfc= Normalizer.normalize(name, Form.NFC);
@@ -193,7 +193,7 @@ final class BuildWithZip{
     boolean nfcOnly= prevNfc.equals(nfc) && !lowPrev.equals(lowName);
     throw Report.hiddenSiblingNamesCollide(kid, prev, name, caseOnly, nfcOnly);
   }
-  private void checkCollectiveVisible(Set<RefParent> kids){
+  private static void checkCollectiveVisible(Set<RefParent> kids){
     var dotKids= new ArrayList<RefParent>();
     var visKids= new ArrayList<RefParent>();
     for (var kid: kids){ (Fs.fileNameWithExtension(kid.fearPath()).startsWith(".") ? dotKids : visKids).add(kid); }
@@ -207,7 +207,7 @@ final class BuildWithZip{
       checkNoExtBaseClash(visKids, kid, name);
     }
   }
-  private void checkNoDuplicateFearPath(List<RefParent> visKids){
+  private static void checkNoDuplicateFearPath(List<RefParent> visKids){
     var seen= new LinkedHashMap<String,RefParent>();
     for (var kid: visKids){
       var prev= seen.putIfAbsent(kid.fearPath(), kid);
@@ -217,7 +217,7 @@ final class BuildWithZip{
       throw Report.zipExpandedPathCollides(kid, zip, real);
     }
   }
-  private void checkNoExtBaseClash(List<RefParent> visKids, RefParent noExtKid, String base){
+  private static void checkNoExtBaseClash(List<RefParent> visKids, RefParent noExtKid, String base){
     for (var kid: visKids){
       if (kid.equals(noExtKid)){ continue; }
       var name= Fs.fileNameWithExtension(kid.fearPath());

@@ -37,6 +37,12 @@ public interface Coordinator {
     return JavaTool.runMainFromJars(data,jars,pkgName+".Main");
   }
   default SourceOracle sourceOracle(Path path){ return new RealSourceOracleWithZip(path); }
+  static List<String> pkgNames(Path path){
+    var o= new RealSourceOracleWithZip(path);
+    var map= Helper.pkgMap(o,path);
+    map.values().forEach(u->Helper.okPkgContent(u,path));
+    return List.copyOf(map.keySet());
+  }
   default String main(Path path) throws InterruptedException{ return Helper.main(this, path); }
   
   default List<Literal> frontend(String pkgName, List<Ref> files, SourceOracle oracle, OtherPackages other,Map<String,String> vres){
@@ -58,10 +64,7 @@ class Helper{
   static boolean isFear(Ref u){ return u.toString().endsWith(".fear"); }
   static String main(Coordinator coordinator, Path path) throws InterruptedException{
     SourceOracle o= coordinator.sourceOracle(path);
-    if (o.allFiles().stream().noneMatch(Helper::isFear)){ throw Report.projectEmpty(path); }
-    o.allFiles().stream().filter(Helper::isFear).forEach(Helper::pkgName);//err if not under a pkg
-    var map= new LinkedHashMap<String,List<Ref>>();
-    for(Ref u:o.allFiles()){ pkgNameOpt(u).ifPresent(pn->map.computeIfAbsent(pn,_->new ArrayList<>()).add(u)); }
+    var map= pkgMap(o,path);
     List<Ref> allRanks= map.values().stream().map(u->Helper.okPkgContent(u,path)).toList();
     var pOut= path.resolve(".fearless_out");
     OutputOracle out= ()->pOut;
@@ -78,6 +81,13 @@ class Helper{
     var sb= new StringBuilder();
     for(var p: l.pkgs().keySet()){ sb.append(coordinator.runAllMains(p,out)); }//by design: only the highest rank number's packages have their Main run
     return sb.toString();
+  }
+  static LinkedHashMap<String,List<Ref>> pkgMap(SourceOracle o, Path path){
+    if (o.allFiles().stream().noneMatch(Helper::isFear)){ throw Report.projectEmpty(path); }
+    o.allFiles().stream().filter(Helper::isFear).forEach(Helper::pkgName);//err if not under a pkg
+    var map= new LinkedHashMap<String,List<Ref>>();
+    for(Ref u:o.allFiles()){ pkgNameOpt(u).ifPresent(pn->map.computeIfAbsent(pn,_->new ArrayList<>()).add(u)); }
+    return map;
   }
   static Layer layers(Coordinator coordinator, Map<String,List<Ref>> map, Layer l, List<Ref> ranks){
     int lastNum= rankNumber(ranks.getFirst());
