@@ -46,6 +46,13 @@ final class FileAssociationTest{
     assertTrue(lines.contains("[HKEY_CURRENT_USER\\Software\\Classes\\.fearless\\OpenWithProgids]"), lines.toString());
     assertTrue(lines.contains("\"Fearless.Project.0_001\"=\"\""), lines.toString());
   }
+  @Test void theWindowWhereTheAnswerIsGivenOpensOnTheProjectFileItself(){
+    var cmd= FileAssociation.pickCommand(Path.of("some.fearless"));
+    assertEquals("rundll32.exe", cmd.getFirst());
+    assertEquals("shell32.dll,OpenAs_RunDLL", cmd.get(1));
+    assertEquals(Path.of("some.fearless").toAbsolutePath().toString(), cmd.getLast());
+    assertEquals(3, cmd.size(), cmd.toString());
+  }
   @Test void theRegistryFileUsesTheLineEndingsWindowsWrites(){
     var reg= FileAssociation.regFile(winLauncher,"0_001");
     assertEquals(reg.split("\r\n",-1).length, reg.split("\n",-1).length);

@@ -17,6 +17,7 @@ import java.nio.file.FileSystems;
 import java.nio.file.WatchService;
 
 import fileSupport.StringFiles;
+import managerIcons.FolderName;
 import managerData.ManagerData;
 import tools.JavacTool;
 import userMessages.Report;
@@ -40,19 +41,36 @@ public class Manager {
     gui.showManager();
     executor.submit(stop.worker(() -> watchMessages(watcher,gui,data,msgDir)));
     executor.submit(stop.worker(gui::tickLoop));//example long lived worker; more will come
-    offerAssociation(gui);
+    offerAssociation(gui,data);
     try { stop.await(); }
     finally { executor.shutdownNow(); }
     //shutdownNow is not resource cleanup: it stops the workers, so that a
     //manager on its way out (quit, or showing its error dialog) cannot keep
     //consuming message files that are meant for the next manager.
   }
-  private static void offerAssociation(ManagerGui gui){
+  private static void offerAssociation(ManagerGui gui, ManagerData data){
     var versionId= JavacTool.reqVersionId(Violation::mustUseLauncher);
     if (!FileAssociation.canBecomeDefault(versionId)){ return; }
     if (!gui.askBecomeDefault()){ return; }
     try { FileAssociation.makeDefault(ManagerMain.binDir, versionId, FearlessIcon.file()); }
-    catch(UserError e){ gui.explain(e); }
+    catch(UserError e){ explainOrPick(gui, data, versionId, e); }
+  }
+  //The answer the desktop remembers for Fearless projects is the user's own,
+  //given by hand: Fearless cannot write it and cannot remove it. What Fearless
+  //can do is open the window where that answer is given, on a project file of
+  //a folder it already knows, and then look at what the desktop answers.
+  private static void explainOrPick(ManagerGui gui, ManagerData data, String versionId, UserError problem){
+    var file= projectFile(data);
+    if (FileAssociation.answerGivenByHand().isEmpty() || file.isEmpty()){ gui.explain(problem); return; }
+    if (!gui.askPickByHand()){ gui.explain(problem); return; }
+    FileAssociation.pickByHand(file.get());
+    if (FileAssociation.canBecomeDefault(versionId)){ gui.explain(problem); }
+  }
+  static Optional<Path> projectFile(ManagerData data){
+    return data.registered().stream()
+      .map(e->e.folder().resolve(FolderName.compactName(e.folder())+FileAssociation.ext))
+      .filter(Files::isRegularFile)
+      .findFirst();
   }
   private static WatchService watcher(Path msgDir){
     try {
