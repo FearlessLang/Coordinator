@@ -60,7 +60,12 @@ final class FileAssociation{
     var launcher= launcher().orElseThrow(Bug::unreachable);
     if (Fs.isLinux()){ linuxMakeDefault(binDir, versionId, launcher, icon); }
     if (Fs.isWindows()){ winMakeDefault(launcher, versionId); }
-    if (canBecomeDefault(versionId)){ throw Violation.couldNotOpenFearlessProjects("Your system kept the program it was opening them with before."); }
+    if (!canBecomeDefault(versionId)){ return; }
+    throw Violation.couldNotOpenFearlessProjects("Your system says a Fearless project is still opened with:\n  "+shownDefault());
+  }
+  private static String shownDefault(){
+    var now= Fs.isWindows() ? winDefault() : linuxDefault();
+    return now.isEmpty() ? "nothing at all" : now;
   }
   private static String linuxDefault(){
     return exec(List.of("xdg-mime","query","default",mimeType))
@@ -80,14 +85,19 @@ final class FileAssociation{
     req(List.of("xdg-mime", "default", desktopName(versionId), mimeType));
   }
   private static void winMakeDefault(Path launcher, String versionId){
+    clearUserChoice();
     var file= Fs.of(()->Files.createTempFile("fearless",".reg"));
     Fs.ofV(()->Files.write(file, ("\uFEFF"+regFile(launcher,versionId)).getBytes(StandardCharsets.UTF_16LE)));
     req(List.of("reg","import",file.toString()));
     Fs.ofV(()->Files.deleteIfExists(file));
   }
+  static final String userChoice= "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts\\"+ext+"\\UserChoice";
   private static String winDefault(){
-    var choice= regValue("HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts\\"+ext+"\\UserChoice","ProgId");
-    return choice.or(()->regValue("HKCU\\Software\\Classes\\"+ext,"")).orElse("");
+    return regValue(userChoice,"ProgId").or(()->regValue("HKCU\\Software\\Classes\\"+ext,"")).orElse("");
+  }
+  private static void clearUserChoice(){
+    if (regValue(userChoice,"ProgId").isEmpty()){ return; }
+    req(List.of("reg","delete",userChoice,"/f"));
   }
   private static Optional<String> regValue(String key, String name){
     var cmd= name.isEmpty()
