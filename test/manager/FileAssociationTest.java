@@ -46,22 +46,6 @@ final class FileAssociationTest{
     assertTrue(lines.contains("[HKEY_CURRENT_USER\\Software\\Classes\\.fearless\\OpenWithProgids]"), lines.toString());
     assertTrue(lines.contains("\"Fearless.Project.0_001\"=\"\""), lines.toString());
   }
-  @Test void theRememberedChoiceIsUnlockedByItsOwnerThenRemoved(){
-    var script= FileAssociation.unprotectScript();
-    assertTrue(script.contains("$key = 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts\\.fearless\\UserChoice'"), script);
-    assertTrue(script.contains("$rule.AccessControlType -eq 'Deny'"), script);
-    assertTrue(script.contains("Remove-Item -LiteralPath $key -Force"), script);
-    assertTrue(script.indexOf("Set-Acl") < script.indexOf("Remove-Item"), script);
-  }
-  @Test void theRememberedChoiceIsTakenOutOfWhatItInheritsBeforeItsDenialsAreDropped(){
-    var script= FileAssociation.unprotectScript();
-    assertTrue(script.indexOf("SetAccessRuleProtection($true, $true)") < script.indexOf("RemoveAccessRule"), script);
-  }
-  @Test void unlockingTheRememberedChoiceStopsAndSpeaksAtTheFirstStepThatFails(){
-    var script= FileAssociation.unprotectScript();
-    assertTrue(script.contains("$ErrorActionPreference = 'Stop'"), script);
-    assertTrue(script.contains("trap { Write-Output $_.Exception.Message; exit 1 }"), script);
-  }
   @Test void theRegistryFileUsesTheLineEndingsWindowsWrites(){
     var reg= FileAssociation.regFile(winLauncher,"0_001");
     assertEquals(reg.split("\r\n",-1).length, reg.split("\n",-1).length);

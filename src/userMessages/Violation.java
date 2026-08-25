@@ -329,6 +329,23 @@ public final class Violation {
       What failed:
       %s""".formatted(reported));
   }
+  public static UserError fearlessProjectsOpenWithYourOwnChoice(String current){
+    return new UserError("""
+      Fearless is not yet the program that opens Fearless projects.
+
+      Fearless registered itself under its own name, and your system still
+      answers that a Fearless project is opened with:
+      %s
+      That is the answer you once gave by hand, and your system keeps it for
+      you: it lets only another answer given by hand take its place, and it
+      refuses to let any program, Fearless included, remove it.
+
+      So the last step is yours: right click a Fearless project file, choose
+      "Open with", then Fearless, and ask to always use it.
+
+      Fearless keeps running: only the double-click shortcut is missing.
+      """.formatted(path(current)));
+  }
   public static UserError fearlessProjectsStillOpenWith(String current, String tried){
     return new UserError("""
       Fearless is not yet the program that opens Fearless projects.
