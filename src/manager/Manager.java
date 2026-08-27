@@ -35,7 +35,7 @@ public class Manager {
     var executor= Executors.newVirtualThreadPerTaskExecutor();
     var watcher= watcher(msgDir);//registered BEFORE the first drain: messages arriving in between queue up, they are not lost
     var stop= new Stop();
-    ManagerGui gui= ManagerGui.create(stop::quit, data, Manager::forgetAssociation);
+    ManagerGui gui= ManagerGui.create(stop::quit, data);
     ManagerTray.install(gui, stop::quit);
     gui.showManager();
     drainToGui(gui,data,msgDir);//before the offer below: the folder this manager was started on is a folder it knows
@@ -49,22 +49,13 @@ public class Manager {
     //consuming message files that are meant for the next manager.
   }
   private static void offerAssociation(ManagerGui gui){
-    var versionId= JavacTool.reqVersionId(Violation::mustUseLauncher);
-    if (!FileAssociation.canBecomeDefault(versionId)){ return; }
+    if (!FileAssociation.canBecomeDefault()){ return; }
     if (!gui.askBecomeDefault()){ return; }
-    try { FileAssociation.makeDefault(ManagerMain.binDir, versionId, FearlessIcon.file()); }
     //Which program opens which kind of file is settled in the system settings, by
-    //the person: no program settles it. So the page that settles it opens, and the
-    //message that says what to do there follows it onto the event thread.
-    catch(UserError e){ FileAssociation.showWhereToChoose(versionId); gui.explain(e); }
-  }
-  //Runs on the event thread, from the button: a rare, deliberate action, whose
-  //dialogs are modal anyway and whose commands are the short ones the offer runs.
-  static void forgetAssociation(ManagerGui gui){
-    if (!gui.askForget()){ return; }
-    var versionId= JavacTool.reqVersionId(Violation::mustUseLauncher);
-    var did= FileAssociation.forget(versionId);
-    if (FileAssociation.stillOffered(versionId)){ gui.explain(Violation.fearlessIsStillOffered(did)); }
+    //the person: no program settles it. So the page that settles it opens, and this
+    //waits there with them until they have answered.
+    try { FileAssociation.makeDefault(FileAssociation.launcher().orElseThrow(Bug::unreachable)); }
+    catch(UserError e){ gui.explain(e); }
   }
   private static WatchService watcher(Path msgDir){
     try {
