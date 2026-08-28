@@ -14,7 +14,6 @@ import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Set;
-import java.util.function.Consumer;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
@@ -43,7 +42,7 @@ final class ManagerGui {
   final JLabel elapsed;
   final JTextArea messages;
   final FolderList folders;
-  private ManagerGui(Runnable onQuit, ManagerData data, Consumer<ManagerGui> onForget){
+  private ManagerGui(Runnable onQuit, ManagerData data){
     frame= new JFrame("Fearless Manager");
     elapsed= new JLabel("Running for 00:00:00");
     elapsed.setBorder(BorderFactory.createEmptyBorder(6, 8, 6, 8));
@@ -55,12 +54,9 @@ final class ManagerGui {
     scroll.setBorder(BorderFactory.createTitledBorder("Start messages received"));
     var quit= new JButton("Quit manager");
     quit.addActionListener(_ -> onQuit.run());
-    var forget= new JButton("Remove the association");
-    forget.addActionListener(_ -> onForget.accept(this));
     var bottom= new JPanel(new BorderLayout());
     bottom.add(scroll, BorderLayout.CENTER);
     var quitRow= new JPanel(new FlowLayout(FlowLayout.RIGHT));
-    quitRow.add(forget);
     quitRow.add(quit);
     bottom.add(quitRow, BorderLayout.SOUTH);
     frame.setLayout(new BorderLayout());
@@ -112,15 +108,6 @@ final class ManagerGui {
       Your desktop does not open Fearless projects with this Fearless.
       Make this Fearless the one that opens them?""");
   }
-  boolean askForget(){
-    return ask("""
-      Fearless registered itself with your desktop as a program that opens
-      Fearless projects. Remove that registration?
-
-      Fearless is then no longer offered by name where your desktop asks which
-      program to use. The answer your desktop already remembers is yours: it is
-      left exactly as it is.""");
-  }
   //Asked from the event thread by the button, and from the manager's own thread
   //by the offer: invokeAndWait is a deadlock when it is already the event thread.
   private boolean ask(String question){
@@ -140,10 +127,10 @@ final class ManagerGui {
     new FolderInfo(data, folder, folders::refresh).showIn(frame);
   }
   void foldersChanged(){ SwingUtilities.invokeLater(folders::refresh); }
-  static ManagerGui create(Runnable onQuit, ManagerData data, Consumer<ManagerGui> onForget){
+  static ManagerGui create(Runnable onQuit, ManagerData data){
     var result= new AtomicReference<ManagerGui>();
     try {
-      SwingUtilities.invokeAndWait(() -> result.set(new ManagerGui(onQuit, data, onForget)));
+      SwingUtilities.invokeAndWait(() -> result.set(new ManagerGui(onQuit, data)));
       return result.get();
     }
     catch(InterruptedException|InvocationTargetException e){ throw Violation.couldNotStartGui(e); }

@@ -329,53 +329,53 @@ public final class Violation {
       What failed:
       %s""".formatted(reported));
   }
-  public static UserError fearlessIsStillOffered(String reported){
-    return new UserError("""
-      Fearless is still offered as a program that opens Fearless projects.
-
-      Fearless removed what it had registered with your system, and your system
-      goes on offering it. Nothing else changed: the answer your system opens
-      Fearless projects with is untouched, whatever it names.
-
-      What Fearless did, and what your system answered:
-      %s""".formatted(reported));
-  }
-  public static UserError fearlessProjectsOpenWithYourOwnChoice(String current, String appName){
-    return new UserError("""
-      Fearless is not yet the program that opens Fearless projects.
-
-      Fearless registered itself, and your system still answers that a Fearless
-      project is opened with:
-      %s
-      That answer is yours, and your system keeps it that way: which program
-      opens which kind of file is settled in your system settings, by you, and
-      no program is allowed to settle it, not even to put its own answer back.
-
-      Your settings should now be open on the page your system keeps for
-      %s
-      It lists the kinds of file this Fearless opens. Choose the Fearless
-      project one, and pick Fearless there.
-
-      Fearless keeps running: only the double-click shortcut is missing.
-      """.formatted(path(current), path(appName)));
-  }
-  public static UserError fearlessProjectsStillOpenWith(String current, String tried){
+  public static UserError fearlessProjectsStillOpenWith(String current){
     return new UserError("""
       Fearless is not yet the program that opens Fearless projects.
 
       Fearless registered itself under its own name, and your system still
       answers that a Fearless project is opened with:
       %s
-      You can pick Fearless by hand: right click a Fearless project file,
-      choose "Open with", then Fearless, and ask to always use it.
+      Nothing was left half done: what Fearless wrote has been taken back, and
+      your system is as it was.
+
+      Fearless keeps running: only the double-click shortcut is missing.
+      """.formatted(path(current)));
+  }
+  public static UserError fileIsNotYoursToChange(String reported){
+    return new UserError("""
+      Fearless cannot become the program that opens Fearless projects.
+
+      Another program already answers for this kind of file, and the file that
+      says so is not yours to change. Fearless stopped before touching
+      anything: your system is exactly as it was.
+
+      What stood in the way:
+      %s""".formatted(reported));
+  }
+  public static UserError associationFilesHalfThere(String reported){
+    return new UserError("""
+      Fearless cannot tell which kinds of file it opens.
+
+      Fearless keeps what it opens in a small set of files that are written and
+      removed together, and only some of them are there. Something removed one
+      of them, or an earlier run stopped part way.
 
       Fearless keeps running: only the double-click shortcut is missing.
 
-      What Fearless did last, and what your system answered:
-      %s""".formatted(
-        path(current),
-        tried
-      ));
+      What is out of step:
+      %s""".formatted(reported));
+  }
+  public static UserError associationLeftHalfDone(String reported){
+    return new UserError("""
+      Fearless could not put your system back as it was.
+
+      A step failed, and undoing what had already been written failed too, so
+      your system is left part way. Which program opens Fearless projects may
+      now be wrong, and you can settle it by hand in your system settings.
+
+      Where the undoing stopped:
+      %s""".formatted(reported));
   }
 
   //-- our own generated files, changed under us
