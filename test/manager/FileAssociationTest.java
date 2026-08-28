@@ -8,6 +8,7 @@ import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.junit.jupiter.api.Test;
 
@@ -65,6 +66,13 @@ final class FileAssociationTest{
     assertEquals(1000, mine.lines().filter(l->l.contains("<mime-type")).count());
     assertEquals(1000, mine.lines().filter(l->l.contains("name=\"fearlessManaged0_001-shared\"")).count());
     assertEquals(many, LinuxFileAssociations.readOwned(mine.lines().toList()));
+  }
+  @Test void aProgramOfferingMoreThanOursKeepsWhatIsStillItsOwn(){
+    var types= Set.of("application/x-fearless","application/x-fproof");
+    assertEquals("MimeType=image/png;",
+      LinuxFileAssociations.keeping("MimeType=application/x-fearless;image/png;", types));
+    assertEquals("MimeType=image/png;text/plain;",
+      LinuxFileAssociations.keeping("MimeType=image/png;application/x-fproof;text/plain;", types));
   }
   @Test void thePictureIsFiledUnderTheSizeItsOwnHeaderDeclares(){
     assertEquals(48, LinuxFileAssociations.side(png(48)));
