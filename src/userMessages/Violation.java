@@ -339,9 +339,6 @@ public final class Violation {
       Nothing was left half done: what Fearless wrote has been taken back, and
       your system is as it was.
 
-      You can pick Fearless by hand: right click a Fearless project file,
-      choose "Open with", then Fearless, and ask to always use it.
-
       Fearless keeps running: only the double-click shortcut is missing.
       """.formatted(path(current)));
   }
