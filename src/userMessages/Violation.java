@@ -356,6 +356,19 @@ public final class Violation {
       What stood in the way:
       %s""".formatted(reported));
   }
+  public static UserError associationFilesHalfThere(String reported){
+    return new UserError("""
+      Fearless cannot tell which kinds of file it opens.
+
+      Fearless keeps what it opens in a small set of files that are written and
+      removed together, and only some of them are there. Something removed one
+      of them, or an earlier run stopped part way.
+
+      Fearless keeps running: only the double-click shortcut is missing.
+
+      What is out of step:
+      %s""".formatted(reported));
+  }
   public static UserError associationLeftHalfDone(String reported){
     return new UserError("""
       Fearless could not put your system back as it was.

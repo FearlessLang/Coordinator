@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.Optional;
 
 import tools.FileAssociations;
-import tools.Fs;
 import userMessages.Violation;
 
 final class FileAssociation{
@@ -18,17 +17,14 @@ final class FileAssociation{
     var dot= file.lastIndexOf('.');
     return dot < 0 ? file : file.substring(0, dot);
   }
-  static boolean canBecomeDefault(){
-    if (Fs.isMac()){ return false; }
-    return launcher().filter(l->!FileAssociations.of().taken(name(l), extensions)).isPresent();
-  }
   //On Windows the icon of a file type is taken from a program, not from a picture:
   //the launcher carries the one jpackage put in it.
-  static void makeDefault(Path launcher){
-    FileAssociations.of().associate(name(launcher), extensions, launcher, FearlessIcon.file(), launcher.toString(),
+  static FileAssociations of(Path launcher){
+    return FileAssociations.of(name(launcher), launcher.toString(), launcher, FearlessIcon.file(),
       Violation::fileIsNotYoursToChange,
       Violation::couldNotOpenFearlessProjects,
       Violation::fearlessProjectsStillOpenWith,
-      Violation::associationLeftHalfDone);
+      Violation::associationLeftHalfDone,
+      Violation::associationFilesHalfThere);
   }
 }

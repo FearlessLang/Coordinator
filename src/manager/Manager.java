@@ -18,7 +18,8 @@ import java.nio.file.WatchService;
 
 import fileSupport.StringFiles;
 import managerData.ManagerData;
-import tools.JavacTool;
+import tools.Fs;
+import tools.FileAssociations;
 import userMessages.Report;
 import userMessages.UserError;
 import userMessages.Violation;
@@ -49,13 +50,19 @@ public class Manager {
     //consuming message files that are meant for the next manager.
   }
   private static void offerAssociation(ManagerGui gui){
-    if (!FileAssociation.canBecomeDefault()){ return; }
-    if (!gui.askBecomeDefault()){ return; }
-    //Which program opens which kind of file is settled in the system settings, by
-    //the person: no program settles it. So the page that settles it opens, and this
-    //waits there with them until they have answered.
-    try { FileAssociation.makeDefault(FileAssociation.launcher().orElseThrow(Bug::unreachable)); }
+    if (Fs.isMac()){ return; }
+    var launcher= FileAssociation.launcher();
+    if (launcher.isEmpty()){ return; }
+    try { becomeDefault(gui, FileAssociation.of(launcher.get())); }
     catch(UserError e){ gui.explain(e); }
+  }
+  //Which program opens which kind of file is settled in the system settings, by
+  //the person: no program settles it. So the page that settles it opens, and this
+  //waits there with them until they have answered.
+  private static void becomeDefault(ManagerGui gui, FileAssociations association){
+    if (association.owned().containsAll(FileAssociation.extensions)){ return; }
+    if (!gui.askBecomeDefault()){ return; }
+    association.acquire(FileAssociation.extensions);
   }
   private static WatchService watcher(Path msgDir){
     try {
