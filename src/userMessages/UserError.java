@@ -40,6 +40,13 @@ public final class UserError extends RuntimeException{
   UserError(String msg){ super(msg); }
   UserError(String msg, Throwable cause){ super(msg, cause); }
 
+  private String recoveryLabel;
+  private Runnable recovery;
+  public UserError withRecovery(String label, Runnable action){
+    recoveryLabel= label; recovery= action;
+    return this;
+  }
+
   //The project root this run actually used, so that a message always shows the folder
   //that was really involved. Tests set it to whatever fake root they use; a real run
   //keeps the default, since Fearless is launched from inside the project folder.
@@ -136,7 +143,14 @@ Details:
     catch(InvocationTargetException e){ displayStderr(e.getCause()); }//Rare, could be a memory overflow or other JVM stuff?
   }
   private void displayNow(){
-    JOptionPane.showMessageDialog(null, displayText(), "Fearless", JOptionPane.ERROR_MESSAGE);
+    if (recovery == null){
+      JOptionPane.showMessageDialog(null, displayText(), "Fearless", JOptionPane.ERROR_MESSAGE);
+      return;
+    }
+    var options= new Object[]{"OK", recoveryLabel};
+    var choice= JOptionPane.showOptionDialog(null, displayText(), "Fearless",
+      JOptionPane.DEFAULT_OPTION, JOptionPane.ERROR_MESSAGE, null, options, options[0]);
+    if (choice == 1){ recovery.run(); }
   }
   public void displayStderr(Throwable displayFailure){
     System.err.print(displayText()+"\n\n");
