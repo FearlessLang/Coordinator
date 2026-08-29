@@ -52,6 +52,18 @@ public class RunIntegration {
     utils.Err.strCmp("Test failure MyTests at line: 5 in file: _hello/_rank_app.fear [###]", String.join("\n",fails));
   }
   @Test void map_a_to_pkc(){ testOk("map_a_to_pkc");}
+  // What counts as a main of a package: a top level type implementing base.Main, and
+  // also one declared inside a method when it implements base.CaptureFree, since that
+  // is the promise that it captures nothing and so the backend gives it an instance.
+  // A main declared inside a method WITHOUT that promise may capture the parameters
+  // and the "this" of its enclosing method, so there is no instance of it to run, and
+  // it is correctly left out: "MkCapturing.mk" is the only way to obtain one.
+  @Test void mainInMethod(){
+    utils.Err.strCmp("""
+capture free main in a method
+top level main
+""", run("mainInMethod"));
+  }
   @Test void helloStackTraces(){ testOk("helloStackTraces");}
   @Test void testingStandardLibrary(){ testOk("testingStandardLibrary");}
   @Test void testDocs(){ testOk("testDocs");}

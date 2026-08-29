@@ -14,7 +14,7 @@ import utils.Join;
 public final class ApiJson{
   //Note: we do not filter _names, because they can still be needed since they can appear as meth signatures or subtypes and type system need to reason on them, even if can not be used by name outside pkg
   public static String toJSon(List<Literal> core){ return Join.of(AllLs.of(core).values().stream().map(ApiJson::typeJ), "[", ",", "]", "[]"); }
-  static String typeJ(Literal l){ return Join.of(List.of(q(l.name().s()), q(l.rc().name()), bsJ(l.bs()), csJ(l.cs()), msJ(l.ms())), "[", ",", "]"); }
+  static String typeJ(Literal l){ return Join.of(List.of(q(l.name().s()), q(l.rc().name()), bsJ(l.bs()), csJ(l.cs()), msJ(l.ms()), q(l.thisName())), "[", ",", "]"); }
   static String bsJ(List<B> bs){ return Join.of(bs.stream().map(ApiJson::bJ), "[", ",", "]", "[]"); }
   static String bJ(B b){ return Join.of(Stream.concat(Stream.of(q(b.x())), b.rcs().stream().map(rc->q(rc.name()))), "[", ",", "]", "[]"); }
   static String csJ(List<T.C> cs){ return Join.of(cs.stream().map(ApiJson::cJ), "[", ",", "]", "[]"); }
