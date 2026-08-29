@@ -323,7 +323,7 @@ public final class Violation {
       projects: more than one is registered with your system at once.
 
       Fearless stopped before touching anything: your system is exactly as it
-      was. Fearless keeps running: only the double-click shortcut is missing.
+      was.
 
       What is registered:
       %s""".formatted(reported));
@@ -340,8 +340,6 @@ public final class Violation {
       The only way to clear it is Settings, Apps, Default apps, Reset - which
       resets every app default on your machine, not only this one.
 
-      Fearless keeps running: only the double-click shortcut is missing.
-
       What is locked:
       %s""".formatted(reported));
   }
@@ -351,8 +349,6 @@ public final class Violation {
 
       Another program already answers for this kind of file. Fearless stopped
       before touching anything: your system is exactly as it was.
-
-      Fearless keeps running: only the double-click shortcut is missing.
 
       What stood in the way:
       %s""".formatted(reported));
