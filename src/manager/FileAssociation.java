@@ -24,10 +24,14 @@ final class FileAssociation{
     var identity= identity(launcher);
     if (!belongsToFamily.test(identity)){ return; }
     FileAssociations.reconcile(identity, belongsToFamily, launcher, extensions, launcher, FearlessIcon.file(),
-      Violation::associationsAmbiguous,
+      reported->Violation.associationsAmbiguous(reported).withRecovery(
+        "Remove all Fearless registrations", FileAssociation::eradicateAll),
       Violation::associationUserLocked,
       Violation::associationNotOurs,
       Violation::associationNotWritable,
       Violation::associationLeftHalfDone);
+  }
+  private static void eradicateAll(){
+    FileAssociations.eradicateAll(belongsToFamily, Violation::associationLeftHalfDone);
   }
 }
