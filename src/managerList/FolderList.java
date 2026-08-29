@@ -70,6 +70,15 @@ public final class FolderList extends JPanel{
     rows.forEach(model::addElement);
   }
   public void sortBy(Sort order){ sort.setSelectedItem(order); }
+  public void select(Path folder){
+    for(int i= 0; i < model.size(); i+= 1){
+      if (!model.get(i).entry().folder().equals(folder)){ continue; }
+      list.setSelectedIndex(i);
+      list.ensureIndexIsVisible(i);
+      onOpen.accept(folder);
+      return;
+    }
+  }
   private Sort selected(){ return (Sort)sort.getSelectedItem(); }
   private static Row row(ManagerData.Entry e){
     return new Row(e,FolderName.compactName(e.folder()),

@@ -12,8 +12,11 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -25,6 +28,7 @@ import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.JSplitPane;
 import javax.swing.JTextArea;
 import javax.swing.SwingUtilities;
 import javax.swing.WindowConstants;
@@ -43,11 +47,18 @@ final class ManagerGui {
   final JLabel elapsed;
   final JTextArea messages;
   final FolderList folders;
-  private ManagerGui(Runnable onQuit, ManagerData data, Consumer<ManagerGui> onForget){
+  final JSplitPane split;
+  private final ManagerData data;
+  private final Executor worker;
+  private final Map<Path,FolderInfo> open= new LinkedHashMap<>();
+  private FolderInfo shown;
+  private ManagerGui(Runnable onQuit, ManagerData data, Executor worker, Consumer<ManagerGui> onForget){
     frame= new JFrame("Fearless Manager");
+    this.data= data;
+    this.worker= worker;
     elapsed= new JLabel("Running for 00:00:00");
     elapsed.setBorder(BorderFactory.createEmptyBorder(6, 8, 6, 8));
-    folders= new FolderList(data, folder -> openFolder(data, folder));
+    folders= new FolderList(data, this::showFolder);
     folders.setBorder(BorderFactory.createTitledBorder("Registered project folders"));
     messages= new JTextArea(6, 60);
     messages.setEditable(false);
@@ -63,9 +74,12 @@ final class ManagerGui {
     quitRow.add(forget);
     quitRow.add(quit);
     bottom.add(quitRow, BorderLayout.SOUTH);
+    split= new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, folders, new JPanel());
+    split.setResizeWeight(0.35);
+    split.setDividerLocation(300);
     frame.setLayout(new BorderLayout());
     frame.add(elapsed, BorderLayout.NORTH);
-    frame.add(folders, BorderLayout.CENTER);
+    frame.add(split, BorderLayout.CENTER);
     frame.add(bottom, BorderLayout.SOUTH);
     frame.setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
     frame.addWindowListener(new WindowAdapter(){//closing the window only hides the manager; the Quit button terminates it
@@ -129,14 +143,24 @@ final class ManagerGui {
   void explain(UserError problem){
     SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(frame, problem.getMessage(), "Fearless", JOptionPane.WARNING_MESSAGE));
   }
-  private void openFolder(ManagerData data, Path folder){
-    new FolderInfo(data, folder, folders::refresh).showIn(frame);
+  void select(Path folder){ SwingUtilities.invokeLater(()->folders.select(folder)); }
+  private void showFolder(Path folder){
+    shown= open.computeIfAbsent(folder, f->new FolderInfo(data, f, worker, this::foldersChangedHere));
+    split.setRightComponent(shown.panel());
+    split.revalidate();
+  }
+  private void foldersChangedHere(){
+    folders.refresh();
+    var live= data.registered().stream().map(e->e.folder()).toList();
+    open.values().stream().filter(i->!live.contains(i.folder())).forEach(i->i.session().terminate());
+    open.keySet().removeIf(f->!live.contains(f));
+    if (shown != null && !live.contains(shown.folder())){ shown= null; split.setRightComponent(new JPanel()); }
   }
   void foldersChanged(){ SwingUtilities.invokeLater(folders::refresh); }
-  static ManagerGui create(Runnable onQuit, ManagerData data, Consumer<ManagerGui> onForget){
+  static ManagerGui create(Runnable onQuit, ManagerData data, Executor worker, Consumer<ManagerGui> onForget){
     var result= new AtomicReference<ManagerGui>();
     try {
-      SwingUtilities.invokeAndWait(() -> result.set(new ManagerGui(onQuit, data, onForget)));
+      SwingUtilities.invokeAndWait(() -> result.set(new ManagerGui(onQuit, data, worker, onForget)));
       return result.get();
     }
     catch(InterruptedException|InvocationTargetException e){ throw Violation.couldNotStartGui(e); }
@@ -161,12 +185,14 @@ final class ManagerGui {
   }
   private boolean tick(Instant start){
     setElapsed(Duration.between(start, Instant.now()));
+    SwingUtilities.invokeLater(this::tickShown);
     try { Thread.sleep(tickDelay); return true; }
     catch(InterruptedException e){ return false; }//interruption is the designed stop signal for this worker
   }
   private void setElapsed(Duration duration){
     SwingUtilities.invokeLater(() -> elapsed.setText("Running for "+formatDuration(duration)));
   }
+  private void tickShown(){ if (shown != null){ shown.tick(); } }
   private static String oneLine(String text){ return text.replace('\r',' ').replace('\n',' '); }
   static String formatDuration(Duration duration){
     var seconds= duration.toSeconds();

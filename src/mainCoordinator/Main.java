@@ -5,15 +5,9 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import java.awt.Desktop;
 import java.awt.Font;
 import java.awt.Taskbar;
-import java.io.OutputStream;
 import java.io.PrintStream;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URI;
-import java.nio.ByteBuffer;
-import java.nio.CharBuffer;
-import java.nio.charset.CharsetDecoder;
-import java.nio.charset.CodingErrorAction;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -37,6 +31,7 @@ import fileAssociations.Icon;
 import userMessages.UserError;
 import userMessages.Violation;
 import tools.Fs;
+import tools.Utf8Sink;
 import tools.JavacTool;
 
 public final class Main{
@@ -150,52 +145,5 @@ public final class Main{
     Path p; try{ p= s.startsWith("file:")?Path.of(URI.create(s)):Path.of(s); }
     catch(RuntimeException ex){ throw Violation.badLaunchArg(s, hasConsoleFlag()); }
     return p.toAbsolutePath().normalize();
-  }
-}
-class Utf8Sink extends OutputStream{
-  private final Consumer<String> out;
-  private final CharsetDecoder decoder= StandardCharsets.UTF_8.newDecoder()
-    .onMalformedInput(CodingErrorAction.REPLACE)
-    .onUnmappableCharacter(CodingErrorAction.REPLACE);
-  private ByteBuffer inBuf= ByteBuffer.allocate(8192);
-  private final CharBuffer outBuf= CharBuffer.allocate(8192);
-  Utf8Sink(Consumer<String> out){ this.out= out; }
-  @Override public void write(int b){ write(new byte[]{(byte)b}, 0, 1); }
-  @Override public synchronized void write(byte[] b, int off, int len){
-    if (inBuf.remaining() < len){ expandBuffer(inBuf.position() + len); }
-    inBuf.put(b, off, len);
-    inBuf.flip();
-    decodeLoop(false);
-    inBuf.compact();
-  }
-  @Override public synchronized void close(){
-    inBuf.flip();
-    decodeLoop(true);
-    while(true){
-      outBuf.clear();
-      var r= decoder.flush(outBuf);
-      drainOutput();
-      if (r.isUnderflow()){ break; }
-    }
-    inBuf.clear();
-  }
-  private void decodeLoop(boolean end){
-    while(true){
-      outBuf.clear();
-      var r= decoder.decode(inBuf, outBuf, end);
-      drainOutput();
-      if (r.isUnderflow()){ break; }
-    }
-  }
-  private void drainOutput(){
-    outBuf.flip();
-    if (outBuf.hasRemaining()){ out.accept(outBuf.toString()); }
-  }
-  private void expandBuffer(int neededSize){
-    int newCap= Math.max(inBuf.capacity() * 2, neededSize);
-    ByteBuffer newBuf= ByteBuffer.allocate(newCap);
-    inBuf.flip();
-    newBuf.put(inBuf);
-    inBuf= newBuf;
   }
 }
