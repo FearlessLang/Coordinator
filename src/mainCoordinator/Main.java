@@ -16,11 +16,13 @@ import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 import javax.imageio.ImageIO;
@@ -30,6 +32,8 @@ import javax.swing.JTextArea;
 import javax.swing.SwingUtilities;
 
 import coordinator.Coordinator;
+import fileAssociations.FileAssociations;
+import fileAssociations.Icon;
 import userMessages.UserError;
 import userMessages.Violation;
 import tools.Fs;
@@ -48,6 +52,7 @@ public final class Main{
   }
   private static void run(String[] args) throws InvocationTargetException, InterruptedException, ExecutionException{
     var appDir= JavacTool.reqAppDir(Violation::mustUseLauncher);
+    offerAssociation(appDir);
     Optional<Path> launch= launchPath(args);
     if (Fs.isMac() && !hasConsoleFlag()){ registerMacSpawnHandler(appDir); }
     if (!launch.isPresent()){
@@ -65,7 +70,29 @@ public final class Main{
     new Coordinator(){
       @Override public Path stLibPath(){ return base; }
       @Override public Path rtPath(){ return rt; }
-    }.main(project);  
+    }.main(project);
+  }
+  private static final Predicate<String> belongsToFamily= s->s.contains("earless");
+  private static void offerAssociation(Path appDir){
+    if (Fs.isMac()){ return; }
+    var launcher= ProcessHandle.current().info().command().map(Path::of);
+    if (launcher.isEmpty()){ return; }
+    var l= launcher.get();
+    var identity= identity(l);
+    if (!belongsToFamily.test(identity)){ return; }
+    var icon= appDir.resolve("icon.png");
+    FileAssociations.reconcile(identity, belongsToFamily, l, List.of(new Icon(".fearless", l, icon)), l, icon,
+      reported->Violation.associationsAmbiguous(reported).withRecovery(
+        "Remove all Fearless registrations", ()->FileAssociations.eradicateAll(belongsToFamily, Violation::associationLeftHalfDone)),
+      Violation::associationUserLocked,
+      Violation::associationNotOurs,
+      Violation::associationNotWritable,
+      Violation::associationLeftHalfDone);
+  }
+  private static String identity(Path launcher){
+    var file= launcher.getFileName().toString();
+    var dot= file.lastIndexOf('.');
+    return dot < 0 ? file : file.substring(0, dot);
   }
   private static void registerMacSpawnHandler(Path appDir){
     Desktop.getDesktop().setOpenFileHandler(e->e.getFiles().forEach(f->spawnMac(appDir, f.toPath())));
