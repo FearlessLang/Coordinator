@@ -107,6 +107,7 @@ class OutputHelper{
   private static boolean eqApi(Literal a, Literal b){
     if (a.rc() != b.rc()){ return false; }
     if (!a.name().equals(b.name())){ return false; }
+    if (!a.thisName().equals(b.thisName())){ return false; }
     if (!a.bs().equals(b.bs())){ return false; }
     if (!a.cs().equals(b.cs())){ return false; }
     return eqMs(a.ms(), b.ms());

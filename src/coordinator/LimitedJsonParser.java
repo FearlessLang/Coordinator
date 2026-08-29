@@ -59,7 +59,7 @@ final class LimitedJsonParser{
     return out;
   }
   private Literal typeLit(List<Object> a){
-    if (a.size() != 5){ throw err("Bad type record size"); }
+    if (a.size() != 6){ throw err("Bad type record size"); }
     var nameS= asStr(a.get(0));
     var rc= RC.valueOf(asStr(a.get(1)));
     var bs= asArr(a.get(2)).stream().map(x->bFrom(asArr(x))).toList();
@@ -67,8 +67,7 @@ final class LimitedJsonParser{
     var cs= asArr(a.get(3)).stream().map(x->cFrom(asArr(x))).toList();
     var ms= asArr(a.get(4)).stream().map(x->mFrom(asArr(x))).toList();
     //We need also the non public for subtyping reasoning//if (!tn.isPublic()){ throw err("Non-public type in api json: "+nameS); }
-    //thisName is not part of the api json (ms carry no bodies here), so "this" is just a placeholder value never read back.
-    return new Literal(rc, tn, bs, cs, "this", ms, dummySrc(), false);
+    return new Literal(rc, tn, bs, cs, asStr(a.get(5)), ms, dummySrc(), false);
   }
   private M mFrom(List<Object> a){
     if (a.size() != 8){ throw err("Bad M"); }
