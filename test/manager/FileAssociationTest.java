@@ -1,6 +1,7 @@
 package manager;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -8,85 +9,84 @@ import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import org.junit.jupiter.api.Test;
 
-import tools.LinuxFileAssociations;
-import tools.WindowsFileAssociations;
+import fileAssociations.Icon;
+import fileAssociations.LinuxAssociations;
+import fileAssociations.WindowsAssociations;
 
 final class FileAssociationTest{
   private static final Path linuxLauncher= Path.of("/home/me/fearlessManaged0_001/bin/fearlessManaged0_001");
   private static final Path winLauncher= Path.of("C:\\fearlessManaged0_001\\fearlessManaged0_001.exe");
   private static final Path proof= Path.of("C:\\fearlessManaged0_001\\proof.ico");
-  private static final String name= "fearlessManaged0_001";
+  private static final Path programIco= Path.of("C:\\fearlessManaged0_001\\app.ico");
+  private static final String identity= "fearlessManaged0_001";
   private static Map<String,String> owned(){
     var res= new LinkedHashMap<String,String>();
-    res.put(".fearless", name+"-aaa");
-    res.put(".fproof", name+"-bbb");
+    res.put(".fearless", identity+"-aaa");
+    res.put(".fproof", identity+"-bbb");
     return res;
   }
   @Test void theLauncherNamesTheProgramAndTheManagerIsNotThePortable(){
-    assertEquals(name, FileAssociation.name(linuxLauncher));
-    assertEquals(name, FileAssociation.name(Path.of("fearlessManaged0_001.exe")));
-    assertNotEquals(FileAssociation.name(linuxLauncher),
-      FileAssociation.name(Path.of("/home/me/fearlessBin0_001/bin/fearlessBin0_001")));
+    assertEquals(identity, FileAssociation.identity(linuxLauncher));
+    assertEquals(identity, FileAssociation.identity(Path.of("fearlessManaged0_001.exe")));
+    assertNotEquals(FileAssociation.identity(linuxLauncher),
+      FileAssociation.identity(Path.of("/home/me/fearlessBin0_001/bin/fearlessBin0_001")));
+  }
+  @Test void everyLauncherOfTheFamilyNamesItInItsOwnFile(){
+    assertTrue(FileAssociation.belongsToFamily.test("fearlessManaged0_001"));
+    assertTrue(FileAssociation.belongsToFamily.test("FearlessApp_001"));
+    assertFalse(FileAssociation.belongsToFamily.test("SomeOtherEditor"));
   }
   @Test void everyExtensionGetsAKindOfItsOwn(){
-    assertEquals("application/x-fearless", LinuxFileAssociations.typeOf(".fearless"));
-    assertEquals("application/x-fproof", LinuxFileAssociations.typeOf(".fproof"));
+    assertEquals("application/x-fearless", LinuxAssociations.typeOf(".fearless"));
+    assertEquals("application/x-fproof", LinuxAssociations.typeOf(".fproof"));
   }
   @Test void theOneDesktopEntryHandsEveryKindToTheRunningLauncher(){
     var types= List.of("application/x-fearless","application/x-fproof");
-    var entry= LinuxFileAssociations.desktopEntry(name, linuxLauncher.toString(), types);
+    var entry= LinuxAssociations.desktopEntry(identity, linuxLauncher.toString(), types);
     assertTrue(entry.startsWith("[Desktop Entry]\n"), entry);
     assertTrue(entry.contains("Exec=/home/me/fearlessManaged0_001/bin/fearlessManaged0_001 %f"), entry);
     assertTrue(entry.contains("MimeType=application/x-fearless;application/x-fproof;"), entry);
     assertTrue(entry.contains("Icon=fearlessManaged0_001"), entry);
   }
   @Test void everyKindIsDeclaredOutrightAtTheWeightThatSettlesTheFileName(){
-    var mine= LinuxFileAssociations.mimePackage(name, owned());
+    var mine= LinuxAssociations.mimePackage(identity, owned());
     assertTrue(mine.contains("<mime-type type=\"application/x-fearless\">"), mine);
     assertTrue(mine.contains("<glob pattern=\"*.fearless\" weight=\"100\"/>"), mine);
     assertTrue(mine.contains("<glob pattern=\"*.fproof\" weight=\"100\"/>"), mine);
   }
   @Test void eachKindNamesItsOwnPictureSoOneBatchCanCarryMany(){
-    var mine= LinuxFileAssociations.mimePackage(name, owned());
+    var mine= LinuxAssociations.mimePackage(identity, owned());
     assertTrue(mine.contains("<icon name=\"fearlessManaged0_001-aaa\"/>"), mine);
     assertTrue(mine.contains("<icon name=\"fearlessManaged0_001-bbb\"/>"), mine);
   }
   @Test void whatWeDeclaredIsWhatWeReadBackOnTheNextRun(){
-    var mine= LinuxFileAssociations.mimePackage(name, owned());
-    assertEquals(owned(), LinuxFileAssociations.readOwned(mine.lines().toList()));
+    var mine= LinuxAssociations.mimePackage(identity, owned());
+    assertEquals(owned(), LinuxAssociations.readOwned(mine.lines().toList()));
   }
   @Test void aThousandExtensionsShareOnePictureAndOneDeclarationFile(){
     var many= new LinkedHashMap<String,String>();
-    for (var i= 0; i < 1000; i++){ many.put(".fear"+i, name+"-shared"); }
-    var mine= LinuxFileAssociations.mimePackage(name, many);
+    for (var i= 0; i < 1000; i++){ many.put(".fear"+i, identity+"-shared"); }
+    var mine= LinuxAssociations.mimePackage(identity, many);
     assertEquals(1000, mine.lines().filter(l->l.contains("<mime-type")).count());
     assertEquals(1000, mine.lines().filter(l->l.contains("name=\"fearlessManaged0_001-shared\"")).count());
-    assertEquals(many, LinuxFileAssociations.readOwned(mine.lines().toList()));
-  }
-  @Test void aProgramOfferingMoreThanOursKeepsWhatIsStillItsOwn(){
-    var types= Set.of("application/x-fearless","application/x-fproof");
-    assertEquals("MimeType=image/png;",
-      LinuxFileAssociations.keeping("MimeType=application/x-fearless;image/png;", types));
-    assertEquals("MimeType=image/png;text/plain;",
-      LinuxFileAssociations.keeping("MimeType=image/png;application/x-fproof;text/plain;", types));
+    assertEquals(many, LinuxAssociations.readOwned(mine.lines().toList()));
   }
   @Test void thePictureIsFiledUnderTheSizeItsOwnHeaderDeclares(){
-    assertEquals(48, LinuxFileAssociations.side(png(48)));
-    assertEquals(256, LinuxFileAssociations.side(png(256)));
+    assertEquals(48, LinuxAssociations.side(png(48)));
+    assertEquals(256, LinuxAssociations.side(png(256)));
   }
   @Test void thePictureNameFollowsWhatIsInsideItSoTheSameOneIsFiledOnce(){
-    assertEquals(LinuxFileAssociations.hash(png(48)), LinuxFileAssociations.hash(png(48)));
-    assertNotEquals(LinuxFileAssociations.hash(png(48)), LinuxFileAssociations.hash(png(32)));
+    assertEquals(LinuxAssociations.hash(png(48)), LinuxAssociations.hash(png(48)));
+    assertNotEquals(LinuxAssociations.hash(png(48)), LinuxAssociations.hash(png(32)));
   }
   @Test void theRegistryFileGivesEveryExtensionATypeOfItsOwn(){
     var lines= regFile();
     assertTrue(lines.contains("[HKEY_CURRENT_USER\\Software\\Classes\\fearlessManaged0_001.fearless]"), lines.toString());
     assertTrue(lines.contains("[HKEY_CURRENT_USER\\Software\\Classes\\fearlessManaged0_001.fproof]"), lines.toString());
-    assertEquals("fearlessManaged0_001.fproof", WindowsFileAssociations.progId(name, ".fproof"));
+    assertEquals("fearlessManaged0_001.fproof", WindowsAssociations.progId(identity, ".fproof"));
   }
   @Test void eachTypeCarriesItsOwnPictureAndTheOneSharedCommand(){
     var lines= regFile();
@@ -94,6 +94,11 @@ final class FileAssociationTest{
     assertTrue(lines.contains("@=\"C:\\\\fearlessManaged0_001\\\\proof.ico,0\""), lines.toString());
     assertEquals(2, lines.stream().filter(l->l.endsWith("\\shell\\open\\command]")).count(), lines.toString());
     assertEquals(2, lines.stream().filter(l->l.equals("@=\"\\\"C:\\\\fearlessManaged0_001\\\\fearlessManaged0_001.exe\\\" \\\"%1\\\"\"")).count(), lines.toString());
+  }
+  @Test void theRegistryFileCarriesTheApplicationsOwnPictureToo(){
+    var lines= regFile();
+    assertTrue(lines.contains("[HKEY_CURRENT_USER\\Software\\fearlessManaged0_001\\Capabilities]"), lines.toString());
+    assertTrue(lines.contains("\"ApplicationIcon\"=\"C:\\\\fearlessManaged0_001\\\\app.ico,0\""), lines.toString());
   }
   @Test void theRegistryFilePointsEachExtensionAtItsOwnType(){
     var lines= regFile();
@@ -114,33 +119,24 @@ final class FileAssociationTest{
     assertTrue(lines.contains("[HKEY_CURRENT_USER\\Software\\RegisteredApplications]"), lines.toString());
     assertTrue(lines.contains("\"fearlessManaged0_001\"=\"Software\\\\fearlessManaged0_001\\\\Capabilities\""), lines.toString());
   }
-  @Test void theExtensionsWeHoldAreReadFromTheOneKeyThatLfilesThem(){
+  @Test void theExtensionsWeHoldAreReadFromTheOneKeyThatFilesThem(){
     assertEquals("HKEY_CURRENT_USER\\Software\\fearlessManaged0_001\\Capabilities\\FileAssociations",
-      WindowsFileAssociations.fileAssociations(name));
-    assertEquals(".fearless", WindowsFileAssociations.regName("    .fearless    REG_SZ    fearlessManaged0_001.fearless"));
+      WindowsAssociations.fileAssociations(identity));
+    assertEquals(".fearless", WindowsAssociations.regName("    .fearless    REG_SZ    fearlessManaged0_001.fearless"));
   }
   @Test void theChoiceWindowsRemembersIsLookedForWhereWindowsKeepsIt(){
     assertEquals("HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts\\.fearless\\UserChoice",
-      WindowsFileAssociations.userChoiceKey(".fearless"));
-  }
-  @Test void theSettingsPageOpenedIsTheOneThisFearlessIsRegisteredUnder(){
-    var cmd= WindowsFileAssociations.whereToChoose(name);
-    assertEquals("explorer.exe", cmd.getFirst());
-    assertEquals("ms-settings:defaultapps?registeredAppUser=fearlessManaged0_001", cmd.getLast());
-    assertEquals(2, cmd.size(), cmd.toString());
+      WindowsAssociations.userChoiceKey(".fearless"));
   }
   @Test void theRegistryFileUsesTheLineEndingsWindowsWrites(){
-    var reg= WindowsFileAssociations.regFile(name, winLauncher.toString(), winIcons());
+    var reg= WindowsAssociations.regFile(identity, winLauncher, winIcons(), programIco);
     assertEquals(reg.split("\r\n",-1).length, reg.split("\n",-1).length);
   }
-  private static Map<String,Path> winIcons(){
-    var res= new LinkedHashMap<String,Path>();
-    res.put(".fearless", winLauncher);
-    res.put(".fproof", proof);
-    return res;
+  private static List<Icon> winIcons(){
+    return List.of(new Icon(".fearless", winLauncher, winLauncher), new Icon(".fproof", proof, proof));
   }
   private static List<String> regFile(){
-    return WindowsFileAssociations.regFile(name, winLauncher.toString(), winIcons()).lines().toList();
+    return WindowsAssociations.regFile(identity, winLauncher, winIcons(), programIco).lines().toList();
   }
   private static byte[] png(int side){
     var res= new byte[24];

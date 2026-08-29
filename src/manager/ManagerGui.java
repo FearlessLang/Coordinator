@@ -15,6 +15,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import javax.swing.BorderFactory;
@@ -42,7 +43,7 @@ final class ManagerGui {
   final JLabel elapsed;
   final JTextArea messages;
   final FolderList folders;
-  private ManagerGui(Runnable onQuit, ManagerData data){
+  private ManagerGui(Runnable onQuit, ManagerData data, Consumer<ManagerGui> onForget){
     frame= new JFrame("Fearless Manager");
     elapsed= new JLabel("Running for 00:00:00");
     elapsed.setBorder(BorderFactory.createEmptyBorder(6, 8, 6, 8));
@@ -52,11 +53,14 @@ final class ManagerGui {
     messages.setEditable(false);
     var scroll= new JScrollPane(messages);
     scroll.setBorder(BorderFactory.createTitledBorder("Start messages received"));
+    var forget= new JButton("Forget association");
+    forget.addActionListener(_ -> onForget.accept(this));
     var quit= new JButton("Quit manager");
     quit.addActionListener(_ -> onQuit.run());
     var bottom= new JPanel(new BorderLayout());
     bottom.add(scroll, BorderLayout.CENTER);
     var quitRow= new JPanel(new FlowLayout(FlowLayout.RIGHT));
+    quitRow.add(forget);
     quitRow.add(quit);
     bottom.add(quitRow, BorderLayout.SOUTH);
     frame.setLayout(new BorderLayout());
@@ -103,10 +107,12 @@ final class ManagerGui {
       if (FolderName.isName(folder,name) && !taken.contains(name)){ return name; }
     }
   }
-  boolean askBecomeDefault(){
+  boolean askForget(){
     return ask("""
-      Your desktop does not open Fearless projects with this Fearless.
-      Make this Fearless the one that opens them?""");
+      Remove Fearless as the program registered to open Fearless projects?
+
+      What your desktop already remembers by hand is left exactly as it is:
+      this only removes what Fearless itself registered.""");
   }
   //Asked from the event thread by the button, and from the manager's own thread
   //by the offer: invokeAndWait is a deadlock when it is already the event thread.
@@ -127,10 +133,10 @@ final class ManagerGui {
     new FolderInfo(data, folder, folders::refresh).showIn(frame);
   }
   void foldersChanged(){ SwingUtilities.invokeLater(folders::refresh); }
-  static ManagerGui create(Runnable onQuit, ManagerData data){
+  static ManagerGui create(Runnable onQuit, ManagerData data, Consumer<ManagerGui> onForget){
     var result= new AtomicReference<ManagerGui>();
     try {
-      SwingUtilities.invokeAndWait(() -> result.set(new ManagerGui(onQuit, data)));
+      SwingUtilities.invokeAndWait(() -> result.set(new ManagerGui(onQuit, data, onForget)));
       return result.get();
     }
     catch(InterruptedException|InvocationTargetException e){ throw Violation.couldNotStartGui(e); }

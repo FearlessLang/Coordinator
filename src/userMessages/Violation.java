@@ -317,53 +317,51 @@ public final class Violation {
       ));
   }
 
-  public static UserError couldNotOpenFearlessProjects(String reported){
+  public static UserError associationsAmbiguous(String reported){
     return new UserError("""
-      Fearless could not become the program that opens Fearless projects.
+      Fearless cannot tell which of your Fearless installs should open Fearless
+      projects: more than one is registered with your system at once.
 
-      A step of asking your system to do so failed, and Fearless stopped there
-      rather than leave the change half made.
+      Fearless stopped before touching anything: your system is exactly as it
+      was.
 
-      Fearless keeps running: only the double-click shortcut is missing.
-
-      What failed:
+      What is registered:
       %s""".formatted(reported));
   }
-  public static UserError fearlessProjectsStillOpenWith(String current){
-    return new UserError("""
-      Fearless is not yet the program that opens Fearless projects.
-
-      Fearless registered itself under its own name, and your system still
-      answers that a Fearless project is opened with:
-      %s
-      Nothing was left half done: what Fearless wrote has been taken back, and
-      your system is as it was.
-
-      Fearless keeps running: only the double-click shortcut is missing.
-      """.formatted(path(current)));
-  }
-  public static UserError fileIsNotYoursToChange(String reported){
+  public static UserError associationUserLocked(String reported){
     return new UserError("""
       Fearless cannot become the program that opens Fearless projects.
 
-      Another program already answers for this kind of file, and the file that
-      says so is not yours to change. Fearless stopped before touching
-      anything: your system is exactly as it was.
+      Your system remembers a choice you made by hand for this kind of file,
+      and no program can change or remove that choice, including this one.
+      Fearless stopped before touching anything: your system is exactly as it
+      was.
+
+      The only way to clear it is Settings, Apps, Default apps, Reset - which
+      resets every app default on your machine, not only this one.
+
+      What is locked:
+      %s""".formatted(reported));
+  }
+  public static UserError associationNotOurs(String reported){
+    return new UserError("""
+      Fearless cannot become the program that opens Fearless projects.
+
+      Another program already answers for this kind of file. Fearless stopped
+      before touching anything: your system is exactly as it was.
 
       What stood in the way:
       %s""".formatted(reported));
   }
-  public static UserError associationFilesHalfThere(String reported){
+  public static UserError associationNotWritable(String reported){
     return new UserError("""
-      Fearless cannot tell which kinds of file it opens.
+      Fearless cannot become the program that opens Fearless projects.
 
-      Fearless keeps what it opens in a small set of files that are written and
-      removed together, and only some of them are there. Something removed one
-      of them, or an earlier run stopped part way.
+      What Fearless would need to write, or remove, is not yours to change.
+      Fearless stopped before touching anything: your system is exactly as it
+      was.
 
-      Fearless keeps running: only the double-click shortcut is missing.
-
-      What is out of step:
+      What stood in the way:
       %s""".formatted(reported));
   }
   public static UserError associationLeftHalfDone(String reported){

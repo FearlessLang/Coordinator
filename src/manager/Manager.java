@@ -35,30 +35,37 @@ public class Manager {
     var executor= Executors.newVirtualThreadPerTaskExecutor();
     var watcher= watcher(msgDir);//registered BEFORE the first drain: messages arriving in between queue up, they are not lost
     var stop= new Stop();
-    ManagerGui gui= ManagerGui.create(stop::quit, data);
+    ManagerGui gui= ManagerGui.create(stop::quit, data, Manager::forgetAssociation);
     ManagerTray.install(gui, stop::quit);
     gui.showManager();
     drainToGui(gui,data,msgDir);//before the offer below: the folder this manager was started on is a folder it knows
     executor.submit(stop.worker(() -> watchMessages(watcher,gui,data,msgDir)));
     executor.submit(stop.worker(gui::tickLoop));//example long lived worker; more will come
-    offerAssociation(gui);
+    offerAssociation();
     try { stop.await(); }
     finally { executor.shutdownNow(); }
     //shutdownNow is not resource cleanup: it stops the workers, so that a
     //manager on its way out (quit, or showing its error dialog) cannot keep
     //consuming message files that are meant for the next manager.
   }
-  private static void offerAssociation(ManagerGui gui){
+  private static void offerAssociation(){
     if (Fs.isMac()){ return; }
     var launcher= FileAssociation.launcher();
     if (launcher.isEmpty()){ return; }
-    try {
-      var association= FileAssociation.of(launcher.get());
-      if (association.owned().containsAll(FileAssociation.extensions)){ return; }
-      if (!gui.askBecomeDefault()){ return; }
-      association.acquire(FileAssociation.extensions);
-    }
-    catch(UserError e){ gui.explain(e); }
+    FileAssociation.reconcile(launcher.get(), FileAssociation.extensions(launcher.get()));
+  }
+  private static void forgetAssociation(ManagerGui gui){
+    if (Fs.isMac() || !gui.askForget()){ return; }
+    var launcher= FileAssociation.launcher();
+    if (launcher.isEmpty()){ return; }
+    try { FileAssociation.reconcile(launcher.get(), List.of()); }
+    catch(UserError e){ displayThenExit(e); return; }
+    System.exit(0);
+  }
+  private static void displayThenExit(UserError e){
+    try { e.display(); }
+    catch(InterruptedException ie){ e.displayStderr(ie); }
+    System.exit(1);
   }
   private static WatchService watcher(Path msgDir){
     try {
