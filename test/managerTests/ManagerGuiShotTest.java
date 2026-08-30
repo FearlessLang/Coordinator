@@ -7,9 +7,11 @@ import java.awt.Component;
 import java.awt.Container;
 import java.awt.image.BufferedImage;
 import java.nio.file.Path;
+import java.util.function.Supplier;
 
 import javax.imageio.ImageIO;
 import javax.swing.JComponent;
+import javax.swing.SwingUtilities;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -18,10 +20,22 @@ import mainCoordinator.ResolveResource;
 import managerInfo.FolderInfo;
 import managerList.FolderList;
 import tools.Fs;
+import utils.Box;
+import utils.ThrowingConsumer;
 
 final class ManagerGuiShotTest{
   static final Path shots= ResolveResource.coordinatorSrc.getParent().resolve(".out").resolve("guiShots");
-  private static BufferedImage shoot(JComponent c, int width, int height, String name){
+  private static void onEdt(Runnable r){ ThrowingConsumer.of(SwingUtilities::invokeAndWait).accept(r); }
+  private static <T> T onEdtGet(Supplier<T> f){
+    var out= new Box<T>(null);
+    onEdt(()->out.set(f.get()));
+    return out.get();
+  }
+  private static BufferedImage shoot(Supplier<JComponent> make, int width, int height, String name){
+    return onEdtGet(()->draw(make.get(),width,height,name));
+  }
+  private static BufferedImage draw(JComponent c, int width, int height, String name){
+    assert SwingUtilities.isEventDispatchThread();
     c.setSize(width,height);
     layout(c);
     var res= new BufferedImage(width,height,BufferedImage.TYPE_INT_RGB);
@@ -52,17 +66,20 @@ final class ManagerGuiShotTest{
     data.setRun(dir.resolve("tetris"),System.currentTimeMillis());
     return data;
   }
+  private static FolderList sorted(FolderList list, FolderList.Sort by){
+    list.sortBy(by);
+    return list;
+  }
   @Test void theRegisteredFoldersLookLikeAGridOfTiles(@TempDir Path dir){
-    var list= new FolderList(tenProjects(dir),_->false,_->{});
-    var shot= shoot(list,760,420,"folderList");
+    var data= tenProjects(dir);
+    var shot= shoot(()->new FolderList(data,_->false,_->{}),760,420,"folderList");
     assertTrue(colours(shot) > 40, "the tiles drew nothing");
   }
   @Test void orderingByNameIsTheSameTilesInAnotherOrder(@TempDir Path dir){
-    var list= new FolderList(tenProjects(dir),_->false,_->{});
-    list.sortBy(FolderList.Sort.Name);
-    var byName= shoot(list,760,420,"folderListByName");
-    list.sortBy(FolderList.Sort.Run);
-    var byRun= shoot(list,760,420,"folderListByRun");
+    var data= tenProjects(dir);
+    var list= onEdtGet(()->new FolderList(data,_->false,_->{}));
+    var byName= shoot(()->sorted(list,FolderList.Sort.Name),760,420,"folderListByName");
+    var byRun= shoot(()->sorted(list,FolderList.Sort.Run),760,420,"folderListByRun");
     assertTrue(colours(byName) > 40);
     assertTrue(colours(byRun) > 40);
   }
@@ -74,8 +91,7 @@ final class ManagerGuiShotTest{
     data.addRegisteredFolder(project);
     data.setCompiled(project,System.currentTimeMillis()-3600000);
     data.setRun(project,System.currentTimeMillis()-60000);
-    var info= new FolderInfo(data,project.toAbsolutePath().normalize(),_->{},()->{}).panel();
-    var shot= shoot(info,720,420,"folderInfo");
+    var shot= shoot(()->new FolderInfo(data,project.toAbsolutePath().normalize(),_->{},()->{}).panel(),720,420,"folderInfo");
     assertTrue(colours(shot) > 20, "the facts drew nothing");
   }
   @Test void aFolderWithBrokenNamesOffersItsReport(@TempDir Path dir){
@@ -83,8 +99,7 @@ final class ManagerGuiShotTest{
     var project= FolderFactsTest.project(dir,"brokenProject");
     Fs.writeUtf8(project.resolve("_hello").resolve("Bad.fear"),"");
     data.addRegisteredFolder(project);
-    var info= new FolderInfo(data,project.toAbsolutePath().normalize(),_->{},()->{}).panel();
-    var shot= shoot(info,720,420,"folderInfoBroken");
+    var shot= shoot(()->new FolderInfo(data,project.toAbsolutePath().normalize(),_->{},()->{}).panel(),720,420,"folderInfoBroken");
     assertTrue(colours(shot) > 20);
   }
 }
