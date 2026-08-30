@@ -12,7 +12,9 @@ import java.util.Set;
 import java.util.stream.Stream;
 
 import userMessages.Report;
+import userMessages.Violation;
 import core.FearlessException;
+import core.LiteralDeclarations;
 import core.OtherPackages;
 import core.TName;
 import core.E.Literal;
@@ -20,6 +22,7 @@ import main.FrontendLogicMain;
 import naiveBackend.NaiveBackendLogicMain;
 import realSourceOracle.RealSourceOracleWithZip;
 import tools.Fs;
+import tools.ChildJvm;
 import tools.JavaTool;
 import tools.JavacTool;
 import tools.SourceOracle;
@@ -30,11 +33,12 @@ public interface Coordinator {
   Path stLibPath();
 
   default String runAllMains(String pkgName,OutputOracle out) throws InterruptedException{
-    var jars= out.rootDir().resolve("gen_java");    
-    var data= List.of(
+    return JavaTool.runMainFromJars(runData(out.rootDir().getParent()), out.rootDir().resolve("gen_java"), pkgName+".Main");
+  }
+  static List<String> runData(Path project){
+    return List.of(
       "--enable-native-access=ALL-UNNAMED",
-      "-DfearlessUser.dir="+jars.getParent().getParent());
-    return JavaTool.runMainFromJars(data,jars,pkgName+".Main");
+      "-DfearlessUser.dir="+project);
   }
   default SourceOracle sourceOracle(Path path){ return new RealSourceOracleWithZip(path); }
   static List<String> pkgNames(Path path){
@@ -44,6 +48,14 @@ public interface Coordinator {
     return List.copyOf(map.keySet());
   }
   default String main(Path path) throws InterruptedException{ return Helper.main(this, path); }
+  default List<String> compile(Path path){ return Helper.compile(this, path); }
+  default Optional<List<String>> mains(Path path){ return Helper.mains(this, path); }
+  static ChildJvm startMain(Path project, String main, java.util.function.Consumer<String> out){
+    var pkg= main.substring(0, main.indexOf('.'));
+    return JavaTool.startMainFromJars(runData(project), genJava(project), pkg+".Main", out, main);
+  }
+  static Path genJava(Path project){ return project.resolve(outDir).resolve("gen_java"); }
+  String outDir= ".fearless_out";
   
   default List<Literal> frontend(String pkgName, List<Ref> files, SourceOracle oracle, OtherPackages other,Map<String,String> vres){
     try{ return new FrontendLogicMain().of(pkgName,vres, files, oracle, other); }
@@ -62,25 +74,51 @@ public interface Coordinator {
 }
 class Helper{
   static boolean isFear(Ref u){ return u.toString().endsWith(".fear"); }
-  static String main(Coordinator coordinator, Path path) throws InterruptedException{
-    SourceOracle o= coordinator.sourceOracle(path);
+  static OutputOracle out(Path path){
+    var pOut= path.resolve(Coordinator.outDir);
+    return ()->pOut;
+  }
+  static Layer layerOf(Coordinator coordinator, SourceOracle o, Path path, OutputOracle out){
     var map= pkgMap(o,path);
     List<Ref> allRanks= map.values().stream().map(u->Helper.okPkgContent(u,path)).toList();
-    var pOut= path.resolve(".fearless_out");
-    OutputOracle out= ()->pOut;
     Layer l= mapFromRanks(coordinator,allRanks,o,out);
-    l = layers(coordinator,map,l,allRanks.stream()
+    return layers(coordinator,map,l,allRanks.stream()
       .sorted(Comparator.comparingInt(Helper::rankNumber).thenComparing(Object::toString)).toList());
-    //--probe to remove
-// var mods= coordinator.modsPath();
-// System.err.println("PROBE modsPath="+mods+" exists="+Files.isDirectory(mods));
-// Fs.walk(mods,s->s.map(Path::toString).sorted().toList()).forEach(p->System.err.println("PROBE mods: "+p));
-    //--
+  }
+  static List<String> compile(Coordinator coordinator, Path path){
+    SourceOracle o= coordinator.sourceOracle(path);
+    var out= out(path);
+    Layer l= layerOf(coordinator,o,path,out);
     Fs.copyTreeFlat(coordinator.modsPath(),out.rootDir().resolve("gen_java"));
     l.compile(o, out);
+    return List.copyOf(l.pkgs().keySet());//by design: only the highest rank number's packages have their Main run
+  }
+  static String main(Coordinator coordinator, Path path) throws InterruptedException{
+    var out= out(path);
     var sb= new StringBuilder();
-    for(var p: l.pkgs().keySet()){ sb.append(coordinator.runAllMains(p,out)); }//by design: only the highest rank number's packages have their Main run
+    for(var p: compile(coordinator,path)){ sb.append(coordinator.runAllMains(p,out)); }
     return sb.toString();
+  }
+  static Optional<List<String>> mains(Coordinator coordinator, Path path){
+    var c= new NoCompile(coordinator);
+    SourceOracle o= c.sourceOracle(path);
+    var out= new NoCommit(out(path).rootDir());
+    Layer l;
+    try{ l= layerOf(c,o,path,out); l.compile(o,out); }
+    catch(WouldCompile _){ return Optional.empty(); }
+    return Optional.of(l.pkgs().keySet().stream().flatMap(p->mainsOf(out,p)).toList());
+  }
+  private static final TName baseMain= new TName("base.Main",0,utils.Pos.unknown);
+  static Stream<String> mainsOf(OutputOracle out, String pkg){
+    var api= new OutputHelper().pgkApiFromJSon(out.rootDir().resolve(pkg+".json"));
+    if (api.isEmpty()){ throw Violation.cacheMissingPkgApiFile(out.rootDir().resolve(pkg+".json")); }
+    return api.get().values().stream().filter(Helper::isMain).map(l->l.name().s()).sorted();
+  }
+  static boolean isMain(Literal l){
+    var hasInstance= l.thisName().equals("this") || LiteralDeclarations.has(l.cs(),LiteralDeclarations.captureFree);
+    return hasInstance
+      && LiteralDeclarations.has(l.cs(),baseMain)
+      && l.ms().stream().noneMatch(m->m.sig().abs());
   }
   static LinkedHashMap<String,List<Ref>> pkgMap(SourceOracle o, Path path){
     if (o.allFiles().stream().noneMatch(Helper::isFear)){ throw Report.projectEmpty(path); }
@@ -151,5 +189,21 @@ class Helper{
     if (!TName.isPkgName(pkg)){ throw Report.projectBadPackageName(u, candidates.getFirst()); }
     if (reservedPkgNames.contains(pkg)){ throw Report.projectReservedPackageName(u, candidates.getFirst()); }
     return Optional.of(pkg);
+  }
+}class WouldCompile extends RuntimeException{
+  private static final long serialVersionUID= 1L;
+}
+record NoCompile(Coordinator inner) implements Coordinator{
+  @Override public Path rtPath(){ return inner.rtPath(); }
+  @Override public Path stLibPath(){ return inner.stLibPath(); }
+  @Override public SourceOracle sourceOracle(Path path){ return inner.sourceOracle(path); }
+  @Override public List<Literal> frontend(String pkgName, List<Ref> files, SourceOracle oracle, OtherPackages other, Map<String,String> vres){ throw new WouldCompile(); }
+  @Override public void backend(String pkgName, List<Literal> core, SourceOracle oracle, OtherPackages other, OutputOracle out){ throw new WouldCompile(); }
+}
+record NoCommit(Path rootDir) implements OutputOracle{
+  @Override public long commitMap(Map<String,Map<String,String>> map, long minExclusiveMillis){
+    var res= new OutputHelper().mapFromJSon(rootDir.resolve("_map.json"));
+    if (res.isPresent() && res.get().equals(map)){ return mapStamp(); }
+    throw new WouldCompile();
   }
 }

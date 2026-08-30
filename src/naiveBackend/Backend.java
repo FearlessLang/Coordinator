@@ -54,7 +54,7 @@ public class Backend{
     var hasInstance= hasInstance(l, abstractOnly);
     if (hasInstance){ sb.a("  "+iface+" instance= new "+iface+"(){};"); }
     Fs.writeUtf8(ifaceFile(l, out), sb.a("}").toString());
-    if (hasInstance && implementsBaseMain(l)){ mains.add(iface); }
+    if (hasInstance && implementsBaseMain(l)){ mains.put(l.name().s(), iface); }
     fixers.add(sb);
   }
   private boolean hasInstance(Literal l, boolean abstractOnly) {
@@ -116,15 +116,21 @@ public class Backend{
     if (s.startsWith(".")){ return encodeTrailingPrimes(s.substring(1)); }
     return "$" + mangleOp(s);
   }
-  final List<String> mains= new ArrayList<>();
+  final Map<String,String> mains= new TreeMap<>();
   void writeMainJava(){
+    var all= Join.of(mains.keySet().stream().map(n->"\""+n+"\""),"{",",","}","{}");
     var sb= new StringBuilder(8_000)
       .append("package ").append(pkgName).append(";\n\n")
-      .append("public final class Main{\n  static{ base.Util.installParentLifeline(); }\n  public static void main(String[] args){\n");
-    mains.stream().sorted().forEach(n->
-      sb.append("    base.Util.topLevel(()->").append(n).append(".instance.imm$main$1(new "+typeName(systemName)+"()));\n")
-    );
-    Fs.writeUtf8(out.resolve("Main.java"), sb.append("  }\n}\n").toString());
+      .append("public final class Main{\n")
+      .append("  static{ base.Util.installParentLifeline(); }\n")
+      .append("  static final String[] all= ").append(all).append(";\n")
+      .append("  public static void main(String[] args){ for(String n: args.length == 0 ? all : args){ run(n); } }\n")
+      .append("  static void run(String n){\n");
+    mains.forEach((n,iface)->sb
+      .append("    if (n.equals(\"").append(n).append("\")){ base.Util.topLevel(()->")
+      .append(iface).append(".instance.imm$main$1(new ").append(typeName(systemName)).append("())); return; }\n"));
+    sb.append("    throw new AssertionError(\"No main called \"+n+\" in package ").append(pkgName).append("\");\n  }\n}\n");
+    Fs.writeUtf8(out.resolve("Main.java"), sb.toString());
   }
   String mangleOp(String op){
     var sb= new StringBuilder(op.length()*6);

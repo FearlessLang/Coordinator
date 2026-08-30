@@ -13,7 +13,7 @@ import userMessages.UserError;
 public record FolderFacts(
     Path folder, int files, long bytes, long modified,
     long jsonStamp, long cacheStamp, List<String> pkgs, Optional<String> problem){
-  public static final String outDir= ".fearless_out";
+  public static final String outDir= Coordinator.outDir;
   public boolean valid(){ return problem.isEmpty(); }
   public boolean cacheUpToDate(){ return cacheStamp >= 0 && cacheStamp >= modified; }
   public boolean hasCache(){ return Files.isDirectory(folder.resolve(outDir)); }

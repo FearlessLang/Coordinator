@@ -74,7 +74,7 @@ final class ManagerGuiShotTest{
     data.addRegisteredFolder(project);
     data.setCompiled(project,System.currentTimeMillis()-3600000);
     data.setRun(project,System.currentTimeMillis()-60000);
-    var info= new FolderInfo(data,project.toAbsolutePath().normalize(),()->{}).panel();
+    var info= new FolderInfo(data,project.toAbsolutePath().normalize(),_->{},()->{}).panel();
     var shot= shoot(info,720,420,"folderInfo");
     assertTrue(colours(shot) > 20, "the facts drew nothing");
   }
@@ -83,7 +83,7 @@ final class ManagerGuiShotTest{
     var project= FolderFactsTest.project(dir,"brokenProject");
     Fs.writeUtf8(project.resolve("_hello").resolve("Bad.fear"),"");
     data.addRegisteredFolder(project);
-    var info= new FolderInfo(data,project.toAbsolutePath().normalize(),()->{}).panel();
+    var info= new FolderInfo(data,project.toAbsolutePath().normalize(),_->{},()->{}).panel();
     var shot= shoot(info,720,420,"folderInfoBroken");
     assertTrue(colours(shot) > 20);
   }

@@ -4,4 +4,5 @@ module Coordinator {
   requires java.desktop;
   exports mainCoordinator;
   exports manager;
+  exports managerRun;
 }

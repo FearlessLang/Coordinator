@@ -7,6 +7,7 @@ import java.nio.file.Path;
 import coordinator.Coordinator;
 import userMessages.UserError;
 import tools.SourceOracle;
+import tools.Utf8Sink;
 
 public record ProgrammaticMain(StringBuilder out, StringBuilder err,String fName, String code, Path stdLib, Path stdRt, Path dest){
   static public void runFearless(Path projectPath, Path base, Path rt) throws Throwable {

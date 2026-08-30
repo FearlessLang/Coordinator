@@ -35,7 +35,7 @@ public class Manager {
     var executor= Executors.newVirtualThreadPerTaskExecutor();
     var watcher= watcher(msgDir);//registered BEFORE the first drain: messages arriving in between queue up, they are not lost
     var stop= new Stop();
-    ManagerGui gui= ManagerGui.create(stop::quit, data, Manager::forgetAssociation);
+    ManagerGui gui= ManagerGui.create(stop::quit, data, executor, Manager::forgetAssociation);
     ManagerTray.install(gui, stop::quit);
     gui.showManager();
     drainToGui(gui,data,msgDir);//before the offer below: the folder this manager was started on is a folder it knows
@@ -114,11 +114,14 @@ public class Manager {
   }
   private static void register(ManagerGui gui, ManagerData data, String message){
     var folder= projectFolder(message, ManagerMain.managerDir);
-    if (folder.isEmpty() || data.isRegistered(folder.get())){ return; }
-    var nested= data.nestedWith(folder.get());
-    if (nested.isPresent()){ gui.explain(Report.folderNestedWithRegistered(folder.get(),nested.get())); return; }
-    gui.nameFolder(data,folder.get());
-    data.addRegisteredFolder(folder.get());
+    if (folder.isEmpty()){ return; }
+    if (!data.isRegistered(folder.get())){
+      var nested= data.nestedWith(folder.get());
+      if (nested.isPresent()){ gui.explain(Report.folderNestedWithRegistered(folder.get(),nested.get())); return; }
+      gui.nameFolder(data,folder.get());
+      data.addRegisteredFolder(folder.get());
+    }
+    gui.select(folder.get());
   }
   static Optional<Path> projectFolder(String message, Path managerDir){
     var folder= folderOf(message);
