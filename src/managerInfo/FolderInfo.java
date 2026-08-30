@@ -1,9 +1,10 @@
 package managerInfo;
 
 import java.awt.BorderLayout;
+import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.FlowLayout;
-import java.awt.GridLayout;
+import java.awt.Insets;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.time.ZoneId;
@@ -42,49 +43,47 @@ public final class FolderInfo{
   private final ProjectSession session;
   private final JPanel root= new JPanel(new BorderLayout(8,8));
   private final JTextArea output= new JTextArea(10,60);
+  private final JScrollPane outputScroll= new JScrollPane(output);
   private final JTextArea details= new JTextArea(9,40);
   private final JPanel mainsBox= new JPanel();
-  private final JPanel buttons= new JPanel(new GridLayout(0,4,4,4));
-  private final JLabel status= new JLabel(" ");
+  private final JScrollPane mainsScroll= new JScrollPane(mainsBox);
+  private final JPanel tools= new JPanel(new FlowLayout(FlowLayout.LEFT));
+  private final List<JCheckBox> boxes= new ArrayList<>();
+  private FolderFacts facts;
   public FolderInfo(ManagerData data, Path folder, Executor worker, Runnable onChange){
     this.data= data;
     this.folder= folder;
     this.onChange= onChange;
     this.session= new ProjectSession(folder, worker, this::append, this::refreshLater);
+    this.facts= FolderFacts.of(folder);
     output.setEditable(false);
     output.setFont(new Font(Font.MONOSPACED,Font.PLAIN,13));
     details.setEditable(false);
     details.setFont(new Font(Font.MONOSPACED,Font.PLAIN,13));
     mainsBox.setLayout(new BoxLayout(mainsBox,BoxLayout.Y_AXIS));
+    outputScroll.setBorder(BorderFactory.createTitledBorder("Output"));
     root.setBorder(BorderFactory.createEmptyBorder(8,8,8,8));
-    root.add(header(),BorderLayout.NORTH);
-    root.add(center(),BorderLayout.CENTER);
-    root.add(south(),BorderLayout.SOUTH);
+    root.add(top(),BorderLayout.NORTH);
+    root.add(outputScroll,BorderLayout.CENTER);
     session.refresh();
     refresh();
   }
   public JPanel panel(){ return root; }
   public Path folder(){ return folder; }
   public ProjectSession session(){ return session; }
-  private JPanel center(){
-    var res= new JPanel(new BorderLayout(8,8));
-    var top= new JPanel(new BorderLayout(8,8));
-    var facts= new JScrollPane(details);
-    facts.setBorder(BorderFactory.createTitledBorder("This project folder"));
-    var mains= new JScrollPane(mainsBox);
-    mains.setBorder(BorderFactory.createTitledBorder("Mains to run"));
-    top.add(facts,BorderLayout.CENTER);
-    top.add(mains,BorderLayout.EAST);
-    var outer= new JScrollPane(output);
-    outer.setBorder(BorderFactory.createTitledBorder("Output"));
-    res.add(top,BorderLayout.NORTH);
-    res.add(outer,BorderLayout.CENTER);
+  public FolderFacts facts(){ return facts; }
+  private JPanel top(){
+    var res= new JPanel();
+    res.setLayout(new BoxLayout(res,BoxLayout.Y_AXIS));
+    res.add(header());
+    res.add(tools);
+    res.add(new Collapsible("Information",new JScrollPane(details),true));
+    res.add(new Collapsible("Mains to run",mainsScroll,true,small("All",()->setAll(true)),small("None",()->setAll(false))));
     return res;
   }
-  private JPanel south(){
-    var res= new JPanel(new BorderLayout());
-    res.add(buttons,BorderLayout.CENTER);
-    res.add(status,BorderLayout.SOUTH);
+  private static JButton small(String text, Runnable action){
+    var res= button(text,true,action);
+    res.setMargin(new Insets(0,6,0,6));
     return res;
   }
   private JPanel header(){
@@ -101,30 +100,31 @@ public final class FolderInfo{
   }
   private void append(String text){
     SwingUtilities.invokeLater(()->{
+      var bar= outputScroll.getVerticalScrollBar();
+      var following= bar.getValue()+bar.getVisibleAmount() >= bar.getMaximum()-16;
       output.append(text);
-      output.setCaretPosition(output.getDocument().getLength());
+      if (following){ output.setCaretPosition(output.getDocument().getLength()); }
     });
   }
-  private void refreshLater(){ SwingUtilities.invokeLater(this::refresh); }
-  public void tick(){
-    if (!session.busy()){ status.setText(" "); return; }
-    status.setText(session.current()+"   "+format(session.elapsed().toSeconds()));
+  private void refreshLater(){ SwingUtilities.invokeLater(()->{ refresh(); onChange.run(); }); }
+  public String status(){
+    if (!session.busy()){ return ""; }
+    return session.current()+"   "+format(session.elapsed().toSeconds());
   }
   private static String format(long seconds){
     return "%02d:%02d:%02d".formatted(seconds/3600, (seconds/60)%60, seconds%60);
   }
   private void refresh(){
-    var facts= FolderFacts.of(folder);
+    facts= FolderFacts.of(folder);
     var entry= data.registered().stream().filter(e->e.folder().equals(facts.folder())).findFirst().orElseThrow();
     details.setText(String.join("\n",lines(facts,entry)));
     details.setCaretPosition(0);
     fillMains();
-    fillButtons(facts);
-    tick();
+    fillTools();
     root.revalidate();
     root.repaint();
   }
-  private final List<JCheckBox> boxes= new ArrayList<>();
+  private void setAll(boolean on){ boxes.forEach(b->b.setSelected(on)); }
   private void fillMains(){
     var known= session.mains();
     var chosen= selected();
@@ -140,21 +140,18 @@ public final class FolderInfo{
       boxes.add(box);
       mainsBox.add(box);
     }
+    mainsScroll.setPreferredSize(new Dimension(0,Math.min(6,boxes.size())*26+8));
   }
   private List<String> selected(){
     return boxes.stream().filter(JCheckBox::isSelected).map(JCheckBox::getText).toList();
   }
-  private void fillButtons(FolderFacts facts){
+  private void fillTools(){
     var busy= session.busy();
-    var runnable= session.mains().isPresent();
-    buttons.removeAll();
-    buttons.add(button("Compile",facts.valid() && !busy,this::compile));
-    buttons.add(button("Run selected",runnable && !busy,this::run));
-    buttons.add(button("Terminate",busy,session::terminate));
-    buttons.add(button("Clear cache",facts.hasCache() && !busy,this::clearCache));
-    buttons.add(button("Browse files",true,this::browse));
-    buttons.add(button("Error report",!facts.valid(),()->report(facts)));
-    buttons.add(button("Forget",!busy,this::forget));
+    tools.removeAll();
+    tools.add(button("Compile",facts.valid() && !busy,this::compile));
+    tools.add(button("Run selected",session.mains().isPresent() && !busy,this::run));
+    tools.add(button("Terminate",session.running().isPresent(),session::terminate));
+    tools.add(button("Clear output",true,this::clearOutput));
   }
   private static JButton button(String text, boolean enabled, Runnable action){
     var res= new JButton(text);
@@ -162,6 +159,7 @@ public final class FolderInfo{
     res.addActionListener(_->action.run());
     return res;
   }
+  private void clearOutput(){ output.setText(""); }
   private void compile(){
     changed(d->d.setCompiled(folder,System.currentTimeMillis()));
     session.compile();
@@ -171,7 +169,7 @@ public final class FolderInfo{
     changed(d->d.setRun(folder,System.currentTimeMillis()));
     session.run(chosen);
   }
-  private void clearCache(){
+  public void clearCache(){
     Fs.rmTree(folder.resolve(FolderFacts.outDir));
     session.refresh();
     changed(_->{});
@@ -181,17 +179,17 @@ public final class FolderInfo{
     refresh();
     onChange.run();
   }
-  private void forget(){
+  public void forget(){
     data.removeRegisteredFolder(folder);
     onChange.run();
   }
-  private void browse(){
+  public void browse(){
     var chooser= new JFileChooser(folder.toFile());
     chooser.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES);
     chooser.setDialogTitle("Files of "+FolderName.compactName(folder));
     chooser.showOpenDialog(root);
   }
-  private void report(FolderFacts facts){
+  public void report(){
     var text= new JTextArea(facts.problem().orElseThrow(),24,90);
     text.setEditable(false);
     text.setFont(new Font(Font.MONOSPACED,Font.PLAIN,13));

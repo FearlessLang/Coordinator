@@ -53,12 +53,12 @@ final class ManagerGuiShotTest{
     return data;
   }
   @Test void theRegisteredFoldersLookLikeAGridOfTiles(@TempDir Path dir){
-    var list= new FolderList(tenProjects(dir),_->{});
+    var list= new FolderList(tenProjects(dir),_->false,_->{});
     var shot= shoot(list,760,420,"folderList");
     assertTrue(colours(shot) > 40, "the tiles drew nothing");
   }
   @Test void orderingByNameIsTheSameTilesInAnotherOrder(@TempDir Path dir){
-    var list= new FolderList(tenProjects(dir),_->{});
+    var list= new FolderList(tenProjects(dir),_->false,_->{});
     list.sortBy(FolderList.Sort.Name);
     var byName= shoot(list,760,420,"folderListByName");
     list.sortBy(FolderList.Sort.Run);

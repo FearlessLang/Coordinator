@@ -1,7 +1,6 @@
 package manager;
 
 import java.awt.BorderLayout;
-import java.awt.FlowLayout;
 import java.awt.Frame;
 import java.awt.Taskbar;
 import java.awt.event.WindowAdapter;
@@ -10,10 +9,9 @@ import java.lang.reflect.InvocationTargetException;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
-import java.time.LocalTime;
-import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Optional;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executor;
@@ -22,14 +20,15 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import javax.swing.BorderFactory;
-import javax.swing.JButton;
+import javax.swing.JFileChooser;
+import javax.swing.JMenu;
+import javax.swing.JMenuBar;
+import javax.swing.JMenuItem;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
-import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
-import javax.swing.JTextArea;
 import javax.swing.SwingUtilities;
 import javax.swing.WindowConstants;
 
@@ -42,45 +41,38 @@ import userMessages.Violation;
 
 final class ManagerGui {
   private static final Duration tickDelay= Duration.ofSeconds(1);//the label shows seconds, so tick every second
-  private static final DateTimeFormatter received= DateTimeFormatter.ofPattern("HH:mm:ss");
   final JFrame frame;
   final JLabel elapsed;
-  final JTextArea messages;
   final FolderList folders;
   final JSplitPane split;
+  private final JPanel body= new JPanel();
+  private final JMenu running= new JMenu("Running");
+  private final JMenu project= new JMenu("Project");
   private final ManagerData data;
   private final Executor worker;
+  private final Consumer<ManagerGui> onForget;
+  private final Runnable onQuit;
   private final Map<Path,FolderInfo> open= new LinkedHashMap<>();
   private FolderInfo shown;
   private ManagerGui(Runnable onQuit, ManagerData data, Executor worker, Consumer<ManagerGui> onForget){
     frame= new JFrame("Fearless Manager");
     this.data= data;
     this.worker= worker;
+    this.onForget= onForget;
+    this.onQuit= onQuit;
     elapsed= new JLabel("Running for 00:00:00");
-    elapsed.setBorder(BorderFactory.createEmptyBorder(6, 8, 6, 8));
-    folders= new FolderList(data, this::showFolder);
+    elapsed.setBorder(BorderFactory.createEmptyBorder(4, 8, 4, 8));
+    folders= new FolderList(data, this::isRunning, this::showFolder);
     folders.setBorder(BorderFactory.createTitledBorder("Registered project folders"));
-    messages= new JTextArea(6, 60);
-    messages.setEditable(false);
-    var scroll= new JScrollPane(messages);
-    scroll.setBorder(BorderFactory.createTitledBorder("Start messages received"));
-    var forget= new JButton("Forget association");
-    forget.addActionListener(_ -> onForget.accept(this));
-    var quit= new JButton("Quit manager");
-    quit.addActionListener(_ -> onQuit.run());
-    var bottom= new JPanel(new BorderLayout());
-    bottom.add(scroll, BorderLayout.CENTER);
-    var quitRow= new JPanel(new FlowLayout(FlowLayout.RIGHT));
-    quitRow.add(forget);
-    quitRow.add(quit);
-    bottom.add(quitRow, BorderLayout.SOUTH);
     split= new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, folders, new JPanel());
-    split.setResizeWeight(0.35);
-    split.setDividerLocation(300);
+    split.setResizeWeight(0.3);
+    split.setDividerLocation(320);
+    body.setLayout(new BorderLayout());
+    body.add(folders, BorderLayout.CENTER);
+    frame.setJMenuBar(menuBar());
     frame.setLayout(new BorderLayout());
-    frame.add(elapsed, BorderLayout.NORTH);
-    frame.add(split, BorderLayout.CENTER);
-    frame.add(bottom, BorderLayout.SOUTH);
+    frame.add(body, BorderLayout.CENTER);
+    frame.add(elapsed, BorderLayout.SOUTH);
     frame.setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
     frame.addWindowListener(new WindowAdapter(){//closing the window only hides the manager; the Quit button terminates it
       @Override public void windowClosing(WindowEvent e){ frame.setVisible(false); }
@@ -144,17 +136,90 @@ final class ManagerGui {
     SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(frame, problem.getMessage(), "Fearless", JOptionPane.WARNING_MESSAGE));
   }
   void select(Path folder){ SwingUtilities.invokeLater(()->folders.select(folder)); }
-  private void showFolder(Path folder){
-    shown= open.computeIfAbsent(folder, f->new FolderInfo(data, f, worker, this::foldersChangedHere));
+  private boolean isRunning(Path folder){
+    var info= open.get(folder);
+    return info != null && info.session().running().isPresent();
+  }
+  private void showFolder(Optional<Path> folder){
+    if (folder.isEmpty()){ hidePanel(); return; }
+    shown= open.computeIfAbsent(folder.get(), f->new FolderInfo(data, f, worker, this::foldersChangedHere));
+    var where= split.getDividerLocation();
+    split.setLeftComponent(folders);
     split.setRightComponent(shown.panel());
-    split.revalidate();
+    body.removeAll();
+    body.add(split, BorderLayout.CENTER);
+    split.setDividerLocation(where);
+    fillProjectMenu();
+    body.revalidate();
+    body.repaint();
+  }
+  private void hidePanel(){
+    shown= null;
+    split.setRightComponent(new JPanel());
+    body.removeAll();
+    body.add(folders, BorderLayout.CENTER);
+    fillProjectMenu();
+    body.revalidate();
+    body.repaint();
+  }
+  private JMenuBar menuBar(){
+    var res= new JMenuBar();
+    var manager= new JMenu("Manager");
+    manager.setMnemonic('M');
+    manager.add(item("Forget association",true,()->onForget.accept(this)));
+    manager.add(item("Quit manager",true,onQuit));
+    project.setMnemonic('P');
+    running.setMnemonic('R');
+    res.add(manager);
+    res.add(project);
+    res.add(running);
+    fillProjectMenu();
+    fillRunningMenu();
+    return res;
+  }
+  private static JMenuItem item(String text, boolean enabled, Runnable action){
+    var res= new JMenuItem(text);
+    res.setEnabled(enabled);
+    res.addActionListener(_->action.run());
+    return res;
+  }
+  private void fillProjectMenu(){
+    project.removeAll();
+    project.add(item("Add folder...",true,this::addFolder));
+    project.addSeparator();
+    var on= shown;
+    project.add(item("Clear cache",on != null,()->on.clearCache()));
+    project.add(item("Browse files",on != null,()->on.browse()));
+    project.add(item("Error report",on != null && !on.facts().valid(),()->on.report()));
+    project.addSeparator();
+    project.add(item("Forget project",on != null,()->on.forget()));
+  }
+  private void fillRunningMenu(){
+    running.removeAll();
+    var live= open.values().stream().filter(i->i.session().running().isPresent()).toList();
+    if (live.isEmpty()){ running.add(item("<nothing running>",false,()->{})); return; }
+    live.forEach(i->running.add(item(describe(i),true,()->folders.select(i.folder()))));
+  }
+  private static String describe(FolderInfo info){
+    return FolderName.compactName(info.folder())+" - "+info.session().running().orElseThrow();
+  }
+  List<String> runningPrograms(){
+    return open.values().stream().filter(i->i.session().running().isPresent()).map(ManagerGui::describe).toList();
+  }
+  private void addFolder(){
+    var chooser= new JFileChooser();
+    chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+    chooser.setDialogTitle("Add a Fearless project folder");
+    if (chooser.showOpenDialog(frame) != JFileChooser.APPROVE_OPTION){ return; }
+    worker.execute(()->Manager.register(this, data, chooser.getSelectedFile().toString()));
   }
   private void foldersChangedHere(){
     folders.refresh();
     var live= data.registered().stream().map(e->e.folder()).toList();
     open.values().stream().filter(i->!live.contains(i.folder())).forEach(i->i.session().terminate());
     open.keySet().removeIf(f->!live.contains(f));
-    if (shown != null && !live.contains(shown.folder())){ shown= null; split.setRightComponent(new JPanel()); }
+    fillRunningMenu();
+    if (shown != null && !live.contains(shown.folder())){ hidePanel(); }
   }
   void foldersChanged(){ SwingUtilities.invokeLater(folders::refresh); }
   static ManagerGui create(Runnable onQuit, ManagerData data, Executor worker, Consumer<ManagerGui> onForget){
@@ -173,27 +238,20 @@ final class ManagerGui {
       frame.requestFocus();//best effort
     });
   }
-  void addMessages(List<String> texts){
-    var stamp= LocalTime.now().format(received);
-    SwingUtilities.invokeLater(() -> {
-      for(var text: texts){ messages.append(stamp+"  "+oneLine(text)+"\n"); }
-    });
-  }
   void tickLoop(){
     var start= Instant.now();
     while(tick(start)){}
   }
   private boolean tick(Instant start){
-    setElapsed(Duration.between(start, Instant.now()));
-    SwingUtilities.invokeLater(this::tickShown);
+    var up= Duration.between(start, Instant.now());
+    SwingUtilities.invokeLater(()->tickShown(up));
     try { Thread.sleep(tickDelay); return true; }
     catch(InterruptedException e){ return false; }//interruption is the designed stop signal for this worker
   }
-  private void setElapsed(Duration duration){
-    SwingUtilities.invokeLater(() -> elapsed.setText("Running for "+formatDuration(duration)));
+  private void tickShown(Duration up){
+    var status= shown == null ? "" : "   -   "+shown.status();
+    elapsed.setText("Running for "+formatDuration(up)+status);
   }
-  private void tickShown(){ if (shown != null){ shown.tick(); } }
-  private static String oneLine(String text){ return text.replace('\r',' ').replace('\n',' '); }
   static String formatDuration(Duration duration){
     var seconds= duration.toSeconds();
     return "%02d:%02d:%02d".formatted(seconds/3600, (seconds/60)%60, seconds%60);
