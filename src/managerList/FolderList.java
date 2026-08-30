@@ -1,6 +1,7 @@
 package managerList;
 
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.Component;
 import java.awt.FlowLayout;
 import java.awt.Point;
@@ -8,12 +9,13 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.nio.file.Path;
 import java.util.Comparator;
+import java.util.Optional;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 
 import javax.swing.DefaultListCellRenderer;
 import javax.swing.DefaultListModel;
 import javax.swing.Icon;
-import javax.swing.ImageIcon;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JList;
@@ -21,12 +23,25 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 
 import managerData.ManagerData;
+import managerIcons.BadgeIcon;
 import managerIcons.FolderIcon;
 import managerIcons.FolderName;
 import managerInfo.FolderFacts;
 
 public final class FolderList extends JPanel{
-  public record Row(ManagerData.Entry entry, String name, Icon icon, long modified){}
+  public enum State{ running, upToDate, needsCompiling;
+    Color colour(){ return switch(this){
+      case running -> BadgeIcon.running;
+      case upToDate -> BadgeIcon.upToDate;
+      case needsCompiling -> BadgeIcon.stale;
+    };}
+    String text(){ return switch(this){
+      case running -> "running";
+      case upToDate -> "up to date";
+      case needsCompiling -> "needs compiling";
+    };}
+  }
+  public record Row(ManagerData.Entry entry, String name, Icon icon, long modified, State state){}
   public enum Sort{
     Name, Modified, Compiled, Run;
     Comparator<Row> comparator(){
@@ -40,13 +55,15 @@ public final class FolderList extends JPanel{
   }
   private static final int iconSize= 48;
   private final ManagerData data;
-  private final Consumer<Path> onOpen;
+  private final Consumer<Optional<Path>> onOpen;
+  private final Predicate<Path> isRunning;
   private final DefaultListModel<Row> model= new DefaultListModel<>();
   private final JList<Row> list= new JList<>(model);
   private final JComboBox<Sort> sort= new JComboBox<>(Sort.values());
-  public FolderList(ManagerData data, Consumer<Path> onOpen){
+  public FolderList(ManagerData data, Predicate<Path> isRunning, Consumer<Optional<Path>> onOpen){
     super(new BorderLayout());
     this.data= data;
+    this.isRunning= isRunning;
     this.onOpen= onOpen;
     list.setLayoutOrientation(JList.HORIZONTAL_WRAP);
     list.setVisibleRowCount(-1);
@@ -65,7 +82,7 @@ public final class FolderList extends JPanel{
     refresh();
   }
   public void refresh(){
-    var rows= data.registered().stream().map(FolderList::row).sorted(selected().comparator()).toList();
+    var rows= data.registered().stream().map(this::row).sorted(selected().comparator()).toList();
     model.clear();
     rows.forEach(model::addElement);
   }
@@ -75,19 +92,25 @@ public final class FolderList extends JPanel{
       if (!model.get(i).entry().folder().equals(folder)){ continue; }
       list.setSelectedIndex(i);
       list.ensureIndexIsVisible(i);
-      onOpen.accept(folder);
+      onOpen.accept(Optional.of(folder));
       return;
     }
   }
   private Sort selected(){ return (Sort)sort.getSelectedItem(); }
-  private static Row row(ManagerData.Entry e){
+  private Row row(ManagerData.Entry e){
+    var modified= FolderFacts.modified(e.folder());
+    var state= stateOf(e.folder(),modified);
     return new Row(e,FolderName.compactName(e.folder()),
-      new ImageIcon(FolderIcon.image(e.folder(),iconSize)),FolderFacts.modified(e.folder()));
+      new BadgeIcon(FolderIcon.image(e.folder(),iconSize),iconSize,state.colour()),modified,state);
+  }
+  private State stateOf(Path folder, long modified){
+    if (isRunning.test(folder)){ return State.running; }
+    return FolderFacts.cacheUpToDate(folder,modified) ? State.upToDate : State.needsCompiling;
   }
   private void open(Point p){
     var i= list.locationToIndex(p);
-    if (i < 0 || !list.getCellBounds(i,i).contains(p)){ return; }
-    onOpen.accept(model.get(i).entry().folder());
+    if (i < 0 || !list.getCellBounds(i,i).contains(p)){ list.clearSelection(); onOpen.accept(Optional.empty()); return; }
+    onOpen.accept(Optional.of(model.get(i).entry().folder()));
   }
   private static final class Tile extends DefaultListCellRenderer{
     @Override public Component getListCellRendererComponent(JList<?> l, Object value, int i, boolean selected, boolean focus){
@@ -98,7 +121,7 @@ public final class FolderList extends JPanel{
       res.setHorizontalAlignment(CENTER);
       res.setHorizontalTextPosition(CENTER);
       res.setVerticalTextPosition(BOTTOM);
-      res.setToolTipText(row.entry().folder().toString());
+      res.setToolTipText(row.entry().folder()+" - "+row.state().text());
       return res;
     }
   }

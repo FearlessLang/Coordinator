@@ -36,6 +36,7 @@ public final class ProjectSession{
   public synchronized String current(){ return current; }
   public synchronized Duration elapsed(){ return Duration.between(since, Instant.now()); }
   public synchronized Optional<List<String>> mains(){ return mains; }
+  public synchronized Optional<String> running(){ return child == null ? Optional.empty() : Optional.of(current); }
   public void refresh(){ submit("reading", this::readMains); }
   public void compile(){ submit("compiling", this::doCompile); }
   public void run(List<String> selected){ submit("starting", ()->doRun(selected)); }
@@ -74,7 +75,7 @@ public final class ProjectSession{
     synchronized(this){ mains= res; }
   }
   private void doCompile(){
-    out.accept("--- compiling "+folder+" ---\n");
+    out.accept("--- compiling "+folder.getFileName()+" ---\n");
     var ec= await(()->ChildJvm.start(compileArgs(), out));
     out.accept("--- compile "+(ec == 0 ? "done" : "failed with "+ec)+" ---\n");
     readMains();

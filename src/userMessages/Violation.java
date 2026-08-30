@@ -2,6 +2,7 @@ package userMessages;
 
 import java.nio.file.Path;
 import java.util.List;
+import java.util.function.Supplier;
 
 import metaParser.Message;
 import metaParser.PrettyFileName;
@@ -23,7 +24,9 @@ public final class Violation {
   static String reported(Throwable cause){ return "Reported reason:\n"+cause.getMessage(); }
   static String crashed(){ return "Fearless crashed."; }
   static String reportProblem(){ return "Please report this problem."; }
-  static String associatedPrograms(){ return "  <Will return the set of active and monitored Fearless programs>"; }//TODO: later
+  private static Supplier<List<String>> running= List::of;
+  public static void running(Supplier<List<String>> live){ running= live; }
+  static String associatedPrograms(){ return Join.of(running.get().stream().map(s->"  "+s),"","\n","",""); }
   static String freshCopyThenReport(){ return """
     Replace this Fearless folder with a fresh copy.
     If this keeps happening, report the problem.

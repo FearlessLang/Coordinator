@@ -36,6 +36,7 @@ public class Manager {
     var watcher= watcher(msgDir);//registered BEFORE the first drain: messages arriving in between queue up, they are not lost
     var stop= new Stop();
     ManagerGui gui= ManagerGui.create(stop::quit, data, executor, Manager::forgetAssociation);
+    Violation.running(gui::runningPrograms);
     ManagerTray.install(gui, stop::quit);
     gui.showManager();
     drainToGui(gui,data,msgDir);//before the offer below: the folder this manager was started on is a folder it knows
@@ -107,12 +108,11 @@ public class Manager {
       if (messages.isEmpty()){ return; }
       messages.forEach(message -> register(gui,data,message));
       gui.foldersChanged();
-      gui.addMessages(messages);
       gui.showManager();
     }
     catch(IOException e){ throw Violation.couldNotDrainMessageFolder(msgDir, e); }
   }
-  private static void register(ManagerGui gui, ManagerData data, String message){
+  static void register(ManagerGui gui, ManagerData data, String message){
     var folder= projectFolder(message, ManagerMain.managerDir);
     if (folder.isEmpty()){ return; }
     if (!data.isRegistered(folder.get())){

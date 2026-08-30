@@ -29,6 +29,10 @@ public record FolderFacts(
       newest(src),stamp(f,".json",true),stamp(f,".built",false),pkgs,problem);
   }
   public static long modified(Path folder){ return newest(sources(folder.toAbsolutePath().normalize())); }
+  public static boolean cacheUpToDate(Path folder, long modified){
+    var built= stamp(folder.toAbsolutePath().normalize(),".built",false);
+    return built >= 0 && built >= modified;
+  }
   private static List<Path> sources(Path folder){
     var out= folder.resolve(outDir);
     return Fs.walk(folder,s->s.filter(p->!p.startsWith(out)).filter(Files::isRegularFile).toList());
