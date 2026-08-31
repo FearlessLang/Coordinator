@@ -17,7 +17,7 @@ import fileAssociations.LinuxAssociations;
 import fileAssociations.WindowsAssociations;
 
 final class FileAssociationTest{
-  private static final Path linuxLauncher= Path.of("/home/me/fearlessManaged0_001/bin/fearlessManaged0_001");
+  private static final String linuxLauncher= "/home/me/fearlessManaged0_001/bin/fearlessManaged0_001";
   private static final Path winLauncher= Path.of("C:\\fearlessManaged0_001\\fearlessManaged0_001.exe");
   private static final Path proof= Path.of("C:\\fearlessManaged0_001\\proof.ico");
   private static final Path programIco= Path.of("C:\\fearlessManaged0_001\\app.ico");
@@ -29,9 +29,9 @@ final class FileAssociationTest{
     return res;
   }
   @Test void theLauncherNamesTheProgramAndTheManagerIsNotThePortable(){
-    assertEquals(identity, FileAssociation.identity(linuxLauncher));
+    assertEquals(identity, FileAssociation.identity(Path.of(linuxLauncher)));
     assertEquals(identity, FileAssociation.identity(Path.of("fearlessManaged0_001.exe")));
-    assertNotEquals(FileAssociation.identity(linuxLauncher),
+    assertNotEquals(FileAssociation.identity(Path.of(linuxLauncher)),
       FileAssociation.identity(Path.of("/home/me/fearlessBin0_001/bin/fearlessBin0_001")));
   }
   @Test void everyLauncherOfTheFamilyNamesItInItsOwnFile(){
@@ -45,7 +45,7 @@ final class FileAssociationTest{
   }
   @Test void theOneDesktopEntryHandsEveryKindToTheRunningLauncher(){
     var types= List.of("application/x-fearless","application/x-fproof");
-    var entry= LinuxAssociations.desktopEntry(identity, linuxLauncher.toString(), types);
+    var entry= LinuxAssociations.desktopEntry(identity, linuxLauncher, types);
     assertTrue(entry.startsWith("[Desktop Entry]\n"), entry);
     assertTrue(entry.contains("Exec=/home/me/fearlessManaged0_001/bin/fearlessManaged0_001 %f"), entry);
     assertTrue(entry.contains("MimeType=application/x-fearless;application/x-fproof;"), entry);
