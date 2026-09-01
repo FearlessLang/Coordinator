@@ -58,6 +58,9 @@ public final class UserError extends RuntimeException{
   private static boolean managerOwner= false;
   public static void becameManagerOwner(){ managerOwner= true; }
 
+  private static java.awt.Window owner= null;
+  public static void owner(java.awt.Window w){ owner= w; }
+
   //-- building
   static UserError die(String first, String... more){
     var sb= new StringBuilder();
@@ -144,11 +147,11 @@ Details:
   }
   private void displayNow(){
     if (recovery == null){
-      JOptionPane.showMessageDialog(null, displayText(), "Fearless", JOptionPane.ERROR_MESSAGE);
+      JOptionPane.showMessageDialog(owner, displayText(), "Fearless", JOptionPane.ERROR_MESSAGE);
       return;
     }
     var options= new Object[]{"OK", recoveryLabel};
-    var choice= JOptionPane.showOptionDialog(null, displayText(), "Fearless",
+    var choice= JOptionPane.showOptionDialog(owner, displayText(), "Fearless",
       JOptionPane.DEFAULT_OPTION, JOptionPane.ERROR_MESSAGE, null, options, options[0]);
     if (choice == 1){ recovery.run(); }
   }
