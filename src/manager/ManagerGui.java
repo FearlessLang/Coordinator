@@ -211,7 +211,7 @@ final class ManagerGui {
     chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
     chooser.setDialogTitle("Add a Fearless project folder");
     if (chooser.showOpenDialog(frame) != JFileChooser.APPROVE_OPTION){ return; }
-    worker.execute(()->Manager.register(this, data, chooser.getSelectedFile().toString()));
+    worker.execute(()->{ Manager.register(this, data, chooser.getSelectedFile().toString()); foldersChanged(); });
   }
   private void foldersChangedHere(){
     folders.refresh();

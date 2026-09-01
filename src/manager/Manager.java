@@ -36,6 +36,7 @@ public class Manager {
     var watcher= watcher(msgDir);//registered BEFORE the first drain: messages arriving in between queue up, they are not lost
     var stop= new Stop();
     ManagerGui gui= ManagerGui.create(stop::quit, data, executor, Manager::forgetAssociation);
+    UserError.owner(gui.frame);
     Violation.running(gui::runningPrograms);
     ManagerTray.install(gui, stop::quit);
     gui.showManager();
