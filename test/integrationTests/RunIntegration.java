@@ -3,13 +3,16 @@ package integrationTests;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
+import java.util.Optional;
 
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.opentest4j.AssertionFailedError;
 
 import coordinator.Coordinator;
+import mainCoordinator.BaseCacheBuilder;
 import mainCoordinator.ResolveResource;
 import realSourceOracle.SourceOracleWithAutoload;
 import testHelperFs.FsDsl;
@@ -22,6 +25,10 @@ import userMessages.UserError;
 public class RunIntegration {
   static{ utils.Err.setUp(AssertionFailedError.class, Assertions::assertEquals, Assertions::assertTrue); }
 
+  static final Path baseCache= ResolveResource.stLibDebugOut.resolve("baseCache");
+  @BeforeAll static void buildBaseOnce(){
+    BaseCacheBuilder.buildInto(ResolveResource.coordinatorJars, ResolveResource.stLibDebugOut);
+  }
   Coordinator coordinator(){
     System.setProperty(JavacTool.appDirKey,ResolveResource.stLibPath.getParent()
       .resolve("fearlessArtefact","fearless","app").toString());
@@ -29,6 +36,7 @@ public class RunIntegration {
       public Path rtPath(){    return ResolveResource.stLibRTPath; }
       public Path stLibPath(){ return ResolveResource.stLibPath; }
       public Path modsPath(){  return ResolveResource.coordinatorJars; }
+      public Optional<Path> baseCachePath(){ return Optional.of(baseCache); }
     };
   }
   static Path freshIntegrationRoot(String name){

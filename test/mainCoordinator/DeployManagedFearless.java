@@ -22,5 +22,6 @@ public class DeployManagedFearless{
       ResolveResource.versionId,
       "Coordinator/manager.ManagerMain"
     ).build();
+    BaseCacheBuilder.deployInto(ResolveResource.managedFolderOut.resolve("fearlessManaged"+ResolveResource.versionId));
   }
 }

@@ -67,12 +67,16 @@ public final class ProjectSession{
   }
   private void readMains(){
     Optional<List<String>> res;
-    try{ res= new Coordinator(){
-      @Override public Path stLibPath(){ return stdLib("base"); }
-      @Override public Path rtPath(){ return stdLib("rt"); }
-    }.mains(folder); }
+    try{ res= appCoordinator().mains(folder); }
     catch(UserError _){ res= Optional.empty(); }
     synchronized(this){ mains= res; }
+  }
+  private static Coordinator appCoordinator(){
+    return new Coordinator(){
+      @Override public Path stLibPath(){ return stdLib("base"); }
+      @Override public Path rtPath(){ return stdLib("rt"); }
+      @Override public Optional<Path> baseCachePath(){ return Optional.of(stdLib("baseCache")); }
+    };
   }
   private void doCompile(){
     out.accept("--- compiling "+folder.getFileName()+" ---\n");
@@ -89,7 +93,7 @@ public final class ProjectSession{
   private void runOne(String main){
     starting(main);
     out.accept("--- running "+main+" ---\n");
-    var ec= await(()->Coordinator.startMain(folder, main, out));
+    var ec= await(()->Coordinator.startMain(folder, main, appCoordinator().sharedClasspath(), out));
     out.accept("--- "+main+" exited with "+ec+" after "+elapsed().toSeconds()+"s ---\n");
   }
   private int await(Supplier<ChildJvm> start){

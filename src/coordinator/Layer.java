@@ -1,5 +1,6 @@
 package coordinator;
 
+import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -9,8 +10,10 @@ import core.AllLs;
 import core.E.Literal;
 import realSourceOracle.SourceOracleWithAutoload;
 import core.OtherPackages;
+import tools.Fs;
 import tools.SourceOracle;
 import tools.SourceOracle.Ref;
+import userMessages.Violation;
 import utils.Push;
 
 public interface Layer{
@@ -45,6 +48,8 @@ record MiddleLayer(Coordinator coordinator, Layer next, LinkedHashMap<String,Lis
 record BaseLayer(Coordinator coordinator, Map<String,Map<String,String>> map, long baseStamp) implements Layer{
   @Override public OtherPackages compile(SourceOracle _ignoreSrc, OutputOracle out){
     var pkgName= "base";
+    var cacheDir= coordinator.baseCachePath();
+    if (cacheDir.isPresent()){ return deployedBaseApi(cacheDir.get(), pkgName); }
     var other= OtherPackages.empty();
     SourceOracle o= coordinator.sourceOracle(coordinator.stLibPath());
     long maxIn= o.allFiles().stream().mapToLong(Ref::lastModified).max().getAsLong();
@@ -55,5 +60,11 @@ record BaseLayer(Coordinator coordinator, Map<String,Map<String,String>> map, lo
     long newStamp= out.commitPkgApi(pkgName, core, maxIn);
     out.commitBuilt(pkgName, o.allFiles(), maxIn);
     return OtherPackages.start(map, AllLs.of(core).values(), Math.max(baseStamp,newStamp));
+  }
+  private OtherPackages deployedBaseApi(Path cacheDir, String pkgName){
+    var json= cacheDir.resolve(pkgName+".json");
+    var api= new OutputHelper().pgkApiFromJSon(json);
+    if (api.isEmpty()){ throw Violation.cacheMissingPkgApiFile(json); }
+    return OtherPackages.start(map, api.get(), Math.max(baseStamp, Fs.lastModified(json)));
   }
 }

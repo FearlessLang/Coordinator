@@ -14,7 +14,7 @@ import tools.JavacTool;
 import tools.SourceOracle;
 
 public class NaiveBackendLogicMain {
-  public void of(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, Path rootDir, Path rtPath){
+  public void of(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, Path rootDir, Path rtPath, List<Path> extraClasspathDirs){
     var outPath= rootDir.resolve("gen_java",pkgName);
     var docs= new HtmlDocBuilder(oracle,other,core);
     var fixers= new Backend(outPath, pkgName, core, docs).produceJavaCode();
@@ -28,7 +28,7 @@ public class NaiveBackendLogicMain {
     Fs.cleanDirContents(classes);
     var pkgPath= classes.resolve(pkgName);
     Runnable post= ()->fixers.forEach(f->f.accept(pkgPath));
-    var javacOut= Fs.of(()->JavacTool.compileTree(outPath, classes,post,rootDir.resolve("gen_java",pkgName+".jar")));
+    var javacOut= Fs.of(()->JavacTool.compileTree(outPath, classes,post,rootDir.resolve("gen_java",pkgName+".jar"),extraClasspathDirs));
     assert javacOut.isEmpty(): javacOut;
     docs.complete();
     Fs.rmTree(outPath); Fs.rmTree(classes);//comment out this line to keep the generated .java and .class files for debugging

@@ -22,5 +22,6 @@ public class DeployPortableFearless{
       ResolveResource.versionId,
       "Coordinator/mainCoordinator.Main"
     ).build();
+    BaseCacheBuilder.deployInto(ResolveResource.portableFolderOut.resolve("fearlessBin"+ResolveResource.versionId));
   }
 }

@@ -65,6 +65,7 @@ public final class Main{
     new Coordinator(){
       @Override public Path stLibPath(){ return base; }
       @Override public Path rtPath(){ return rt; }
+      @Override public Optional<Path> baseCachePath(){ return Optional.of(base.getParent().resolve("baseCache")); }
     }.main(project);
   }
   private static final Predicate<String> belongsToFamily= s->s.contains("earless");
