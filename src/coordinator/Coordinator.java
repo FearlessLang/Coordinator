@@ -92,18 +92,9 @@ class Helper{
   static List<String> compile(Coordinator coordinator, Path path){
     SourceOracle o= coordinator.sourceOracle(path);
     var out= out(path);
-    seedBaseCache(coordinator, out);
     Layer l= layerOf(coordinator,o,path,out);
     l.compile(o, out);
     return List.copyOf(l.pkgs().keySet());//by design: only the highest rank number's packages have their Main run
-  }
-  private static void seedBaseCache(Coordinator coordinator, OutputOracle out){
-    var cacheDir= coordinator.baseCachePath();
-    if (cacheDir.isEmpty()){ return; }
-    Fs.copyFresh(cacheDir.get().resolve("base.json"), out.rootDir().resolve("base.json"));
-    var baseSrc= coordinator.sourceOracle(coordinator.stLibPath());
-    long maxIn= baseSrc.allFiles().stream().mapToLong(Ref::lastModified).max().getAsLong();
-    out.commitBuilt("base", baseSrc.allFiles(), maxIn);
   }
   static String main(Coordinator coordinator, Path path) throws InterruptedException{
     var out= out(path);

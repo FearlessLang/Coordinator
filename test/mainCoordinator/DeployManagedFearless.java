@@ -7,7 +7,6 @@ import tools.PortableApp;
 
 public class DeployManagedFearless{
   public static void main(String[] a){
-    var appName= "fearlessManaged"+ResolveResource.versionId;
     new PortableApp(
       ResolveResource.packaging,
       ResolveResource.managedFolderOut,//out
@@ -19,10 +18,10 @@ public class DeployManagedFearless{
       ResolveResource.stLibPath,//base
       ResolveResource.stLibRTPath,//rt
       ResolveResource.coordinatorJars,
-      appName,
+      "fearlessManaged"+ResolveResource.versionId,
       ResolveResource.versionId,
       "Coordinator/manager.ManagerMain"
     ).build();
-    BaseCacheBuilder.deployInto(ResolveResource.managedFolderOut.resolve(appName));
+    BaseCacheBuilder.deployInto(ResolveResource.managedFolderOut.resolve("fearlessManaged"+ResolveResource.versionId));
   }
 }
