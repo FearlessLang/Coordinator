@@ -36,7 +36,6 @@ public final class BaseCacheBuilder{
       var other= OtherPackages.empty();
       SourceOracle o= c.sourceOracle(c.stLibPath());
       List<Literal> core= c.frontend(pkgName, o.allFiles(), o, other, Map.of());
-      Fs.copyTreeFlat(c.modsPath(), scratch.resolve("gen_java"));
       c.backend(pkgName, core, o, other, out);
       out.commitPkgApi(pkgName, core, -1);
       var baseCache= stdLibDir.resolve("baseCache");

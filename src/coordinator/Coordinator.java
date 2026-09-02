@@ -26,13 +26,14 @@ import tools.JavaTool;
 import tools.JavacTool;
 import tools.SourceOracle;
 import tools.SourceOracle.Ref;
+import utils.Push;
 
 public interface Coordinator {
-  Path rtPath();  
+  Path rtPath();
   Path stLibPath();
 
   default String runAllMains(String pkgName,OutputOracle out) throws InterruptedException{
-    return JavaTool.runMainFromJars(runData(out.rootDir().getParent()), out.rootDir().resolve("gen_java"), pkgName+".Main");
+    return JavaTool.runMainFromJars(runData(out.rootDir().getParent()), Push.of(out.rootDir().resolve("gen_java"),sharedClasspath()), pkgName+".Main");
   }
   static List<String> runData(Path project){
     return List.of(
@@ -49,9 +50,9 @@ public interface Coordinator {
   default String main(Path path) throws InterruptedException{ return Helper.main(this, path); }
   default List<String> compile(Path path){ return Helper.compile(this, path); }
   default Optional<List<String>> mains(Path path){ return Helper.mains(this, path); }
-  static ChildJvm startMain(Path project, String main, java.util.function.Consumer<String> out){
+  static ChildJvm startMain(Path project, String main, List<Path> sharedClasspath, java.util.function.Consumer<String> out){
     var pkg= main.substring(0, main.indexOf('.'));
-    return JavaTool.startMainFromJars(runData(project), genJava(project), pkg+".Main", out, main);
+    return JavaTool.startMainFromJars(runData(project), Push.of(genJava(project),sharedClasspath), pkg+".Main", out, main);
   }
   static Path genJava(Path project){ return project.resolve(outDir).resolve("gen_java"); }
   String outDir= ".fearless_out";
@@ -61,7 +62,7 @@ public interface Coordinator {
     catch(FearlessException fe){ throw Report.sourceError(fe.render(oracle)); }
   }
   default void backend(String pkgName, List<Literal> core, SourceOracle oracle, OtherPackages other, OutputOracle out){
-    new NaiveBackendLogicMain().of(pkgName,oracle,other,core,out.rootDir(),rtPath());
+    new NaiveBackendLogicMain().of(pkgName,oracle,other,core,out.rootDir(),rtPath(),sharedClasspath());
   }
   default Path modsPath(){
     var appDir= System.getProperty(JavacTool.appDirKey);
@@ -71,6 +72,9 @@ public interface Coordinator {
     return path;
   }
   default Optional<Path> baseCachePath(){ return Optional.empty(); }
+  default List<Path> sharedClasspath(){
+    return Stream.concat(Stream.of(modsPath()), baseCachePath().stream()).toList();
+  }
 }
 class Helper{
   static boolean isFear(Ref u){ return u.toString().endsWith(".fear"); }
@@ -90,7 +94,6 @@ class Helper{
     var out= out(path);
     seedBaseCache(coordinator, out);
     Layer l= layerOf(coordinator,o,path,out);
-    Fs.copyTreeFlat(coordinator.modsPath(),out.rootDir().resolve("gen_java"));
     l.compile(o, out);
     return List.copyOf(l.pkgs().keySet());//by design: only the highest rank number's packages have their Main run
   }
@@ -98,7 +101,6 @@ class Helper{
     var cacheDir= coordinator.baseCachePath();
     if (cacheDir.isEmpty()){ return; }
     Fs.copyFresh(cacheDir.get().resolve("base.json"), out.rootDir().resolve("base.json"));
-    Fs.copyFresh(cacheDir.get().resolve("base.jar"), out.rootDir().resolve("gen_java").resolve("base.jar"));
     var baseSrc= coordinator.sourceOracle(coordinator.stLibPath());
     long maxIn= baseSrc.allFiles().stream().mapToLong(Ref::lastModified).max().getAsLong();
     out.commitBuilt("base", baseSrc.allFiles(), maxIn);

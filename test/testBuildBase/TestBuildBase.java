@@ -14,13 +14,13 @@ import coordinator.OutputOracle;
 import core.OtherPackages;
 import core.E.Literal;
 import mainCoordinator.ResolveResource;
-import tools.Fs;
 import tools.JavaTool;
 import tools.SourceOracle;
+import utils.Push;
 
 class TestBuildBase {
   Coordinator c= new Coordinator(){
-    @Override public Path rtPath(){    return ResolveResource.stLibRTPath; }  
+    @Override public Path rtPath(){    return ResolveResource.stLibRTPath; }
     @Override public Path stLibPath(){ return ResolveResource.stLibPath; }
     @Override public Path modsPath(){  return ResolveResource.coordinatorJars; }
 
@@ -30,9 +30,8 @@ class TestBuildBase {
       var other= OtherPackages.empty();
       SourceOracle o= sourceOracle(stLibPath());
       List<Literal> core= frontend(pkgName,o.allFiles(),o,other,Map.of());
-      Fs.copyTreeFlat(modsPath(),out.rootDir().resolve("gen_java"));
       backend(pkgName,core,o,other,out);
-      var jars= out.rootDir().resolve("gen_java");
+      var jars= Push.of(out.rootDir().resolve("gen_java"),sharedClasspath());
       var runOut= JavaTool.runMainFromJars(List.of("-DfearlessUser.dir="+out.rootDir().getParent()),jars,pkgName+".Main");
       assertEquals("", runOut);
       return runOut;
