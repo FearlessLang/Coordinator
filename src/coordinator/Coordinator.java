@@ -1,6 +1,5 @@
 package coordinator;
 
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -96,14 +95,10 @@ class Helper{
     return List.copyOf(l.pkgs().keySet());//by design: only the highest rank number's packages have their Main run
   }
   private static void seedBaseCache(Coordinator coordinator, OutputOracle out){
-    if (Files.exists(out.rootDir().resolve("base.built"))){ return; }
     var cacheDir= coordinator.baseCachePath();
     if (cacheDir.isEmpty()){ return; }
-    var json= cacheDir.get().resolve("base.json");
-    var jar= cacheDir.get().resolve("base.jar");
-    if (!Files.exists(json) || !Files.exists(jar)){ return; }
-    Fs.copyFresh(json, out.rootDir().resolve("base.json"));
-    Fs.copyFresh(jar, out.rootDir().resolve("gen_java").resolve("base.jar"));
+    Fs.copyFresh(cacheDir.get().resolve("base.json"), out.rootDir().resolve("base.json"));
+    Fs.copyFresh(cacheDir.get().resolve("base.jar"), out.rootDir().resolve("gen_java").resolve("base.jar"));
     var baseSrc= coordinator.sourceOracle(coordinator.stLibPath());
     long maxIn= baseSrc.allFiles().stream().mapToLong(Ref::lastModified).max().getAsLong();
     out.commitBuilt("base", baseSrc.allFiles(), maxIn);

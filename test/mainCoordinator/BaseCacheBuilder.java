@@ -1,5 +1,6 @@
 package mainCoordinator;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
@@ -10,9 +11,18 @@ import core.E.Literal;
 import core.OtherPackages;
 import tools.Fs;
 import tools.SourceOracle;
+import utils.OneOr;
 
 public final class BaseCacheBuilder{
-  public static void buildInto(Path modsDir, Path stdLibDir){
+  public static void deployInto(Path appRoot){
+    var modsDir= singleDirNamed(appRoot, "mods");
+    buildInto(modsDir, modsDir.getParent().resolve("stdLib"));
+  }
+  private static Path singleDirNamed(Path root, String name){
+    var found= Fs.walk(root, s->s.filter(Files::isDirectory).filter(p->p.getFileName().toString().equals(name)).toList());
+    return OneOr.of("Expected exactly one '"+name+"' dir under "+root, found.stream());
+  }
+  private static void buildInto(Path modsDir, Path stdLibDir){
     var pkgName= "base";
     var scratch= stdLibDir.resolve("_baseScratch");
     Fs.ensureDir(scratch);
