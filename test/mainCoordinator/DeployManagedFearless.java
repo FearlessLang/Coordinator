@@ -20,7 +20,8 @@ public class DeployManagedFearless{
       ResolveResource.coordinatorJars,
       "fearlessManaged"+ResolveResource.versionId,
       ResolveResource.versionId,
-      "Coordinator/manager.ManagerMain"
+      "Coordinator/manager.ManagerMain",
+      BaseCacheBuilder::buildInto
     ).build();
   }
 }

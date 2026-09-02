@@ -71,6 +71,7 @@ public interface Coordinator {
     Fs.ensureDir(path);
     return path;
   }
+  default Optional<Path> baseCachePath(){ return Optional.empty(); }
 }
 class Helper{
   static boolean isFear(Ref u){ return u.toString().endsWith(".fear"); }
@@ -88,10 +89,24 @@ class Helper{
   static List<String> compile(Coordinator coordinator, Path path){
     SourceOracle o= coordinator.sourceOracle(path);
     var out= out(path);
+    seedBaseCache(coordinator, out);
     Layer l= layerOf(coordinator,o,path,out);
     Fs.copyTreeFlat(coordinator.modsPath(),out.rootDir().resolve("gen_java"));
     l.compile(o, out);
     return List.copyOf(l.pkgs().keySet());//by design: only the highest rank number's packages have their Main run
+  }
+  private static void seedBaseCache(Coordinator coordinator, OutputOracle out){
+    if (Files.exists(out.rootDir().resolve("base.built"))){ return; }
+    var cacheDir= coordinator.baseCachePath();
+    if (cacheDir.isEmpty()){ return; }
+    var json= cacheDir.get().resolve("base.json");
+    var jar= cacheDir.get().resolve("base.jar");
+    if (!Files.exists(json) || !Files.exists(jar)){ return; }
+    Fs.copyFresh(json, out.rootDir().resolve("base.json"));
+    Fs.copyFresh(jar, out.rootDir().resolve("gen_java").resolve("base.jar"));
+    var baseSrc= coordinator.sourceOracle(coordinator.stLibPath());
+    long maxIn= baseSrc.allFiles().stream().mapToLong(Ref::lastModified).max().getAsLong();
+    out.commitBuilt("base", baseSrc.allFiles(), maxIn);
   }
   static String main(Coordinator coordinator, Path path) throws InterruptedException{
     var out= out(path);

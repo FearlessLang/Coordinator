@@ -20,7 +20,8 @@ public class DeployPortableFearless{
       ResolveResource.coordinatorJars,
       "fearlessBin"+ResolveResource.versionId,
       ResolveResource.versionId,
-      "Coordinator/mainCoordinator.Main"
+      "Coordinator/mainCoordinator.Main",
+      BaseCacheBuilder::buildInto
     ).build();
   }
 }

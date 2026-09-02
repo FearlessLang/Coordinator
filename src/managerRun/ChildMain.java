@@ -1,6 +1,7 @@
 package managerRun;
 
 import java.nio.file.Path;
+import java.util.Optional;
 
 import coordinator.Coordinator;
 import fileSupport.NativeLocaleForcer;
@@ -29,6 +30,7 @@ public class ChildMain{
     new Coordinator(){
       @Override public Path stLibPath(){ return base; }
       @Override public Path rtPath(){ return rt; }
+      @Override public Optional<Path> baseCachePath(){ return Optional.of(appDir.resolve("stdLib").resolve("baseCache")); }
     }.compile(project);
   }
 }
