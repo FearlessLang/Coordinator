@@ -22,7 +22,7 @@ public final class BaseCacheBuilder{
     var found= Fs.walk(root, s->s.filter(Files::isDirectory).filter(p->p.getFileName().toString().equals(name)).toList());
     return OneOr.of("Expected exactly one '"+name+"' dir under "+root, found.stream());
   }
-  private static void buildInto(Path modsDir, Path stdLibDir){
+  public static void buildInto(Path modsDir, Path stdLibDir){
     var pkgName= "base";
     var scratch= stdLibDir.resolve("_baseScratch");
     Fs.ensureDir(scratch);
