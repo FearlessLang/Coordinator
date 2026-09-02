@@ -1,7 +1,9 @@
 package manager;
 
 import java.awt.BorderLayout;
+import java.awt.Dimension;
 import java.awt.Frame;
+import java.awt.GraphicsEnvironment;
 import java.awt.Taskbar;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
@@ -79,7 +81,14 @@ final class ManagerGui {
     });
     setIcons();
     frame.setLocationByPlatform(true);
-    frame.setSize(760, 620);
+    frame.setSize(preferredSize());
+  }
+  //760x900 is tall enough that a small project's compile-then-run-all output is
+  //visible without scrolling, but capped against the usable screen so the window
+  //itself never lands partly off-screen on a shorter display.
+  private static Dimension preferredSize(){
+    var avail= GraphicsEnvironment.getLocalGraphicsEnvironment().getMaximumWindowBounds();
+    return new Dimension(Math.min(760, avail.width), Math.min(900, avail.height));
   }
   //Same icon in the window, in the task bar and in the tray: one Fearless, whichever of
   //the three the desktop chooses to show. Whether a desktop shows a task bar icon at all
