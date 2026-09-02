@@ -63,6 +63,7 @@ public final class FolderInfo{
     mainsBox.setLayout(new BoxLayout(mainsBox,BoxLayout.Y_AXIS));
     outputScroll.setBorder(BorderFactory.createTitledBorder("Output"));
     root.setBorder(BorderFactory.createEmptyBorder(8,8,8,8));
+    root.setMinimumSize(new Dimension(0,0));//let the split divider shrink this panel past its natural content width
     root.add(top(),BorderLayout.NORTH);
     root.add(outputScroll,BorderLayout.CENTER);
     session.refresh();
