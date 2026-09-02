@@ -41,6 +41,7 @@ public final class BaseCacheBuilder{
       var baseCache= stdLibDir.resolve("baseCache");
       Fs.copyFresh(scratch.resolve("base.json"), baseCache.resolve("base.json"));
       Fs.copyFresh(scratch.resolve("gen_java").resolve("base.jar"), baseCache.resolve("base.jar"));
+      Fs.copyFresh(scratch.resolve("gen_java").resolve("base.html"), baseCache.resolve("base.html"));
     } finally{ Fs.rmTree(scratch); }
   }
 }
