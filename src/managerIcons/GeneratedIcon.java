@@ -32,10 +32,26 @@ final class GeneratedIcon{
     var half= size/2;
     int[] at= {0,half};
     int[] len= {half,size-half};
+    var bevel= Math.max(1,size/16);
     for (int i= 0; i < 4; i++){
-      g.setColor(colors.get(i));
-      g.fillRect(at[i%2],at[i/2],len[i%2],len[i/2]);
+      tile(g,colors.get(i),at[i%2],at[i/2],len[i%2],len[i/2],bevel);
     }
+  }
+  //flat fill plus a light top/left edge and dark bottom/right edge, to hint at a raised tile instead of a dead flat square
+  private static void tile(Graphics2D g, Color base, int x, int y, int w, int h, int bevel){
+    g.setColor(base);
+    g.fillRect(x,y,w,h);
+    g.setColor(shade(base,0.16f));
+    g.fillRect(x,y,w,bevel);
+    g.fillRect(x,y,bevel,h);
+    g.setColor(shade(base,-0.16f));
+    g.fillRect(x,y+h-bevel,w,bevel);
+    g.fillRect(x+w-bevel,y,bevel,h);
+  }
+  private static Color shade(Color c, float deltaBrightness){
+    var hsb= Color.RGBtoHSB(c.getRed(),c.getGreen(),c.getBlue(),null);
+    var brightness= Math.max(0f,Math.min(1f,hsb[2]+deltaBrightness));
+    return Color.getHSBColor(hsb[0],hsb[1],brightness);
   }
   private static void initials(Graphics2D g, List<Color> colors, String name, int size){
     var text= first2(name);
