@@ -135,7 +135,7 @@ zeroMemo
   //@Test void testGui1(){ testOk("testGui1");}
   void compileOk(String name){ coordinator().compile(freshIntegrationRoot(name)); }
   @Test void theInteractiveProjectsStillCompile(){
-    for (var name: List.of("testGui1","testGui2","testGuiImg","testBasketball")){ compileOk(name); }
+    for (var name: List.of("testGui1","testGui2","testGuiImg","testBasketball","testTicTacToe")){ compileOk(name); }
   }
 
   // Two assets that generate the same auto-loaded type name (here "foo.txt" and "foo.png",
