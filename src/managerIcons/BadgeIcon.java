@@ -1,7 +1,9 @@
 package managerIcons;
 
+import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Component;
+import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Image;
@@ -9,22 +11,50 @@ import java.awt.RenderingHints;
 
 import javax.swing.Icon;
 
-public record BadgeIcon(Image image, int size, Color badge) implements Icon{
-  public static final Color running= new Color(0x2E7D32);
-  public static final Color upToDate= new Color(0x1565C0);
-  public static final Color stale= new Color(0xB0BEC5);
+public record BadgeIcon(Image image, int size, Mark mark) implements Icon{
+  public enum Mark{ none, attention, running }
+  private static final Color attentionColor= new Color(0xEF6C00);
+  private static final Color runningColor= new Color(0x2E7D32);
   @Override public int getIconWidth(){ return size; }
   @Override public int getIconHeight(){ return size; }
   @Override public void paintIcon(Component c, Graphics g, int x, int y){
     var g2= (Graphics2D)g.create();
     g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
     g2.drawImage(image, x, y, size, size, c);
-    var dot= Math.max(8, size/4);
-    var at= x+size-dot;
-    g2.setColor(Color.white);
-    g2.fillOval(at-2, y+size-dot-2, dot+4, dot+4);
-    g2.setColor(badge);
-    g2.fillOval(at, y+size-dot, dot, dot);
+    switch(mark){
+      case none -> {}
+      case attention -> attention(g2,x,y);
+      case running -> running(g2,x,y);
+    }
     g2.dispose();
+  }
+  //bigger than a plain dot and carries a mark, so it reads as "this needs you" rather than blending into the tile
+  private void attention(Graphics2D g, int x, int y){
+    var d= Math.max(10,size/3);
+    var at= x+size-d;
+    var top= y+size-d;
+    ring(g,at,top,d);
+    g.setColor(attentionColor);
+    g.fillOval(at,top,d,d);
+    g.setColor(Color.white);
+    g.setFont(g.getFont().deriveFont(Font.BOLD,d*0.7f));
+    var m= g.getFontMetrics();
+    var glyph= "!";
+    g.drawString(glyph,at+(d-m.stringWidth(glyph))/2f,top+(d+m.getAscent()-m.getDescent())/2f);
+  }
+  //a partial ring redrawn at a time-derived angle, so a list that repaints while this project runs shows it spinning
+  private void running(Graphics2D g, int x, int y){
+    var d= Math.max(8,size/4);
+    var at= x+size-d;
+    var top= y+size-d;
+    ring(g,at,top,d);
+    var angle= (int)(System.currentTimeMillis()/8%360);
+    g.setColor(runningColor);
+    g.setStroke(new BasicStroke(Math.max(2f,d/4f),BasicStroke.CAP_ROUND,BasicStroke.JOIN_ROUND));
+    g.drawArc(at,top,d,d,angle,270);
+  }
+  private void ring(Graphics2D g, int at, int top, int d){
+    g.setColor(Color.white);
+    g.fillOval(at-2,top-2,d+4,d+4);
   }
 }

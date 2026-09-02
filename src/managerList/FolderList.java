@@ -1,7 +1,6 @@
 package managerList;
 
 import java.awt.BorderLayout;
-import java.awt.Color;
 import java.awt.Component;
 import java.awt.FlowLayout;
 import java.awt.Point;
@@ -21,6 +20,7 @@ import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.Timer;
 
 import managerData.ManagerData;
 import managerIcons.BadgeIcon;
@@ -30,10 +30,10 @@ import managerInfo.FolderFacts;
 
 public final class FolderList extends JPanel{
   public enum State{ running, upToDate, needsCompiling;
-    Color colour(){ return switch(this){
-      case running -> BadgeIcon.running;
-      case upToDate -> BadgeIcon.upToDate;
-      case needsCompiling -> BadgeIcon.stale;
+    BadgeIcon.Mark mark(){ return switch(this){
+      case running -> BadgeIcon.Mark.running;
+      case upToDate -> BadgeIcon.Mark.none;
+      case needsCompiling -> BadgeIcon.Mark.attention;
     };}
     String text(){ return switch(this){
       case running -> "running";
@@ -60,6 +60,7 @@ public final class FolderList extends JPanel{
   private final DefaultListModel<Row> model= new DefaultListModel<>();
   private final JList<Row> list= new JList<>(model);
   private final JComboBox<Sort> sort= new JComboBox<>(Sort.values());
+  private final Timer spinner= new Timer(80,_->list.repaint());
   public FolderList(ManagerData data, Predicate<Path> isRunning, Consumer<Optional<Path>> onOpen){
     super(new BorderLayout());
     this.data= data;
@@ -85,6 +86,9 @@ public final class FolderList extends JPanel{
     var rows= data.registered().stream().map(this::row).sorted(selected().comparator()).toList();
     model.clear();
     rows.forEach(model::addElement);
+    var anyRunning= rows.stream().anyMatch(r->r.state() == State.running);
+    if (anyRunning && !spinner.isRunning()){ spinner.start(); }
+    if (!anyRunning && spinner.isRunning()){ spinner.stop(); }
   }
   public void sortBy(Sort order){ sort.setSelectedItem(order); }
   public void select(Path folder){
@@ -101,7 +105,7 @@ public final class FolderList extends JPanel{
     var modified= FolderFacts.modified(e.folder());
     var state= stateOf(e.folder(),modified);
     return new Row(e,FolderName.compactName(e.folder()),
-      new BadgeIcon(FolderIcon.image(e.folder(),iconSize),iconSize,state.colour()),modified,state);
+      new BadgeIcon(FolderIcon.image(e.folder(),iconSize),iconSize,state.mark()),modified,state);
   }
   private State stateOf(Path folder, long modified){
     if (isRunning.test(folder)){ return State.running; }
