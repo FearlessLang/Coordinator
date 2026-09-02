@@ -199,6 +199,8 @@ class Helper{
 record NoCompile(Coordinator inner) implements Coordinator{
   @Override public Path rtPath(){ return inner.rtPath(); }
   @Override public Path stLibPath(){ return inner.stLibPath(); }
+  @Override public Path modsPath(){ return inner.modsPath(); }
+  @Override public Optional<Path> baseCachePath(){ return inner.baseCachePath(); }
   @Override public SourceOracle sourceOracle(Path path){ return inner.sourceOracle(path); }
   @Override public List<Literal> frontend(String pkgName, List<Ref> files, SourceOracle oracle, OtherPackages other, Map<String,String> vres){ throw new WouldCompile(); }
   @Override public void backend(String pkgName, List<Literal> core, SourceOracle oracle, OtherPackages other, OutputOracle out){ throw new WouldCompile(); }
