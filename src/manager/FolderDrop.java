@@ -16,15 +16,6 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
-//Cross-platform extraction of the folders/files dropped onto the manager
-//window, kept apart from the Swing wiring so the uri-list fallback below can
-//be unit tested without a display.
-//
-//Windows and macOS file managers hand over DataFlavor.javaFileListFlavor on
-//a drop. GTK file managers on Linux (Nautilus, Dolphin, ...) commonly don't:
-//they offer only a "text/uri-list" payload (RFC 2483, one file:// URI per
-//line), carried as String, Reader or InputStream depending on JDK/toolkit -
-//all three are handled below since which one shows up is not testable here.
 final class FolderDrop{
   private FolderDrop(){}
   static boolean hasFileFlavor(Transferable t){
@@ -36,7 +27,7 @@ final class FolderDrop{
       var flavor= uriListFlavor(t);
       return flavor == null ? List.of() : fromUriList(text(t,flavor));
     }
-    catch(UnsupportedFlavorException|IOException e){ return List.of(); }//unreadable drop: nothing offered, rather than failing it
+    catch(UnsupportedFlavorException|IOException e){ return List.of(); }
   }
   @SuppressWarnings("unchecked")
   private static List<Path> fromFileList(Transferable t) throws UnsupportedFlavorException, IOException {
@@ -64,7 +55,7 @@ final class FolderDrop{
   static List<Path> fromUriList(String data){
     var res= new ArrayList<Path>();
     for(var line: data.split("\r\n|\n|\r")){
-      if (line.isBlank() || line.startsWith("#")){ continue; }//comments are part of the text/uri-list format
+      if (line.isBlank() || line.startsWith("#")){ continue; }
       var path= toPath(line.strip());
       if (path != null){ res.add(path); }
     }

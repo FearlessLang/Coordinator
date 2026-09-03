@@ -233,19 +233,12 @@ final class ManagerGui {
     if (chooser.showOpenDialog(frame) != JFileChooser.APPROVE_OPTION){ return; }
     worker.execute(()->{ Manager.register(this, data, chooser.getSelectedFile().toString()); foldersChanged(); });
   }
-  //Directories are always offered, even ones without a *.fearless yet; among
-  //files, only the marker itself is - Manager.register treats picking either
-  //the same way.
   private static FileFilter projectFilter(){
     return new FileFilter(){
       @Override public boolean accept(File f){ return f.isDirectory() || f.getName().endsWith(".fearless"); }
       @Override public String getDescription(){ return "Fearless project folder or *.fearless file"; }
     };
   }
-  //A folder or *.fearless file dropped anywhere in the window registers the
-  //same as picking one in the Add-folder dialog above. FolderDrop reads the
-  //drop cross-platform: GTK file managers on Linux often hand over a
-  //text/uri-list instead of the file list Windows/macOS give directly.
   private TransferHandler dropHandler(){
     return new TransferHandler(){
       @Override public boolean canImport(TransferSupport support){

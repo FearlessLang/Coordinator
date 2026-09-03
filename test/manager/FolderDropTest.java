@@ -16,11 +16,6 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
-//file:// URIs here always carry a drive letter: this JVM runs on Windows, and
-//Path.of(URI) rejects a driveless Unix-style path here (there is nothing to
-//resolve it against). The line-splitting, comment/blank skipping and flavor
-//lookup below are the same code Linux runs; only that last URI-to-Path step
-//is platform-specific JDK behaviour, not something this suite re-proves.
 final class FolderDropTest{
   @Test void aFileListDropIsReadStraightFromTheFlavor(){
     var t= fixed(DataFlavor.javaFileListFlavor, List.of(new File("C:\\Users\\marco\\myproject")));
@@ -50,7 +45,7 @@ final class FolderDropTest{
     assertEquals(List.of(Path.of("C:\\Users\\marco\\My Project")), FolderDrop.fromUriList(data));
   }
   @Test void aBareLineFeedIsAcceptedToo(){
-    var data= "file:///C:/Users/marco/myproject\n";//RFC 2483 mandates CRLF; some toolkits hand over LF instead
+    var data= "file:///C:/Users/marco/myproject\n";
     assertEquals(List.of(Path.of("C:\\Users\\marco\\myproject")), FolderDrop.fromUriList(data));
   }
   @Test void aDropWithNeitherFlavorHasNothingToOffer(){
