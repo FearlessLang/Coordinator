@@ -11,6 +11,7 @@ import java.util.Comparator;
 import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
+import java.util.stream.IntStream;
 
 import javax.swing.DefaultListCellRenderer;
 import javax.swing.DefaultListModel;
@@ -86,7 +87,21 @@ public final class FolderList extends JPanel{
     var rows= data.registered().stream().map(this::row).sorted(selected().comparator()).toList();
     model.clear();
     rows.forEach(model::addElement);
-    var anyRunning= rows.stream().anyMatch(r->r.state() == State.running);
+    syncSpinner();
+  }
+  public void updateFreshness(Path folder, long modified, boolean upToDate){
+    for(int i= 0; i < model.size(); i+= 1){
+      var row= model.get(i);
+      if (!row.entry().folder().equals(folder)){ continue; }
+      var updated= build(row.entry(),modified,upToDate);
+      if (updated.state() == row.state() && updated.modified() == row.modified()){ return; }
+      model.set(i,updated);
+      syncSpinner();
+      return;
+    }
+  }
+  private void syncSpinner(){
+    var anyRunning= IntStream.range(0,model.size()).mapToObj(model::get).anyMatch(r->r.state() == State.running);
     if (anyRunning && !spinner.isRunning()){ spinner.start(); }
     if (!anyRunning && spinner.isRunning()){ spinner.stop(); }
   }
@@ -103,13 +118,13 @@ public final class FolderList extends JPanel{
   private Sort selected(){ return (Sort)sort.getSelectedItem(); }
   private Row row(ManagerData.Entry e){
     var modified= FolderFacts.modified(e.folder());
-    var state= stateOf(e.folder(),modified);
+    var upToDate= FolderFacts.cacheUpToDate(e.folder(),modified);
+    return build(e,modified,upToDate);
+  }
+  private Row build(ManagerData.Entry e, long modified, boolean upToDate){
+    var state= isRunning.test(e.folder()) ? State.running : (upToDate ? State.upToDate : State.needsCompiling);
     return new Row(e,FolderName.compactName(e.folder()),
       new BadgeIcon(FolderIcon.image(e.folder(),iconSize),iconSize,state.mark()),modified,state);
-  }
-  private State stateOf(Path folder, long modified){
-    if (isRunning.test(folder)){ return State.running; }
-    return FolderFacts.cacheUpToDate(folder,modified) ? State.upToDate : State.needsCompiling;
   }
   private void open(Point p){
     var i= list.locationToIndex(p);

@@ -18,6 +18,7 @@ import java.util.Optional;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executor;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -39,6 +40,7 @@ import javax.swing.filechooser.FileFilter;
 
 import managerData.ManagerData;
 import managerIcons.FolderName;
+import managerInfo.FolderFacts;
 import managerInfo.FolderInfo;
 import managerList.FolderList;
 import tools.JavacTool;
@@ -48,6 +50,7 @@ import userMessages.Violation;
 
 final class ManagerGui {
   private static final Duration tickDelay= Duration.ofSeconds(1);//the label shows seconds, so tick every second
+  private static final Duration freshnessPeriod= Duration.ofMillis(2500);
   final JFrame frame;
   final JLabel elapsed;
   final FolderList folders;
@@ -60,7 +63,11 @@ final class ManagerGui {
   private final Consumer<ManagerGui> onForget;
   private final Runnable onQuit;
   private final Map<Path,FolderInfo> open= new LinkedHashMap<>();
+  private final AtomicBoolean rotationChecking= new AtomicBoolean();
   private FolderInfo shown;
+  private Instant lastShownCheck= Instant.now();
+  private Instant lastRotationCheck= Instant.now().minusMillis(1250);
+  private int rotationIndex= 0;
   private ManagerGui(Runnable onQuit, ManagerData data, Executor worker, Consumer<ManagerGui> onForget){
     frame= new JFrame("Fearless Manager");
     this.data= data;
@@ -300,7 +307,22 @@ final class ManagerGui {
   private void tickShown(Duration up){
     var status= shown == null ? "" : "   -   "+shown.status();
     elapsed.setText("Running for "+formatDuration(up)+status);
-    if (shown != null){ shown.recheckFreshness(); }
+    var now= Instant.now();
+    if (shown != null && due(lastShownCheck,now)){ lastShownCheck= now; shown.recheckFreshness(); }
+    if (due(lastRotationCheck,now)){ lastRotationCheck= now; recheckNextInRotation(); }
+  }
+  private static boolean due(Instant last, Instant now){ return Duration.between(last,now).compareTo(freshnessPeriod) >= 0; }
+  private void recheckNextInRotation(){
+    var registered= data.registered().stream().map(ManagerData.Entry::folder).toList();
+    var candidates= shown == null ? registered : registered.stream().filter(f->!f.equals(shown.folder())).toList();
+    if (candidates.isEmpty() || !rotationChecking.compareAndSet(false,true)){ return; }
+    var folder= candidates.get(rotationIndex % candidates.size());
+    rotationIndex+= 1;
+    worker.execute(()->{
+      var modified= FolderFacts.modified(folder);
+      var upToDate= FolderFacts.cacheUpToDate(folder,modified);
+      SwingUtilities.invokeLater(()->{ rotationChecking.set(false); folders.updateFreshness(folder,modified,upToDate); });
+    });
   }
   static String formatDuration(Duration duration){
     var seconds= duration.toSeconds();
