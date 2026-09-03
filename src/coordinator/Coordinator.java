@@ -61,8 +61,8 @@ public interface Coordinator {
     try{ return new FrontendLogicMain().of(pkgName,vres, files, oracle, other); }
     catch(FearlessException fe){ throw Report.sourceError(fe.render(oracle)); }
   }
-  default void backend(String pkgName, List<Literal> core, SourceOracle oracle, OtherPackages other, OutputOracle out){
-    new NaiveBackendLogicMain().of(pkgName,oracle,other,core,out.rootDir(),rtPath(),sharedClasspath(),baseCachePath().map(p->p.resolve("base.html")));
+  default void backend(String pkgName, List<Literal> core, SourceOracle oracle, OtherPackages other, OutputOracle out, List<realSourceOracle.SourceOracleWithAutoload.Triple> autoloadedAssets){
+    new NaiveBackendLogicMain().of(pkgName,oracle,other,core,out.rootDir(),rtPath(),sharedClasspath(),baseCachePath().map(p->p.resolve("base.html")),autoloadedAssets);
   }
   default Path modsPath(){
     var appDir= System.getProperty(JavacTool.appDirKey);
@@ -203,7 +203,7 @@ record NoCompile(Coordinator inner) implements Coordinator{
   @Override public Optional<Path> baseCachePath(){ return inner.baseCachePath(); }
   @Override public SourceOracle sourceOracle(Path path){ return inner.sourceOracle(path); }
   @Override public List<Literal> frontend(String pkgName, List<Ref> files, SourceOracle oracle, OtherPackages other, Map<String,String> vres){ throw new WouldCompile(); }
-  @Override public void backend(String pkgName, List<Literal> core, SourceOracle oracle, OtherPackages other, OutputOracle out){ throw new WouldCompile(); }
+  @Override public void backend(String pkgName, List<Literal> core, SourceOracle oracle, OtherPackages other, OutputOracle out, List<realSourceOracle.SourceOracleWithAutoload.Triple> autoloadedAssets){ throw new WouldCompile(); }
 }
 record NoCommit(Path rootDir) implements OutputOracle{
   @Override public long commitMap(Map<String,Map<String,String>> map, long minExclusiveMillis){

@@ -30,7 +30,7 @@ class TestBuildBase {
       var other= OtherPackages.empty();
       SourceOracle o= sourceOracle(stLibPath());
       List<Literal> core= frontend(pkgName,o.allFiles(),o,other,Map.of());
-      backend(pkgName,core,o,other,out);
+      backend(pkgName,core,o,other,out,List.of());
       var jars= Push.of(out.rootDir().resolve("gen_java"),sharedClasspath());
       var runOut= JavaTool.runMainFromJars(List.of("-DfearlessUser.dir="+out.rootDir().getParent()),jars,pkgName+".Main");
       assertEquals("", runOut);

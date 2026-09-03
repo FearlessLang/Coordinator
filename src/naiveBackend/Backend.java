@@ -16,18 +16,20 @@ import utils.Join;
 import utils.Pos;
 
 public class Backend{
-  public Backend(Path out, String pkgName, List<Literal> decs, DocBuilder docs){
-    assert nonNull(out,pkgName,decs,docs);
+  public Backend(Path out, String pkgName, List<Literal> decs, DocBuilder docs, List<realSourceOracle.SourceOracleWithAutoload.Triple> autoloadedAssets){
+    assert nonNull(out,pkgName,decs,docs,autoloadedAssets);
     assert unmodifiable(decs, "decs");
     this.out= out;
     this.pkgName= pkgName;
     this.decs= decs;
     this.docs= docs;
+    this.autoloadedAssets= autoloadedAssets;
   }
   Path out;
   String pkgName;
   List<Literal> decs;
   DocBuilder docs;
+  List<realSourceOracle.SourceOracleWithAutoload.Triple> autoloadedAssets;
   List<Consumer<Path>> fixers= new ArrayList<>();
   private static final TName captureFreeName= new TName("base.CaptureFree",0,Pos.unknown);
   boolean captureFree(Literal l){ return l.cs().stream().anyMatch(c->c.name().equals(captureFreeName)); }
@@ -119,11 +121,13 @@ public class Backend{
   final Map<String,String> mains= new TreeMap<>();
   void writeMainJava(){
     var all= Join.of(mains.keySet().stream().map(n->"\""+n+"\""),"{",",","}","{}");
+    var assets= Join.of(autoloadedAssets.stream().map(Backend::assetLiteral),"{",",","}","{}");
     var sb= new StringBuilder(8_000)
       .append("package ").append(pkgName).append(";\n\n")
       .append("public final class Main{\n")
       .append("  static{ base.Util.installParentLifeline(); }\n")
       .append("  static final String[] all= ").append(all).append(";\n")
+      .append("  public static final String[][] autoloadedAssets= ").append(assets).append(";\n")
       .append("  public static void main(String[] args){ for(String n: args.length == 0 ? all : args){ run(n); } }\n")
       .append("  static void run(String n){\n");
     mains.forEach((n,iface)->sb
@@ -131,6 +135,13 @@ public class Backend{
       .append(iface).append(".instance.imm$main$1(new ").append(typeName(systemName)).append("())); return; }\n"));
     sb.append("    throw new AssertionError(\"No main called \"+n+\" in package ").append(pkgName).append("\");\n  }\n}\n");
     Fs.writeUtf8(out.resolve("Main.java"), sb.toString());
+  }
+  static String assetLiteral(realSourceOracle.SourceOracleWithAutoload.Triple t){
+    return "{"+javaStrLit(t.diskPath())+","+javaStrLit(t.zipSteps())+","+javaStrLit(t.zipEntry())+"}";
+  }
+  static String javaStrLit(String s){
+    assert s.indexOf('"') < 0 && s.indexOf('\\') < 0 && s.indexOf('\n') < 0 && s.indexOf('\r') < 0;
+    return "\""+s+"\"";
   }
   String mangleOp(String op){
     var sb= new StringBuilder(op.length()*6);
