@@ -10,26 +10,27 @@ import java.util.stream.IntStream;
 
 import core.*;
 import core.E.*;
+import coordinator.CapabilityEnvironment;
 import docBuilder.DocBuilder;
 import tools.Fs;
 import utils.Join;
 import utils.Pos;
 
 public class Backend{
-  public Backend(Path out, String pkgName, List<Literal> decs, DocBuilder docs, List<realSourceOracle.SourceOracleWithAutoload.Triple> autoloadedAssets){
-    assert nonNull(out,pkgName,decs,docs,autoloadedAssets);
+  public Backend(Path out, String pkgName, List<Literal> decs, DocBuilder docs, CapabilityEnvironment capabilities){
+    assert nonNull(out,pkgName,decs,docs,capabilities);
     assert unmodifiable(decs, "decs");
     this.out= out;
     this.pkgName= pkgName;
     this.decs= decs;
     this.docs= docs;
-    this.autoloadedAssets= autoloadedAssets;
+    this.capabilities= capabilities;
   }
   Path out;
   String pkgName;
   List<Literal> decs;
   DocBuilder docs;
-  List<realSourceOracle.SourceOracleWithAutoload.Triple> autoloadedAssets;
+  CapabilityEnvironment capabilities;
   List<Consumer<Path>> fixers= new ArrayList<>();
   private static final TName captureFreeName= new TName("base.CaptureFree",0,Pos.unknown);
   boolean captureFree(Literal l){ return l.cs().stream().anyMatch(c->c.name().equals(captureFreeName)); }
@@ -121,7 +122,7 @@ public class Backend{
   final Map<String,String> mains= new TreeMap<>();
   void writeMainJava(){
     var all= Join.of(mains.keySet().stream().map(n->"\""+n+"\""),"{",",","}","{}");
-    var assets= Join.of(autoloadedAssets.stream().map(Backend::assetLiteral),"{",",","}","{}");
+    var assets= Join.of(capabilities.autoloadedAssets().stream().map(Backend::assetLiteral),"{",",","}","{}");
     var sb= new StringBuilder(8_000)
       .append("package ").append(pkgName).append(";\n\n")
       .append("public final class Main{\n")

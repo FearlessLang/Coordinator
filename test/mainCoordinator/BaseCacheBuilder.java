@@ -5,6 +5,7 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 
+import coordinator.CapabilityEnvironment;
 import coordinator.Coordinator;
 import coordinator.OutputOracle;
 import core.E.Literal;
@@ -36,7 +37,7 @@ public final class BaseCacheBuilder{
       var other= OtherPackages.empty();
       SourceOracle o= c.sourceOracle(c.stLibPath());
       List<Literal> core= c.frontend(pkgName, o.allFiles(), o, other, Map.of());
-      c.backend(pkgName, core, o, other, out, List.of());
+      c.backend(pkgName, core, o, other, out, new CapabilityEnvironment(List.of()));
       out.commitPkgApi(pkgName, core, -1);
       var baseCache= stdLibDir.resolve("baseCache");
       Fs.copyFresh(scratch.resolve("base.json"), baseCache.resolve("base.json"));
