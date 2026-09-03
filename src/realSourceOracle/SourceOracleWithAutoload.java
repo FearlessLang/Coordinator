@@ -2,6 +2,7 @@ package realSourceOracle;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import tools.SourceOracle;
@@ -19,7 +20,7 @@ public record SourceOracleWithAutoload(SourceOracle base, Ref autoload, URI auto
     new TxtAutoloadHandler(),
     new ImageAutoloadHandler()
   );
-  private record Generated(String text, List<SourceOracleWithAutoload.Triple> autoloadedAssets){}
+  private record Generated(String text, List<Triple> autoloadedAssets){}
   public static Res of(SourceOracle base, String pkgName){
     if (suppressed(base, pkgName)){ return new Res(base, List.of(), List.of()); }
     var gen= generate(base, pkgName, handlers);
@@ -45,7 +46,7 @@ public record SourceOracleWithAutoload(SourceOracle base, Ref autoload, URI auto
   private static Generated generate(SourceOracle base, String pkgName, List<AutoloadHandler> handlers){
     var out= new StringBuilder();
     var declaredBy= new LinkedHashMap<String,Ref>();
-    var assets= new java.util.ArrayList<SourceOracleWithAutoload.Triple>();
+    var assets= new ArrayList<Triple>();
     for (var ref: base.allFiles()){
       if (!ref.fearPath().contains("/"+pkgName+"/")){ continue; }
       for (var h: handlers){
