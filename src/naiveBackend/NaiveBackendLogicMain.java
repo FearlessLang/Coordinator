@@ -15,10 +15,10 @@ import tools.JavacTool;
 import tools.SourceOracle;
 
 public class NaiveBackendLogicMain {
-  public void of(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, Path rootDir, Path rtPath, List<Path> extraClasspathDirs, Optional<Path> baseDocLocation){
+  public void of(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, Path rootDir, Path rtPath, List<Path> extraClasspathDirs, Optional<Path> baseDocLocation, List<realSourceOracle.SourceOracleWithAutoload.Triple> autoloadedAssets){
     var outPath= rootDir.resolve("gen_java",pkgName);
     var docs= new HtmlDocBuilder(oracle,other,core,baseDocLocation);
-    var fixers= new Backend(outPath, pkgName, core, docs).produceJavaCode();
+    var fixers= new Backend(outPath, pkgName, core, docs, autoloadedAssets).produceJavaCode();
     assert Files.exists(rtPath): "Missing extra folder: "+rtPath;
     if (pkgName.equals("base")){
     	Fs.copyTreeFlat(rtPath, outPath);

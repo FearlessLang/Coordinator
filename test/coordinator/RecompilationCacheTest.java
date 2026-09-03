@@ -55,7 +55,7 @@ final class RecompilationCacheTest{
       lastOtherSeen.put(pkgName, other);
       return scripts.get(pkgName).apply(other);
     }
-    @Override public void backend(String pkgName, List<Literal> core, SourceOracle oracle, OtherPackages other, OutputOracle out){}
+    @Override public void backend(String pkgName, List<Literal> core, SourceOracle oracle, OtherPackages other, OutputOracle out, List<realSourceOracle.SourceOracleWithAutoload.Triple> autoloadedAssets){}
     int calls(String pkg){ return frontendCalls.getOrDefault(pkg, 0); }
   }
 
@@ -412,7 +412,7 @@ final class RecompilationCacheTest{
       frontendCalls.merge(pkgName, 1, Integer::sum);
       return List.of();
     }
-    @Override public void backend(String pkgName, List<Literal> core, SourceOracle oracle, OtherPackages other, OutputOracle out){}
+    @Override public void backend(String pkgName, List<Literal> core, SourceOracle oracle, OtherPackages other, OutputOracle out, List<realSourceOracle.SourceOracleWithAutoload.Triple> autoloadedAssets){}
     int calls(String pkg){ return frontendCalls.getOrDefault(pkg, 0); }
   }
   private static void touch(Path p, long millis){ Fs.ofV(()->Files.setLastModifiedTime(p, FileTime.fromMillis(millis))); }

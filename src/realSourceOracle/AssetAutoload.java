@@ -17,6 +17,10 @@ final class AssetAutoload{
       +"  .zipEntry: base.Str -> `"+zipEntry(ref)+"`;\n";
   }
 
+  static SourceOracleWithAutoload.Triple triple(SourceOracle.Ref ref){
+    return new SourceOracleWithAutoload.Triple(diskPath(ref), zipSteps(ref), zipEntry(ref));
+  }
+
   private static String zipSteps(SourceOracle.Ref ref){
     if (ref instanceof PathEntry){ return ""; }
     if (ref instanceof ZipEntry z){

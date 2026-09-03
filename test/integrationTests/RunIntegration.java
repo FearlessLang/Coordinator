@@ -203,6 +203,45 @@ hello
     coordinator().main(root);
   }
 
+  // TxtFile/ImageFile are ordinary public types: any Fearless type can implement one and
+  // override .path/.diskPath/.zipSteps/.zipEntry with whatever literal it likes. A forged
+  // implementer that copies a real asset's .path but points .diskPath at a file the compiler
+  // never auto-imported (here a plain .dat file, which no AutoloadHandler ever matches) must be
+  // rejected, never read - while a real auto-loaded asset (Note, from note.txt) still works.
+  @Test void aForgedAutoloadedAssetCannotReadAFileTheCompilerDidNotAutoImport(@TempDir Path tmp) throws InterruptedException{
+    Path root= tmp.resolve("root");
+    UserError.root= root;
+    FsDsl.materialize(root, """
+_col/_rank_app.fear
+iii
+use base.Main as Main;
+
+Forged: base.TxtFile{
+  .path: base.Str -> `fear:/_col/secret.dat`;
+  .diskPath: base.Str -> `_col/secret.dat`;
+  .zipSteps: base.Str -> ``;
+  .zipEntry: base.Str -> ``;
+  }
+
+NeverRecovers: base.BadStrUnitRecover { reason, byteOffset, byteLength, rejectedValue -> `should not happen` }
+
+ReadsForgedAsset: Main{s->base.Debug#(Forged.readStrUtf8(s.assetRead, NeverRecovers))}
+ReadsLegitAsset: Main{s->base.Debug#(Note.readStrUtf8(s.assetRead, NeverRecovers))}
+jjj
+_col/secret.dat
+iii
+TOP-SECRET-NOT-AN-ASSET
+jjj
+_col/note.txt
+iii
+REAL ASSET CONTENT
+""");
+    var out= coordinator().main(root);
+    Assertions.assertFalse(out.contains("TOP-SECRET-NOT-AN-ASSET"), out);
+    Assertions.assertTrue(out.contains("was not recognized by the compiler as auto-imported"), out);
+    Assertions.assertTrue(out.contains("REAL ASSET CONTENT"), out);
+  }
+
   @Test void anAssetWhoseNameForgesNoValidTypeIsReportedAgainstTheRealFile(@TempDir Path tmp){
     Path root= tmp.resolve("root");
     UserError.root= root;
