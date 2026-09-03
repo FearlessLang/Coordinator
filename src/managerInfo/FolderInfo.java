@@ -5,6 +5,8 @@ import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.FlowLayout;
 import java.awt.Insets;
+import java.awt.Toolkit;
+import java.awt.datatransfer.StringSelection;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.nio.file.Files;
@@ -26,6 +28,7 @@ import javax.swing.JCheckBox;
 import javax.swing.JFileChooser;
 import javax.swing.JLabel;
 import javax.swing.JLayeredPane;
+import javax.swing.JList;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
@@ -62,6 +65,12 @@ public final class FolderInfo{
   private final Collapsible mainsToRun= new Collapsible("Mains to run",mainsScroll,true,small("All",()->setAll(true)),small("None",()->setAll(false)),openDocsButton);
   private final JButton actionButton= new JButton("Compile");
   private final List<JCheckBox> boxes= new ArrayList<>();
+  private final JList<LogFiles.Entry> logList= new JList<>();
+  private final JScrollPane logScroll= new JScrollPane(logList);
+  private final JButton viewLogButton= small("View",this::viewLog);
+  private final JButton copyLogButton= small("Copy",this::copyLog);
+  private final JButton deleteLogButton= small("Delete",this::deleteLog);
+  private final Collapsible logs= new Collapsible("Logs",logScroll,false,viewLogButton,copyLogButton,deleteLogButton);
   private FolderFacts facts;
   public FolderInfo(ManagerData data, Path folder, Executor worker, Runnable onChange){
     this.data= data;
@@ -75,6 +84,8 @@ public final class FolderInfo{
     details.setEditable(false);
     details.setFont(new Font(Font.MONOSPACED,Font.PLAIN,13));
     mainsBox.setLayout(new BoxLayout(mainsBox,BoxLayout.Y_AXIS));
+    logScroll.setPreferredSize(new Dimension(0,140));
+    logList.addListSelectionListener(_->updateLogButtons());
     outputScroll.setBorder(BorderFactory.createTitledBorder("Output"));
     actionButton.addActionListener(_->onAction());
     outputLayer.setLayout(null);
@@ -100,6 +111,7 @@ public final class FolderInfo{
     res.add(header());
     res.add(information);
     res.add(mainsToRun);
+    res.add(logs);
     return res;
   }
   private static JButton small(String text, Runnable action){
@@ -169,11 +181,44 @@ public final class FolderInfo{
     details.setText(String.join("\n",lines(folder,facts,entry)));
     details.setCaretPosition(0);
     fillMains();
+    fillLogs();
     updateButtons();
     root.revalidate();
     root.repaint();
   }
   private void setAll(boolean on){ boxes.forEach(b->b.setSelected(on)); }
+  private void fillLogs(){
+    logList.setListData(LogFiles.list(folder).toArray(LogFiles.Entry[]::new));
+    updateLogButtons();
+  }
+  private void updateLogButtons(){
+    var has= logList.getSelectedValue() != null;
+    viewLogButton.setEnabled(has);
+    copyLogButton.setEnabled(has);
+    deleteLogButton.setEnabled(has);
+  }
+  private void viewLog(){
+    var sel= logList.getSelectedValue();
+    if (sel == null){ return; }
+    var text= new JTextArea(Fs.readUtf8(sel.path()),24,90);
+    text.setEditable(false);
+    text.setFont(new Font(Font.MONOSPACED,Font.PLAIN,13));
+    JOptionPane.showMessageDialog(root,new JScrollPane(text),sel.path().getFileName().toString(),JOptionPane.PLAIN_MESSAGE);
+  }
+  private void copyLog(){
+    var sel= logList.getSelectedValue();
+    if (sel == null){ return; }
+    var selection= new StringSelection(Fs.readUtf8(sel.path()));
+    Toolkit.getDefaultToolkit().getSystemClipboard().setContents(selection,selection);
+  }
+  private void deleteLog(){
+    var sel= logList.getSelectedValue();
+    if (sel == null){ return; }
+    var question= "Delete "+sel.path().getFileName()+"?";
+    if (JOptionPane.showConfirmDialog(root,question,"Fearless",JOptionPane.YES_NO_OPTION) != JOptionPane.YES_OPTION){ return; }
+    Fs.rmTree(sel.path());
+    fillLogs();
+  }
   private void fillMains(){
     var known= session.mains();
     var chosen= selected();

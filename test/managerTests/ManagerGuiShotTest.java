@@ -102,4 +102,13 @@ final class ManagerGuiShotTest{
     var shot= shoot(()->new FolderInfo(data,project.toAbsolutePath().normalize(),_->{},()->{}).panel(),720,420,"folderInfoBroken");
     assertTrue(colours(shot) > 20);
   }
+  @Test void aFolderWithLogsListsThemInTheLogsSection(@TempDir Path dir){
+    var data= new MockManagerData();
+    var project= FolderFactsTest.project(dir,"loggedProject").toAbsolutePath().normalize();
+    Fs.writeUtf8(project.resolve(".out").resolve("logs").resolve("_base").resolve("log$20260904_123456_789Z.log"),"hello\n");
+    data.addRegisteredFolder(project);
+    var info= onEdtGet(()->new FolderInfo(data,project,_->{},()->{}));
+    var shot= shoot(info::panel,720,420,"folderInfoWithLogs");
+    assertTrue(colours(shot) > 20);
+  }
 }
