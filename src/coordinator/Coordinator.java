@@ -62,7 +62,7 @@ public interface Coordinator {
     catch(FearlessException fe){ throw Report.sourceError(fe.render(oracle)); }
   }
   default void backend(String pkgName, List<Literal> core, SourceOracle oracle, OtherPackages other, OutputOracle out){
-    new NaiveBackendLogicMain().of(pkgName,oracle,other,core,out.rootDir(),rtPath(),sharedClasspath());
+    new NaiveBackendLogicMain().of(pkgName,oracle,other,core,out.rootDir(),rtPath(),sharedClasspath(),baseCachePath().map(p->p.resolve("base.html")));
   }
   default Path modsPath(){
     var appDir= System.getProperty(JavacTool.appDirKey);

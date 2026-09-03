@@ -1,6 +1,7 @@
 package mainCoordinator;
 import managerIcons.FolderName;
 import tools.Fs;
+import tools.OpenPath;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
@@ -13,7 +14,7 @@ public final class MakeDemo{
     if (!fearThere){ Fs.writeUtf8(demoDir.resolve("_rank_app.fear"), rankAppFear); }
     var startThere= Files.exists(projectDir.resolve("start.fearless"));
     if (!startThere){ Fs.writeUtf8(projectDir.resolve("start.fearless"), FolderName.content); }
-    OpenDir.open(projectDir);
+    OpenPath.open(projectDir);
   }
 
   private static final String rankAppFear="""

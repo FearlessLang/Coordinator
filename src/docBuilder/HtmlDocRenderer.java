@@ -2,11 +2,13 @@ package docBuilder;
 
 import static offensiveUtils.Require.*;
 
+import java.nio.file.Path;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -19,11 +21,16 @@ import utils.Pos;
 final class HtmlDocRenderer{
   HtmlDocRenderer(String pkgName, Map<String,String> uses, List<TypeDoc> types, OtherPackages other,
       Map<DocOcc,List<ResolvedSpan>> spans){
-    assert nonNull(pkgName,uses,types,other,spans);
+    this(pkgName,uses,types,other,spans,Optional.empty());
+  }
+  HtmlDocRenderer(String pkgName, Map<String,String> uses, List<TypeDoc> types, OtherPackages other,
+      Map<DocOcc,List<ResolvedSpan>> spans, Optional<Path> baseDocLocation){
+    assert nonNull(pkgName,uses,types,other,spans,baseDocLocation);
     this.pkgName= pkgName;
     this.uses= uses;
     this.types= types;
     this.spans= spans;
+    this.baseDocLocation= baseDocLocation;
     this.toStr= new ExportedToStr(pkgName, uses);
     this.resolver= new DocResolver(pkgName, types, other);
   }
@@ -32,6 +39,7 @@ final class HtmlDocRenderer{
   final Map<String,String> uses;
   final List<TypeDoc> types;
   final Map<DocOcc,List<ResolvedSpan>> spans;
+  final Optional<Path> baseDocLocation;
   //filled by href() as links are emitted, so every ambiguous link that reaches the
   //page also gets its landing section; rendered after all types, when it is complete.
   final Map<String,DocLink.Ambiguous> pages= new LinkedHashMap<>();
@@ -493,12 +501,14 @@ code{
     return "<a href=\""+h(linkTo(c.name()))+"\">"+h(toStr.typeName(c))+"</a>";
   }
 
-  String linkTo(TName n){
-    return (n.pkgName().equals(pkgName) ? "" : n.pkgName()+".html")+"#"+typeId(n);
-  }
+  String linkTo(TName n){ return prefix(n.pkgName())+"#"+typeId(n); }
 
-  String linkTo(TName owner, M m){
-    return (owner.pkgName().equals(pkgName) ? "" : owner.pkgName()+".html")+"#"+methodId(owner,m);
+  String linkTo(TName owner, M m){ return prefix(owner.pkgName())+"#"+methodId(owner,m); }
+
+  String prefix(String pkg){
+    if (pkg.equals(pkgName)){ return ""; }
+    if (pkg.equals("base")){ return baseDocLocation.map(p->p.toUri().toString()).orElse("base.html"); }
+    return pkg+".html";
   }
 
   static String typeId(TypeDoc t){

@@ -26,12 +26,17 @@ import utils.Pos;
 
 public final class HtmlDocBuilder implements DocBuilder{
   public HtmlDocBuilder(SourceOracle oracle, OtherPackages other, List<Literal> core){
-    assert nonNull(oracle,other,core);
+    this(oracle,other,core,Optional.empty());
+  }
+  public HtmlDocBuilder(SourceOracle oracle, OtherPackages other, List<Literal> core, Optional<Path> baseDocLocation){
+    assert nonNull(oracle,other,core,baseDocLocation);
     this.oracle= oracle;
     this.other= other;
     this.core= core;
+    this.baseDocLocation= baseDocLocation;
     this.currentByName= core.stream().collect(Collectors.toUnmodifiableMap(Literal::name,l->l));
   }
+  final Optional<Path> baseDocLocation;
 
   final SourceOracle oracle;
   final OtherPackages other;
@@ -90,7 +95,7 @@ public final class HtmlDocBuilder implements DocBuilder{
     orphans(problems);
     docGroups().forEach(g->linkGroup(resolver,g,spans,problems));
     if (!problems.isEmpty()){ throw Report.docReferences(problems); }
-    Fs.writeUtf8(htmlPath,new HtmlDocRenderer(pkgName,uses,types,other,spans).render());
+    Fs.writeUtf8(htmlPath,new HtmlDocRenderer(pkgName,uses,types,other,spans,baseDocLocation).render());
   }
 
   //one group per declaration, carrying the scope its comment is written in: a fenced

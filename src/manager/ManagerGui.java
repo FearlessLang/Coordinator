@@ -41,6 +41,8 @@ import managerData.ManagerData;
 import managerIcons.FolderName;
 import managerInfo.FolderInfo;
 import managerList.FolderList;
+import tools.JavacTool;
+import tools.OpenPath;
 import userMessages.UserError;
 import userMessages.Violation;
 
@@ -208,9 +210,15 @@ final class ManagerGui {
     var on= shown;
     project.add(item("Clear cache",on != null,()->on.clearCache()));
     project.add(item("Browse files",on != null,()->on.browse()));
+    project.add(item("View documentation",on != null,()->on.openDocs()));
+    project.add(item("View base documentation",true,ManagerGui::openBaseDocs));
     project.add(item("Error report",on != null && !on.facts().valid(),()->on.report()));
     project.addSeparator();
     project.add(item("Forget project",on != null,()->on.forget()));
+  }
+  private static void openBaseDocs(){
+    var appDir= JavacTool.reqAppDir(Violation::mustUseLauncher);
+    OpenPath.open(appDir.resolve("stdLib").resolve("baseCache").resolve("base.html"));
   }
   private void fillRunningMenu(){
     running.removeAll();

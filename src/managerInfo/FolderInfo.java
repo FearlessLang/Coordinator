@@ -7,6 +7,7 @@ import java.awt.FlowLayout;
 import java.awt.Insets;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.time.ZoneId;
@@ -35,6 +36,7 @@ import managerIcons.FolderIcon;
 import managerIcons.FolderName;
 import managerRun.ProjectSession;
 import tools.Fs;
+import tools.OpenPath;
 import utils.Join;
 
 public final class FolderInfo{
@@ -53,7 +55,8 @@ public final class FolderInfo{
   private final JPanel mainsBox= new JPanel();
   private final JScrollPane mainsScroll= new JScrollPane(mainsBox);
   private final Collapsible information= new Collapsible("Information",new JScrollPane(details),true);
-  private final Collapsible mainsToRun= new Collapsible("Mains to run",mainsScroll,true,small("All",()->setAll(true)),small("None",()->setAll(false)));
+  private final JButton openDocsButton= small("Open docs",this::openDocs);
+  private final Collapsible mainsToRun= new Collapsible("Mains to run",mainsScroll,true,small("All",()->setAll(true)),small("None",()->setAll(false)),openDocsButton);
   private final JButton compileButton= new JButton("Compile");
   private final JButton runOrTerminateButton= new JButton("Run selected");
   private final List<JCheckBox> boxes= new ArrayList<>();
@@ -185,6 +188,7 @@ public final class FolderInfo{
     var running= session.running().isPresent();
     runOrTerminateButton.setText(running ? "Terminate" : "Run selected");
     runOrTerminateButton.setEnabled(running || (session.mains().isPresent() && !busy));
+    openDocsButton.setEnabled(session.mains().isPresent());
   }
   private void clearOutput(){ output.setText(""); }
   private void compile(){
@@ -211,6 +215,11 @@ public final class FolderInfo{
   public void forget(){
     data.removeRegisteredFolder(folder);
     onChange.run();
+  }
+  public void openDocs(){
+    var genJava= folder.resolve(FolderFacts.outDir).resolve("gen_java");
+    if (!Files.isDirectory(genJava)){ return; }
+    Fs.walk(genJava, s->s.filter(p->p.toString().endsWith(".html")).toList()).forEach(OpenPath::open);
   }
   public void browse(){
     var chooser= new JFileChooser(folder.toFile());
