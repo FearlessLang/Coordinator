@@ -17,9 +17,8 @@ final class GeneratedIcon{
     var res= new BufferedImage(size,size,BufferedImage.TYPE_INT_RGB);
     var g= res.createGraphics();
     quarters(g,colors,size);
-    initials(g,colors,name,size);
     g.dispose();
-    outline(res,Math.min(2,Math.max(1,size/32)));
+    initials(res,colors,name,size);
     return res;
   }
   private static List<Color> colors(Random rnd){
@@ -54,30 +53,49 @@ final class GeneratedIcon{
     var brightness= Math.max(0f,Math.min(1f,hsb[2]+deltaBrightness));
     return Color.getHSBColor(hsb[0],hsb[1],brightness);
   }
-  private static void initials(Graphics2D g, List<Color> colors, String name, int size){
-    var text= first2(name);
+  private static void initials(BufferedImage img, List<Color> colors, String name, int size){
+    var ink= readableOn(colors);
+    var mask= glyphMask(first2(name),ink,size);
+    if (ink.equals(Color.black)){ outline(img,mask); }
+    var g= img.createGraphics();
+    g.setRenderingHint(RenderingHints.KEY_ANTIALIASING,RenderingHints.VALUE_ANTIALIAS_ON);
+    g.drawImage(mask,0,0,null);
+    g.dispose();
+  }
+  //renders just the initials, alone on a transparent canvas, so their coverage (this image's alpha) can drive the outline independently of whatever colour sits underneath them
+  private static BufferedImage glyphMask(String text, Color ink, int size){
+    var mask= new BufferedImage(size,size,BufferedImage.TYPE_INT_ARGB);
+    var g= mask.createGraphics();
     g.setRenderingHint(RenderingHints.KEY_ANTIALIASING,RenderingHints.VALUE_ANTIALIAS_ON);
     g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING,RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
     g.setFont(new Font(Font.SANS_SERIF,Font.BOLD,size/2));
-    g.setColor(readableOn(colors));
+    g.setColor(ink);
     var m= g.getFontMetrics();
     g.drawString(text,(size-m.stringWidth(text))/2,(size-m.getHeight())/2+m.getAscent());
+    g.dispose();
+    return mask;
   }
-  //grows a white halo around the black initials so they stay readable over any quarter's colour, not just the ones readableOn averaged for
-  private static void outline(BufferedImage img, int thickness){
+  //a two-step halo around the glyph's opaque pixels: pure white right next to the letters, then a white/background blend one pixel further out, so the edge softens instead of cutting straight from white to a saturated quarter colour
+  private static void outline(BufferedImage img, BufferedImage mask){
     var w= img.getWidth();
     var h= img.getHeight();
-    var ink= new boolean[w][h];
+    var core= new boolean[w][h];
     for (int x= 0; x < w; x++){
-      for (int y= 0; y < h; y++){ ink[x][y]= img.getRGB(x,y) == Color.black.getRGB(); }
+      for (int y= 0; y < h; y++){ core[x][y]= alpha(mask,x,y) >= 128; }
     }
-    var halo= ink;
-    for (int i= 0; i < thickness; i++){ halo= dilate(halo,w,h); }
+    var ring1= dilate(core,w,h);
+    var ring2= dilate(ring1,w,h);
     for (int x= 0; x < w; x++){
       for (int y= 0; y < h; y++){
-        if (halo[x][y] && !ink[x][y]){ img.setRGB(x,y,Color.white.getRGB()); }
+        if (core[x][y]){ continue; }
+        if (ring1[x][y]){ img.setRGB(x,y,Color.white.getRGB()); }
+        else if (ring2[x][y]){ img.setRGB(x,y,blend(new Color(img.getRGB(x,y)),Color.white).getRGB()); }
       }
     }
+  }
+  private static int alpha(BufferedImage img, int x, int y){ return (img.getRGB(x,y) >>> 24)&0xFF; }
+  private static Color blend(Color a, Color b){
+    return new Color((a.getRed()+b.getRed())/2,(a.getGreen()+b.getGreen())/2,(a.getBlue()+b.getBlue())/2);
   }
   private static boolean[][] dilate(boolean[][] mask, int w, int h){
     var res= new boolean[w][h];
