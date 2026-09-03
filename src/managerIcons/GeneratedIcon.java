@@ -19,6 +19,7 @@ final class GeneratedIcon{
     quarters(g,colors,size);
     initials(g,colors,name,size);
     g.dispose();
+    outline(res,Math.min(2,Math.max(1,size/32)));
     return res;
   }
   private static List<Color> colors(Random rnd){
@@ -61,6 +62,39 @@ final class GeneratedIcon{
     g.setColor(readableOn(colors));
     var m= g.getFontMetrics();
     g.drawString(text,(size-m.stringWidth(text))/2,(size-m.getHeight())/2+m.getAscent());
+  }
+  //grows a white halo around the black initials so they stay readable over any quarter's colour, not just the ones readableOn averaged for
+  private static void outline(BufferedImage img, int thickness){
+    var w= img.getWidth();
+    var h= img.getHeight();
+    var ink= new boolean[w][h];
+    for (int x= 0; x < w; x++){
+      for (int y= 0; y < h; y++){ ink[x][y]= img.getRGB(x,y) == Color.black.getRGB(); }
+    }
+    var halo= ink;
+    for (int i= 0; i < thickness; i++){ halo= dilate(halo,w,h); }
+    for (int x= 0; x < w; x++){
+      for (int y= 0; y < h; y++){
+        if (halo[x][y] && !ink[x][y]){ img.setRGB(x,y,Color.white.getRGB()); }
+      }
+    }
+  }
+  private static boolean[][] dilate(boolean[][] mask, int w, int h){
+    var res= new boolean[w][h];
+    for (int x= 0; x < w; x++){
+      for (int y= 0; y < h; y++){ res[x][y]= mask[x][y] || hasSetNeighbour(mask,x,y,w,h); }
+    }
+    return res;
+  }
+  private static boolean hasSetNeighbour(boolean[][] mask, int x, int y, int w, int h){
+    for (int dx= -1; dx <= 1; dx++){
+      for (int dy= -1; dy <= 1; dy++){
+        var nx= x+dx;
+        var ny= y+dy;
+        if (nx >= 0 && nx < w && ny >= 0 && ny < h && mask[nx][ny]){ return true; }
+      }
+    }
+    return false;
   }
   private static String first2(String name){
     var s= name.strip();
