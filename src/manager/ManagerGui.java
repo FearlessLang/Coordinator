@@ -300,6 +300,7 @@ final class ManagerGui {
   private void tickShown(Duration up){
     var status= shown == null ? "" : "   -   "+shown.status();
     elapsed.setText("Running for "+formatDuration(up)+status);
+    if (shown != null){ shown.recheckFreshness(); }
   }
   static String formatDuration(Duration duration){
     var seconds= duration.toSeconds();

@@ -15,6 +15,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executor;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
 import javax.swing.BorderFactory;
@@ -44,8 +45,10 @@ public final class FolderInfo{
   private static final int iconSize= 48;
   private final ManagerData data;
   private final Path folder;
+  private final Executor worker;
   private final Runnable onChange;
   private final ProjectSession session;
+  private final AtomicBoolean checkingFreshness= new AtomicBoolean();
   private final JPanel root= new JPanel(new BorderLayout(8,8));
   private final JTextArea output= new JTextArea(10,60);
   private final JScrollPane outputScroll= new JScrollPane(output);
@@ -64,6 +67,7 @@ public final class FolderInfo{
   public FolderInfo(ManagerData data, Path folder, Executor worker, Runnable onChange){
     this.data= data;
     this.folder= folder;
+    this.worker= worker;
     this.onChange= onChange;
     this.session= new ProjectSession(folder, worker, this::append, this::refreshLater);
     this.facts= FolderFacts.of(folder);
@@ -149,6 +153,18 @@ public final class FolderInfo{
   }
   private static String format(long seconds){
     return "%02d:%02d:%02d".formatted(seconds/3600, (seconds/60)%60, seconds%60);
+  }
+  public void recheckFreshness(){
+    if (session.busy() || !checkingFreshness.compareAndSet(false,true)){ return; }
+    worker.execute(this::checkFreshness);
+  }
+  private void checkFreshness(){
+    var modified= FolderFacts.modified(folder);
+    var upToDate= FolderFacts.cacheUpToDate(folder,modified);
+    SwingUtilities.invokeLater(()->{
+      checkingFreshness.set(false);
+      if (upToDate != facts.cacheUpToDate()){ refresh(); }
+    });
   }
   private void refresh(){
     facts= FolderFacts.of(folder);
