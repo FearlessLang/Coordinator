@@ -13,8 +13,8 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 final class FolderDrop{
   private FolderDrop(){}
@@ -53,13 +53,11 @@ final class FolderDrop{
     return out.toString();
   }
   static List<Path> fromUriList(String data){
-    var res= new ArrayList<Path>();
-    for(var line: data.split("\r\n|\n|\r")){
-      if (line.isBlank() || line.startsWith("#")){ continue; }
-      var path= toPath(line.strip());
-      if (path != null){ res.add(path); }
-    }
-    return res;
+    return data.lines()
+      .filter(line -> !line.isBlank() && !line.startsWith("#"))
+      .map(FolderDrop::toPath)
+      .filter(Objects::nonNull)
+      .toList();
   }
   private static Path toPath(String line){
     try { return Path.of(new URI(line)); }
