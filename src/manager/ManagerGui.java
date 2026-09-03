@@ -7,6 +7,7 @@ import java.awt.GraphicsEnvironment;
 import java.awt.Taskbar;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.io.File;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -32,7 +33,9 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JSplitPane;
 import javax.swing.SwingUtilities;
+import javax.swing.TransferHandler;
 import javax.swing.WindowConstants;
+import javax.swing.filechooser.FileFilter;
 
 import managerData.ManagerData;
 import managerIcons.FolderName;
@@ -75,6 +78,7 @@ final class ManagerGui {
     frame.setLayout(new BorderLayout());
     frame.add(body, BorderLayout.CENTER);
     frame.add(elapsed, BorderLayout.SOUTH);
+    frame.getRootPane().setTransferHandler(dropHandler());
     frame.setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
     frame.addWindowListener(new WindowAdapter(){//closing the window only hides the manager; the Quit button terminates it
       @Override public void windowClosing(WindowEvent e){ frame.setVisible(false); }
@@ -222,10 +226,40 @@ final class ManagerGui {
   }
   private void addFolder(){
     var chooser= new JFileChooser();
-    chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+    chooser.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES);
+    chooser.setFileFilter(projectFilter());
+    chooser.setAcceptAllFileFilterUsed(false);
     chooser.setDialogTitle("Add a Fearless project folder");
     if (chooser.showOpenDialog(frame) != JFileChooser.APPROVE_OPTION){ return; }
     worker.execute(()->{ Manager.register(this, data, chooser.getSelectedFile().toString()); foldersChanged(); });
+  }
+  //Directories are always offered, even ones without a *.fearless yet; among
+  //files, only the marker itself is - Manager.register treats picking either
+  //the same way.
+  private static FileFilter projectFilter(){
+    return new FileFilter(){
+      @Override public boolean accept(File f){ return f.isDirectory() || f.getName().endsWith(".fearless"); }
+      @Override public String getDescription(){ return "Fearless project folder or *.fearless file"; }
+    };
+  }
+  //A folder or *.fearless file dropped anywhere in the window registers the
+  //same as picking one in the Add-folder dialog above. FolderDrop reads the
+  //drop cross-platform: GTK file managers on Linux often hand over a
+  //text/uri-list instead of the file list Windows/macOS give directly.
+  private TransferHandler dropHandler(){
+    return new TransferHandler(){
+      @Override public boolean canImport(TransferSupport support){
+        if (!FolderDrop.hasFileFlavor(support.getTransferable())){ return false; }
+        support.setDropAction(COPY);
+        return true;
+      }
+      @Override public boolean importData(TransferSupport support){
+        var paths= FolderDrop.pathsOf(support.getTransferable());
+        if (paths.isEmpty()){ return false; }
+        worker.execute(()->{ paths.forEach(p->Manager.register(ManagerGui.this,data,p.toString())); foldersChanged(); });
+        return true;
+      }
+    };
   }
   private void foldersChangedHere(){
     folders.refresh();
