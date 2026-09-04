@@ -29,14 +29,15 @@ public record DiskData(Path managerDir) implements ManagerData{
     var all= registered();
     if (all.stream().anyMatch(e->e.folder().equals(f))){ return; }
     assert nestedWith(f).isEmpty();
-    write(Push.of(all,new Entry(f,-1,-1)));
+    write(Push.of(all,new Entry(f,-1,-1,List.of())));
   }
   @Override public void removeRegisteredFolder(Path folder){
     var f= norm(folder);
     write(registered().stream().filter(e->!e.folder().equals(f)).toList());
   }
-  @Override public void setCompiled(Path folder, long millis){ update(folder,e->new Entry(e.folder(),millis,e.run())); }
-  @Override public void setRun(Path folder, long millis){ update(folder,e->new Entry(e.folder(),e.compiled(),millis)); }
+  @Override public void setCompiled(Path folder, long millis){ update(folder,e->new Entry(e.folder(),millis,e.run(),e.selectedMains())); }
+  @Override public void setRun(Path folder, long millis){ update(folder,e->new Entry(e.folder(),e.compiled(),millis,e.selectedMains())); }
+  @Override public void setSelectedMains(Path folder, List<String> mains){ update(folder,e->new Entry(e.folder(),e.compiled(),e.run(),mains)); }
   private void update(Path folder, UnaryOperator<Entry> op){
     var f= norm(folder);
     assert isRegistered(f);
@@ -44,14 +45,16 @@ public record DiskData(Path managerDir) implements ManagerData{
   }
   private static Path norm(Path folder){ return folder.toAbsolutePath().normalize(); }
   private Entry entry(String line){
-    var parts= line.split(" ",3);
-    if (parts.length != 3){ throw Violation.registeredFoldersUnreadable(managerDir); }
-    try { return new Entry(Path.of(new URI(parts[2])),Long.parseLong(parts[0]),Long.parseLong(parts[1])); }
+    var parts= line.split(" ",4);
+    if (parts.length != 4){ throw Violation.registeredFoldersUnreadable(managerDir); }
+    try { return new Entry(Path.of(new URI(parts[3])),Long.parseLong(parts[0]),Long.parseLong(parts[1]),mainsOf(parts[2])); }
     catch(URISyntaxException|IllegalArgumentException|FileSystemNotFoundException e){
       throw Violation.registeredFoldersUnreadable(managerDir);
     }
   }
-  private static String line(Entry e){ return e.compiled()+" "+e.run()+" "+e.folder().toUri(); }
+  private static String line(Entry e){ return e.compiled()+" "+e.run()+" "+mainsToken(e.selectedMains())+" "+e.folder().toUri(); }
+  private static String mainsToken(List<String> mains){ return mains.isEmpty() ? "-" : String.join(",",mains); }
+  private static List<String> mainsOf(String token){ return token.equals("-") ? List.of() : List.of(token.split(",")); }
   private void write(List<Entry> all){
     var text= Join.of(all.stream().map(DiskData::line),"","\n","\n","");
     var tmp= managerDir.resolve(UUID.randomUUID()+".tmp");

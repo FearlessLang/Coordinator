@@ -14,7 +14,6 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -42,6 +41,7 @@ import managerRun.ProjectSession;
 import tools.Fs;
 import tools.OpenPath;
 import utils.Join;
+import utils.Push;
 
 public final class FolderInfo{
   private static final DateTimeFormatter when= DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(ZoneId.systemDefault());
@@ -64,8 +64,6 @@ public final class FolderInfo{
   private final JButton openDocsButton= small("Open docs",this::openDocs);
   private final JPanel mainsPanel= new JPanel(new BorderLayout());
   private final JButton actionButton= new JButton("Compile");
-  private final List<JCheckBox> boxes= new ArrayList<>();
-  private boolean showPicker= false;
   private final JList<LogFiles.Entry> logList= new JList<>();
   private final JScrollPane logScroll= new JScrollPane(logList);
   private final JButton viewLogButton= small("View",this::viewLog);
@@ -191,8 +189,7 @@ public final class FolderInfo{
   }
   private void refresh(){
     facts= FolderFacts.of(folder);
-    var entry= data.registered().stream().filter(e->e.folder().equals(facts.folder())).findFirst().orElseThrow();
-    details.setText(String.join("\n",lines(folder,facts,entry)));
+    details.setText(String.join("\n",lines(folder,facts,currentEntry())));
     details.setCaretPosition(0);
     fillMains();
     fillLogs();
@@ -200,7 +197,13 @@ public final class FolderInfo{
     root.revalidate();
     root.repaint();
   }
-  private void setAll(boolean on){ boxes.forEach(b->b.setSelected(on)); }
+  private ManagerData.Entry currentEntry(){
+    return data.registered().stream().filter(e->e.folder().equals(facts.folder())).findFirst().orElseThrow();
+  }
+  private void setAll(boolean on){
+    data.setSelectedMains(folder, on ? session.mains().orElse(List.of()) : List.of());
+    refresh();
+  }
   private void fillLogs(){
     logList.setListData(LogFiles.list(folder).toArray(LogFiles.Entry[]::new));
     updateLogButtons();
@@ -235,25 +238,31 @@ public final class FolderInfo{
   }
   private void fillMains(){
     var known= session.mains();
-    var chosen= selected();
     mainsBox.removeAll();
-    boxes.clear();
     var multi= known.filter(m->m.size() > 1).isPresent();
-    if (!multi){ showPicker= false; }
     if (multi){
+      var chosen= selectedMains();
       for(var main: known.get()){
         var box= new JCheckBox(main, chosen.contains(main));
         box.setEnabled(!session.busy());
-        box.addActionListener(_->updateButtons());
-        boxes.add(box);
+        box.addActionListener(_->toggleMain(main,box.isSelected()));
         mainsBox.add(box);
       }
-      mainsScroll.setPreferredSize(new Dimension(0,Math.min(6,boxes.size())*26+8));
+      mainsScroll.setPreferredSize(new Dimension(0,Math.min(6,known.get().size())*26+8));
     }
-    mainsPanel.setVisible(multi && showPicker);
+    mainsPanel.setVisible(multi);
   }
-  private List<String> selected(){
-    return boxes.stream().filter(JCheckBox::isSelected).map(JCheckBox::getText).toList();
+  private void toggleMain(String main, boolean on){
+    var current= selectedMains();
+    data.setSelectedMains(folder, on ? Push.of(current,main) : current.stream().filter(m->!m.equals(main)).toList());
+    refresh();
+  }
+  private List<String> selectedMains(){
+    var known= session.mains();
+    if (known.isEmpty()){ return List.of(); }
+    if (known.get().size() == 1){ return known.get(); }
+    var chosen= currentEntry().selectedMains();
+    return known.get().stream().filter(chosen::contains).toList();
   }
   private boolean multiMains(){ return session.mains().filter(m->m.size() > 1).isPresent(); }
   private void updateButtons(){
@@ -261,15 +270,13 @@ public final class FolderInfo{
     var running= session.running().isPresent();
     var needsCompile= !facts.cacheUpToDate();
     var multi= multiMains();
-    var picking= multi && showPicker;
-    actionButton.setText(running ? "Terminate" : needsCompile ? "Compile" : picking ? "Run selected" : multi ? "Select mains" : "Run");
-    actionButton.setEnabled(running || (!busy && (needsCompile || !picking || !selected().isEmpty())));
+    actionButton.setText(running ? "Terminate" : needsCompile ? "Compile" : multi ? "Run selected" : "Run");
+    actionButton.setEnabled(running || (!busy && (needsCompile || !selectedMains().isEmpty())));
     openDocsButton.setEnabled(session.mains().isPresent());
   }
   private void onAction(){
     if (session.running().isPresent()){ session.terminate(); return; }
     if (!facts.cacheUpToDate()){ compile(); return; }
-    if (multiMains() && !showPicker){ showPicker= true; refresh(); return; }
     run();
   }
   private void clearOutput(){ output.setText(""); }
@@ -280,8 +287,7 @@ public final class FolderInfo{
   }
   private void run(){
     information.setOpen(false);
-    var known= session.mains().orElseThrow();
-    var chosen= known.size() == 1 ? known : selected();
+    var chosen= selectedMains();
     changed(d->d.setRun(folder,System.currentTimeMillis()));
     session.run(chosen);
   }

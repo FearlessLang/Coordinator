@@ -30,7 +30,7 @@ final class ManagerDataTest{
   @Test void addedFolderIsStoredAbsoluteWithNoTimes(@TempDir Path dir){
     var project= folder(dir,"someProject");
     data(dir).addRegisteredFolder(project);
-    assertEquals(List.of(new ManagerData.Entry(project.toAbsolutePath().normalize(),-1,-1)), data(dir).registered());
+    assertEquals(List.of(new ManagerData.Entry(project.toAbsolutePath().normalize(),-1,-1,List.of())), data(dir).registered());
   }
   @Test void addingTheSameFolderTwiceRegistersItOnce(@TempDir Path dir){
     var project= folder(dir,"someProject");
@@ -47,6 +47,13 @@ final class ManagerDataTest{
     var reread= data(dir).registered().getFirst();
     assertEquals(111, reread.compiled());
     assertEquals(222, reread.run());
+  }
+  @Test void selectedMainsSurviveAReRead(@TempDir Path dir){
+    var project= folder(dir,"someProject");
+    var d= data(dir);
+    d.addRegisteredFolder(project);
+    d.setSelectedMains(project,List.of("pkg.Main1","pkg.Main2"));
+    assertEquals(List.of("pkg.Main1","pkg.Main2"), data(dir).registered().getFirst().selectedMains());
   }
   @Test void forgettingAFolderRemovesOnlyThatOne(@TempDir Path dir){
     var kept= folder(dir,"kept");
