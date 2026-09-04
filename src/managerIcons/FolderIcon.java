@@ -14,9 +14,10 @@ public final class FolderIcon{
   public static Image image(Path folder, int size){
     var f= folder.toAbsolutePath().normalize();
     var name= FolderName.compactName(f);
-    var png= f.resolve(".icons").resolve(name+".png");
+    var png= iconFile(f,name);
     return Files.isRegularFile(png) ? read(png) : GeneratedIcon.of(name,size);
   }
+  static Path iconFile(Path folder, String name){ return folder.resolve(".icons").resolve(name+".png"); }
   public static Image read(Path file){
     try {
       var res= ImageIO.read(file.toFile());

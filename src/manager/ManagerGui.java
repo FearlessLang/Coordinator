@@ -132,7 +132,7 @@ final class ManagerGui {
       var answer= JOptionPane.showInputDialog(frame, question, suggested);
       if (answer == null){ return suggested; }
       var name= answer.strip();
-      if (FolderName.isName(folder,name) && !taken.contains(name)){ return name; }
+      if (FolderName.isName(folder,name) && FolderName.isFree(folder,name,taken)){ return name; }
     }
   }
   boolean askForget(){
