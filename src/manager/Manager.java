@@ -22,7 +22,6 @@ import tools.Fs;
 import userMessages.Report;
 import userMessages.UserError;
 import userMessages.Violation;
-import userMessages.UserError;
 import utils.Bug;
 
 import static java.nio.file.StandardWatchEventKinds.ENTRY_CREATE;

@@ -18,7 +18,6 @@ import realSourceOracle.SourceOracleWithAutoload;
 import testHelperFs.FsDsl;
 import java.util.List;
 import tools.Fs;
-import tools.JavaTool;
 import tools.JavacTool;
 import userMessages.UserError;
 

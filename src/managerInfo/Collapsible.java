@@ -10,6 +10,7 @@ import javax.swing.JButton;
 import javax.swing.JPanel;
 import javax.swing.SwingConstants;
 
+@SuppressWarnings("serial")
 public final class Collapsible extends JPanel{
   private final String title;
   private final JButton head= new JButton();

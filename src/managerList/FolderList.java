@@ -29,6 +29,7 @@ import managerIcons.FolderIcon;
 import managerIcons.FolderName;
 import managerInfo.FolderFacts;
 
+@SuppressWarnings("serial")
 public final class FolderList extends JPanel{
   public enum State{ running, upToDate, needsCompiling;
     BadgeIcon.Mark mark(){ return switch(this){
