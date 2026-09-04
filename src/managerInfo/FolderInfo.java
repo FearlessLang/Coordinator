@@ -14,7 +14,6 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -22,7 +21,6 @@ import java.util.function.Consumer;
 
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
-import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JFileChooser;
@@ -36,12 +34,14 @@ import javax.swing.JTextArea;
 import javax.swing.SwingUtilities;
 
 import managerData.ManagerData;
+import managerIcons.BadgeIcon;
 import managerIcons.FolderIcon;
 import managerIcons.FolderName;
 import managerRun.ProjectSession;
 import tools.Fs;
 import tools.OpenPath;
 import utils.Join;
+import utils.Push;
 
 public final class FolderInfo{
   private static final DateTimeFormatter when= DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(ZoneId.systemDefault());
@@ -62,9 +62,8 @@ public final class FolderInfo{
   private final JScrollPane mainsScroll= new JScrollPane(mainsBox);
   private final Collapsible information= new Collapsible("Information",new JScrollPane(details),true);
   private final JButton openDocsButton= small("Open docs",this::openDocs);
-  private final Collapsible mainsToRun= new Collapsible("Mains to run",mainsScroll,true,small("All",()->setAll(true)),small("None",()->setAll(false)),openDocsButton);
+  private final JPanel mainsPanel= new JPanel(new BorderLayout());
   private final JButton actionButton= new JButton("Compile");
-  private final List<JCheckBox> boxes= new ArrayList<>();
   private final JList<LogFiles.Entry> logList= new JList<>();
   private final JScrollPane logScroll= new JScrollPane(logList);
   private final JButton viewLogButton= small("View",this::viewLog);
@@ -84,6 +83,10 @@ public final class FolderInfo{
     details.setEditable(false);
     details.setFont(new Font(Font.MONOSPACED,Font.PLAIN,13));
     mainsBox.setLayout(new BoxLayout(mainsBox,BoxLayout.Y_AXIS));
+    mainsPanel.add(mainsPickerHeader(),BorderLayout.NORTH);
+    mainsPanel.add(mainsScroll,BorderLayout.CENTER);
+    mainsPanel.setBorder(BorderFactory.createEtchedBorder());
+    mainsPanel.setVisible(false);
     logScroll.setPreferredSize(new Dimension(0,140));
     logList.addListSelectionListener(_->updateLogButtons());
     outputScroll.setBorder(BorderFactory.createTitledBorder("Output"));
@@ -109,9 +112,15 @@ public final class FolderInfo{
     var res= new JPanel();
     res.setLayout(new BoxLayout(res,BoxLayout.Y_AXIS));
     res.add(header());
+    res.add(mainsPanel);
     res.add(information);
-    res.add(mainsToRun);
     res.add(logs);
+    return res;
+  }
+  private JPanel mainsPickerHeader(){
+    var res= new JPanel(new FlowLayout(FlowLayout.LEFT,8,0));
+    res.add(small("All",()->setAll(true)));
+    res.add(small("None",()->setAll(false)));
     return res;
   }
   private static JButton small(String text, Runnable action){
@@ -129,11 +138,12 @@ public final class FolderInfo{
   //horizontally without forcing this whole row wide.
   private JPanel header(){
     var res= new JPanel(new FlowLayout(FlowLayout.LEFT,8,0));
-    res.add(new JLabel(new ImageIcon(FolderIcon.image(folder,iconSize))));
+    res.add(new JLabel(new BadgeIcon(FolderIcon.image(folder,iconSize),iconSize,BadgeIcon.Mark.none)));
     res.add(actionButton);
     var name= new JLabel(FolderName.compactName(folder));
     name.setFont(name.getFont().deriveFont(Font.BOLD,18f));
     res.add(name);
+    res.add(openDocsButton);
     return res;
   }
   //Floats Clear output over the top-right of the Output area instead of taking
@@ -172,13 +182,14 @@ public final class FolderInfo{
     var upToDate= FolderFacts.cacheUpToDate(folder,modified);
     SwingUtilities.invokeLater(()->{
       checkingFreshness.set(false);
-      if (upToDate != facts.cacheUpToDate()){ refresh(); }
+      if (upToDate == facts.cacheUpToDate() && modified == facts.modified()){ return; }
+      refresh();
+      onChange.run();
     });
   }
   private void refresh(){
     facts= FolderFacts.of(folder);
-    var entry= data.registered().stream().filter(e->e.folder().equals(facts.folder())).findFirst().orElseThrow();
-    details.setText(String.join("\n",lines(folder,facts,entry)));
+    details.setText(String.join("\n",lines(folder,facts,currentEntry())));
     details.setCaretPosition(0);
     fillMains();
     fillLogs();
@@ -186,7 +197,13 @@ public final class FolderInfo{
     root.revalidate();
     root.repaint();
   }
-  private void setAll(boolean on){ boxes.forEach(b->b.setSelected(on)); }
+  private ManagerData.Entry currentEntry(){
+    return data.registered().stream().filter(e->e.folder().equals(facts.folder())).findFirst().orElseThrow();
+  }
+  private void setAll(boolean on){
+    data.setSelectedMains(folder, on ? session.mains().orElse(List.of()) : List.of());
+    refresh();
+  }
   private void fillLogs(){
     logList.setListData(LogFiles.list(folder).toArray(LogFiles.Entry[]::new));
     updateLogButtons();
@@ -221,34 +238,42 @@ public final class FolderInfo{
   }
   private void fillMains(){
     var known= session.mains();
-    var chosen= selected();
     mainsBox.removeAll();
-    boxes.clear();
-    if (known.isEmpty()){
-      mainsBox.add(new JLabel("<needs compiling>"));
-      return;
+    var multi= known.filter(m->m.size() > 1).isPresent();
+    if (multi){
+      var chosen= selectedMains();
+      for(var main: known.get()){
+        var box= new JCheckBox(main, chosen.contains(main));
+        box.setEnabled(!session.busy());
+        box.addActionListener(_->toggleMain(main,box.isSelected()));
+        mainsBox.add(box);
+      }
+      mainsScroll.setPreferredSize(new Dimension(0,Math.min(6,known.get().size())*26+8));
     }
-    var solo= known.get().size() == 1;
-    for(var main: known.get()){
-      var box= new JCheckBox(main, solo || chosen.contains(main));
-      box.setEnabled(!session.busy());
-      boxes.add(box);
-      mainsBox.add(box);
-    }
-    mainsScroll.setPreferredSize(new Dimension(0,Math.min(6,boxes.size())*26+8));
-    mainsToRun.setOpen(true);
+    mainsPanel.setVisible(multi);
   }
-  private List<String> selected(){
-    return boxes.stream().filter(JCheckBox::isSelected).map(JCheckBox::getText).toList();
+  private void toggleMain(String main, boolean on){
+    var current= selectedMains();
+    data.setSelectedMains(folder, on ? Push.of(current,main) : current.stream().filter(m->!m.equals(main)).toList());
+    refresh();
   }
+  private List<String> selectedMains(){
+    var known= session.mains();
+    if (known.isEmpty()){ return List.of(); }
+    if (known.get().size() == 1){ return known.get(); }
+    var chosen= currentEntry().selectedMains();
+    return known.get().stream().filter(chosen::contains).toList();
+  }
+  private boolean multiMains(){ return session.mains().filter(m->m.size() > 1).isPresent(); }
   private void updateButtons(){
     var busy= session.busy();
     var running= session.running().isPresent();
-    actionButton.setText(running ? "Terminate" : !facts.cacheUpToDate() ? "Compile" : runLabel());
-    actionButton.setEnabled(running || (facts.valid() && !busy));
+    var needsCompile= !facts.cacheUpToDate();
+    var multi= multiMains();
+    actionButton.setText(running ? "Terminate" : needsCompile ? "Compile" : multi ? "Run selected" : "Run");
+    actionButton.setEnabled(running || (!busy && (needsCompile || !selectedMains().isEmpty())));
     openDocsButton.setEnabled(session.mains().isPresent());
   }
-  private String runLabel(){ return session.mains().filter(m->m.size() == 1).isPresent() ? "Run" : "Run selected"; }
   private void onAction(){
     if (session.running().isPresent()){ session.terminate(); return; }
     if (!facts.cacheUpToDate()){ compile(); return; }
@@ -262,7 +287,7 @@ public final class FolderInfo{
   }
   private void run(){
     information.setOpen(false);
-    var chosen= selected();
+    var chosen= selectedMains();
     changed(d->d.setRun(folder,System.currentTimeMillis()));
     session.run(chosen);
   }

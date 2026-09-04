@@ -18,6 +18,7 @@ import java.nio.file.WatchService;
 
 import fileSupport.StringFiles;
 import managerData.ManagerData;
+import managerInfo.FolderFacts;
 import tools.Fs;
 import userMessages.Report;
 import userMessages.UserError;
@@ -119,6 +120,7 @@ public class Manager {
       var nested= data.nestedWith(folder.get());
       if (nested.isPresent()){ gui.explain(Report.folderNestedWithRegistered(folder.get(),nested.get())); return; }
       gui.nameFolder(data,folder.get());
+      Fs.rmTree(folder.get().resolve(FolderFacts.outDir));
       data.addRegisteredFolder(folder.get());
     }
     gui.select(folder.get());

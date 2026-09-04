@@ -31,14 +31,16 @@ import managerInfo.FolderFacts;
 
 @SuppressWarnings("serial")
 public final class FolderList extends JPanel{
-  public enum State{ running, upToDate, needsCompiling;
+  public enum State{ running, invalid, upToDate, needsCompiling;
     BadgeIcon.Mark mark(){ return switch(this){
       case running -> BadgeIcon.Mark.running;
+      case invalid -> BadgeIcon.Mark.invalid;
       case upToDate -> BadgeIcon.Mark.none;
       case needsCompiling -> BadgeIcon.Mark.attention;
     };}
     String text(){ return switch(this){
       case running -> "running";
+      case invalid -> "invalid file names";
       case upToDate -> "up to date";
       case needsCompiling -> "needs compiling";
     };}
@@ -94,7 +96,9 @@ public final class FolderList extends JPanel{
     for(int i= 0; i < model.size(); i+= 1){
       var row= model.get(i);
       if (!row.entry().folder().equals(folder)){ continue; }
-      var updated= build(row.entry(),modified,upToDate);
+      if (row.state() == State.invalid){ return; }
+      var state= isRunning.test(folder) ? State.running : upToDate ? State.upToDate : State.needsCompiling;
+      var updated= build(row.entry(),modified,state);
       if (updated.state() == row.state() && updated.modified() == row.modified()){ return; }
       model.set(i,updated);
       syncSpinner();
@@ -118,12 +122,13 @@ public final class FolderList extends JPanel{
   }
   private Sort selected(){ return (Sort)sort.getSelectedItem(); }
   private Row row(ManagerData.Entry e){
-    var modified= FolderFacts.modified(e.folder());
-    var upToDate= FolderFacts.cacheUpToDate(e.folder(),modified);
-    return build(e,modified,upToDate);
+    var facts= FolderFacts.of(e.folder());
+    var state= isRunning.test(e.folder()) ? State.running
+      : !facts.valid() ? State.invalid
+      : facts.cacheUpToDate() ? State.upToDate : State.needsCompiling;
+    return build(e,facts.modified(),state);
   }
-  private Row build(ManagerData.Entry e, long modified, boolean upToDate){
-    var state= isRunning.test(e.folder()) ? State.running : (upToDate ? State.upToDate : State.needsCompiling);
+  private Row build(ManagerData.Entry e, long modified, State state){
     return new Row(e,FolderName.compactName(e.folder()),
       new BadgeIcon(FolderIcon.image(e.folder(),iconSize),iconSize,state.mark()),modified,state);
   }

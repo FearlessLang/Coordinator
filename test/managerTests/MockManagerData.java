@@ -14,14 +14,15 @@ public final class MockManagerData implements ManagerData{
     var f= norm(folder);
     if (isRegistered(f)){ return; }
     assert nestedWith(f).isEmpty();
-    entries.add(new Entry(f,-1,-1));
+    entries.add(new Entry(f,-1,-1,List.of()));
   }
   @Override public void removeRegisteredFolder(Path folder){
     var f= norm(folder);
     entries.removeIf(e->e.folder().equals(f));
   }
-  @Override public void setCompiled(Path folder, long millis){ update(folder,e->new Entry(e.folder(),millis,e.run())); }
-  @Override public void setRun(Path folder, long millis){ update(folder,e->new Entry(e.folder(),e.compiled(),millis)); }
+  @Override public void setCompiled(Path folder, long millis){ update(folder,e->new Entry(e.folder(),millis,e.run(),e.selectedMains())); }
+  @Override public void setRun(Path folder, long millis){ update(folder,e->new Entry(e.folder(),e.compiled(),millis,e.selectedMains())); }
+  @Override public void setSelectedMains(Path folder, List<String> mains){ update(folder,e->new Entry(e.folder(),e.compiled(),e.run(),mains)); }
   private void update(Path folder, UnaryOperator<Entry> op){
     var f= norm(folder);
     assert isRegistered(f);

@@ -5,12 +5,13 @@ import java.util.List;
 import java.util.Optional;
 
 public interface ManagerData{
-  record Entry(Path folder, long compiled, long run){}
+  record Entry(Path folder, long compiled, long run, List<String> selectedMains){}
   List<Entry> registered();
   void addRegisteredFolder(Path folder);
   void removeRegisteredFolder(Path folder);
   void setCompiled(Path folder, long millis);
   void setRun(Path folder, long millis);
+  void setSelectedMains(Path folder, List<String> mains);
   default boolean isRegistered(Path folder){
     var f= folder.toAbsolutePath().normalize();
     return registered().stream().anyMatch(e->e.folder().equals(f));
