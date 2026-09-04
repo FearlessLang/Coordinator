@@ -1,15 +1,28 @@
 package integrationTests;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
 import java.util.Optional;
+
+import javax.imageio.ImageIO;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.opentest4j.AssertionFailedError;
+
+import com.sun.net.httpserver.HttpExchange;
+import com.sun.net.httpserver.HttpHandler;
+import com.sun.net.httpserver.HttpServer;
 
 import coordinator.Coordinator;
 import mainCoordinator.BaseCacheBuilder;
@@ -427,5 +440,240 @@ Hello:Main{s->base.Debug#(`hi`)}
     var c= coordinator();
     c.main(root);
     c.main(root);
+  }
+
+  // --- DownloadCapability -------------------------------------------------
+  // Each test starts a local HttpServer (no external network needed) and
+  // materializes a fresh Fearless project whose source references its port.
+
+  static HttpServer startServer(HttpHandler handler) throws IOException{
+    var server= HttpServer.create(new InetSocketAddress(InetAddress.getLoopbackAddress(),0),0);
+    server.createContext("/",handler);
+    server.start();
+    return server;
+  }
+  static String url(HttpServer server,String path){ return "http://127.0.0.1:"+server.getAddress().getPort()+path; }
+  static void reply(HttpExchange ex,int status,byte[] body) throws IOException{
+    ex.sendResponseHeaders(status,body.length);
+    ex.getResponseBody().write(body);
+    ex.close();
+  }
+  static void replyChunked(HttpExchange ex,byte[] body) throws IOException{
+    ex.sendResponseHeaders(200,0);
+    ex.getResponseBody().write(body);
+    ex.close();
+  }
+  static void redirect(HttpExchange ex,String location) throws IOException{
+    ex.getResponseHeaders().add("Location",location);
+    ex.sendResponseHeaders(302,-1);
+    ex.close();
+  }
+  static byte[] onePixelPng() throws IOException{
+    var img= new BufferedImage(3,5,BufferedImage.TYPE_INT_ARGB);
+    var bout= new ByteArrayOutputStream();
+    ImageIO.write(img,"png",bout);
+    return bout.toByteArray();
+  }
+  static String downloadProject(String url,String call){
+    return """
+_col/_rank_app.fear
+iii
+use base.Main as Main;
+NeverRecovers: base.BadStrUnitRecover { reason, byteOffset, byteLength, rejectedValue -> `should not happen` }
+NeverRecoversU: base.BadUStrUnitRecover { reason, byteOffset, byteLength, rejectedValue -> `should not happen`.u }
+Hello:Main{s->base.Debug#("""+call.replace("$URL",url)+")}\n";
+  }
+
+  @Test void downloadStrUtf8Succeeds(@TempDir Path tmp) throws Exception{
+    var server= startServer(ex->reply(ex,200,"hello download".getBytes(UTF_8)));
+    try{
+      Path root= tmp.resolve("root");
+      UserError.root= root;
+      FsDsl.materialize(root, downloadProject(url(server,"/ok"),
+        "s.download.downloadStrUtf8(`$URL`, 1000, NeverRecovers)"));
+      var out= coordinator().main(root);
+      Assertions.assertTrue(out.contains("hello download"), out);
+    }
+    finally{ server.stop(0); }
+  }
+
+  @Test void downloadBytesReturnsExactContent(@TempDir Path tmp) throws Exception{
+    var server= startServer(ex->reply(ex,200,new byte[]{65,66,67}));
+    try{
+      Path root= tmp.resolve("root");
+      UserError.root= root;
+      FsDsl.materialize(root, downloadProject(url(server,"/bytes"),
+        "s.download.downloadBytes(`$URL`, 1000).size"));
+      var out= coordinator().main(root);
+      Assertions.assertTrue(out.contains("3"), out);
+    }
+    finally{ server.stop(0); }
+  }
+
+  @Test void downloadRejectsNonHttpScheme(@TempDir Path tmp) throws Exception{
+    Path root= tmp.resolve("root");
+    UserError.root= root;
+    FsDsl.materialize(root, downloadProject("ftp://127.0.0.1/x",
+      "s.download.downloadStrUtf8(`$URL`, 1000, NeverRecovers)"));
+    var out= coordinator().main(root);
+    Assertions.assertTrue(out.contains("Invalid URL descriptor"), out);
+    Assertions.assertTrue(out.contains("unsupported scheme"), out);
+  }
+
+  @Test void downloadRejectsMalformedUrl(@TempDir Path tmp) throws Exception{
+    Path root= tmp.resolve("root");
+    UserError.root= root;
+    FsDsl.materialize(root, downloadProject("not a url",
+      "s.download.downloadStrUtf8(`$URL`, 1000, NeverRecovers)"));
+    var out= coordinator().main(root);
+    Assertions.assertTrue(out.contains("Invalid URL descriptor"), out);
+  }
+
+  @Test void downloadFailsWhenContentLengthExceedsMaxBytes(@TempDir Path tmp) throws Exception{
+    var server= startServer(ex->reply(ex,200,"0123456789".getBytes(UTF_8)));
+    try{
+      Path root= tmp.resolve("root");
+      UserError.root= root;
+      FsDsl.materialize(root, downloadProject(url(server,"/big"),
+        "s.download.downloadBytes(`$URL`, 4).size"));
+      var out= coordinator().main(root);
+      Assertions.assertTrue(out.contains("Download exceeds maxBytes"), out);
+      Assertions.assertTrue(out.contains("contentLength"), out);
+    }
+    finally{ server.stop(0); }
+  }
+
+  @Test void downloadFailsWhenStreamedBytesExceedMaxBytesWithoutContentLength(@TempDir Path tmp) throws Exception{
+    var server= startServer(ex->replyChunked(ex,"0123456789".getBytes(UTF_8)));
+    try{
+      Path root= tmp.resolve("root");
+      UserError.root= root;
+      FsDsl.materialize(root, downloadProject(url(server,"/chunked"),
+        "s.download.downloadBytes(`$URL`, 4).size"));
+      var out= coordinator().main(root);
+      Assertions.assertTrue(out.contains("Download exceeds maxBytes"), out);
+      Assertions.assertTrue(out.contains("bytesRead"), out);
+    }
+    finally{ server.stop(0); }
+  }
+
+  @Test void downloadFollowsRedirectsThenSucceeds(@TempDir Path tmp) throws Exception{
+    var server= startServer(ex->{
+      switch (ex.getRequestURI().getPath()){
+        case "/start" -> redirect(ex,"/next");
+        case "/next" -> redirect(ex,"/final");
+        case "/final" -> reply(ex,200,"landed".getBytes(UTF_8));
+        default -> reply(ex,404,new byte[0]);
+      }
+    });
+    try{
+      Path root= tmp.resolve("root");
+      UserError.root= root;
+      FsDsl.materialize(root, downloadProject(url(server,"/start"),
+        "s.download.downloadStrUtf8(`$URL`, 1000, NeverRecovers)"));
+      var out= coordinator().main(root);
+      Assertions.assertTrue(out.contains("landed"), out);
+    }
+    finally{ server.stop(0); }
+  }
+
+  @Test void downloadFailsAfterTooManyRedirects(@TempDir Path tmp) throws Exception{
+    var server= startServer(ex->redirect(ex,"/loop"));
+    try{
+      Path root= tmp.resolve("root");
+      UserError.root= root;
+      FsDsl.materialize(root, downloadProject(url(server,"/loop"),
+        "s.download.downloadStrUtf8(`$URL`, 1000, NeverRecovers)"));
+      var out= coordinator().main(root);
+      Assertions.assertTrue(out.contains("too many redirects"), out);
+    }
+    finally{ server.stop(0); }
+  }
+
+  @Test void downloadRedirectRevalidatesScheme(@TempDir Path tmp) throws Exception{
+    var server= startServer(ex->redirect(ex,"file:///etc/passwd"));
+    try{
+      Path root= tmp.resolve("root");
+      UserError.root= root;
+      FsDsl.materialize(root, downloadProject(url(server,"/go"),
+        "s.download.downloadStrUtf8(`$URL`, 1000, NeverRecovers)"));
+      var out= coordinator().main(root);
+      Assertions.assertTrue(out.contains("Invalid URL descriptor"), out);
+      Assertions.assertTrue(out.contains("unsupported scheme"), out);
+      Assertions.assertTrue(out.contains("file:///etc/passwd"), out);
+    }
+    finally{ server.stop(0); }
+  }
+
+  @Test void downloadFailsOnNon2xxStatus(@TempDir Path tmp) throws Exception{
+    var server= startServer(ex->reply(ex,404,"nope".getBytes(UTF_8)));
+    try{
+      Path root= tmp.resolve("root");
+      UserError.root= root;
+      FsDsl.materialize(root, downloadProject(url(server,"/missing"),
+        "s.download.downloadStrUtf8(`$URL`, 1000, NeverRecovers)"));
+      var out= coordinator().main(root);
+      Assertions.assertTrue(out.contains("HTTP status: 404"), out);
+    }
+    finally{ server.stop(0); }
+  }
+
+  // A precomposed e-acute (U+00E9, via Character.toChars so the source file's
+  // own encoding never matters) is valid UTF-8 and a valid Unicode scalar
+  // value, but it is outside Str's ASCII-only whitelist: UStr decodes it
+  // as-is, Str must route it through the recover callback instead.
+  @Test void downloadUStrAcceptsWhatStrMustRecover(@TempDir Path tmp) throws Exception{
+    var eAcute= new String(Character.toChars(0xE9));
+    var body= ("caf"+eAcute).getBytes(UTF_8);
+    var server= startServer(ex->reply(ex,200,body));
+    try{
+      Path root= tmp.resolve("root");
+      UserError.root= root;
+      var u= url(server,"/accent");
+      FsDsl.materialize(root, """
+_col/_rank_app.fear
+iii
+use base.Main as Main;
+RecoverToMarker: base.BadStrUnitRecover { reason, byteOffset, byteLength, rejectedValue -> `?` }
+NeverRecoversU: base.BadUStrUnitRecover { reason, byteOffset, byteLength, rejectedValue -> `should not happen`.u }
+Hello:Main{s->base.Debug#(
+  s.download.downloadStrUtf8(`"""+u+"""
+`, 1000, RecoverToMarker)+`|`+(s.download.downloadUStrUtf8(`"""+u+"""
+`, 1000, NeverRecoversU).size.str))}
+""");
+      var out= coordinator().main(root);
+      Assertions.assertTrue(out.contains("caf?"), out);
+      Assertions.assertTrue(out.contains("|4"), out);
+    }
+    finally{ server.stop(0); }
+  }
+
+  @Test void downloadImageSucceeds(@TempDir Path tmp) throws Exception{
+    var png= onePixelPng();
+    var server= startServer(ex->reply(ex,200,png));
+    try{
+      Path root= tmp.resolve("root");
+      UserError.root= root;
+      FsDsl.materialize(root, downloadProject(url(server,"/img.png"),
+        "s.download.downloadImage(`$URL`, 100_000, 1_000_000).width"));
+      var out= coordinator().main(root);
+      Assertions.assertTrue(out.contains("3"), out);
+    }
+    finally{ server.stop(0); }
+  }
+
+  @Test void downloadTimesOutOnStalledResponse(@TempDir Path tmp) throws Exception{
+    var server= startServer(ex->{
+      try{ Thread.sleep(40_000); } catch(InterruptedException ignored){}
+    });
+    try{
+      Path root= tmp.resolve("root");
+      UserError.root= root;
+      FsDsl.materialize(root, downloadProject(url(server,"/stall"),
+        "s.download.downloadStrUtf8(`$URL`, 1000, NeverRecovers)"));
+      var out= coordinator().main(root);
+      Assertions.assertTrue(out.contains("Download timed out"), out);
+    }
+    finally{ server.stop(0); }
   }
 }
