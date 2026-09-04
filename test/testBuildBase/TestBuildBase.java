@@ -9,6 +9,7 @@ import java.util.Map;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import coordinator.CapabilityEnvironment;
 import coordinator.Coordinator;
 import coordinator.OutputOracle;
 import core.OtherPackages;
@@ -30,7 +31,7 @@ class TestBuildBase {
       var other= OtherPackages.empty();
       SourceOracle o= sourceOracle(stLibPath());
       List<Literal> core= frontend(pkgName,o.allFiles(),o,other,Map.of());
-      backend(pkgName,core,o,other,out,List.of());
+      backend(pkgName,core,o,other,out,new CapabilityEnvironment(List.of()));
       var jars= Push.of(out.rootDir().resolve("gen_java"),sharedClasspath());
       var runOut= JavaTool.runMainFromJars(List.of("-DfearlessUser.dir="+out.rootDir().getParent()),jars,pkgName+".Main");
       assertEquals("", runOut);

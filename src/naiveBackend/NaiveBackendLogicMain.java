@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 
+import coordinator.CapabilityEnvironment;
 import core.OtherPackages;
 import docBuilder.HtmlDocBuilder;
 import core.E.Literal;
@@ -15,10 +16,10 @@ import tools.JavacTool;
 import tools.SourceOracle;
 
 public class NaiveBackendLogicMain {
-  public void of(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, Path rootDir, Path rtPath, List<Path> extraClasspathDirs, Optional<Path> baseDocLocation, List<realSourceOracle.SourceOracleWithAutoload.Triple> autoloadedAssets){
+  public void of(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, Path rootDir, Path rtPath, List<Path> extraClasspathDirs, Optional<Path> baseDocLocation, CapabilityEnvironment capabilities){
     var outPath= rootDir.resolve("gen_java",pkgName);
     var docs= new HtmlDocBuilder(oracle,other,core,baseDocLocation);
-    var fixers= new Backend(outPath, pkgName, core, docs, autoloadedAssets).produceJavaCode();
+    var fixers= new Backend(outPath, pkgName, core, docs, capabilities).produceJavaCode();
     assert Files.exists(rtPath): "Missing extra folder: "+rtPath;
     if (pkgName.equals("base")){
     	Fs.copyTreeFlat(rtPath, outPath);
