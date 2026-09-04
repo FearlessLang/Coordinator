@@ -114,8 +114,8 @@ public final class FolderInfo{
     var res= new JPanel();
     res.setLayout(new BoxLayout(res,BoxLayout.Y_AXIS));
     res.add(header());
-    res.add(information);
     res.add(mainsPanel);
+    res.add(information);
     res.add(logs);
     return res;
   }
@@ -184,7 +184,9 @@ public final class FolderInfo{
     var upToDate= FolderFacts.cacheUpToDate(folder,modified);
     SwingUtilities.invokeLater(()->{
       checkingFreshness.set(false);
-      if (upToDate != facts.cacheUpToDate()){ refresh(); }
+      if (upToDate == facts.cacheUpToDate() && modified == facts.modified()){ return; }
+      refresh();
+      onChange.run();
     });
   }
   private void refresh(){
