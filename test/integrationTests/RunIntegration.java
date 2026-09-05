@@ -96,9 +96,11 @@ top level main
     var logs= managerInfo.LogFiles.list(root);
     Assertions.assertEquals(1, logs.size(), logs.toString());
     var content= Fs.readUtf8(logs.get(0).path());
-    Assertions.assertTrue(content.contains("starting logging example"), content);
-    Assertions.assertTrue(content.contains("processed item 1"), content);
-    Assertions.assertTrue(content.contains("finished, 3 steps recorded"), content);
+    var messages= content.strip().lines().map(l-> l.substring(l.indexOf(' ')+1)).sorted().toList();
+    Assertions.assertEquals(List.of(
+      "finished, 3 steps recorded",
+      "processed item 1", "processed item 2", "processed item 3",
+      "starting logging example"), messages, content);
   }
   // testingNorms holds no fearless unit tests: a cache hit and a recomputation return
   // the very same value, so nothing about caching can be asserted on results alone.
