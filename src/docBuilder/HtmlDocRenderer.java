@@ -64,6 +64,50 @@ final class HtmlDocRenderer{
     return sb.append("</main>\n</div>\n</body>\n</html>\n").toString();
   }
 
+  String renderText(){
+    var shown= visibleTypes();
+    var claims= inlineClaims(shown);
+    var sb= new StringBuilder(4_000).append("package ").append(pkgName).append("\n\n");
+    shown.forEach(t->renderTypeText(sb,t,claims));
+    return sb.toString();
+  }
+
+  void renderTypeText(StringBuilder sb, TypeDoc t, Map<DocOcc,Object> claims){
+    sb.append(typeTitle(t));
+    if (!t.main().cs().isEmpty()){
+      sb.append(" : ").append(t.main().cs().stream().map(toStr::typeName).collect(Collectors.joining(", ")));
+    }
+    sb.append('\n');
+    renderDocText(sb,"  ",t,t.docs,claims);
+    visibleMethods(t).forEach(m->renderMethodText(sb,m,claims));
+    sb.append('\n');
+  }
+
+  void renderMethodText(StringBuilder sb, MethodDoc m, Map<DocOcc,Object> claims){
+    sb.append("  ").append(toStr.sig(m.main().sig())).append('\n');
+    if (m.declared){ renderDocText(sb,"    ",m,m.docs,claims); }
+    var refs= fromRefs(m);
+    if (refs.isEmpty()){ return; }
+    sb.append("    from: ").append(refs.stream()
+      .map(r->refName(r)+r.method().sig().m())
+      .collect(Collectors.joining(", "))).append('\n');
+  }
+
+  void renderDocText(StringBuilder sb, String indent, Object owner, List<DocOcc> docs, Map<DocOcc,Object> claims){
+    var visible= docs.stream().filter(c->!c.inline() || claims.get(c) == owner).toList();
+    if (visible.isEmpty()){ return; }
+    visible.stream().filter(c->!c.example()).forEach(c->appendIndented(sb,indent,c.text()));
+    var examples= visible.stream().filter(DocOcc::example).map(DocOcc::text).toList();
+    if (examples.isEmpty()){ return; }
+    sb.append(indent).append("example:\n");
+    examples.forEach(e->appendIndented(sb,indent+"  ",e));
+  }
+
+  static void appendIndented(StringBuilder sb, String indent, String line){
+    if (!line.isBlank()){ sb.append(indent); }
+    sb.append(line).append('\n');
+  }
+
   void renderHeader(StringBuilder sb, List<TypeDoc> shown){
     sb.append("<header class=\"hdr\">").append(mark)
       .append("<div><p class=\"eyebrow\">package</p><h1>").append(h(pkgName)).append("</h1></div>")
