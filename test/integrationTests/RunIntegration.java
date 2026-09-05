@@ -88,19 +88,24 @@ top level main
   @Test void testingStandardLibrary(){ testOk("testingStandardLibrary");}
   @Test void testDocs(){ testOk("testDocs");}
   @Test void testAssets(){ testOk("testAssets");}
-  @Test void testLogging() throws InterruptedException{
+  @Test void testLogging() throws InterruptedException, IOException{
     var root= ResolveResource.integrationTests.resolve("testLogging");
     Fs.rmTree(root.resolve(".out"));
     testOk("testLogging");
-    var logs= managerInfo.LogFiles.list(root).stream()
-      .filter(f-> !f.path().getFileName().toString().startsWith("unit_test_log")).toList();
+    var logDir= root.resolve(".out").resolve("logs").resolve("_base");
+    List<Path> logs;
+    try (var files= Files.list(logDir)){
+      logs= files.filter(p-> p.getFileName().toString().startsWith("log$")).toList();
+    }
     Assertions.assertEquals(1, logs.size(), logs.toString());
-    var content= Fs.readUtf8(logs.get(0).path());
-    var messages= content.strip().lines().map(l-> l.substring(l.indexOf(' ')+1)).toList();
-    Assertions.assertEquals(List.of(
-      "starting logging example",
-      "processed item 1", "processed item 2", "processed item 3",
-      "finished"), messages, content);
+    var content= Fs.readUtf8(logs.get(0));
+    utils.Err.strCmp("""
+[###] starting logging example
+[###] processed item 1
+[###] processed item 2
+[###] processed item 3
+[###] finished
+""", content);
   }
   // testingNorms holds no fearless unit tests: a cache hit and a recomputation return
   // the very same value, so nothing about caching can be asserted on results alone.
