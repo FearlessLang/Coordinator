@@ -484,7 +484,78 @@ final class DocBuilderTest{
     assertFalse(html.contains("Hidden"), "an undocumented anonymous literal must not reach the page: "+html);
   }
 
-  private static String renderedFixture(){
+  @Test void renderTextNeverContainsHtmlMarkup(){
+    var text= renderedTextFixture();
+    assertFalse(text.contains("<"), "the plain text doc must contain no markup at all: "+text);
+  }
+
+  @Test void renderTextNeverLeaksAHiddenAnonymousLiteral(){
+    var text= renderedTextFixture();
+    assertFalse(text.contains("Hidden"), "an undocumented anonymous literal must not reach the text doc either: "+text);
+  }
+
+  @Test void renderTextProducesAPlainSignatureLineWithNoPlaceholderForMissingDocs(){
+    var ownerName= new TName("pkg.Holder",0,Pos.unknown);
+    var bar= namedMethod(".bar", ownerName);
+    var owner= namedType("pkg.Holder", List.of(), List.of(bar));
+    SourceOracle oracle= List::of;
+    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(owner));
+    builder.visitLiteral(owner);
+
+    var text= new HtmlDocRenderer("pkg", Map.of(), builder.types, OtherPackages.empty(), Map.of()).renderText();
+
+    assertEquals("""
+package pkg
+
+Holder
+  .bar:base.Void
+
+""", text);
+  }
+
+  @Test void renderTextIndentsDocProseAndExamplesUnderTheirDeclaredMethod(){
+    var ownerName= new TName("pkg.Holder",0,Pos.unknown);
+    var bar= namedMethod(".bar", ownerName);
+    var owner= namedType("pkg.Holder", List.of(), List.of());
+    var typeDoc= new TypeDoc(owner, List.of());
+    typeDoc.declared(Pos.of(file,9,1), bar, List.of(
+      new DocOcc(file,9,1,4,"does the bar thing",true,false),
+      new DocOcc(file,9,1,4,".check{bar.assertOk}",true,true)
+    ), List.of());
+
+    var text= new HtmlDocRenderer("pkg", Map.of(), List.of(typeDoc), OtherPackages.empty(), Map.of()).renderText();
+
+    assertEquals("""
+package pkg
+
+Holder
+  .bar:base.Void
+    does the bar thing
+    example:
+      .check{bar.assertOk}
+
+""", text);
+  }
+
+  @Test void renderTextShowsPlainFromProvenanceForAnInheritedMethod(){
+    var supName= new TName("pkg.Sup",0,Pos.unknown);
+    var subName= new TName("pkg.Sub",0,Pos.unknown);
+    var supMut= fooMethod(RC.mut, supName);
+    var sup= namedType("pkg.Sup", List.of(), List.of(supMut));
+    var subMut= fooMethod(RC.mut, subName);
+    var sub= namedType("pkg.Sub", List.of(new T.C(supName, List.of())), List.of(subMut));
+    SourceOracle oracle= List::of;
+    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(sup, sub));
+    builder.visitLiteral(sup);
+    builder.visitLiteral(sub);
+
+    var text= new HtmlDocRenderer("pkg", Map.of(), builder.types, OtherPackages.empty(), Map.of()).renderText();
+
+    assertTrue(text.contains("from: Sup.foo"), text);
+    assertFalse(text.contains("<a "), text);
+  }
+
+  private static HtmlDocBuilder fixtureBuilder(){
     var aName= new TName("pkg.A",0,Pos.unknown);
     var bName= new TName("pkg.B",0,Pos.unknown);
     var hiddenName= new TName("pkg.Hidden",0,Pos.unknown);
@@ -498,7 +569,17 @@ final class DocBuilderTest{
     builder.visitLiteral(a);
     builder.visitLiteral(b);
     builder.visitLiteral(hidden);
+    return builder;
+  }
+
+  private static String renderedFixture(){
+    var builder= fixtureBuilder();
     return new HtmlDocRenderer("pkg", Map.of(), builder.types, OtherPackages.empty(), Map.of()).render();
+  }
+
+  private static String renderedTextFixture(){
+    var builder= fixtureBuilder();
+    return new HtmlDocRenderer("pkg", Map.of(), builder.types, OtherPackages.empty(), Map.of()).renderText();
   }
 
   private static List<String> idsIn(String html, String prefix){

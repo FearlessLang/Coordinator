@@ -45,6 +45,7 @@ public final class HtmlDocBuilder implements DocBuilder{
 
   String pkgName;
   Path htmlPath;
+  Path textPath;
   Map<String,String> uses= Map.of();
 
   final List<TypeDoc> types= new java.util.ArrayList<>();
@@ -56,6 +57,7 @@ public final class HtmlDocBuilder implements DocBuilder{
     assert this.pkgName == null;
     this.pkgName= pkgName;
     this.htmlPath= htmlPath;
+    this.textPath= htmlPath.resolveSibling(pkgName+".txt");
     this.uses= DocNames.uses(pkgName,core);
   }
 
@@ -95,7 +97,9 @@ public final class HtmlDocBuilder implements DocBuilder{
     orphans(problems);
     docGroups().forEach(g->linkGroup(resolver,g,spans,problems));
     if (!problems.isEmpty()){ throw Report.docReferences(problems); }
-    Fs.writeUtf8(htmlPath,new HtmlDocRenderer(pkgName,uses,types,other,spans,baseDocLocation).render());
+    var renderer= new HtmlDocRenderer(pkgName,uses,types,other,spans,baseDocLocation);
+    Fs.writeUtf8(htmlPath,renderer.render());
+    Fs.writeUtf8(textPath,renderer.renderText());
   }
 
   //one group per declaration, carrying the scope its comment is written in: a fenced
