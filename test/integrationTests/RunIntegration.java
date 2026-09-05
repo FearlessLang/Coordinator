@@ -38,8 +38,10 @@ public class RunIntegration {
   static{ utils.Err.setUp(AssertionFailedError.class, Assertions::assertEquals, Assertions::assertTrue); }
 
   static final Path baseCache= ResolveResource.stLibDebugOut.resolve("baseCache");
+  static final Path eclipseReportsDir= ResolveResource.coordinatorSrc.getParent().resolve(".out","eclipse-junit-xml");
   @BeforeAll static void buildBaseOnce(){
     BaseCacheBuilder.buildInto(ResolveResource.coordinatorJars, ResolveResource.stLibDebugOut);
+    Fs.rmTree(eclipseReportsDir);
   }
   Coordinator coordinator(){
     System.setProperty(JavacTool.appDirKey,ResolveResource.stLibPath.getParent()
@@ -62,13 +64,35 @@ public class RunIntegration {
   }
   void testOk(String name){
     var out= run(name);
+    writeEclipseJUnitXml(name);
     var fails= out.lines().filter(l->l.startsWith("Test failure ")).toList();
     Assertions.assertTrue(fails.isEmpty(), ()->"Fearless unit tests failed in "+name+":\n"+String.join("\n",fails));
+  }
+  static String xmlAttr(String s){ return s.replace("&","&amp;").replace("<","&lt;").replace("\"","&quot;"); }
+  static void writeEclipseJUnitXml(String name){
+    var logs= managerInfo.LogFiles.list(ResolveResource.integrationTests.resolve(name)).stream()
+      .filter(e->e.path().getFileName().toString().startsWith("unit_test_log"))
+      .toList();
+    if (logs.isEmpty()){ return; }
+    var disabled= java.util.regex.Pattern.compile("(?m)^PLAN\\|DISABLED\\|([^|]*)\\|([^|]*)\\|([^|]*)\\|([^|]*)$");
+    var body= disabled.matcher(Fs.readUtf8(logs.get(0).path())).replaceAll(mr->
+      "<testcase classname=\""+xmlAttr(mr.group(2))+"\" name=\""+xmlAttr(mr.group(3))
+      +"\" file=\""+xmlAttr(mr.group(1))+"\" line=\""+mr.group(4)+"\"><skipped/></testcase>");
+    body= body.replaceAll("(?m)^PLAN\\|RUN\\|.*$\\r?\\n?","");
+    var tests= body.split("<testcase ",-1).length-1;
+    var failures= body.split("<failure>",-1).length-1;
+    Fs.ensureDir(eclipseReportsDir);
+    Fs.writeUtf8(eclipseReportsDir.resolve("TEST-"+name+".xml"), """
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="%s" tests="%d" failures="%d" errors="0">
+%s</testsuite>
+""".formatted(name,tests,failures,body));
   }
   @Test void helloWorld(){ testOk("helloWorld");}
   //testUnitTests is the project that checks the failure report itself, so it must fail
   @Test void testUnitTests(){
     var fails= run("testUnitTests").lines().filter(l->l.startsWith("Test failure ")).toList();
+    writeEclipseJUnitXml("testUnitTests");
     utils.Err.strCmp("Test failure MyTests at line: 5 in file: _hello/_rank_app.fear [###]", String.join("\n",fails));
   }
   @Test void map_a_to_pkc(){ testOk("map_a_to_pkc");}
