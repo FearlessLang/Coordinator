@@ -91,16 +91,16 @@ top level main
   @Test void testLogging() throws InterruptedException{
     var root= ResolveResource.integrationTests.resolve("testLogging");
     Fs.rmTree(root.resolve(".out"));
-    var out= run("testLogging");
-    Assertions.assertTrue(out.contains("done, 3 steps recorded"), out);
-    var logs= managerInfo.LogFiles.list(root);
+    testOk("testLogging");
+    var logs= managerInfo.LogFiles.list(root).stream()
+      .filter(f-> !f.path().getFileName().toString().startsWith("unit_test_log")).toList();
     Assertions.assertEquals(1, logs.size(), logs.toString());
     var content= Fs.readUtf8(logs.get(0).path());
-    var messages= content.strip().lines().map(l-> l.substring(l.indexOf(' ')+1)).sorted().toList();
+    var messages= content.strip().lines().map(l-> l.substring(l.indexOf(' ')+1)).toList();
     Assertions.assertEquals(List.of(
-      "finished, 3 steps recorded",
+      "starting logging example",
       "processed item 1", "processed item 2", "processed item 3",
-      "starting logging example"), messages, content);
+      "finished"), messages, content);
   }
   // testingNorms holds no fearless unit tests: a cache hit and a recomputation return
   // the very same value, so nothing about caching can be asserted on results alone.
