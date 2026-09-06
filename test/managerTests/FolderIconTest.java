@@ -2,6 +2,7 @@ package managerTests;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.awt.Color;
@@ -19,6 +20,7 @@ import org.junit.jupiter.api.io.TempDir;
 import managerIcons.FolderIcon;
 import managerIcons.FolderName;
 import tools.Fs;
+import userMessages.UserError;
 
 final class FolderIconTest{
   static Path folder(Path dir, String name){
@@ -55,24 +57,29 @@ final class FolderIconTest{
     Fs.writeUtf8(project.resolve("inside").resolve("my_game.fearless"),"");
     assertEquals("someProject", FolderName.compactName(project));
   }
-  @Test void theIconIsTheDotIconsPngNamedAfterTheFolder(@TempDir Path dir){
+  @Test void theIconIsThePngInDotConfigIcon(@TempDir Path dir){
     var project= folder(dir,"someProject");
-    png(project.resolve(".icons").resolve("someProject.png"), Color.red);
+    png(project.resolve(".config").resolve("icon").resolve("whatever.png"), Color.red);
     var got= image(project);
     assertEquals(16, got.getWidth());
     assertEquals(Color.red.getRGB(), got.getRGB(3,3));
   }
-  @Test void aDotIconsPngNamedAfterSomethingElseIsNotTheIcon(@TempDir Path dir){
+  @Test void renamingTheProjectDoesNotAffectTheIcon(@TempDir Path dir){
     var project= folder(dir,"someProject");
-    png(project.resolve(".icons").resolve("aaa.png"), Color.red);
+    png(project.resolve(".config").resolve("icon").resolve("icon.png"), Color.blue);
+    Fs.writeUtf8(project.resolve("my_game.fearless"),"");
+    assertEquals(Color.blue.getRGB(), image(project).getRGB(3,3));
+  }
+  @Test void aNonPngFileInDotConfigIconIsIgnored(@TempDir Path dir){
+    var project= folder(dir,"someProject");
+    Fs.writeUtf8(project.resolve(".config").resolve("icon").resolve("icon.ico"),"not really an ico");
     assertEquals(64, image(project).getWidth());
   }
-  @Test void theFearlessFileNameAlsoChoosesTheIcon(@TempDir Path dir){
+  @Test void multiplePngsInDotConfigIconIsAnError(@TempDir Path dir){
     var project= folder(dir,"someProject");
-    Fs.writeUtf8(project.resolve("my_game.fearless"),"");
-    png(project.resolve(".icons").resolve("someProject.png"), Color.red);
-    png(project.resolve(".icons").resolve("my_game.png"), Color.blue);
-    assertEquals(Color.blue.getRGB(), image(project).getRGB(3,3));
+    png(project.resolve(".config").resolve("icon").resolve("a.png"), Color.red);
+    png(project.resolve(".config").resolve("icon").resolve("b.png"), Color.blue);
+    assertThrows(UserError.class, ()->image(project));
   }
   @Test void withNoIconOneIsMadeUpOfTheRightSize(@TempDir Path dir){
     var got= image(folder(dir,"someProject"));

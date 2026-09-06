@@ -4,20 +4,35 @@ import java.awt.Image;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Locale;
+import java.util.Optional;
 
 import javax.imageio.ImageIO;
 
+import tools.Fs;
 import userMessages.Violation;
 
 public final class FolderIcon{
   private FolderIcon(){}
   public static Image image(Path folder, int size){
     var f= folder.toAbsolutePath().normalize();
-    var name= FolderName.compactName(f);
-    var png= iconFile(f,name);
-    return Files.isRegularFile(png) ? read(png) : GeneratedIcon.of(name,size);
+    var png= pngIcon(f);
+    return png.isPresent() ? read(png.get()) : GeneratedIcon.of(FolderName.compactName(f),size);
   }
-  static Path iconFile(Path folder, String name){ return folder.resolve(".icons").resolve(name+".png"); }
+  static Path iconDir(Path folder){ return folder.resolve(".config").resolve("icon"); }
+  private static Optional<Path> pngIcon(Path folder){
+    var dir= iconDir(folder);
+    if (!Files.isDirectory(dir)){ return Optional.empty(); }
+    var pngs= Fs.of(()->{ try(var s= Files.list(dir)){ return s
+      .filter(Files::isRegularFile)
+      .filter(p->p.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".png"))
+      .sorted()
+      .toList();
+    }});
+    if (pngs.isEmpty()){ return Optional.empty(); }
+    if (pngs.size() > 1){ throw Violation.multipleIcons(dir,pngs); }
+    return Optional.of(pngs.getFirst());
+  }
   public static Image read(Path file){
     try {
       var res= ImageIO.read(file.toFile());
