@@ -29,6 +29,7 @@ import mainCoordinator.BaseCacheBuilder;
 import mainCoordinator.ResolveResource;
 import realSourceOracle.SourceOracleWithAutoload;
 import testHelperFs.FsDsl;
+import java.util.ArrayList;
 import java.util.List;
 import tools.Fs;
 import tools.JavacTool;
@@ -38,10 +39,12 @@ public class RunIntegration {
   static{ utils.Err.setUp(AssertionFailedError.class, Assertions::assertEquals, Assertions::assertTrue); }
 
   static final Path baseCache= ResolveResource.stLibDebugOut.resolve("baseCache");
-  static final Path eclipseReportsDir= ResolveResource.coordinatorSrc.getParent().resolve(".out","eclipse-junit-xml");
+  static final Path reportsDir= ResolveResource.coordinatorSrc.getParent().resolve(".out","junit_xml");
+  static final Path reportsFile= reportsDir.resolve("all_auto_tests.xml");
+  static final List<String> suites= new ArrayList<>();
   @BeforeAll static void buildBaseOnce(){
     BaseCacheBuilder.buildInto(ResolveResource.coordinatorJars, ResolveResource.stLibDebugOut);
-    Fs.rmTree(eclipseReportsDir);
+    Fs.rmTree(reportsDir);
   }
   Coordinator coordinator(){
     System.setProperty(JavacTool.appDirKey,ResolveResource.stLibPath.getParent()
@@ -64,12 +67,12 @@ public class RunIntegration {
   }
   void testOk(String name){
     var out= run(name);
-    writeEclipseJUnitXml(name);
+    writeJUnitReport(name);
     var fails= out.lines().filter(l->l.startsWith("Test failure ")).toList();
     Assertions.assertTrue(fails.isEmpty(), ()->"Fearless unit tests failed in "+name+":\n"+String.join("\n",fails));
   }
   static String xmlAttr(String s){ return s.replace("&","&amp;").replace("<","&lt;").replace("\"","&quot;"); }
-  static void writeEclipseJUnitXml(String name){
+  static void writeJUnitReport(String name){
     var logs= managerInfo.LogFiles.list(ResolveResource.integrationTests.resolve(name)).stream()
       .filter(e->e.path().getFileName().toString().startsWith("unit_test_log"))
       .toList();
@@ -81,18 +84,22 @@ public class RunIntegration {
     body= body.replaceAll("(?m)^PLAN\\|RUN\\|.*$\\r?\\n?","");
     var tests= body.split("<testcase ",-1).length-1;
     var failures= body.split("<failure>",-1).length-1;
-    Fs.ensureDir(eclipseReportsDir);
-    Fs.writeUtf8(eclipseReportsDir.resolve("TEST-"+name+".xml"), """
-<?xml version="1.0" encoding="UTF-8"?>
+    suites.add("""
 <testsuite name="%s" tests="%d" failures="%d" errors="0">
 %s</testsuite>
 """.formatted(name,tests,failures,body));
+    Fs.ensureDir(reportsDir);
+    Fs.writeUtf8(reportsFile, """
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites>
+%s</testsuites>
+""".formatted(String.join("",suites)));
   }
   @Test void helloWorld(){ testOk("helloWorld");}
   //testUnitTests is the project that checks the failure report itself, so it must fail
   @Test void testUnitTests(){
     var fails= run("testUnitTests").lines().filter(l->l.startsWith("Test failure ")).toList();
-    writeEclipseJUnitXml("testUnitTests");
+    writeJUnitReport("testUnitTests");
     utils.Err.strCmp("Test failure MyTests at line: 5 in file: _hello/_rank_app.fear [###]", String.join("\n",fails));
   }
   @Test void map_a_to_pkc(){ testOk("map_a_to_pkc");}
