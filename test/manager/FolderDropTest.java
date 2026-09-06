@@ -25,28 +25,28 @@ final class FolderDropTest{
   @Test void aUriListStringIsSplitOnLines(){
     var t= fixed(uriListFlavor("java.lang.String"),
       "file:///C:/Users/me/myproject\r\nfile:///C:/Users/me/other.fearless\r\n");
-    assertEquals(List.of(Path.of("C:\\Users\\me\\myproject"),Path.of("C:\\Users\\me\\other.fearless")), FolderDrop.pathsOf(t));
+    assertUris(FolderDrop.pathsOf(t),"file:///C:/Users/me/myproject","file:///C:/Users/me/other.fearless");
   }
   @Test void aUriListReaderIsReadInFull(){
     var t= fixed(uriListFlavor("java.io.Reader"), new StringReader("file:///C:/Users/me/myproject\n"));
-    assertEquals(List.of(Path.of("C:\\Users\\me\\myproject")), FolderDrop.pathsOf(t));
+    assertUris(FolderDrop.pathsOf(t),"file:///C:/Users/me/myproject");
   }
   @Test void aUriListInputStreamIsReadAsUtf8(){
     var bytes= "file:///C:/Users/me/myproject\n".getBytes(StandardCharsets.UTF_8);
     var t= fixed(uriListFlavor("java.io.InputStream"), new ByteArrayInputStream(bytes));
-    assertEquals(List.of(Path.of("C:\\Users\\me\\myproject")), FolderDrop.pathsOf(t));
+    assertUris(FolderDrop.pathsOf(t),"file:///C:/Users/me/myproject");
   }
   @Test void commentAndBlankLinesAreSkipped(){
     var data= "# a comment\r\n\r\nfile:///C:/Users/me/myproject\r\n";
-    assertEquals(List.of(Path.of("C:\\Users\\me\\myproject")), FolderDrop.fromUriList(data));
+    assertUris(FolderDrop.fromUriList(data),"file:///C:/Users/me/myproject");
   }
   @Test void aSpaceInTheNameIsPercentDecoded(){
     var data= "file:///C:/Users/me/My%20Project\r\n";
-    assertEquals(List.of(Path.of("C:\\Users\\me\\My Project")), FolderDrop.fromUriList(data));
+    assertUris(FolderDrop.fromUriList(data),"file:///C:/Users/me/My%20Project");
   }
   @Test void aBareLineFeedIsAcceptedToo(){
     var data= "file:///C:/Users/me/myproject\n";
-    assertEquals(List.of(Path.of("C:\\Users\\me\\myproject")), FolderDrop.fromUriList(data));
+    assertUris(FolderDrop.fromUriList(data),"file:///C:/Users/me/myproject");
   }
   @Test void aDropWithNeitherFlavorHasNothingToOffer(){
     var t= fixed(DataFlavor.stringFlavor, "just text");
@@ -56,6 +56,9 @@ final class FolderDropTest{
   private static DataFlavor uriListFlavor(String repClass){
     try { return new DataFlavor("text/uri-list;class="+repClass); }
     catch(ClassNotFoundException e){ throw new RuntimeException(e); }
+  }
+  private static void assertUris(List<Path> paths, String... expected){
+    assertEquals(List.of(expected),paths.stream().map(Path::toUri).map(Object::toString).toList());
   }
   private static Transferable fixed(DataFlavor flavor, Object data){
     return new Transferable(){
