@@ -717,7 +717,7 @@ Hello:Main{s->base.Debug#(
   }
 
   @Test void downloadTimesOutOnStalledResponse(@TempDir Path tmp) throws Exception{
-    var server= startServer(ex->{
+    var server= startServer(_->{
       try{ Thread.sleep(40_000); } catch(InterruptedException ignored){}
     });
     try{
