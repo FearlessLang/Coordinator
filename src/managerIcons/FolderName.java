@@ -30,9 +30,12 @@ public final class FolderName{
     try { BuildWithZip.checkIndividualVisibleSegment(kid.get()); return true; }
     catch(UserError e){ return false; }
   }
-  public static void makeUnique(Path folder, Set<String> taken, UnaryOperator<String> ask){
-    if (!taken.contains(compactName(folder))){ return; }
-    nameAs(folder, ask.apply(free(folder, folder.getFileName().toString(), taken)));
+  public static String makeUnique(Path folder, Set<String> taken, UnaryOperator<String> ask){
+    var name= compactName(folder);
+    if (isName(folder,name) && !taken.contains(name)){ return name; }
+    var chosen= ask.apply(free(folder, folder.getFileName().toString(), taken));
+    nameAs(folder, chosen);
+    return chosen;
   }
   public static String free(Path folder, String wanted, Set<String> taken){
     var base= asName(folder, wanted);

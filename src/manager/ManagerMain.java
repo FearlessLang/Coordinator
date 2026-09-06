@@ -13,7 +13,7 @@ import java.nio.file.Path;
 import java.util.UUID;
 
 import fileSupport.NativeLocaleForcer;
-import managerData.DiskData;
+import managerData.InfoData;
 import fileSupport.StringFiles;
 import userMessages.Violation;
 import userMessages.UserError;
@@ -65,7 +65,7 @@ public class ManagerMain {
     //draining, our message waits in the folder and is shown by the NEXT
     //manager start. Messages are never lost, only delayed.
     UserError.becameManagerOwner();//from here on, a failure ends the manager, not just this process
-    Manager.runOwner(msgDir(), new DiskData(managerDir));
+    Manager.runOwner(msgDir(), new InfoData(managerDir));
   }
   //heuristic to navigate the path upwards
   private static Path locateBinDir(){

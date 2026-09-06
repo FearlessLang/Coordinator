@@ -2,6 +2,8 @@ package manager;
 
 import java.awt.BorderLayout;
 import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.Font;
 import java.awt.Frame;
 import java.awt.GraphicsEnvironment;
 import java.awt.Taskbar;
@@ -24,6 +26,8 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import javax.swing.BorderFactory;
+import javax.swing.JButton;
+import javax.swing.JDialog;
 import javax.swing.JFileChooser;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
@@ -32,7 +36,9 @@ import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
+import javax.swing.JTextArea;
 import javax.swing.SwingUtilities;
 import javax.swing.TransferHandler;
 import javax.swing.WindowConstants;
@@ -112,9 +118,9 @@ final class ManagerGui {
     var bar= Taskbar.getTaskbar();
     if (bar.isSupported(Taskbar.Feature.ICON_IMAGE)){ bar.setIconImage(FearlessIcon.image()); }
   }
-  void nameFolder(ManagerData data, Path folder){
-    var taken= data.registered().stream().map(e -> FolderName.compactName(e.folder())).collect(Collectors.toSet());
-    FolderName.makeUnique(folder, taken, suggested -> askName(folder, suggested, taken));
+  String nameFolder(ManagerData data, Path folder){
+    var taken= data.registered().stream().map(ManagerData.Entry::alias).collect(Collectors.toSet());
+    return FolderName.makeUnique(folder, taken, suggested -> askName(folder, suggested, taken));
   }
   private String askName(Path folder, String suggested, Set<String> taken){
     var result= new AtomicReference<String>();
@@ -193,6 +199,9 @@ final class ManagerGui {
     var res= new JMenuBar();
     var manager= new JMenu("Manager");
     manager.setMnemonic('M');
+    manager.add(item("Edit project metadata...",true,this::editMetadata));
+    manager.add(item("Show raw project state...",true,this::showRawState));
+    manager.addSeparator();
     manager.add(item("Forget association",true,()->onForget.accept(this)));
     manager.add(item("Quit manager",true,onQuit));
     project.setMnemonic('P');
@@ -219,7 +228,7 @@ final class ManagerGui {
     project.add(item("Browse files",on != null,()->on.browse()));
     project.add(item("View documentation",on != null,()->on.openDocs()));
     project.add(item("View base documentation",true,ManagerGui::openBaseDocs));
-    project.add(item("Error report",on != null && !on.facts().valid(),()->on.report()));
+    project.add(item("Error report",on != null && on.hasProblem(),()->on.report()));
     project.addSeparator();
     project.add(item("Forget project",on != null,()->on.forget()));
   }
@@ -233,11 +242,12 @@ final class ManagerGui {
     if (live.isEmpty()){ running.add(item("<nothing running>",false,()->{})); return; }
     live.forEach(i->running.add(item(describe(i),true,()->folders.select(i.folder()))));
   }
-  private static String describe(FolderInfo info){
-    return FolderName.compactName(info.folder())+" - "+info.session().running().orElseThrow();
+  private String describe(FolderInfo info){
+    var alias= data.entryOf(info.folder()).map(ManagerData.Entry::alias).orElseGet(()->FolderName.compactName(info.folder()));
+    return alias+" - "+info.session().running().orElseThrow();
   }
   List<String> runningPrograms(){
-    return open.values().stream().filter(i->i.session().running().isPresent()).map(ManagerGui::describe).toList();
+    return open.values().stream().filter(i->i.session().running().isPresent()).map(this::describe).toList();
   }
   private void addFolder(){
     var chooser= new JFileChooser();
@@ -269,13 +279,70 @@ final class ManagerGui {
       }
     };
   }
+  private void editMetadata(){
+    var area= new JTextArea(data.infoText(),30,100);
+    area.setFont(new Font(Font.MONOSPACED,Font.PLAIN,13));
+    var dialog= new JDialog(frame,"Edit project metadata",true);
+    var commit= new JButton("Commit");
+    var close= new JButton("Close");
+    commit.addActionListener(_->worker.execute(()->tryCommit(area.getText(),dialog)));
+    close.addActionListener(_->dialog.dispose());
+    var buttons= new JPanel(new FlowLayout(FlowLayout.RIGHT));
+    buttons.add(commit);
+    buttons.add(close);
+    dialog.setLayout(new BorderLayout());
+    dialog.add(new JScrollPane(area),BorderLayout.CENTER);
+    dialog.add(buttons,BorderLayout.SOUTH);
+    dialog.pack();
+    dialog.setLocationRelativeTo(frame);
+    dialog.setVisible(true);
+  }
+  private void tryCommit(String text, JDialog dialog){
+    try{ data.commitInfoText(text); }
+    catch(UserError e){ explain(e); return; }
+    SwingUtilities.invokeLater(()->{
+      dialog.dispose();
+      open.values().forEach(FolderInfo::reload);
+      foldersChangedHere();
+    });
+  }
+  private void showRawState(){
+    var text= new JTextArea(rawStateDump(),30,100);
+    text.setEditable(false);
+    text.setFont(new Font(Font.MONOSPACED,Font.PLAIN,13));
+    JOptionPane.showMessageDialog(frame,new JScrollPane(text),"Raw project state (everything the manager tracks that is not in the metadata file)",JOptionPane.PLAIN_MESSAGE);
+  }
+  private String rawStateDump(){
+    var sb= new StringBuilder();
+    for (var e: data.registered()){
+      var facts= FolderFacts.of(e.path(),e.kind());
+      sb.append(e.alias()).append("  (").append(e.path()).append(")\n");
+      sb.append("  files: ").append(facts.files()).append(", bytes: ").append(facts.bytes()).append('\n');
+      sb.append("  last modified: ").append(facts.modified()).append('\n');
+      sb.append("  package-data stamp: ").append(facts.jsonStamp()).append(", cache stamp: ").append(facts.cacheStamp()).append('\n');
+      sb.append("  cache up to date: ").append(facts.cacheUpToDate()).append('\n');
+      sb.append("  structurally valid: ").append(facts.valid());
+      facts.problem().ifPresent(p->sb.append(" (").append(p.lines().findFirst().orElse(p)).append(')'));
+      sb.append('\n');
+      sb.append("  last compiled: ").append(e.compiled()).append(", last run: ").append(e.run()).append('\n');
+      var info= open.get(e.path());
+      if (info != null){
+        sb.append("  session busy: ").append(info.session().busy()).append('\n');
+        sb.append("  session running: ").append(info.session().running().orElse("<no>")).append('\n');
+        sb.append("  known mains from last compile: ").append(info.session().mains().orElse(List.of())).append('\n');
+      }
+      sb.append('\n');
+    }
+    return sb.isEmpty() ? "<nothing registered>" : sb.toString();
+  }
   private void foldersChangedHere(){
     folders.refresh();
-    var live= data.registered().stream().map(e->e.folder()).toList();
+    var live= data.registered().stream().map(ManagerData.Entry::path).toList();
     open.values().stream().filter(i->!live.contains(i.folder())).forEach(i->i.session().terminate());
     open.keySet().removeIf(f->!live.contains(f));
     fillRunningMenu();
-    if (shown != null && !live.contains(shown.folder())){ hidePanel(); }
+    if (shown != null && !live.contains(shown.folder())){ hidePanel(); return; }
+    fillProjectMenu();
   }
   void foldersChanged(){ SwingUtilities.invokeLater(folders::refresh); }
   static ManagerGui create(Runnable onQuit, ManagerData data, Executor worker, Consumer<ManagerGui> onForget){
@@ -313,7 +380,7 @@ final class ManagerGui {
   }
   private static boolean due(Instant last, Instant now){ return Duration.between(last,now).compareTo(freshnessPeriod) >= 0; }
   private void recheckNextInRotation(){
-    var registered= data.registered().stream().map(ManagerData.Entry::folder).toList();
+    var registered= data.registered().stream().map(ManagerData.Entry::path).toList();
     var candidates= shown == null ? registered : registered.stream().filter(f->!f.equals(shown.folder())).toList();
     if (candidates.isEmpty() || !rotationChecking.compareAndSet(false,true)){ return; }
     var folder= candidates.get(rotationIndex % candidates.size());

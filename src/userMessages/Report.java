@@ -596,6 +596,8 @@ Examples:
   //the language: parse errors, well formedness, types. Here they only become terminal.
   public static UserError sourceError(String rendered){ return new UserError(rendered); }
 
+  public static UserError infoError(String rendered){ return new UserError(rendered); }
+
   public static UserError docReferences(List<String> problems){ return new UserError("""
 Broken reference in a doc comment.
 
