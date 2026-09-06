@@ -496,7 +496,6 @@ Folder:
 Package name: %s
 """.formatted(disp(pkgFolder(file, segment)), disp(segment.substring(1))));
   }
-  @SuppressWarnings("text-blocks")
   public static UserError projectAmbiguousPackageSegment(Ref file, List<String> candidates){ return new UserError("""
 This path contains more than one folder whose name starts with "_":
   %s
@@ -528,7 +527,7 @@ Valid alternatives:
       +-- bla/
           +-- _beer/
               +-- bar.fear
-      """.formatted(file, Join.of(candidates.stream().map(c->disp(c)), "",", ","")));
+""".formatted(file, Join.of(candidates.stream().map(c->disp(c)), "",", ","")));
   }
   public static UserError projectMissingRankFile(String pkg, Path pkgRoot){ return new UserError("""
 Missing rank file for a package.
