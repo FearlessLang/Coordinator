@@ -34,7 +34,7 @@ import utils.Bug;
 // [[..]]: judge each sentence as if the concrete word stood there.
 //
 // AUDIENCE: a Fearless user is fluent in functional programming in an OCaml-like style,
-// data structures with occasional mutation, closures, generics, exceptions, 
+// data structures with occasional mutation, closures, generics, exceptions,
 // anything technical in the mathematical or logical sense.
 // They are NOT assumed to know anything about operating systems, shells,
 // or files beyond "the thing the Fearless APIs let me read and write in the right conditions":
@@ -594,7 +594,7 @@ class StorageUnavailableText{
   static final String staleNetworkFile= NetInfo.serverLine+"""
 The file's bytes live on the server named above. To «read» such a file, this computer
 first asks the server for it and receives back a reference, then uses that reference
-for the actual «reading». 
+for the actual «reading».
 The server has stopped honoring the reference this computer holds for this file ("stale file handle").
 Servers do that when the file behind a reference was deleted, moved, or replaced.
 """+Terms.glossary;
@@ -766,7 +766,7 @@ class PathResolutionParentIsNotAFolder{
     return CommonInfo.of(op, path, suppressed)+msg;
   }
   private static final String msg= """
-Path 
+Path
   yy
 is not a folder but is a parent of the requested path
   yyxxx
@@ -777,7 +777,7 @@ files inside an archive cannot be reached by path; they are read through the arc
 //Todo: code example here.
 //For Op.Write the archive sentence needs its writing twin (or a neutral "reached
 //through the archive API"): review together with the code example above.
-[[The zip file backup.zip cointains/does not contan xxx inside/is not a valid zip]](using the zip api) 
+[[The zip file backup.zip cointains/does not contan xxx inside/is not a valid zip]](using the zip api)
 """;
 }
 
@@ -817,7 +817,7 @@ On Windows the limit is 259 characters, unless long-path support is enabled, in 
 System setting -> registry value LongPathsEnabled.
 On this computer the system setting is [[enabled/not enabled]](read from the registry value).
 """;
-  
+
   private static final String posixLimits= """
 On this system, a whole path may be at most [[4096]](asked to the system: pathconf
 of this path, PATH_MAX) bytes, and a single file or folder name at most
@@ -828,8 +828,8 @@ of this path, PATH_MAX) bytes, and a single file or folder name at most
 class PathResolutionText{
   //[POSIX-only]
   static final String symlinkLoop= """
-As shown by the chain above, 
-[[The path goes through too many links,The path loops back to itself]](inspect the chain before, or set a variable that we can read here) 
+As shown by the chain above,
+[[The path goes through too many links,The path loops back to itself]](inspect the chain before, or set a variable that we can read here)
 ("too many levels of symbolic links").
 """;
 }
@@ -1019,7 +1019,7 @@ by the Fearless API
   static final String deviceDoesNotRecognizeCommand= """
 While «reading» this file, the conversation between the device and its driver broke down:
 the driver reported that the device rejected a command as one it does not know (error 22, ERROR_BAD_COMMAND).
-A rejection at that boundary means one of the two sides is wrong 
+A rejection at that boundary means one of the two sides is wrong
 - Device malfunction or Device built-in software bug,
 - Device driver bug, or the wrong driver for this device
 The device is [[the USB storage device "SanDisk Ultra"]] and its driver is
@@ -1032,7 +1032,7 @@ class InterruptionText{
   //CHANGED(2): "the file must be reopened before trying again" was instruction;
   //replaced by the fact it encoded (stopping this way also closes the file).
   static final String channelClosedByInterrupt= """
-Fearless stopped this «read» mid way on purpose; 
+Fearless stopped this «read» mid way on purpose;
 for example because of a shutdown, a timeout, or a cancelled task.
 Stopping a «read» this way also closes the file.
 """;

@@ -406,6 +406,7 @@ That metadata should be stored in:
   %s
 """.formatted(PrettyFileName.displayFileName(apiJson.toUri())));
   }
+  @SuppressWarnings("text-blocks")
   public static UserError cacheInvalidFile(Path mapJson, String parseErr){
     return new UserError("""
 Build cache contains an invalid cached file.

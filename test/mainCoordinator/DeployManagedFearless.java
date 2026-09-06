@@ -1,9 +1,6 @@
 package mainCoordinator;
 
 import tools.PortableApp;
-//This can easily be run from command line as follow:
-//go in the parent directory (Coordinator/test)
-//yourJava --class-path "youPathToCommons/Commons/Commons.jar" mainCoordinator/DeployManagedFearless.java
 
 public class DeployManagedFearless{
   public static void main(String[] a){
