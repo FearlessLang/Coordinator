@@ -64,9 +64,13 @@ public class Backend{
       sb.a("  default java.util.ArrayList<Object> _log(){ return _logStore; }\n");
     }
     if (hasInstance && implementsFileLog(l)){
-      var name= l.name().simpleName();
-      sb.a("  base.AppLog _appLog= base.AppLog.open(java.nio.file.Path.of(\".out\",\"logs\",\""+name+"\",\""+name+".log\"), false);\n");
-      sb.a("  default base.AppLog _log(){ return _appLog; }\n");
+      if (l.name().arity() == 0){
+        var name= l.name().simpleName();
+        sb.a("  base.AppLog _appLog= base.AppLog.open(java.nio.file.Path.of(\".out\",\"logs\",\""+name+"\",\""+name+".log\"), false);\n");
+        sb.a("  default base.AppLog _log(){ return _appLog; }\n");
+      } else {
+        sb.a("  default base.AppLog _log(){ return null; }\n");
+      }
     }
     if (hasInstance){ sb.a("  "+iface+" instance= new "+iface+"(){};"); }
     Fs.writeUtf8(ifaceFile(l, out), sb.a("}").toString());
