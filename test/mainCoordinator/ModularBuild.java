@@ -14,6 +14,7 @@ public class ModularBuild{
   static void commons(){
     Fs.cleanDir(mods); Fs.ensureDir(mods);
     Fs.copyTreeFlat(ResolveResource.coordinatorJars, mods);
+    Fs.copyTreeFlat(ResolveResource.coordinatorTestJars, mods);
     buildJar("Commons", List.of(ResolveResource.commonsSrc));
   }
   static void frontendMain(){
@@ -42,6 +43,6 @@ public class ModularBuild{
   }
 
   static void deployBaseCache(Path appRoot) throws InterruptedException{
-    JavaTool.runMain(List.of("-ea"), out.resolve("coordinator-test"), mods, "mainCoordinator.BaseCacheBuilder", "deployInto", appRoot.toString());
+    JavaTool.runMain(List.of("-ea"), out.resolve("coordinator-test"), mods, "mainCoordinator.BaseCacheBuilder", appRoot.toString());
   }
 }

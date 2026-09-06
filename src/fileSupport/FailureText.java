@@ -26,11 +26,11 @@ import utils.Bug;
 //
 // OPERATION WORDS: the texts serve every whole-file operation (ByteFiles.Op), and are
 // written once. Where a text merely NAMES the operation, it carries the placeholders
-// «read»/«reading»/«written» (verb/gerund/past participle); explain(..) substitutes the real operation words (Op.fill)
+// `read`/`reading`/`written` (verb/gerund/past participle); explain(..) substitutes the real operation words (Op.fill)
 // exactly once, on the final assembled text, so no individual text can forget it.
 // Where the CONTENT of a text depends on the operation - what the failure means, not
 // what it is called - the text branches on Op instead: see PathResolutionFileNotFound
-// and MediaIoText.writeFault. The «..» markers follow the same reviewer convention as
+// and MediaIoText.writeFault. The `..` markers follow the same reviewer convention as
 // [[..]]: judge each sentence as if the concrete word stood there.
 //
 // AUDIENCE: a Fearless user is fluent in functional programming in an OCaml-like style,
@@ -145,7 +145,7 @@ final class FailureText {
     };
     return new Explanation(op.fill(text), suppressed.toList());
     //fill happens here, once, on the final text. A discovered value (a path, a
-    //volume name) could in principle contain a literal «..» marker and be filled
+    //volume name) could in principle contain a literal `..` marker and be filled
     //too; accepted, like the [[..]] markers would be.
   }
   private static String plain(Op op, Path path, Suppressed suppressed, String msg){
@@ -423,7 +423,7 @@ class UnknownFailureAfterSuccessfulOpen{
     return CommonInfo.of(op, path, suppressed)+msg+holders+Terms.glossary;
   }
   private static final String msg= """
-Fearless opened the file, but «reading» its contents failed without a clear reported reason.
+Fearless opened the file, but `reading` its contents failed without a clear reported reason.
 Fearless cannot tell whether the problem is with the file or with the device or volume that contains it.
 """;
   //Trying reading a sibling file on the same volume to distinguish "this file" from "this volume"
@@ -438,7 +438,7 @@ class FileBusyWindowsSharingViolation{
   }
   private static final String intro= """
 Another program has this file open in a mode that does not permit other programs to
-«read» it while it is open. A program can keep a file open and still allow others to «read» it;
+`read` it while it is open. A program can keep a file open and still allow others to `read` it;
 one of the programs below has chosen not to. Windows reported a sharing violation (error 32).
 
 """;//Above, is it correct always program or should be always process or a mix? and why?
@@ -462,14 +462,14 @@ class FileBusyWindowsFileRegionLocked{
   }
   private static final String intro= """
 Another program has locked a portion of this file, and the range Fearless tried to
-«read» overlaps that lock. Windows reported a lock violation (error 33).
+`read` overlaps that lock. Windows reported a lock violation (error 33).
 
 """;
 //should the terminology section discuss those two kinds of locks? (file and range)
 //also, program or process?
 
   private static final String whenNone= """
-The «read» failed because it overlapped a lock,
+The `read` failed because it overlapped a lock,
 yet this check (some moments after), found no program holding the file open at all.
 """;
 //Removed since verbose and pointless:
@@ -492,7 +492,7 @@ class FileLockWindowsFileRegionLockFailed{
     return CommonInfo.of(op, path, suppressed)+intro+Holders.section(path, suppressed, "", whenNone, "");
   }
   private static final String intro= """
-To «read» this file, Fearless needed to lock a portion of it, and Windows refused to place the lock (error 167, ERROR_LOCK_FAILED).
+To `read` this file, Fearless needed to lock a portion of it, and Windows refused to place the lock (error 167, ERROR_LOCK_FAILED).
 Windows refuses a lock when it conflicts with a lock another program already holds.
 
 """;//CHANGED: was "Reading this file required locking...": reworded so the operation
@@ -592,9 +592,9 @@ card); on others it is a setting stored on the device itself.
 class StorageUnavailableText{
   //[POSIX-only]
   static final String staleNetworkFile= NetInfo.serverLine+"""
-The file's bytes live on the server named above. To «read» such a file, this computer
+The file's bytes live on the server named above. To `read` such a file, this computer
 first asks the server for it and receives back a reference, then uses that reference
-for the actual «reading».
+for the actual `reading`.
 The server has stopped honoring the reference this computer holds for this file ("stale file handle").
 Servers do that when the file behind a reference was deleted, moved, or replaced.
 """+Terms.glossary;
@@ -701,7 +701,7 @@ class ResourceExhaustedText{
   //[POSIX-only]
   //"Closing other programs frees memory" (advice) removed; the text now only says whose memory ran out.
   static final String memory= """
-The operating system could not allocate the memory needed to perform this «read» ("cannot allocate memory", ENOMEM).
+The operating system could not allocate the memory needed to perform this `read` ("cannot allocate memory", ENOMEM).
 This is memory of the operating system itself, not Fearless's own working memory:
 Running out of the Fearless process memory while loading a large file surfaces as a different failure and is handled elsewhere.
 """;
@@ -741,7 +741,7 @@ class PathResolutionFileNotFound{
       +(op == Op.Read ? msgRead : msgWrite)
       +FolderInfo.similarNames(path, suppressed);
   }
-  //The MEANING forks on the operation, so this branches instead of using «..»:
+  //The MEANING forks on the operation, so this branches instead of using `..`:
   //- read: the file itself is missing;
   //- write (with CREATE): the file is ALLOWED to be missing - creating it is the
   //  point - so this failure means a FOLDER on the way to it is missing.
@@ -840,7 +840,7 @@ class FileAlreadyExists{
     return CommonInfo.of(op, path, suppressed)+msg;
   }
   private static final String msg= """
-This «read» was asked to create a new file, with the guarantee of never touching
+This `read` was asked to create a new file, with the guarantee of never touching
 anything already at this location. Something is already there:
 [[a file of 12,041 bytes, last changed 2026-07-02 09:14:03/a folder]](one metadata
 query, the isFolder one plus size and times), so the operation was refused, and what
@@ -853,14 +853,14 @@ class AccessDenied{
     return CommonInfo.of(op, path, suppressed)+msg+PermissionsInfo.section(op, path, suppressed);
   }
   private static final String msg= """
-The operating system did not allow Fearless to «read» this file (access denied).
+The operating system did not allow Fearless to `read` this file (access denied).
 """;
 }
 
 class AccessText{
   //[any OS]
   static final String accessDeniedNetwork= NetInfo.serverLine+"""
-The server named above refused to let Fearless «read» at this path.
+The server named above refused to let Fearless `read` at this path.
 Given this refusal we cannot even confirm whether this path points to an actual file.
 """+Terms.glossary;
 }
@@ -870,7 +870,7 @@ class PathIsFolder{
     return CommonInfo.of(op, path, suppressed)+msg+FolderInfo.listing(path, suppressed);
   }
   private static final String msg= """
-This path is a folder, not a file, so it cannot be «written» as a file.
+This path is a folder, not a file, so it cannot be `written` as a file.
 """;//CHANGED: was "so there are no file contents to read", which had no sensible
 //write twin; passive position, so it takes the participle token (see Op.fill).
 }//TODO: should look if there is a file with the same name and some extension.
@@ -879,7 +879,7 @@ class MediaIoText{
 
 //[any OS]
   static final String generic= """
-The device named above reported a failure while «reading» (I/O error).
+The device named above reported a failure while `reading` (I/O error).
 This failure does not report whether this file's stored bytes are damaged or the device itself is failing.
 - stored bytes damaged: the medium is damaged at the spots holding this file's data.
 - device failing: the hardware is degrading; errors appear on other files of the same volume too, and grow over time.
@@ -916,7 +916,7 @@ should be (error 27, ERROR_SECTOR_NOT_FOUND). That part of the medium is unreada
   //[Windows-only]
   //The CONTENT forks on the operation - a write fault during a write is the plain
   //event; during a read it needs the "surprising but not impossible" paragraph - so
-  //this branches instead of using «..».
+  //this branches instead of using `..`.
   static String writeFault(Op op){ return op == Op.Write ? writeFaultOnWrite : writeFaultOnRead; }
   private static final String writeFaultOnRead= """
 The device named above reported a write failure (error 29, ERROR_WRITE_FAULT).
@@ -963,8 +963,8 @@ This should not happen in normal operation: it points to a bug in the JVM
 class InvalidOperationText{
 //[POSIX-only]
   static final String invalidArgument= """
-The operating system rejected the «read» request as nonsensical for this file ("invalid argument").
-This file is [[not an ordinary file: it is a device endpoint, which can not be «written» by the Fearless API
+The operating system rejected the `read` request as nonsensical for this file ("invalid argument").
+This file is [[not an ordinary file: it is a device endpoint, which can not be `written` by the Fearless API
 /on a volume of an unusual kind, which sets its own rules on how its files may be accessed
 /an ordinary file on an ordinary volume, so the malformed request shows a JVM bug]]
 (checked by asking the file's kind and the volume's kind: one metadata query plus the Device-line queries).
@@ -975,9 +975,9 @@ This file is [[not an ordinary file: it is a device endpoint, which can not be �
   //error vocabulary, not two different events.
   //[Windows-only]
   static final String invalidParameter= """
-The operating system rejected the «read» request as nonsensical for this file
+The operating system rejected the `read` request as nonsensical for this file
 (error 87, ERROR_INVALID_PARAMETER).
-This file is [[not an ordinary file: it is a device endpoint, which can not be «written» by the Fearless API
+This file is [[not an ordinary file: it is a device endpoint, which can not be `written` by the Fearless API
 /on a volume of an unusual kind, which sets its own rules on how its files may be accessed
 /an ordinary file on an ordinary volume, so the malformed request shows a JVM bug]]
 (checked by asking the file's kind and the volume's kind: one metadata query plus the Device-line queries).
@@ -985,7 +985,7 @@ This file is [[not an ordinary file: it is a device endpoint, which can not be �
 
   //[Windows-only]
   static final String incorrectFunction= """
-A component involved in «reading» this file refused an operation as one it does not
+A component involved in `reading` this file refused an operation as one it does not
 perform (error 1, ERROR_INVALID_FUNCTION).
 This failure does not report the failure level:
 it could be the device, its driver, or the file-system.
@@ -993,7 +993,7 @@ it could be the device, its driver, or the file-system.
 [[The device behind the volume named above is a special-purpose device (a virtual
 volume provided by another program), and such devices set their own rules on how
 they may be accessed./The device behind the volume named above is an ordinary disk with
-an ordinary file system, which supports everything «reading» needs - so the refusal
+an ordinary file system, which supports everything `reading` needs - so the refusal
 itself is the anomaly, and it points to a bug in the driver, in Windows, or in the
 JVM.]](checked by asking the device kind and volume type: the Device-line queries.)
 """+Terms.glossary;
@@ -1002,9 +1002,9 @@ JVM.]](checked by asking the device kind and volume type: the Device-line querie
 class UnsupportedText{
 //[any OS]
   static final String unsupportedFileSystem= """
-A component involved in «reading» this file refused an operation as one it does not perform.
+A component involved in `reading` this file refused an operation as one it does not perform.
 Ordinary disk and network volumes support everything needed.
-This file is [[not an ordinary file: it is a device endpoint, which can not be «written»
+This file is [[not an ordinary file: it is a device endpoint, which can not be `written`
 by the Fearless API
 /on a volume of an unusual kind - one that presents device controls or live system information as if they were files - which sets its own rules on how its files may be accessed
 /an ordinary file on an ordinary volume; thus the refusal itself is the anomaly: a bug in the driver, in the operating system, or in the JVM]]
@@ -1017,7 +1017,7 @@ by the Fearless API
   //check applies, and Fearless/JVM are exonerated structurally (they never speak to
   //the device; the driver composes every device command).
   static final String deviceDoesNotRecognizeCommand= """
-While «reading» this file, the conversation between the device and its driver broke down:
+While `reading` this file, the conversation between the device and its driver broke down:
 the driver reported that the device rejected a command as one it does not know (error 22, ERROR_BAD_COMMAND).
 A rejection at that boundary means one of the two sides is wrong
 - Device malfunction or Device built-in software bug,
@@ -1032,9 +1032,9 @@ class InterruptionText{
   //CHANGED(2): "the file must be reopened before trying again" was instruction;
   //replaced by the fact it encoded (stopping this way also closes the file).
   static final String channelClosedByInterrupt= """
-Fearless stopped this «read» mid way on purpose;
+Fearless stopped this `read` mid way on purpose;
 for example because of a shutdown, a timeout, or a cancelled task.
-Stopping a «read» this way also closes the file.
+Stopping a `read` this way also closes the file.
 """;
 //Op.Write review question: a write stopped mid way may leave the file with only part
 //of the new content on disk. True and important; is stating it "information" (yes)
@@ -1044,7 +1044,7 @@ Stopping a «read» this way also closes the file.
   //Sibling of channelClosedByInterrupt: both are the JVM's own bookkeeping ("the file was closed under an operation in progress"), arriving by different doors - that one via
   //the cancellation mechanism, this one via a direct close.
   static final String channelClosedExternally= """
-While this «read» was in progress, the file was closed from inside this program,
+While this `read` was in progress, the file was closed from inside this program,
 not by the operating system and not through a cancellation.
 This must be a JVM bug, or a bug in some native code loaded by Fearless.
 """+ReportText.please;
@@ -1057,8 +1057,8 @@ This must be a JVM bug, or a bug in some native code loaded by Fearless.
   //kind above. Reaching here requires native code inside this process having installed
   //its own signal handling - the population InterferenceInfo enumerates on Linux.
   static final String ioInterrupted= """
-The operating system paused this «read» to deliver a signal - a notification sent to a
-running process - and the «read» was not resumed ("interrupted system call"). Unlike a
+The operating system paused this `read` to deliver a signal - a notification sent to a
+running process - and the `read` was not resumed ("interrupted system call"). Unlike a
 cancellation by Fearless, this does not close the file.
 Neither the JVM nor pure Fearless code installs signal handling that stops operations
 this way: this should only be possible if some native code loaded by Fearless has installed its own.

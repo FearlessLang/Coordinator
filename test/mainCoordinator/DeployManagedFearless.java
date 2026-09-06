@@ -1,11 +1,10 @@
-// Builds fearlessManaged, a runnable app-image of the Fearless project manager GUI, real JPMS modules. See development-guide.txt. Run from Coordinator/test:
-//   java --module-path ../../Commons/Commons.jar --add-modules Commons mainCoordinator/DeployManagedFearless.java
+// java --module-path ../../Commons/Commons.jar --add-modules Commons mainCoordinator/DeployManagedFearless.java
 package mainCoordinator;
 
 import tools.PortableApp;
 
 public class DeployManagedFearless{
-  public static void main(String[] a) throws Exception{
+  public static void main(String[] a) throws InterruptedException{
     new PortableApp(
       ResolveResource.packaging,
       ResolveResource.managedFolderOut,//out
