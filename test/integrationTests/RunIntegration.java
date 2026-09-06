@@ -29,6 +29,7 @@ import mainCoordinator.BaseCacheBuilder;
 import mainCoordinator.ResolveResource;
 import realSourceOracle.SourceOracleWithAutoload;
 import testHelperFs.FsDsl;
+import java.util.ArrayList;
 import java.util.List;
 import tools.Fs;
 import tools.JavacTool;
@@ -38,7 +39,9 @@ public class RunIntegration {
   static{ utils.Err.setUp(AssertionFailedError.class, Assertions::assertEquals, Assertions::assertTrue); }
 
   static final Path baseCache= ResolveResource.stLibDebugOut.resolve("baseCache");
-  static final Path eclipseReportsDir= ResolveResource.coordinatorSrc.getParent().resolve(".out","eclipse-junit-xml");
+  static final Path eclipseReportsDir= ResolveResource.coordinatorSrc.getParent().resolve(".out","eclipse_junit_xml");
+  static final Path eclipseReportsFile= eclipseReportsDir.resolve("all_auto_tests.xml");
+  static final List<String> eclipseSuites= new ArrayList<>();
   @BeforeAll static void buildBaseOnce(){
     BaseCacheBuilder.buildInto(ResolveResource.coordinatorJars, ResolveResource.stLibDebugOut);
     Fs.rmTree(eclipseReportsDir);
@@ -81,12 +84,16 @@ public class RunIntegration {
     body= body.replaceAll("(?m)^PLAN\\|RUN\\|.*$\\r?\\n?","");
     var tests= body.split("<testcase ",-1).length-1;
     var failures= body.split("<failure>",-1).length-1;
-    Fs.ensureDir(eclipseReportsDir);
-    Fs.writeUtf8(eclipseReportsDir.resolve("TEST-"+name+".xml"), """
-<?xml version="1.0" encoding="UTF-8"?>
+    eclipseSuites.add("""
 <testsuite name="%s" tests="%d" failures="%d" errors="0">
 %s</testsuite>
 """.formatted(name,tests,failures,body));
+    Fs.ensureDir(eclipseReportsDir);
+    Fs.writeUtf8(eclipseReportsFile, """
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites>
+%s</testsuites>
+""".formatted(String.join("",eclipseSuites)));
   }
   @Test void helloWorld(){ testOk("helloWorld");}
   //testUnitTests is the project that checks the failure report itself, so it must fail
