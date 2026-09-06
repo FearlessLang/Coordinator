@@ -1,9 +1,11 @@
+// Builds fearlessBin, a runnable app-image of the Fearless compiler/runner, real JPMS modules. See development-guide.txt. Run from Coordinator/test:
+//   java --module-path ../../Commons/Commons.jar --add-modules Commons mainCoordinator/DeployPortableFearless.java
 package mainCoordinator;
 
 import tools.PortableApp;
 
 public class DeployPortableFearless{
-  public static void main(String[] a){
+  public static void main(String[] a) throws Exception{
     new PortableApp(
       ResolveResource.packaging,
       ResolveResource.portableFolderOut,//out
@@ -19,6 +21,9 @@ public class DeployPortableFearless{
       ResolveResource.versionId,
       "Coordinator/mainCoordinator.Main"
     ).build();
-    BaseCacheBuilder.deployInto(ResolveResource.portableFolderOut.resolve("fearlessBin"+ResolveResource.versionId));
+    ModularBuild.commons();
+    ModularBuild.frontendMain();
+    ModularBuild.coordinatorTest();
+    ModularBuild.deployBaseCache(ResolveResource.portableFolderOut.resolve("fearlessBin"+ResolveResource.versionId));
   }
 }

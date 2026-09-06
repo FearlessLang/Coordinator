@@ -15,6 +15,13 @@ import tools.SourceOracle;
 import utils.OneOr;
 
 public final class BaseCacheBuilder{
+  public static void main(String[] a){
+    switch (a[0]){
+      case "deployInto" -> deployInto(Path.of(a[1]));
+      case "buildInto" -> buildInto(Path.of(a[1]), Path.of(a[2]));
+      default -> throw utils.Bug.unreachable();
+    }
+  }
   public static void deployInto(Path appRoot){
     var modsDir= singleDirNamed(appRoot, "mods");
     buildInto(modsDir, modsDir.getParent().resolve("stdLib"));
