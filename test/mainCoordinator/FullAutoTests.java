@@ -1,17 +1,14 @@
 // Complete check: everything including integrationTests, real JPMS modules, -Werror. See development-guide.txt. Run from Coordinator/test:
-//   java --module-path ../../Commons/Commons.jar --add-modules Commons mainCoordinator/FullAutoTests.java <extraJarsDir>
+//   java --module-path ../../Commons/Commons.jar --add-modules Commons mainCoordinator/FullAutoTests.java
 package mainCoordinator;
-
-import java.nio.file.Path;
 
 public class FullAutoTests{
   public static void main(String[] args) throws Exception{
-    var extraJars= Path.of(args[0]);
     ModularBuild.commons();
     ModularBuild.frontendMain();
-    ModularBuild.frontendTest(extraJars);
+    ModularBuild.frontendTest();
     ModularBuild.runJUnit(ModularBuild.out.resolve("frontend-test"));
-    ModularBuild.coordinatorTest(extraJars);
+    ModularBuild.coordinatorTest();
     ModularBuild.runJUnit(ModularBuild.out.resolve("coordinator-test"));
   }
 }

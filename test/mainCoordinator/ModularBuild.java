@@ -21,13 +21,11 @@ public class ModularBuild{
   static void frontendMain(){
     buildJar("FearlessFrontend", List.of(ResolveResource.frontendSrc, ResolveResource.frontendSrcModule));
   }
-  static void frontendTest(Path extraJars){
-    Fs.copyTreeFlat(extraJars, mods);
+  static void frontendTest(){
     var fe= ResolveResource.frontendSrc.getParent();
     JavacTool.javac(List.of(ResolveResource.frontendSrc, fe.resolve("test"), fe.resolve("testModule")), out.resolve("frontend-test"), mods);
   }
-  static void coordinatorTest(Path extraJars){
-    Fs.copyTreeFlat(extraJars, mods);
+  static void coordinatorTest(){
     var co= ResolveResource.coordinatorSrc.getParent();
     JavacTool.javac(List.of(ResolveResource.coordinatorSrc, co.resolve("test"), co.resolve("testModule")), out.resolve("coordinator-test"), mods);
   }
