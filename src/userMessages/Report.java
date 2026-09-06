@@ -527,7 +527,7 @@ Valid alternatives:
       +-- bla/
           +-- _beer/
               +-- bar.fear
-      """.formatted(file, Join.of(candidates.stream().map(c->disp(c)), "",", ","")));
+""".formatted(file, Join.of(candidates.stream().map(c->disp(c)), "",", ","")));
   }
   public static UserError projectMissingRankFile(String pkg, Path pkgRoot){ return new UserError("""
 Missing rank file for a package.

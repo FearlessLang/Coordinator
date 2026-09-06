@@ -15,6 +15,7 @@ import tools.SourceOracle;
 import utils.OneOr;
 
 public final class BaseCacheBuilder{
+  public static void main(String[] a){ deployInto(Path.of(a[0])); }
   public static void deployInto(Path appRoot){
     var modsDir= singleDirNamed(appRoot, "mods");
     buildInto(modsDir, modsDir.getParent().resolve("stdLib"));

@@ -1,12 +1,10 @@
+// java --module-path ../../Commons/Commons.jar --add-modules Commons mainCoordinator/DeployManagedFearless.java
 package mainCoordinator;
 
 import tools.PortableApp;
-//This can easily be run from command line as follow:
-//go in the parent directory (Coordinator/test)
-//yourJava --class-path "youPathToCommons/Commons/Commons.jar" mainCoordinator/DeployManagedFearless.java
 
 public class DeployManagedFearless{
-  public static void main(String[] a){
+  public static void main(String[] a) throws InterruptedException{
     new PortableApp(
       ResolveResource.packaging,
       ResolveResource.managedFolderOut,//out
@@ -22,6 +20,9 @@ public class DeployManagedFearless{
       ResolveResource.versionId,
       "Coordinator/manager.ManagerMain"
     ).build();
-    BaseCacheBuilder.deployInto(ResolveResource.managedFolderOut.resolve("fearlessManaged"+ResolveResource.versionId));
+    ModularBuild.commons();
+    ModularBuild.frontendMain();
+    ModularBuild.coordinatorTest();
+    ModularBuild.deployBaseCache(ResolveResource.managedFolderOut.resolve("fearlessManaged"+ResolveResource.versionId));
   }
 }

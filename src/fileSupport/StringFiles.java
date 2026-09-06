@@ -144,7 +144,7 @@ Nearby bytes:  %s
   }
   private static String tail(String text, int length){
     var size= text.codePointCount(0,text.length());
-    return size <= length ? text : "…"+text.substring(text.offsetByCodePoints(0,size-length));
+    return size <= length ? text : "\u2026"+text.substring(text.offsetByCodePoints(0,size-length));
   }
   private static String hex(byte[] bytes, int from, int to){
     return HexFormat.ofDelimiter(" ").withUpperCase().formatHex(bytes,from,to);

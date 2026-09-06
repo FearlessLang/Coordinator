@@ -416,7 +416,7 @@ but the file content is not valid.
 
 Parse error:
   %s
-      """.formatted(PrettyFileName.displayFileName(mapJson.toUri()), parseErr));
+""".formatted(PrettyFileName.displayFileName(mapJson.toUri()), parseErr));
   }
   public static UserError cacheCanNotFindZipEntry(Path diskZip, List<String> steps, String entryName){
     return new UserError("""
