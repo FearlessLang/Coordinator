@@ -64,6 +64,7 @@ final class ManagerGui {
   private final Runnable onQuit;
   private final Map<Path,FolderInfo> open= new LinkedHashMap<>();
   private final AtomicBoolean rotationChecking= new AtomicBoolean();
+  private boolean windowVisible;
   private FolderInfo shown;
   private Instant lastShownCheck= Instant.now();
   private Instant lastRotationCheck= Instant.now().minusMillis(1250);
@@ -90,7 +91,9 @@ final class ManagerGui {
     frame.getRootPane().setTransferHandler(dropHandler());
     frame.setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
     frame.addWindowListener(new WindowAdapter(){//closing the window only hides the manager; the Quit button terminates it
-      @Override public void windowClosing(WindowEvent e){ frame.setVisible(false); }
+      @Override public void windowClosing(WindowEvent e){ frame.setVisible(false); setWindowVisible(false); }
+      @Override public void windowIconified(WindowEvent e){ setWindowVisible(false); }
+      @Override public void windowDeiconified(WindowEvent e){ setWindowVisible(true); }
     });
     setIcons();
     frame.setLocationByPlatform(true);
@@ -292,13 +295,18 @@ final class ManagerGui {
       frame.setExtendedState(frame.getExtendedState() & ~Frame.ICONIFIED);
       frame.toFront();
       frame.requestFocus();//best effort
+      setWindowVisible(true);
     });
   }
+  private synchronized void setWindowVisible(boolean value){ windowVisible= value; notifyAll(); }
+  private synchronized void awaitWindowVisible() throws InterruptedException { while(!windowVisible){ wait(); } }
   void tickLoop(){
     var start= Instant.now();
     while(tick(start)){}
   }
   private boolean tick(Instant start){
+    try { awaitWindowVisible(); }
+    catch(InterruptedException e){ return false; }
     var up= Duration.between(start, Instant.now());
     SwingUtilities.invokeLater(()->tickShown(up));
     try { Thread.sleep(tickDelay); return true; }
