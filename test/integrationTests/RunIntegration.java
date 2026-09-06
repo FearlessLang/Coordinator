@@ -132,7 +132,7 @@ top level main
 [###] processed item 3
 [###] finished
 """, content);
-    var pkgContent= Fs.readUtf8(theOneLogFile(logDir.resolve("PkgLog"), "PkgLog$"));
+    var pkgContent= Fs.readUtf8(theOneLogFile(logDir.resolve("logging"), "PkgLog$"));
     utils.Err.strCmp("[###] package-specific log entry\n", pkgContent);
   }
   // testingNorms holds no fearless unit tests: a cache hit and a recomputation return
