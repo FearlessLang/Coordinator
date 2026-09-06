@@ -37,7 +37,7 @@ public final class ByteFiles {
     // Plain replace: the text blocks stay literal, with no format-string hazards.
     // Applied exactly once, by FailureText.explain, on the final assembled text, so no
     // individual text can forget it.
-    String fill(String text){ return text.replace("«read»",verb).replace("«reading»",gerund).replace("«written»",participle); }
+    String fill(String text){ return text.replace("`read`",verb).replace("`reading`",gerund).replace("`written`",participle); }
   }
   public enum Kind {
     FileBusy_WindowsSharingViolation,

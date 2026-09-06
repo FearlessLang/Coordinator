@@ -480,7 +480,7 @@ code{
     }
     sb.append("</a>");
     c.localMethod().ifPresent(m->m.docs.stream().filter(d->!d.example()).findFirst()
-      .ifPresent(d->sb.append(" <span class=\"opt-doc\">— ").append(h(d.text())).append("</span>")));
+      .ifPresent(d->sb.append(" <span class=\"opt-doc\">\u2014 ").append(h(d.text())).append("</span>")));
     return sb.toString();
   }
 
