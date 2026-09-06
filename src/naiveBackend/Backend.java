@@ -73,9 +73,29 @@ public class Backend{
       }
     }
     if (hasInstance){ sb.a("  "+iface+" instance= new "+iface+"(){};"); }
+    if (hasInstance && l.name().arity() == 0){ emitCacheField(sb, l); }
     Fs.writeUtf8(ifaceFile(l, out), sb.a("}").toString());
     if (hasInstance && implementsBaseMain(l)){ mains.put(l.name().s(), iface); }
     fixers.add(sb);
+  }
+  private static final TName cacheF1Name= new TName("base.CacheF", 1,Pos.unknown);
+  private static final TName cacheF2Name= new TName("base.CacheF", 2,Pos.unknown);
+  private static final TName cacheF3Name= new TName("base.CacheF", 3,Pos.unknown);
+  private static final TName cacheMemo1Name= new TName("base.CacheMemo", 1,Pos.unknown);
+  private static final TName cacheMemo2Name= new TName("base.CacheMemo", 2,Pos.unknown);
+  private static final TName cacheMemo3Name= new TName("base.CacheMemo", 3,Pos.unknown);
+  boolean directlyImplements(Literal l, TName n){ return l.cs().stream().anyMatch(c->c.name().equals(n)); }
+  int cacheShape(Literal l){
+    if (directlyImplements(l,cacheF1Name) || directlyImplements(l,cacheMemo1Name)){ return 0; }
+    if (directlyImplements(l,cacheF2Name) || directlyImplements(l,cacheMemo2Name)){ return 1; }
+    if (directlyImplements(l,cacheF3Name) || directlyImplements(l,cacheMemo3Name)){ return 2; }
+    return -1;
+  }
+  void emitCacheField(BytecodeLineFix sb, Literal l){
+    var shape= cacheShape(l);
+    if (shape == -1){ return; }
+    var t= "base.Cache"+shape;
+    sb.a("  "+t+" _cache= new "+t+"(1, instance);\n  default "+t+" _cache"+shape+"(){ return _cache; }\n");
   }
   private boolean hasInstance(Literal l, boolean abstractOnly) {
     if (abstractOnly){ return false; } 
