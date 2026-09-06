@@ -42,28 +42,17 @@ public final class FolderName{
       .findFirst().orElseThrow();
   }
   public static boolean isFree(Path folder, String name, Set<String> taken){
-    return !taken.contains(name) && !hasMarker(folder,name) && !hasIcon(folder,name);
+    return !taken.contains(name) && !hasMarker(folder,name);
   }
   private static boolean hasMarker(Path folder, String name){ return Files.exists(folder.resolve(name+ext)); }
-  private static boolean hasIcon(Path folder, String name){ return Files.isRegularFile(FolderIcon.iconFile(folder,name)); }
   private static void nameAs(Path folder, String name){
     assert isName(folder,name);
     var all= fearlessFiles(folder);
     assert all.size() <= 1;
-    var oldName= compactName(folder);
     var target= folder.resolve(name+ext);
     assert !Files.exists(target);
     if (all.isEmpty()){ Fs.writeUtf8(target,content); }
     else { Fs.ofV(()->Files.move(all.getFirst(),target)); }
-    moveIcon(folder,oldName,name);
-  }
-  private static void moveIcon(Path folder, String oldName, String newName){
-    if (oldName.equals(newName)){ return; }
-    var oldIcon= FolderIcon.iconFile(folder,oldName);
-    if (!Files.isRegularFile(oldIcon)){ return; }
-    var newIcon= FolderIcon.iconFile(folder,newName);
-    assert !Files.exists(newIcon);
-    Fs.ofV(()->Files.move(oldIcon,newIcon));
   }
   private static String asName(Path folder, String text){
     var res= text.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9_]+","_").replaceAll("_+","_");

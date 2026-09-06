@@ -160,6 +160,21 @@ public final class Violation {
         freshCopyThenReport()
       ));
   }
+  public static UserError multipleIcons(Path dir, List<Path> found){
+    return new UserError("""
+      More than one .png file was found for this project's icon.
+
+      Looked in:
+      %s
+
+      Found:
+      %s
+
+      Keep exactly one .png file there.""".formatted(
+        path(dir.toString()),
+        Join.of(found.stream().map(p->"  "+p.getFileName()),"","\n","","")
+      ));
+  }
 
   //-- the manager folder: the files Fearless processes use to find each other
   public static UserError couldNotCreateManagerFolder(Path dir, Throwable cause){
