@@ -41,6 +41,8 @@ public class Backend{
   boolean implementsInMemoryLog(Literal l){ return l.cs().stream().anyMatch(c->c.name().equals(inMemoryLogName)); }
   private static final TName fileLogName= new TName("base.FileLog", 0,Pos.unknown);
   boolean implementsFileLog(Literal l){ return l.cs().stream().anyMatch(c->c.name().equals(fileLogName)); }
+  private static final TName reprName= new TName("base.Repr", 1,Pos.unknown);
+  boolean isRepr(Literal l){ return l.name().equals(reprName); }
   public List<Consumer<Path>> produceJavaCode(){
     docs.packageLocation(pkgName,out.getParent().resolve(pkgName+".html"));
     cleanOutFolder();
@@ -71,6 +73,10 @@ public class Backend{
       } else {
         sb.a("  default base.AppLog _log(){ return null; }\n");
       }
+    }
+    if (isRepr(l)){
+      sb.a("  Object _reprCacheGet(Object k, java.util.function.Supplier<Object> f, long time);\n");
+      sb.a("  void _reprCacheFlush();\n");
     }
     if (hasInstance){ sb.a("  "+iface+" instance= new "+iface+"(){};"); }
     if (hasInstance && (implementsType(l,cacheF1Name)||implementsType(l,cacheMemo1Name)||implementsType(l,cacheF2Name)||implementsType(l,cacheMemo2Name)||implementsType(l,cacheF3Name)||implementsType(l,cacheMemo3Name))){ emitCacheField(sb, l); }
