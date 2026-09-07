@@ -117,6 +117,16 @@ top level main
   }
   @Test void helloStackTraces(){ testOk("helloStackTraces");}
   @Test void testingStandardLibrary(){ testOk("testingStandardLibrary");}
+  @Test void baseGeneratedExamples(@TempDir Path tmp) throws InterruptedException{
+    Path root= tmp.resolve("root");
+    UserError.root= root;
+    var genDir= root.resolve("_gen");
+    Fs.ensureDir(genDir);
+    Fs.writeUtf8(genDir.resolve("_rank_app.fear"), Fs.readUtf8(baseCache.resolve("base_test.fear")));
+    var out= coordinator().main(root);
+    var fails= out.lines().filter(l->l.startsWith("Test failure ")).toList();
+    Assertions.assertTrue(fails.isEmpty(), ()->"Fearless unit tests failed in base's generated examples:\n"+String.join("\n",fails));
+  }
   @Test void testDocs(){ testOk("testDocs");}
   @Test void testAssets(){ testOk("testAssets");}
   private Path theOneLogFile(Path dir, String prefix) throws IOException{

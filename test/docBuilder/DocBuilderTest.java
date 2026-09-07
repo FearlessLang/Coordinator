@@ -537,6 +537,78 @@ Holder
 """, text);
   }
 
+  @Test void renderTestGroupsExamplesByMethodThenByTypeThenIntoOnePackageMain(){
+    var ownerName= new TName("pkg.Holder",0,Pos.unknown);
+    var bar= namedMethod(".bar", ownerName);
+    var owner= namedType("pkg.Holder", List.of(), List.of());
+    var typeDoc= new TypeDoc(owner, List.of());
+    typeDoc.declared(Pos.of(file,9,1), bar, List.of(
+      new DocOcc(file,9,1,4,".check{bar.assertOk}",true,true)
+    ), List.of());
+
+    var test= new HtmlDocRenderer("pkg", Map.of(), List.of(typeDoc), OtherPackages.empty(), Map.of()).renderTest();
+
+    assertEquals("""
+use pkg.Holder as Holder;
+use base.Test as Test;
+use base.UnitTests as UnitTests;
+
+HolderCheck1: Test {::
+.check{bar.assertOk}
+  }
+
+HolderExamples: Test {::
+  .test HolderCheck1
+  }
+
+GeneratedExamples: UnitTests {::
+  .test HolderExamples
+  }
+""", test);
+  }
+
+  @Test void renderTestSkipsPrivateTypesAndMethodsWithoutExamples(){
+    var visibleName= new TName("pkg.Visible",0,Pos.unknown);
+    var bar= namedMethod(".bar", visibleName);
+    var baz= namedMethod(".baz", visibleName);
+    var visible= namedType("pkg.Visible", List.of(), List.of());
+    var visibleDoc= new TypeDoc(visible, List.of());
+    visibleDoc.declared(Pos.of(file,9,1), bar, List.of(
+      new DocOcc(file,9,1,4,".check{bar.assertOk}",true,true)
+    ), List.of());
+    visibleDoc.declared(Pos.of(file,12,1), baz, List.of(
+      new DocOcc(file,12,1,4,"does the baz thing",true,false)
+    ), List.of());
+
+    var hiddenName= new TName("pkg._Hidden",0,Pos.unknown);
+    var qux= namedMethod(".qux", hiddenName);
+    var hidden= namedType("pkg._Hidden", List.of(), List.of());
+    var hiddenDoc= new TypeDoc(hidden, List.of());
+    hiddenDoc.declared(Pos.of(file,20,1), qux, List.of(
+      new DocOcc(file,20,1,4,".check{qux.assertOk}",true,true)
+    ), List.of());
+
+    var test= new HtmlDocRenderer("pkg", Map.of(), List.of(visibleDoc,hiddenDoc), OtherPackages.empty(), Map.of()).renderTest();
+
+    assertEquals("""
+use pkg.Visible as Visible;
+use base.Test as Test;
+use base.UnitTests as UnitTests;
+
+VisibleCheck1: Test {::
+.check{bar.assertOk}
+  }
+
+VisibleExamples: Test {::
+  .test VisibleCheck1
+  }
+
+GeneratedExamples: UnitTests {::
+  .test VisibleExamples
+  }
+""", test);
+  }
+
   @Test void renderTextShowsPlainFromProvenanceForAnInheritedMethod(){
     var supName= new TName("pkg.Sup",0,Pos.unknown);
     var subName= new TName("pkg.Sub",0,Pos.unknown);

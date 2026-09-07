@@ -3,6 +3,7 @@ package docBuilder;
 import static offensiveUtils.Require.*;
 
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -69,6 +70,38 @@ final class HtmlDocRenderer{
     var claims= inlineClaims(shown);
     var sb= new StringBuilder(4_000).append("package ").append(pkgName).append("\n\n");
     shown.forEach(t->renderTypeText(sb,t,claims));
+    return sb.toString();
+  }
+
+  String renderTest(){
+    var shown= visibleTypes().stream().filter(t->!t.main().infName() && t.main().name().isPublic()).toList();
+    var aliases= new LinkedHashMap<String,String>();
+    shown.forEach(t->aliases.putIfAbsent(t.main().name().simpleName(), pkgName+"."+t.main().name().simpleName()));
+    aliases.putIfAbsent("Test","base.Test");
+    aliases.putIfAbsent("UnitTests","base.UnitTests");
+    var sb= new StringBuilder(4_000);
+    aliases.forEach((alias,full)->sb.append("use ").append(full).append(" as ").append(alias).append(";\n"));
+    sb.append('\n');
+    var suiteNames= new ArrayList<String>();
+    for (var t: shown){
+      var checkNames= new ArrayList<String>();
+      for (var m: visibleMethods(t)){
+        var examples= m.docs.stream().filter(DocOcc::example).map(DocOcc::text).toList();
+        if (examples.isEmpty()){ continue; }
+        var name= t.main().name().simpleName()+"Check"+(checkNames.size()+1);
+        checkNames.add(name);
+        sb.append(name).append(": Test {::\n").append(String.join("\n",examples)).append("\n  }\n\n");
+      }
+      if (checkNames.isEmpty()){ continue; }
+      var suiteName= t.main().name().simpleName()+"Examples";
+      suiteNames.add(suiteName);
+      sb.append(suiteName).append(": Test {::\n");
+      checkNames.forEach(n->sb.append("  .test ").append(n).append('\n'));
+      sb.append("  }\n\n");
+    }
+    sb.append("GeneratedExamples: UnitTests {::\n");
+    suiteNames.forEach(n->sb.append("  .test ").append(n).append('\n'));
+    sb.append("  }\n");
     return sb.toString();
   }
 

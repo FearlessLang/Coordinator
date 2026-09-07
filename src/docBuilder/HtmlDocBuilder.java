@@ -46,6 +46,7 @@ public final class HtmlDocBuilder implements DocBuilder{
   String pkgName;
   Path htmlPath;
   Path textPath;
+  Path testPath;
   Map<String,String> uses= Map.of();
 
   final List<TypeDoc> types= new java.util.ArrayList<>();
@@ -58,6 +59,7 @@ public final class HtmlDocBuilder implements DocBuilder{
     this.pkgName= pkgName;
     this.htmlPath= htmlPath;
     this.textPath= htmlPath.resolveSibling(pkgName+".txt");
+    this.testPath= htmlPath.resolveSibling(pkgName+"_test.fear");
     this.uses= DocNames.uses(pkgName,core);
   }
 
@@ -100,6 +102,7 @@ public final class HtmlDocBuilder implements DocBuilder{
     var renderer= new HtmlDocRenderer(pkgName,uses,types,other,spans,baseDocLocation);
     Fs.writeUtf8(htmlPath,renderer.render());
     Fs.writeUtf8(textPath,renderer.renderText());
+    Fs.writeUtf8(testPath,renderer.renderTest());
   }
 
   //one group per declaration, carrying the scope its comment is written in: a fenced
