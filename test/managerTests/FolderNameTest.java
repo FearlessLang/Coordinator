@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Optional;
 import java.util.Set;
 
 import org.junit.jupiter.api.Test;
@@ -41,11 +42,17 @@ final class FolderNameTest{
     assertEquals("hello2", FolderName.free(project,"hello",Set.of("hello")));
     assertEquals("hello3", FolderName.free(project,"hello",Set.of("hello","hello2")));
   }
-  @Test void aFreeNameIsNeverAskedAbout(@TempDir Path dir){
+  @Test void aFreeNameIsNeverAskedAboutButStillGetsAMarkerFile(@TempDir Path dir){
     var project= folder(dir,"someproject");
     FolderName.makeUnique(project,Set.of("other"),_->{ throw new AssertionError("must not ask"); });
     assertEquals("someproject", FolderName.compactName(project));
-    assertFalse(Files.exists(project.resolve("someproject.fearless")));
+    assertTrue(Files.isRegularFile(project.resolve("someproject.fearless")));
+  }
+  @Test void makeUniqueIsIdempotentOnAnAlreadyMarkedFolder(@TempDir Path dir){
+    var project= folder(dir,"someproject");
+    FolderName.makeUnique(project,Set.of("other"),_->{ throw new AssertionError("must not ask"); });
+    FolderName.makeUnique(project,Set.of("other"),_->{ throw new AssertionError("must not ask"); });
+    assertEquals("someproject", FolderName.compactName(project));
   }
   @Test void anUnsafeFolderNameIsAskedAboutEvenWithNoCollision(@TempDir Path dir){
     var project= folder(dir,"someProject");
@@ -80,5 +87,22 @@ final class FolderNameTest{
     FolderName.makeUnique(project,Set.of("helloWorld"),s->s);
     assertEquals("helloworld", FolderName.compactName(project));
     assertTrue(managerInfo.FolderFacts.of(project,managerData.Kind.code).valid());
+  }
+  @Test void markerProblemIsEmptyWhenTheMarkerMatchesTheAlias(@TempDir Path dir){
+    var project= folder(dir,"someProject");
+    Fs.writeUtf8(project.resolve("my_game.fearless"),"");
+    assertEquals(Optional.empty(), FolderName.markerProblem(project,"my_game"));
+  }
+  @Test void markerProblemReportsAMissingMarker(@TempDir Path dir){
+    var project= folder(dir,"someProject");
+    var problem= FolderName.markerProblem(project,"my_game");
+    assertTrue(problem.orElseThrow().contains("my_game.fearless"), problem.orElseThrow());
+  }
+  @Test void markerProblemReportsMoreThanOneMarker(@TempDir Path dir){
+    var project= folder(dir,"someProject");
+    Fs.writeUtf8(project.resolve("my_game.fearless"),"");
+    Fs.writeUtf8(project.resolve("other.fearless"),"");
+    var problem= FolderName.markerProblem(project,"my_game");
+    assertTrue(problem.orElseThrow().contains("More than one"), problem.orElseThrow());
   }
 }

@@ -327,6 +327,7 @@ final class ManagerGui {
       sb.append("  structurally valid: ").append(facts.valid());
       facts.problem().ifPresent(p->sb.append(" (").append(p.lines().findFirst().orElse(p)).append(')'));
       sb.append('\n');
+      sb.append("  marker file: ").append(data.markerProblem(e).map(p->p.lines().findFirst().orElse(p)).orElse("ok")).append('\n');
       sb.append("  last compiled: ").append(e.compiled()).append(", last run: ").append(e.run()).append('\n');
       var info= open.get(e.path());
       if (info != null){

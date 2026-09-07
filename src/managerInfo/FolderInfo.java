@@ -195,7 +195,7 @@ public final class FolderInfo{
     var entry= currentEntry();
     facts= FolderFacts.of(folder,entry.kind());
     nameLabel.setText(entry.alias());
-    details.setText(String.join("\n",lines(folder,facts,entry,data.linkProblem(entry))));
+    details.setText(String.join("\n",lines(folder,facts,entry,data.linkProblem(entry),data.markerProblem(entry))));
     details.setCaretPosition(0);
     fillMains();
     fillLogs();
@@ -206,7 +206,10 @@ public final class FolderInfo{
   private ManagerData.Entry currentEntry(){
     return data.entryOf(folder).orElseThrow();
   }
-  private Optional<String> effectiveProblem(){ return facts.problem().or(()->data.linkProblem(currentEntry())); }
+  private Optional<String> effectiveProblem(){
+    var entry= currentEntry();
+    return facts.problem().or(()->data.linkProblem(entry)).or(()->data.markerProblem(entry));
+  }
   public boolean hasProblem(){ return effectiveProblem().isPresent(); }
   private void setAll(boolean on){
     data.setSelectedMains(folder, on ? session.mains().orElse(List.of()) : List.of());
@@ -300,7 +303,7 @@ public final class FolderInfo{
     information.setOpen(false);
     worker.execute(()->{
       var entry= currentEntry();
-      var problem= FolderFacts.of(folder,entry.kind()).problem().or(()->data.linkProblem(entry));
+      var problem= FolderFacts.of(folder,entry.kind()).problem().or(()->data.linkProblem(entry)).or(()->data.markerProblem(entry));
       append(problem.map(p->p+"\n").orElse("--- ok: no problem found ---\n"));
       SwingUtilities.invokeLater(this::refresh);
     });
@@ -349,10 +352,11 @@ public final class FolderInfo{
     text.setFont(new Font(Font.MONOSPACED,Font.PLAIN,13));
     JOptionPane.showMessageDialog(root,new JScrollPane(text),"Why this project is invalid",JOptionPane.ERROR_MESSAGE);
   }
-  private static List<String> lines(Path folder, FolderFacts facts, ManagerData.Entry entry, Optional<String> linkProblem){
+  private static List<String> lines(Path folder, FolderFacts facts, ManagerData.Entry entry, Optional<String> linkProblem, Optional<String> markerProblem){
     var out= new ArrayList<>(List.of(
       row("Folder",folder.toString()),
       row("Alias",entry.alias()),
+      row("Marker file",markerProblem.isEmpty() ? "ok" : "broken - see Error report"),
       row("Kind",entry.kind().infoText()),
       row("Files",facts.files()+""),
       row("Total size",bytes(facts.bytes())),

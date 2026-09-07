@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import managerIcons.FolderName;
+
 public interface ManagerData{
   record Entry(String alias, Path path, Kind kind, List<String> mains,
       Map<String,List<String>> reads, Map<String,List<String>> edits,
@@ -32,4 +34,5 @@ public interface ManagerData{
     return registered().stream().filter(e->e.path().equals(f)).findFirst();
   }
   default Optional<String> linkProblem(Entry e){ return LinkCheck.problem(e,registered()); }
+  default Optional<String> markerProblem(Entry e){ return FolderName.markerProblem(e.path(),e.alias()); }
 }
