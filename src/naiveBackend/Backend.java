@@ -41,6 +41,8 @@ public class Backend{
   boolean implementsInMemoryLog(Literal l){ return l.cs().stream().anyMatch(c->c.name().equals(inMemoryLogName)); }
   private static final TName fileLogName= new TName("base.FileLog", 0,Pos.unknown);
   boolean implementsFileLog(Literal l){ return l.cs().stream().anyMatch(c->c.name().equals(fileLogName)); }
+  private static final TName reprName= new TName("base.Repr", 1,Pos.unknown);
+  boolean isRepr(Literal l){ return l.name().equals(reprName); }
   public List<Consumer<Path>> produceJavaCode(){
     docs.packageLocation(pkgName,out.getParent().resolve(pkgName+".html"));
     cleanOutFolder();
@@ -72,10 +74,33 @@ public class Backend{
         sb.a("  default base.AppLog _log(){ return null; }\n");
       }
     }
+    if (isRepr(l)){
+      sb.a("  Object _reprCacheGet(Object k, java.util.function.Supplier<Object> f, long time);\n");
+      sb.a("  void _reprCacheFlush();\n");
+    }
     if (hasInstance){ sb.a("  "+iface+" instance= new "+iface+"(){};"); }
+    if (hasInstance && (implementsType(l,cacheF1Name)||implementsType(l,cacheMemo1Name)||implementsType(l,cacheF2Name)||implementsType(l,cacheMemo2Name)||implementsType(l,cacheF3Name)||implementsType(l,cacheMemo3Name))){ emitCacheField(sb, l); }
     Fs.writeUtf8(ifaceFile(l, out), sb.a("}").toString());
     if (hasInstance && implementsBaseMain(l)){ mains.put(l.name().s(), iface); }
     fixers.add(sb);
+  }
+  private static final TName cacheF1Name= new TName("base.CacheF", 1,Pos.unknown);
+  private static final TName cacheF2Name= new TName("base.CacheF", 2,Pos.unknown);
+  private static final TName cacheF3Name= new TName("base.CacheF", 3,Pos.unknown);
+  private static final TName cacheMemo1Name= new TName("base.CacheMemo", 1,Pos.unknown);
+  private static final TName cacheMemo2Name= new TName("base.CacheMemo", 2,Pos.unknown);
+  private static final TName cacheMemo3Name= new TName("base.CacheMemo", 3,Pos.unknown);
+  private boolean implementsType(Literal l, TName n){ return l.cs().stream().anyMatch(c->c.name().equals(n)); }
+  private int cacheShape(Literal l){
+    if (implementsType(l,cacheF1Name) || implementsType(l,cacheMemo1Name)){ return 0; }
+    if (implementsType(l,cacheF2Name) || implementsType(l,cacheMemo2Name)){ return 1; }
+    if (implementsType(l,cacheF3Name) || implementsType(l,cacheMemo3Name)){ return 2; }
+    throw utils.Bug.unreachable();
+  }
+  void emitCacheField(BytecodeLineFix sb, Literal l){
+    var shape= cacheShape(l);
+    var t= "base.Cache"+shape;
+    sb.a("  "+t+" _cache= new "+t+"(1, instance);\n  default "+t+" _cache"+shape+"(){ return _cache; }\n");
   }
   private boolean hasInstance(Literal l, boolean abstractOnly) {
     if (abstractOnly){ return false; } 
