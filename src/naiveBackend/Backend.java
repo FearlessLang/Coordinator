@@ -84,11 +84,11 @@ public class Backend{
   private static final TName cacheMemo1Name= new TName("base.CacheMemo", 1,Pos.unknown);
   private static final TName cacheMemo2Name= new TName("base.CacheMemo", 2,Pos.unknown);
   private static final TName cacheMemo3Name= new TName("base.CacheMemo", 3,Pos.unknown);
-  boolean directlyImplements(Literal l, TName n){ return l.cs().stream().anyMatch(c->c.name().equals(n)); }
+  boolean implementsType(Literal l, TName n){ return l.cs().stream().anyMatch(c->c.name().equals(n)); }
   int cacheShape(Literal l){
-    if (directlyImplements(l,cacheF1Name) || directlyImplements(l,cacheMemo1Name)){ return 0; }
-    if (directlyImplements(l,cacheF2Name) || directlyImplements(l,cacheMemo2Name)){ return 1; }
-    if (directlyImplements(l,cacheF3Name) || directlyImplements(l,cacheMemo3Name)){ return 2; }
+    if (implementsType(l,cacheF1Name) || implementsType(l,cacheMemo1Name)){ return 0; }
+    if (implementsType(l,cacheF2Name) || implementsType(l,cacheMemo2Name)){ return 1; }
+    if (implementsType(l,cacheF3Name) || implementsType(l,cacheMemo3Name)){ return 2; }
     return -1;
   }
   void emitCacheField(BytecodeLineFix sb, Literal l){
