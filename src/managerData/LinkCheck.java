@@ -6,8 +6,8 @@ import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import coordinator.Coordinator;
 import managerData.ManagerData.Entry;
+import realSourceOracle.RealSourceOracleWithZip;
 import userMessages.UserError;
 
 public final class LinkCheck{
@@ -28,7 +28,7 @@ public final class LinkCheck{
         var needed= needsWrite ? "\"data:readWrite\"" : "a data project";
         return Optional.of("\""+field+"\" refers to \""+alias+"\", but that project's kind is \""+target.kind().infoText()+"\", not "+needed+".");
       }
-      try{ Coordinator.scanStructure(target.path()); }
+      try{ new RealSourceOracleWithZip(target.path()); }
       catch(UserError err){ return Optional.of("\""+field+"\" refers to \""+alias+"\", which is itself invalid:\n"+err.getMessage()); }
     }
     return Optional.empty();

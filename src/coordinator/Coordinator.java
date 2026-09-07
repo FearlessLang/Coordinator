@@ -41,7 +41,6 @@ public interface Coordinator {
       "-DfearlessUser.dir="+project);
   }
   default SourceOracle sourceOracle(Path path){ return new RealSourceOracleWithZip(path); }
-  static void scanStructure(Path path){ new RealSourceOracleWithZip(path); }
   static List<String> pkgNames(Path path){
     var o= new RealSourceOracleWithZip(path);
     var map= Helper.pkgMap(o,path);

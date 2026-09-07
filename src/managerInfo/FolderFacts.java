@@ -8,6 +8,7 @@ import java.util.stream.LongStream;
 
 import coordinator.Coordinator;
 import managerData.Kind;
+import realSourceOracle.RealSourceOracleWithZip;
 import tools.Fs;
 import userMessages.UserError;
 
@@ -26,7 +27,7 @@ public record FolderFacts(
     Optional<String> problem;
     UserError.root= f;
     try {
-      if (kind == Kind.code){ pkgs= Coordinator.pkgNames(f); } else { Coordinator.scanStructure(f); }
+      if (kind == Kind.code){ pkgs= Coordinator.pkgNames(f); } else { new RealSourceOracleWithZip(f); }
       problem= Optional.empty();
     }
     catch(UserError e){ problem= Optional.of(e.getMessage()); }
