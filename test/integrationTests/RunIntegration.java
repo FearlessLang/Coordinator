@@ -188,6 +188,11 @@ naming
 cat
 naming
 cat
+listSizeF
+3
+3
+listSizeF
+2
 summingList
 6
 6

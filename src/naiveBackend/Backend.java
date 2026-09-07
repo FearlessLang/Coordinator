@@ -73,7 +73,7 @@ public class Backend{
       }
     }
     if (hasInstance){ sb.a("  "+iface+" instance= new "+iface+"(){};"); }
-    if (hasInstance && l.name().arity() == 0 && (implementsType(l,cacheF1Name)||implementsType(l,cacheMemo1Name)||implementsType(l,cacheF2Name)||implementsType(l,cacheMemo2Name)||implementsType(l,cacheF3Name)||implementsType(l,cacheMemo3Name))){ emitCacheField(sb, l); }
+    if (hasInstance && (implementsType(l,cacheF1Name)||implementsType(l,cacheMemo1Name)||implementsType(l,cacheF2Name)||implementsType(l,cacheMemo2Name)||implementsType(l,cacheF3Name)||implementsType(l,cacheMemo3Name))){ emitCacheField(sb, l); }
     Fs.writeUtf8(ifaceFile(l, out), sb.a("}").toString());
     if (hasInstance && implementsBaseMain(l)){ mains.put(l.name().s(), iface); }
     fixers.add(sb);
