@@ -30,10 +30,17 @@ public final class FolderName{
     try { BuildWithZip.checkIndividualVisibleSegment(kid.get()); return true; }
     catch(UserError e){ return false; }
   }
+  public static Optional<String> markerProblem(Path folder, String alias){
+    var all= fearlessFiles(folder);
+    if (all.size() > 1){
+      return Optional.of("More than one .fearless marker file was found.\nLooked in:\n"+folder+"\nKeep exactly one .fearless file there.");
+    }
+    if (hasMarker(folder,alias)){ return Optional.empty(); }
+    return Optional.of("This project's marker file \""+alias+ext+"\" is missing.\nExpected it in:\n"+folder+"\nRestore it, or forget and re-add this project folder.");
+  }
   public static String makeUnique(Path folder, Set<String> taken, UnaryOperator<String> ask){
     var name= compactName(folder);
-    if (isName(folder,name) && !taken.contains(name)){ return name; }
-    var chosen= ask.apply(free(folder, folder.getFileName().toString(), taken));
+    var chosen= isName(folder,name) && !taken.contains(name) ? name : ask.apply(free(folder, folder.getFileName().toString(), taken));
     nameAs(folder, chosen);
     return chosen;
   }
@@ -50,12 +57,11 @@ public final class FolderName{
   private static boolean hasMarker(Path folder, String name){ return Files.exists(folder.resolve(name+ext)); }
   private static void nameAs(Path folder, String name){
     assert isName(folder,name);
-    var all= fearlessFiles(folder);
-    assert all.size() <= 1;
     var target= folder.resolve(name+ext);
-    assert !Files.exists(target);
-    if (all.isEmpty()){ Fs.writeUtf8(target,content); }
-    else { Fs.ofV(()->Files.move(all.getFirst(),target)); }
+    if (Files.exists(target)){ return; }
+    var all= fearlessFiles(folder);
+    if (all.isEmpty()){ Fs.writeUtf8(target,content); return; }
+    Fs.ofV(()->Files.move(all.getFirst(),target));
   }
   private static String asName(Path folder, String text){
     var res= text.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9_]+","_").replaceAll("_+","_");

@@ -61,6 +61,7 @@ final class ManagerGuiShotTest{
     var data= new MockManagerData();
     for (var name: new String[]{"someProject","otherProject","map_editor","webShop","hello","sudoku","payroll","tetris","notes","weather"}){
       var project= FolderFactsTest.project(dir,name);
+      Fs.writeUtf8(project.resolve(name+".fearless"),"");
       data.addRegisteredFolder(name,project);
       data.setKind(project,Kind.code);
       data.setCompiled(project,System.currentTimeMillis()-60000);
@@ -88,7 +89,7 @@ final class ManagerGuiShotTest{
   @Test void oneFolderShowsItsFactsAndWhatCanBeDoneToIt(@TempDir Path dir){
     var data= new MockManagerData();
     var project= FolderFactsTest.project(dir,"someProject");
-    Fs.writeUtf8(project.resolve("my_game.fearless"),"");
+    Fs.writeUtf8(project.resolve("someProject.fearless"),"");
     FolderFactsTest.cache(project,"hello",FolderFactsTest.after(project));
     data.addRegisteredFolder("someProject",project);
     data.setKind(project,Kind.code);
@@ -101,6 +102,7 @@ final class ManagerGuiShotTest{
     var data= new MockManagerData();
     var project= FolderFactsTest.project(dir,"brokenProject");
     Fs.writeUtf8(project.resolve("_hello").resolve("Bad.fear"),"");
+    Fs.writeUtf8(project.resolve("brokenProject.fearless"),"");
     data.addRegisteredFolder("brokenProject",project);
     data.setKind(project,Kind.code);
     var shot= shoot(()->new FolderInfo(data,project.toAbsolutePath().normalize(),_->{},()->{}).panel(),720,420,"folderInfoBroken");
@@ -110,6 +112,7 @@ final class ManagerGuiShotTest{
     var data= new MockManagerData();
     var project= FolderFactsTest.project(dir,"loggedProject").toAbsolutePath().normalize();
     Fs.writeUtf8(project.resolve(".out").resolve("logs").resolve("_base").resolve("log$20260904_123456_789Z.log"),"hello\n");
+    Fs.writeUtf8(project.resolve("loggedProject.fearless"),"");
     data.addRegisteredFolder("loggedProject",project);
     var info= onEdtGet(()->new FolderInfo(data,project,_->{},()->{}));
     var shot= shoot(info::panel,720,420,"folderInfoWithLogs");

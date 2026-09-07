@@ -141,7 +141,7 @@ public final class FolderList extends JPanel{
   private Sort selected(){ return (Sort)sort.getSelectedItem(); }
   private Row row(ManagerData.Entry e){
     var facts= FolderFacts.of(e.path(),e.kind());
-    var valid= facts.valid() && data.linkProblem(e).isEmpty();
+    var valid= facts.valid() && data.linkProblem(e).isEmpty() && data.markerProblem(e).isEmpty();
     var state= State.of(e.kind(),valid,facts.hasCache(),facts.cacheUpToDate(),isRunning.test(e.path()));
     return build(e,facts.modified(),state);
   }
