@@ -119,9 +119,9 @@ public class Manager {
     if (!data.isRegistered(folder.get())){
       var nested= data.nestedWith(folder.get());
       if (nested.isPresent()){ gui.explain(Report.folderNestedWithRegistered(folder.get(),nested.get())); return; }
-      gui.nameFolder(data,folder.get());
+      var alias= gui.nameFolder(data,folder.get());
       Fs.rmTree(folder.get().resolve(FolderFacts.outDir));
-      data.addRegisteredFolder(folder.get());
+      data.addRegisteredFolder(alias,folder.get());
     }
     gui.select(folder.get());
   }

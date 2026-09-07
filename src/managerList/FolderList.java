@@ -23,27 +23,44 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.Timer;
 
+import managerData.Kind;
 import managerData.ManagerData;
 import managerIcons.BadgeIcon;
 import managerIcons.FolderIcon;
-import managerIcons.FolderName;
 import managerInfo.FolderFacts;
 
 @SuppressWarnings("serial")
 public final class FolderList extends JPanel{
-  public enum State{ running, invalid, upToDate, needsCompiling;
+  public enum State{
+    codeInvalid, dataInvalid, idle, dataReadOnly, dataReadWrite,
+    codeNoCache, codeOutdated, codeCompiled, codeRunning;
     BadgeIcon.Mark mark(){ return switch(this){
-      case running -> BadgeIcon.Mark.running;
-      case invalid -> BadgeIcon.Mark.invalid;
-      case upToDate -> BadgeIcon.Mark.none;
-      case needsCompiling -> BadgeIcon.Mark.attention;
+      case codeInvalid, dataInvalid -> BadgeIcon.Mark.invalid;
+      case codeRunning -> BadgeIcon.Mark.running;
+      case codeNoCache, codeOutdated -> BadgeIcon.Mark.attention;
+      case idle, dataReadOnly, dataReadWrite, codeCompiled -> BadgeIcon.Mark.none;
     };}
     String text(){ return switch(this){
-      case running -> "running";
-      case invalid -> "invalid file names";
-      case upToDate -> "up to date";
-      case needsCompiling -> "needs compiling";
+      case codeInvalid -> "code: invalid content";
+      case dataInvalid -> "data: invalid content";
+      case idle -> "idle";
+      case dataReadOnly -> "data: read only";
+      case dataReadWrite -> "data: read write";
+      case codeNoCache -> "code: not compiled (no cache)";
+      case codeOutdated -> "code: not compiled (cache out of date)";
+      case codeCompiled -> "code: compiled";
+      case codeRunning -> "code: compiled and running";
     };}
+    static State of(Kind kind, boolean valid, boolean hasCache, boolean cacheUpToDate, boolean running){
+      if (running){ return codeRunning; }
+      if (!valid){ return kind == Kind.code ? codeInvalid : dataInvalid; }
+      return switch(kind){
+        case idle -> idle;
+        case dataReadOnly -> dataReadOnly;
+        case dataReadWrite -> dataReadWrite;
+        case code -> !hasCache ? codeNoCache : !cacheUpToDate ? codeOutdated : codeCompiled;
+      };
+    }
   }
   public record Row(ManagerData.Entry entry, String name, Icon icon, long modified, State state){}
   public enum Sort{
@@ -95,10 +112,11 @@ public final class FolderList extends JPanel{
   public void updateFreshness(Path folder, long modified, boolean upToDate){
     for(int i= 0; i < model.size(); i+= 1){
       var row= model.get(i);
-      if (!row.entry().folder().equals(folder)){ continue; }
-      if (row.state() == State.invalid){ return; }
-      var state= isRunning.test(folder) ? State.running : upToDate ? State.upToDate : State.needsCompiling;
-      var updated= build(row.entry(),modified,state);
+      if (!row.entry().path().equals(folder)){ continue; }
+      if (row.state() == State.codeInvalid || row.state() == State.dataInvalid){ return; }
+      var e= row.entry();
+      var state= State.of(e.kind(),true,FolderFacts.hasCache(folder),upToDate,isRunning.test(folder));
+      var updated= build(e,modified,state);
       if (updated.state() == row.state() && updated.modified() == row.modified()){ return; }
       model.set(i,updated);
       syncSpinner();
@@ -106,14 +124,14 @@ public final class FolderList extends JPanel{
     }
   }
   private void syncSpinner(){
-    var anyRunning= IntStream.range(0,model.size()).mapToObj(model::get).anyMatch(r->r.state() == State.running);
+    var anyRunning= IntStream.range(0,model.size()).mapToObj(model::get).anyMatch(r->r.state() == State.codeRunning);
     if (anyRunning && !spinner.isRunning()){ spinner.start(); }
     if (!anyRunning && spinner.isRunning()){ spinner.stop(); }
   }
   public void sortBy(Sort order){ sort.setSelectedItem(order); }
   public void select(Path folder){
     for(int i= 0; i < model.size(); i+= 1){
-      if (!model.get(i).entry().folder().equals(folder)){ continue; }
+      if (!model.get(i).entry().path().equals(folder)){ continue; }
       list.setSelectedIndex(i);
       list.ensureIndexIsVisible(i);
       onOpen.accept(Optional.of(folder));
@@ -122,20 +140,19 @@ public final class FolderList extends JPanel{
   }
   private Sort selected(){ return (Sort)sort.getSelectedItem(); }
   private Row row(ManagerData.Entry e){
-    var facts= FolderFacts.of(e.folder());
-    var state= isRunning.test(e.folder()) ? State.running
-      : !facts.valid() ? State.invalid
-      : facts.cacheUpToDate() ? State.upToDate : State.needsCompiling;
+    var facts= FolderFacts.of(e.path(),e.kind());
+    var valid= facts.valid() && data.linkProblem(e).isEmpty();
+    var state= State.of(e.kind(),valid,facts.hasCache(),facts.cacheUpToDate(),isRunning.test(e.path()));
     return build(e,facts.modified(),state);
   }
   private Row build(ManagerData.Entry e, long modified, State state){
-    return new Row(e,FolderName.compactName(e.folder()),
-      new BadgeIcon(FolderIcon.image(e.folder(),iconSize),iconSize,state.mark()),modified,state);
+    return new Row(e,e.alias(),
+      new BadgeIcon(FolderIcon.image(e.path(),iconSize),iconSize,state.mark()),modified,state);
   }
   private void open(Point p){
     var i= list.locationToIndex(p);
     if (i < 0 || !list.getCellBounds(i,i).contains(p)){ list.clearSelection(); onOpen.accept(Optional.empty()); return; }
-    onOpen.accept(Optional.of(model.get(i).entry().folder()));
+    onOpen.accept(Optional.of(model.get(i).entry().path()));
   }
   private static final class Tile extends DefaultListCellRenderer{
     @Override public Component getListCellRendererComponent(JList<?> l, Object value, int i, boolean selected, boolean focus){
@@ -146,7 +163,7 @@ public final class FolderList extends JPanel{
       res.setHorizontalAlignment(CENTER);
       res.setHorizontalTextPosition(CENTER);
       res.setVerticalTextPosition(BOTTOM);
-      res.setToolTipText(row.entry().folder()+" - "+row.state().text());
+      res.setToolTipText(row.entry().path()+" - "+row.state().text());
       return res;
     }
   }

@@ -12,6 +12,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import managerData.Kind;
 import managerInfo.FolderFacts;
 import tools.Fs;
 
@@ -33,7 +34,7 @@ final class FolderFactsTest{
   }
   static long after(Path project){ return FolderFacts.modified(project)+1000; }
   @Test void countsAndSizesTheSourceFiles(@TempDir Path dir){
-    var facts= FolderFacts.of(project(dir,"someProject"));
+    var facts= FolderFacts.of(project(dir,"someProject"),Kind.code);
     assertEquals(2, facts.files());
     assertEquals("use base.Main as Main;\n".length()+"hi\n".length(), facts.bytes());
     assertTrue(facts.modified() > 0);
@@ -41,14 +42,14 @@ final class FolderFactsTest{
   @Test void theCompiledCacheIsNotCountedAsSource(@TempDir Path dir){
     var project= project(dir,"someProject");
     cache(project,"hello",after(project));
-    var facts= FolderFacts.of(project);
+    var facts= FolderFacts.of(project,Kind.code);
     assertEquals(2, facts.files());
     assertTrue(facts.jsonStamp() > facts.modified());
   }
   @Test void recognisesThePackagesOfTheProject(@TempDir Path dir){
     var project= project(dir,"someProject");
     Fs.writeUtf8(project.resolve("_other").resolve("_rank_app.fear"),"");
-    var facts= FolderFacts.of(project);
+    var facts= FolderFacts.of(project,Kind.code);
     assertEquals(List.of("hello","other"), facts.pkgs().stream().sorted().toList());
     assertTrue(facts.valid());
     assertTrue(facts.problem().isEmpty());
@@ -56,20 +57,20 @@ final class FolderFactsTest{
   @Test void brokenNamesAreReportedNotHidden(@TempDir Path dir){
     var project= project(dir,"someProject");
     Fs.writeUtf8(project.resolve("_hello").resolve("Bad.fear"),"");
-    var facts= FolderFacts.of(project);
+    var facts= FolderFacts.of(project,Kind.code);
     assertFalse(facts.valid());
     assertEquals(List.of(), facts.pkgs());
     assertTrue(facts.problem().orElseThrow().contains("Bad.fear"), facts.problem().orElseThrow());
   }
   @Test void withNoCacheThereIsSomethingToCompileAndNothingToRun(@TempDir Path dir){
-    var facts= FolderFacts.of(project(dir,"someProject"));
+    var facts= FolderFacts.of(project(dir,"someProject"),Kind.code);
     assertFalse(facts.hasCache());
     assertFalse(facts.cacheUpToDate());
   }
   @Test void aCacheNewerThanEverySourceIsUpToDate(@TempDir Path dir){
     var project= project(dir,"someProject");
     cache(project,"hello",after(project));
-    var facts= FolderFacts.of(project);
+    var facts= FolderFacts.of(project,Kind.code);
     assertTrue(facts.hasCache());
     assertTrue(facts.cacheUpToDate());
   }
@@ -77,8 +78,21 @@ final class FolderFactsTest{
     var project= project(dir,"someProject");
     cache(project,"hello",after(project));
     cache(project,"other",1000);
-    var facts= FolderFacts.of(project);
+    var facts= FolderFacts.of(project,Kind.code);
     assertTrue(facts.hasCache());
     assertFalse(facts.cacheUpToDate());
+  }
+  @Test void aDataFolderNeedsNoPackageStructure(@TempDir Path dir){
+    var project= dir.resolve("publicFiles");
+    Fs.writeUtf8(project.resolve("readme.txt"),"hi\n");
+    var facts= FolderFacts.of(project,Kind.dataReadOnly);
+    assertTrue(facts.valid());
+    assertEquals(List.of(), facts.pkgs());
+  }
+  @Test void aDataFolderStillRejectsUnsafeNames(@TempDir Path dir){
+    var project= dir.resolve("publicFiles");
+    Fs.writeUtf8(project.resolve("Bad Name.txt"),"hi\n");
+    var facts= FolderFacts.of(project,Kind.dataReadOnly);
+    assertFalse(facts.valid());
   }
 }

@@ -315,26 +315,6 @@ public final class Violation {
         blockingPrograms()
       ), cause);
   }
-  public static UserError registeredFoldersUnreadable(Path managerDir){
-    return new UserError("""
-      Fearless cannot read back what it remembers about your project folders.
-
-      %s
-      The manager folder is:
-      %s
-      Its content is not what Fearless left there: another program changed it,
-      or an earlier Fearless was stopped while saving. Fearless stops here
-      rather than guess what it used to remember.
-
-      While no Fearless program is running, you can delete the manager folder.
-      Fearless then starts again remembering nothing, and starting Fearless on
-      a project folder registers that folder again.
-      """.formatted(
-        managerFolderIntro(),
-        path(managerDir.toString())
-      ));
-  }
-
   public static UserError associationsAmbiguous(String reported){
     return new UserError("""
       Fearless cannot tell which of your Fearless installs should open Fearless

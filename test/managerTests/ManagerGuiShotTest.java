@@ -17,6 +17,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import mainCoordinator.ResolveResource;
+import managerData.Kind;
 import managerInfo.FolderInfo;
 import managerList.FolderList;
 import tools.Fs;
@@ -60,7 +61,8 @@ final class ManagerGuiShotTest{
     var data= new MockManagerData();
     for (var name: new String[]{"someProject","otherProject","map_editor","webShop","hello","sudoku","payroll","tetris","notes","weather"}){
       var project= FolderFactsTest.project(dir,name);
-      data.addRegisteredFolder(project);
+      data.addRegisteredFolder(name,project);
+      data.setKind(project,Kind.code);
       data.setCompiled(project,System.currentTimeMillis()-60000);
     }
     data.setRun(dir.resolve("tetris"),System.currentTimeMillis());
@@ -88,7 +90,8 @@ final class ManagerGuiShotTest{
     var project= FolderFactsTest.project(dir,"someProject");
     Fs.writeUtf8(project.resolve("my_game.fearless"),"");
     FolderFactsTest.cache(project,"hello",FolderFactsTest.after(project));
-    data.addRegisteredFolder(project);
+    data.addRegisteredFolder("someProject",project);
+    data.setKind(project,Kind.code);
     data.setCompiled(project,System.currentTimeMillis()-3600000);
     data.setRun(project,System.currentTimeMillis()-60000);
     var shot= shoot(()->new FolderInfo(data,project.toAbsolutePath().normalize(),_->{},()->{}).panel(),720,420,"folderInfo");
@@ -98,7 +101,8 @@ final class ManagerGuiShotTest{
     var data= new MockManagerData();
     var project= FolderFactsTest.project(dir,"brokenProject");
     Fs.writeUtf8(project.resolve("_hello").resolve("Bad.fear"),"");
-    data.addRegisteredFolder(project);
+    data.addRegisteredFolder("brokenProject",project);
+    data.setKind(project,Kind.code);
     var shot= shoot(()->new FolderInfo(data,project.toAbsolutePath().normalize(),_->{},()->{}).panel(),720,420,"folderInfoBroken");
     assertTrue(colours(shot) > 20);
   }
@@ -106,7 +110,7 @@ final class ManagerGuiShotTest{
     var data= new MockManagerData();
     var project= FolderFactsTest.project(dir,"loggedProject").toAbsolutePath().normalize();
     Fs.writeUtf8(project.resolve(".out").resolve("logs").resolve("_base").resolve("log$20260904_123456_789Z.log"),"hello\n");
-    data.addRegisteredFolder(project);
+    data.addRegisteredFolder("loggedProject",project);
     var info= onEdtGet(()->new FolderInfo(data,project,_->{},()->{}));
     var shot= shoot(info::panel,720,420,"folderInfoWithLogs");
     assertTrue(colours(shot) > 20);

@@ -14,7 +14,9 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
@@ -33,6 +35,7 @@ import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.SwingUtilities;
 
+import managerData.Kind;
 import managerData.ManagerData;
 import managerIcons.BadgeIcon;
 import managerIcons.FolderIcon;
@@ -64,6 +67,7 @@ public final class FolderInfo{
   private final JButton openDocsButton= small("Open docs",this::openDocs);
   private final JPanel mainsPanel= new JPanel(new BorderLayout());
   private final JButton actionButton= new JButton("Compile");
+  private final JLabel nameLabel= new JLabel();
   private final JList<LogFiles.Entry> logList= new JList<>();
   private final JScrollPane logScroll= new JScrollPane(logList);
   private final JButton viewLogButton= small("View",this::viewLog);
@@ -77,7 +81,7 @@ public final class FolderInfo{
     this.worker= worker;
     this.onChange= onChange;
     this.session= new ProjectSession(folder, worker, this::append, this::refreshLater);
-    this.facts= FolderFacts.of(folder);
+    this.facts= FolderFacts.of(folder, currentEntry().kind());
     output.setEditable(false);
     output.setFont(new Font(Font.MONOSPACED,Font.PLAIN,13));
     details.setEditable(false);
@@ -108,6 +112,7 @@ public final class FolderInfo{
   public Path folder(){ return folder; }
   public ProjectSession session(){ return session; }
   public FolderFacts facts(){ return facts; }
+  public void reload(){ session.refresh(); refresh(); }
   private JPanel top(){
     var res= new JPanel();
     res.setLayout(new BoxLayout(res,BoxLayout.Y_AXIS));
@@ -140,9 +145,8 @@ public final class FolderInfo{
     var res= new JPanel(new FlowLayout(FlowLayout.LEFT,8,0));
     res.add(new JLabel(new BadgeIcon(FolderIcon.image(folder,iconSize),iconSize,BadgeIcon.Mark.none)));
     res.add(actionButton);
-    var name= new JLabel(FolderName.compactName(folder));
-    name.setFont(name.getFont().deriveFont(Font.BOLD,18f));
-    res.add(name);
+    nameLabel.setFont(nameLabel.getFont().deriveFont(Font.BOLD,18f));
+    res.add(nameLabel);
     res.add(openDocsButton);
     return res;
   }
@@ -188,8 +192,10 @@ public final class FolderInfo{
     });
   }
   private void refresh(){
-    facts= FolderFacts.of(folder);
-    details.setText(String.join("\n",lines(folder,facts,currentEntry())));
+    var entry= currentEntry();
+    facts= FolderFacts.of(folder,entry.kind());
+    nameLabel.setText(entry.alias());
+    details.setText(String.join("\n",lines(folder,facts,entry,data.linkProblem(entry))));
     details.setCaretPosition(0);
     fillMains();
     fillLogs();
@@ -198,8 +204,10 @@ public final class FolderInfo{
     root.repaint();
   }
   private ManagerData.Entry currentEntry(){
-    return data.registered().stream().filter(e->e.folder().equals(facts.folder())).findFirst().orElseThrow();
+    return data.entryOf(folder).orElseThrow();
   }
+  private Optional<String> effectiveProblem(){ return facts.problem().or(()->data.linkProblem(currentEntry())); }
+  public boolean hasProblem(){ return effectiveProblem().isPresent(); }
   private void setAll(boolean on){
     data.setSelectedMains(folder, on ? session.mains().orElse(List.of()) : List.of());
     refresh();
@@ -261,27 +269,46 @@ public final class FolderInfo{
     var known= session.mains();
     if (known.isEmpty()){ return List.of(); }
     if (known.get().size() == 1){ return known.get(); }
-    var chosen= currentEntry().selectedMains();
+    var chosen= currentEntry().mains();
     return known.get().stream().filter(chosen::contains).toList();
   }
   private boolean multiMains(){ return session.mains().filter(m->m.size() > 1).isPresent(); }
   private void updateButtons(){
     var busy= session.busy();
     var running= session.running().isPresent();
+    if (running){ actionButton.setText("Terminate"); actionButton.setEnabled(true); openDocsButton.setEnabled(session.mains().isPresent()); return; }
+    if (currentEntry().kind() != Kind.code){
+      actionButton.setText("Check");
+      actionButton.setEnabled(!busy);
+      openDocsButton.setEnabled(false);
+      return;
+    }
     var needsCompile= !facts.cacheUpToDate();
     var multi= multiMains();
-    actionButton.setText(running ? "Terminate" : needsCompile ? "Compile" : multi ? "Run selected" : "Run");
-    actionButton.setEnabled(running || (!busy && (needsCompile || !selectedMains().isEmpty())));
+    actionButton.setText(needsCompile ? "Compile" : multi ? "Run selected" : "Run");
+    actionButton.setEnabled(!busy && (needsCompile || !selectedMains().isEmpty()));
     openDocsButton.setEnabled(session.mains().isPresent());
   }
   private void onAction(){
     if (session.running().isPresent()){ session.terminate(); return; }
+    if (currentEntry().kind() != Kind.code){ check(); return; }
     if (!facts.cacheUpToDate()){ compile(); return; }
     run();
   }
   private void clearOutput(){ output.setText(""); }
+  private void check(){
+    information.setOpen(false);
+    worker.execute(()->{
+      var entry= currentEntry();
+      var problem= FolderFacts.of(folder,entry.kind()).problem().or(()->data.linkProblem(entry));
+      append(problem.map(p->p+"\n").orElse("--- ok: no problem found ---\n"));
+      SwingUtilities.invokeLater(this::refresh);
+    });
+  }
   private void compile(){
     information.setOpen(false);
+    var link= data.linkProblem(currentEntry());
+    if (link.isPresent()){ append(link.get()+"\n"); return; }
     changed(d->d.setCompiled(folder,System.currentTimeMillis()));
     session.compile();
   }
@@ -317,23 +344,32 @@ public final class FolderInfo{
     chooser.showOpenDialog(root);
   }
   public void report(){
-    var text= new JTextArea(facts.problem().orElseThrow(),24,90);
+    var text= new JTextArea(effectiveProblem().orElseThrow(),24,90);
     text.setEditable(false);
     text.setFont(new Font(Font.MONOSPACED,Font.PLAIN,13));
-    JOptionPane.showMessageDialog(root,new JScrollPane(text),"Names that Fearless cannot accept",JOptionPane.ERROR_MESSAGE);
+    JOptionPane.showMessageDialog(root,new JScrollPane(text),"Why this project is invalid",JOptionPane.ERROR_MESSAGE);
   }
-  private static List<String> lines(Path folder, FolderFacts facts, ManagerData.Entry entry){
-    return List.of(
+  private static List<String> lines(Path folder, FolderFacts facts, ManagerData.Entry entry, Optional<String> linkProblem){
+    var out= new ArrayList<>(List.of(
       row("Folder",folder.toString()),
+      row("Alias",entry.alias()),
+      row("Kind",entry.kind().infoText()),
       row("Files",facts.files()+""),
       row("Total size",bytes(facts.bytes())),
-      row("Last modified",stamp(facts.modified())),
-      row("Package data",stamp(facts.jsonStamp())),
-      row("Compiled cache",facts.cacheUpToDate() ? "up to date" : "needs compiling"),
-      row("Last compile",stamp(entry.compiled())),
-      row("Last run",stamp(entry.run())),
-      row("Packages",Join.of(facts.pkgs(),""," ","","<none>")),
-      row("File names",facts.valid() ? "valid" : "broken"));
+      row("Last modified",stamp(facts.modified()))));
+    if (entry.kind() == Kind.code){
+      out.add(row("Package data",stamp(facts.jsonStamp())));
+      out.add(row("Compiled cache",facts.cacheUpToDate() ? "up to date" : "needs compiling"));
+      out.add(row("Last compile",stamp(entry.compiled())));
+      out.add(row("Last run",stamp(entry.run())));
+      out.add(row("Packages",Join.of(facts.pkgs(),""," ","","<none>")));
+      out.add(row("Mains selected",Join.of(entry.mains(),""," ","","<none>")));
+      out.add(row("Reads",entry.reads().isEmpty() ? "<none>" : String.join(" ",entry.reads().keySet())));
+      out.add(row("Edits",entry.edits().isEmpty() ? "<none>" : String.join(" ",entry.edits().keySet())));
+      out.add(row("Links",linkProblem.isEmpty() ? "ok" : "broken - see Error report"));
+    }
+    out.add(row("File names",facts.valid() ? "valid" : "broken"));
+    return List.copyOf(out);
   }
   private static String row(String name, String value){ return "%-16s%s".formatted(name,value); }
   private static String stamp(long millis){ return millis < 0 ? "never" : when.format(Instant.ofEpochMilli(millis)); }

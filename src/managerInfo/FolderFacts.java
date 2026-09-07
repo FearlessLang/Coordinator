@@ -7,6 +7,8 @@ import java.util.Optional;
 import java.util.stream.LongStream;
 
 import coordinator.Coordinator;
+import managerData.Kind;
+import realSourceOracle.RealSourceOracleWithZip;
 import tools.Fs;
 import userMessages.UserError;
 
@@ -16,15 +18,19 @@ public record FolderFacts(
   public static final String outDir= Coordinator.outDir;
   public boolean valid(){ return problem.isEmpty(); }
   public boolean cacheUpToDate(){ return cacheStamp >= 0 && cacheStamp >= modified; }
-  public boolean hasCache(){ return Files.isDirectory(folder.resolve(outDir)); }
-  public static FolderFacts of(Path folder){
+  public boolean hasCache(){ return hasCache(folder); }
+  public static boolean hasCache(Path folder){ return Files.isDirectory(folder.toAbsolutePath().normalize().resolve(outDir)); }
+  public static FolderFacts of(Path folder, Kind kind){
     var f= folder.toAbsolutePath().normalize();
     var src= sources(f);
-    List<String> pkgs;
+    List<String> pkgs= List.of();
     Optional<String> problem;
     UserError.root= f;
-    try { pkgs= Coordinator.pkgNames(f); problem= Optional.empty(); }
-    catch(UserError e){ pkgs= List.of(); problem= Optional.of(e.getMessage()); }
+    try {
+      if (kind == Kind.code){ pkgs= Coordinator.pkgNames(f); } else { new RealSourceOracleWithZip(f); }
+      problem= Optional.empty();
+    }
+    catch(UserError e){ problem= Optional.of(e.getMessage()); }
     return new FolderFacts(f,src.size(),src.stream().mapToLong(FolderFacts::size).sum(),
       modified(f),stamp(f,".json",true),stamp(f,".built",false),pkgs,problem);
   }

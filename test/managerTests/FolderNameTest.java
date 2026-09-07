@@ -42,10 +42,16 @@ final class FolderNameTest{
     assertEquals("hello3", FolderName.free(project,"hello",Set.of("hello","hello2")));
   }
   @Test void aFreeNameIsNeverAskedAbout(@TempDir Path dir){
-    var project= folder(dir,"someProject");
+    var project= folder(dir,"someproject");
     FolderName.makeUnique(project,Set.of("other"),_->{ throw new AssertionError("must not ask"); });
-    assertEquals("someProject", FolderName.compactName(project));
-    assertFalse(Files.exists(project.resolve("someProject.fearless")));
+    assertEquals("someproject", FolderName.compactName(project));
+    assertFalse(Files.exists(project.resolve("someproject.fearless")));
+  }
+  @Test void anUnsafeFolderNameIsAskedAboutEvenWithNoCollision(@TempDir Path dir){
+    var project= folder(dir,"someProject");
+    var name= FolderName.makeUnique(project,Set.of("other"),s->s);
+    assertEquals("someproject", name);
+    assertTrue(Files.isRegularFile(project.resolve("someproject.fearless")));
   }
   @Test void aTakenNameIsAskedAboutAndWrittenIntoANewFearlessFile(@TempDir Path dir){
     var project= folder(dir,"someProject");
@@ -73,6 +79,6 @@ final class FolderNameTest{
     var project= FolderFactsTest.project(dir,"helloWorld");
     FolderName.makeUnique(project,Set.of("helloWorld"),s->s);
     assertEquals("helloworld", FolderName.compactName(project));
-    assertTrue(managerInfo.FolderFacts.of(project).valid());
+    assertTrue(managerInfo.FolderFacts.of(project,managerData.Kind.code).valid());
   }
 }
