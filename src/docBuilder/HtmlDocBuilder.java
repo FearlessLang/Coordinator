@@ -125,7 +125,7 @@ public final class HtmlDocBuilder implements DocBuilder{
       if (occ.text().strip().equals("```")){ inFence= !inFence; continue; }
       //a //> line is real Fearless code, not prose: any backtick in it is a genuine
       //raw string literal, never doc-comment markup, so it is never reference-checked.
-      if (inFence || occ.example()){ continue; }
+      if (inFence || occ.example() || occ.testOnly()){ continue; }
       link(resolver,occ,group.scope(),spans,problems);
     }
   }

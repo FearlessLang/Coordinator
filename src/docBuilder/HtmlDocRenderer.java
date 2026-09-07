@@ -86,7 +86,7 @@ final class HtmlDocRenderer{
     for (var t: shown){
       var checkNames= new ArrayList<String>();
       for (var m: visibleMethods(t)){
-        var examples= m.docs.stream().filter(DocOcc::example).map(DocOcc::text).toList();
+        var examples= m.docs.stream().filter(d->d.example() || d.testOnly()).map(DocOcc::text).toList();
         if (examples.isEmpty()){ continue; }
         var name= t.main().name().simpleName()+"Check"+(checkNames.size()+1);
         checkNames.add(name);
@@ -127,7 +127,7 @@ final class HtmlDocRenderer{
   }
 
   void renderDocText(StringBuilder sb, String indent, Object owner, List<DocOcc> docs, Map<DocOcc,Object> claims){
-    var visible= docs.stream().filter(c->!c.inline() || claims.get(c) == owner).toList();
+    var visible= docs.stream().filter(c->!c.inline() || claims.get(c) == owner).filter(c->!c.testOnly()).toList();
     if (visible.isEmpty()){ return; }
     visible.stream().filter(c->!c.example()).forEach(c->appendIndented(sb,indent,c.text()));
     var examples= visible.stream().filter(DocOcc::example).map(DocOcc::text).toList();
@@ -430,6 +430,7 @@ code{
   void renderDoc(StringBuilder sb, Object owner, List<DocOcc> docs, Map<DocOcc,Object> claims){
     var visible= docs.stream()
       .filter(c->!c.inline() || claims.get(c) == owner)
+      .filter(c->!c.testOnly())
       .toList();
     if (visible.isEmpty()){
       sb.append("<p class=\"doc missing\">No documentation yet.</p>\n");
@@ -512,7 +513,7 @@ code{
       c.arity().ifPresent(n->sb.append(h(arityParens(n))));
     }
     sb.append("</a>");
-    c.localMethod().ifPresent(m->m.docs.stream().filter(d->!d.example()).findFirst()
+    c.localMethod().ifPresent(m->m.docs.stream().filter(d->!d.example() && !d.testOnly()).findFirst()
       .ifPresent(d->sb.append(" <span class=\"opt-doc\">\u2014 ").append(h(d.text())).append("</span>")));
     return sb.toString();
   }

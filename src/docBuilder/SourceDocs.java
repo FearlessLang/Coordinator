@@ -52,7 +52,7 @@ final class SourceDocs{
       var pure= pureDocs(l);
       if (!pure.isEmpty()){ before.addAll(pure); continue; }
       if (!lines.get(l-1).isBlank()){ break; }
-      before.add(new DocOcc(uri,l,1,1,"",true,contextIsExample(before)));
+      before.add(new DocOcc(uri,l,1,1,"",true,contextIsExample(before),contextIsTestOnly(before)));
     }
     Collections.reverse(before);
     //everything collected is attached, including an empty line trimmed off the end:
@@ -64,6 +64,10 @@ final class SourceDocs{
   //the line just below the empty one, which is the last one collected walking up
   static boolean contextIsExample(List<DocOcc> before){
     return !before.isEmpty() && before.getLast().example();
+  }
+
+  static boolean contextIsTestOnly(List<DocOcc> before){
+    return !before.isEmpty() && before.getLast().testOnly();
   }
 
   static List<DocOcc> trimBlanks(List<DocOcc> ds){
@@ -94,11 +98,15 @@ final class SourceDocs{
         switch(mode){
           case Normal -> {
             if (s.startsWith("///",i)){
-              add(l,i+1,s.substring(i+3),s.substring(0,i).isBlank(),false);
+              add(l,i+1,s.substring(i+3),s.substring(0,i).isBlank(),false,false);
               i= s.length();
             }
             else if (s.startsWith("//>",i)){
-              add(l,i+1,s.substring(i+3),s.substring(0,i).isBlank(),true);
+              add(l,i+1,s.substring(i+3),s.substring(0,i).isBlank(),true,false);
+              i= s.length();
+            }
+            else if (s.startsWith("//-",i)){
+              add(l,i+1,s.substring(i+3),s.substring(0,i).isBlank(),false,true);
               i= s.length();
             }
             else if (s.startsWith("//",i)){ i= s.length(); }
@@ -126,10 +134,10 @@ final class SourceDocs{
 
   //textColumn is where the stored text really starts in the line, so an error can put
   //its carets under the offending characters: past the "///" and the space clean drops.
-  void add(int line, int column, String text, boolean pureLine, boolean example){
+  void add(int line, int column, String text, boolean pureLine, boolean example, boolean testOnly){
     var clean= clean(text);
     docsByLine.computeIfAbsent(line,_ -> new ArrayList<>())
-      .add(new DocOcc(uri,line,column,column+3+(text.length()-clean.length()),clean,pureLine,example));
+      .add(new DocOcc(uri,line,column,column+3+(text.length()-clean.length()),clean,pureLine,example,testOnly));
   }
 
   static String clean(String s){ return s.startsWith(" ") ? s.substring(1) : s; }

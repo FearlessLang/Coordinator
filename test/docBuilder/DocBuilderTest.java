@@ -519,8 +519,8 @@ Holder
     var owner= namedType("pkg.Holder", List.of(), List.of());
     var typeDoc= new TypeDoc(owner, List.of());
     typeDoc.declared(Pos.of(file,9,1), bar, List.of(
-      new DocOcc(file,9,1,4,"does the bar thing",true,false),
-      new DocOcc(file,9,1,4,".check{bar.assertOk}",true,true)
+      new DocOcc(file,9,1,4,"does the bar thing",true,false,false),
+      new DocOcc(file,9,1,4,".check{bar.assertOk}",true,true,false)
     ), List.of());
 
     var text= new HtmlDocRenderer("pkg", Map.of(), List.of(typeDoc), OtherPackages.empty(), Map.of()).renderText();
@@ -543,7 +543,7 @@ Holder
     var owner= namedType("pkg.Holder", List.of(), List.of());
     var typeDoc= new TypeDoc(owner, List.of());
     typeDoc.declared(Pos.of(file,9,1), bar, List.of(
-      new DocOcc(file,9,1,4,".check{bar.assertOk}",true,true)
+      new DocOcc(file,9,1,4,".check{bar.assertOk}",true,true,false)
     ), List.of());
 
     var test= new HtmlDocRenderer("pkg", Map.of(), List.of(typeDoc), OtherPackages.empty(), Map.of()).renderTest();
@@ -574,10 +574,10 @@ GeneratedExamples: UnitTests {::
     var visible= namedType("pkg.Visible", List.of(), List.of());
     var visibleDoc= new TypeDoc(visible, List.of());
     visibleDoc.declared(Pos.of(file,9,1), bar, List.of(
-      new DocOcc(file,9,1,4,".check{bar.assertOk}",true,true)
+      new DocOcc(file,9,1,4,".check{bar.assertOk}",true,true,false)
     ), List.of());
     visibleDoc.declared(Pos.of(file,12,1), baz, List.of(
-      new DocOcc(file,12,1,4,"does the baz thing",true,false)
+      new DocOcc(file,12,1,4,"does the baz thing",true,false,false)
     ), List.of());
 
     var hiddenName= new TName("pkg._Hidden",0,Pos.unknown);
@@ -585,7 +585,7 @@ GeneratedExamples: UnitTests {::
     var hidden= namedType("pkg._Hidden", List.of(), List.of());
     var hiddenDoc= new TypeDoc(hidden, List.of());
     hiddenDoc.declared(Pos.of(file,20,1), qux, List.of(
-      new DocOcc(file,20,1,4,".check{qux.assertOk}",true,true)
+      new DocOcc(file,20,1,4,".check{qux.assertOk}",true,true,false)
     ), List.of());
 
     var test= new HtmlDocRenderer("pkg", Map.of(), List.of(visibleDoc,hiddenDoc), OtherPackages.empty(), Map.of()).renderTest();
@@ -607,6 +607,50 @@ GeneratedExamples: UnitTests {::
   .test VisibleExamples
   }
 """, test);
+  }
+
+  @Test void renderTestIncludesTestOnlyLinesButRenderTextHidesThem(){
+    var ownerName= new TName("pkg.Holder",0,Pos.unknown);
+    var bar= namedMethod(".bar", ownerName);
+    var owner= namedType("pkg.Holder", List.of(), List.of());
+    var typeDoc= new TypeDoc(owner, List.of());
+    typeDoc.declared(Pos.of(file,9,1), bar, List.of(
+      new DocOcc(file,9,1,4,".let x={1}",true,false,true),
+      new DocOcc(file,9,1,4,".check{x.assertEq 1}",true,true,false)
+    ), List.of());
+
+    var test= new HtmlDocRenderer("pkg", Map.of(), List.of(typeDoc), OtherPackages.empty(), Map.of()).renderTest();
+
+    assertEquals("""
+use pkg.Holder as Holder;
+use base.Test as Test;
+use base.UnitTests as UnitTests;
+
+HolderCheck1: Test {::
+.let x={1}
+.check{x.assertEq 1}
+  }
+
+HolderExamples: Test {::
+  .test HolderCheck1
+  }
+
+GeneratedExamples: UnitTests {::
+  .test HolderExamples
+  }
+""", test);
+
+    var text= new HtmlDocRenderer("pkg", Map.of(), List.of(typeDoc), OtherPackages.empty(), Map.of()).renderText();
+
+    assertEquals("""
+package pkg
+
+Holder
+  .bar:base.Void
+    example:
+      .check{x.assertEq 1}
+
+""", text);
   }
 
   @Test void renderTextShowsPlainFromProvenanceForAnInheritedMethod(){
