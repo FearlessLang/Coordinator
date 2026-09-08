@@ -97,7 +97,7 @@ class OutputHelper{
     var allCore= AllLs.of(core).values();
     if (map.size() != allCore.size()){ return false; }
     for (var l: allCore){
-      //if (!l.name().isPublic()){ continue; }//No, privates can still be mentioned in meth parameters and ret types.
+      //Not filtered to public-only: privates can still be mentioned in meth parameters and ret types.
       var cached= map.get(l.name());
       if (cached == null){ return false; }
       if (!eqApi(l, cached)){ return false; }

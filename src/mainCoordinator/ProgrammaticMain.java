@@ -22,9 +22,7 @@ public record ProgrammaticMain(StringBuilder out, StringBuilder err,String fName
     try{ Main.run(projectPath, base,rt); }
     catch(UserError e){ System.err.print(e.getMessage()); }
     catch (InterruptedException e){ throw e; }
-    //catch (InvocationTargetException e){ throw e.getCause(); }
-    //catch (ExecutionException e){ throw e.getCause(); }
-    catch(Throwable t){ 
+    catch(Throwable t){
       System.err.println(t.getClass().getCanonicalName());
       System.err.print(UserError.crash(t));
     }
