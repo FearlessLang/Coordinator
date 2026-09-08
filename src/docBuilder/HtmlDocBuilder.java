@@ -46,18 +46,20 @@ public final class HtmlDocBuilder implements DocBuilder{
   String pkgName;
   Path htmlPath;
   Path textPath;
+  Path testPath;
   Map<String,String> uses= Map.of();
 
   final List<TypeDoc> types= new java.util.ArrayList<>();
   final IdentityHashMap<Src,TypeDoc> typeBySrc= new IdentityHashMap<>();
   final Map<URI,SourceDocs> sources= new HashMap<>();
 
-  @Override public void packageLocation(String pkgName, Path htmlPath){
-    assert nonNull(pkgName,htmlPath);
+  @Override public void packageLocation(String pkgName, Path htmlPath, Path testPath){
+    assert nonNull(pkgName,htmlPath,testPath);
     assert this.pkgName == null;
     this.pkgName= pkgName;
     this.htmlPath= htmlPath;
     this.textPath= htmlPath.resolveSibling(pkgName+".txt");
+    this.testPath= testPath;
     this.uses= DocNames.uses(pkgName,core);
   }
 
@@ -100,6 +102,27 @@ public final class HtmlDocBuilder implements DocBuilder{
     var renderer= new HtmlDocRenderer(pkgName,uses,types,other,spans,baseDocLocation);
     Fs.writeUtf8(htmlPath,renderer.render());
     Fs.writeUtf8(textPath,renderer.renderText());
+    writeTest(renderer);
+  }
+
+  void writeTest(HtmlDocRenderer renderer){
+    var names= renderer.testNames();
+    var declared= types.stream().map(t->t.main().name().simpleName()).collect(Collectors.toUnmodifiableSet());
+    if (names.perType().isEmpty() || declared.contains(names.top())){ Fs.rmTree(testPath.getParent()); return; }
+    var collided= names.perType().stream().filter(declared::contains).findFirst();
+    if (collided.isPresent()){ throw Report.generatedTestNameReserved(reservedNameProblem(collided.get()),names.top()); }
+    Fs.ensureDir(testPath.getParent());
+    Fs.cleanDirContents(testPath.getParent());
+    Fs.writeUtf8(testPath,renderer.renderTest());
+  }
+
+  String reservedNameProblem(String name){
+    var owner= types.stream().filter(t->t.main().name().simpleName().equals(name)).findFirst()
+      .orElseThrow().main();
+    var p= owner.pos();
+    var span= new Span(p.fileName(),p.line(),p.column(),p.line(),p.column()+name.length()-1);
+    var frame= new Frame("the documentation of package "+pkgName, span);
+    return Message.of(oracle::loadString, List.of(frame), "This name is reserved for an auto-generated test suite.");
   }
 
   //one group per declaration, carrying the scope its comment is written in: a fenced
@@ -122,7 +145,7 @@ public final class HtmlDocBuilder implements DocBuilder{
       if (occ.text().strip().equals("```")){ inFence= !inFence; continue; }
       //a //> line is real Fearless code, not prose: any backtick in it is a genuine
       //raw string literal, never doc-comment markup, so it is never reference-checked.
-      if (inFence || occ.example()){ continue; }
+      if (inFence || occ.example() || occ.testOnly()){ continue; }
       link(resolver,occ,group.scope(),spans,problems);
     }
   }

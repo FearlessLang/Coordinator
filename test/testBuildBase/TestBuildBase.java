@@ -14,6 +14,8 @@ import coordinator.Coordinator;
 import coordinator.OutputOracle;
 import core.OtherPackages;
 import core.E.Literal;
+import docBuilder.DocBuilder;
+import docBuilder.HtmlDocBuilder;
 import mainCoordinator.ResolveResource;
 import tools.JavaTool;
 import tools.SourceOracle;
@@ -24,6 +26,12 @@ class TestBuildBase {
     @Override public Path rtPath(){    return ResolveResource.stLibRTPath; }
     @Override public Path stLibPath(){ return ResolveResource.stLibPath; }
     @Override public Path modsPath(){  return ResolveResource.coordinatorJars; }
+    @Override public DocBuilder docBuilder(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, Path rootDir){
+      var docs= new HtmlDocBuilder(oracle,other,core,baseCachePath().map(p->p.resolve("base.html")));
+      var htmlPath= rootDir.resolve("gen_java",pkgName+".html");
+      docs.packageLocation(pkgName,htmlPath,ResolveResource.stLibDebugOut.resolve("_baseTestOut","base_test.fear"));
+      return docs;
+    }
 
     @Override public String main(Path path) throws InterruptedException{
       OutputOracle out= ()->ResolveResource.stLibDebugOut;

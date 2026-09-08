@@ -44,7 +44,6 @@ public class Backend{
   private static final TName reprName= new TName("base.Repr", 1,Pos.unknown);
   boolean isRepr(Literal l){ return l.name().equals(reprName); }
   public List<Consumer<Path>> produceJavaCode(){
-    docs.packageLocation(pkgName,out.getParent().resolve(pkgName+".html"));
     cleanOutFolder();
     decs.forEach(d->{docs.visitLiteral(d); generateInterface(d,false);});
     writeMainJava();

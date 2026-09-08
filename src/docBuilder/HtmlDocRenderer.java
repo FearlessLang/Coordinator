@@ -3,6 +3,7 @@ package docBuilder;
 import static offensiveUtils.Require.*;
 
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -31,6 +32,7 @@ final class HtmlDocRenderer{
     this.types= types;
     this.spans= spans;
     this.baseDocLocation= baseDocLocation;
+    this.other= other;
     this.toStr= new ExportedToStr(pkgName, uses);
     this.resolver= new DocResolver(pkgName, types, other);
   }
@@ -38,6 +40,7 @@ final class HtmlDocRenderer{
   final String pkgName;
   final Map<String,String> uses;
   final List<TypeDoc> types;
+  final OtherPackages other;
   final Map<DocOcc,List<ResolvedSpan>> spans;
   final Optional<Path> baseDocLocation;
   //filled by href() as links are emitted, so every ambiguous link that reaches the
@@ -72,6 +75,56 @@ final class HtmlDocRenderer{
     return sb.toString();
   }
 
+  record GeneratedTestNames(String top, List<String> perType){}
+
+  List<TypeDoc> testableTypes(){
+    return visibleTypes().stream()
+      .filter(t->!t.main().infName() && t.main().name().isPublic())
+      .filter(t->visibleMethods(t).stream().anyMatch(this::hasTestContent))
+      .toList();
+  }
+
+  boolean hasTestContent(MethodDoc m){
+    return m.docs.stream().anyMatch(d->d.example() || d.testOnly());
+  }
+
+  GeneratedTestNames testNames(){
+    var shown= testableTypes();
+    return new GeneratedTestNames(
+      "AllAutoTests_"+pkgName,
+      shown.stream().map(t->"_"+t.main().name().simpleName()+"_Examples").toList()
+    );
+  }
+
+  String renderTest(){
+    var shown= testableTypes();
+    var names= testNames();
+    var aliases= new LinkedHashMap<String,String>();
+    types.stream().filter(t->!t.main().infName() && t.main().name().isPublic())
+      .forEach(t->aliases.putIfAbsent(t.main().name().simpleName(), pkgName+"."+t.main().name().simpleName()));
+    uses.forEach((full,alias)->aliases.putIfAbsent(alias,full));
+    other.dom().stream().filter(n->n.pkgName().equals("base") && n.isPublic())
+      .forEach(n->aliases.putIfAbsent(n.simpleName(), "base."+n.simpleName()));
+    aliases.putIfAbsent("Test","base.Test");
+    aliases.putIfAbsent("UnitTests","base.UnitTests");
+    var sb= new StringBuilder(4_000);
+    aliases.forEach((alias,full)->sb.append("use ").append(full).append(" as ").append(alias).append(";\n"));
+    sb.append('\n');
+    for (int i= 0; i < shown.size(); i += 1){
+      sb.append(names.perType().get(i)).append(": Test {::\n");
+      for (var m: visibleMethods(shown.get(i))){
+        var examples= m.docs.stream().filter(d->d.example() || d.testOnly()).map(DocOcc::text).toList();
+        if (examples.isEmpty()){ continue; }
+        sb.append("  .test Test{::\n").append(String.join("\n",examples)).append("\n  }\n");
+      }
+      sb.append("  }\n\n");
+    }
+    sb.append(names.top()).append(": UnitTests {::\n");
+    names.perType().forEach(n->sb.append("  .test ").append(n).append('\n'));
+    sb.append("  }\n");
+    return sb.toString();
+  }
+
   void renderTypeText(StringBuilder sb, TypeDoc t, Map<DocOcc,Object> claims){
     sb.append(typeTitle(t));
     if (!t.main().cs().isEmpty()){
@@ -94,7 +147,7 @@ final class HtmlDocRenderer{
   }
 
   void renderDocText(StringBuilder sb, String indent, Object owner, List<DocOcc> docs, Map<DocOcc,Object> claims){
-    var visible= docs.stream().filter(c->!c.inline() || claims.get(c) == owner).toList();
+    var visible= docs.stream().filter(c->!c.inline() || claims.get(c) == owner).filter(c->!c.testOnly()).toList();
     if (visible.isEmpty()){ return; }
     visible.stream().filter(c->!c.example()).forEach(c->appendIndented(sb,indent,c.text()));
     var examples= visible.stream().filter(DocOcc::example).map(DocOcc::text).toList();
@@ -397,6 +450,7 @@ code{
   void renderDoc(StringBuilder sb, Object owner, List<DocOcc> docs, Map<DocOcc,Object> claims){
     var visible= docs.stream()
       .filter(c->!c.inline() || claims.get(c) == owner)
+      .filter(c->!c.testOnly())
       .toList();
     if (visible.isEmpty()){
       sb.append("<p class=\"doc missing\">No documentation yet.</p>\n");
@@ -479,7 +533,7 @@ code{
       c.arity().ifPresent(n->sb.append(h(arityParens(n))));
     }
     sb.append("</a>");
-    c.localMethod().ifPresent(m->m.docs.stream().filter(d->!d.example()).findFirst()
+    c.localMethod().ifPresent(m->m.docs.stream().filter(d->!d.example() && !d.testOnly()).findFirst()
       .ifPresent(d->sb.append(" <span class=\"opt-doc\">\u2014 ").append(h(d.text())).append("</span>")));
     return sb.toString();
   }
