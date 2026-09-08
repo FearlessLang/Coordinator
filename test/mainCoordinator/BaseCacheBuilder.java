@@ -11,6 +11,8 @@ import coordinator.Coordinator;
 import coordinator.OutputOracle;
 import core.E.Literal;
 import core.OtherPackages;
+import docBuilder.DocBuilder;
+import docBuilder.HtmlDocBuilder;
 import tools.Fs;
 import tools.SourceOracle;
 import utils.OneOr;
@@ -34,8 +36,11 @@ public final class BaseCacheBuilder{
         @Override public Path rtPath(){ return ResolveResource.stLibRTPath; }
         @Override public Path stLibPath(){ return ResolveResource.stLibPath; }
         @Override public Path modsPath(){ return modsDir; }
-        @Override public Path testPath(String pkgName, Path rootDir){
-          return testFileDest.orElseGet(()->scratch.resolve("_discardedTest.fear"));
+        @Override public DocBuilder docBuilder(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, Path rootDir){
+          var docs= new HtmlDocBuilder(oracle,other,core,baseCachePath().map(p->p.resolve("base.html")));
+          var htmlPath= rootDir.resolve("gen_java",pkgName+".html");
+          docs.packageLocation(pkgName,htmlPath,testFileDest.orElseGet(()->scratch.resolve("_discardedTest.fear")));
+          return docs;
         }
       };
       OutputOracle out= ()->scratch;
