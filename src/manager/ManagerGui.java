@@ -178,6 +178,7 @@ final class ManagerGui {
   private void showFolder(Optional<Path> folder){
     if (folder.isEmpty()){ hidePanel(); return; }
     shown= open.computeIfAbsent(folder.get(), f->new FolderInfo(data, f, worker, this::foldersChangedHere));
+    shown.reload();
     var where= split.getDividerLocation();
     if (split.getWidth() > 0){ where= Math.min(where, split.getWidth()-minPanelWidth); }
     split.setLeftComponent(folders);
