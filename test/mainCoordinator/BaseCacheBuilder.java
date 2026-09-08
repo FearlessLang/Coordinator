@@ -36,7 +36,7 @@ public final class BaseCacheBuilder{
         @Override public Path modsPath(){ return modsDir; }
         @Override public BackendTools backendTools(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, Path rootDir, CapabilityEnvironment capabilities){
           var docs= new HtmlDocBuilder(oracle,other,core,baseCachePath().map(p->p.resolve("base.html")));
-          docs.packageLocation(pkgName, rootDir.resolve("gen_java",pkgName+".html"), testFileDest.orElseGet(()->scratch.resolve("_discardedTest.fear")));
+          docs.packageLocation(pkgName, rootDir.resolve("gen_java",pkgName+".html"), testFileDest.orElseGet(()->scratch.resolve("_discardedTest","_discardedTest.fear")));
           return BackendTools.of(pkgName, core, rootDir, docs, ResolveResource.stLibRTPath, capabilities);
         }
       };
