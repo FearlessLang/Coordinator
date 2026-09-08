@@ -11,12 +11,12 @@ import tools.Fs;
 import tools.JavacTool;
 
 public class NaiveBackendLogicMain {
-  public void of(String pkgName, List<Literal> core, Path rootDir, BackendTools tools, Path rtPath, List<Path> extraClasspathDirs){
+  public void of(String pkgName, List<Literal> core, Path rootDir, BackendTools tools, List<Path> extraClasspathDirs){
     var outPath= rootDir.resolve("gen_java",pkgName);
-    assert Files.exists(rtPath): "Missing extra folder: "+rtPath;
+    assert Files.exists(tools.rtPath()): "Missing extra folder: "+tools.rtPath();
     var fixers= new Backend(outPath, pkgName, core, tools).produceJavaCode();
     if (pkgName.equals("base")){
-    	Fs.copyTreeFlat(rtPath, outPath);
+    	Fs.copyTreeFlat(tools.rtPath(), outPath);
     }
     assert foldDistinct(outPath);
     var classes= rootDir.resolve("gen_java","_classes");

@@ -65,9 +65,11 @@ public interface Coordinator {
     catch(FearlessException fe){ throw Report.sourceError(fe.render(oracle)); }
   }
   default void backend(String pkgName, List<Literal> core, SourceOracle oracle, OtherPackages other, OutputOracle out, CapabilityEnvironment capabilities){
-    var docs= docBuilder(pkgName,oracle,other,core,out.rootDir());
-    var rtPath= rtPath();
-    new NaiveBackendLogicMain().of(pkgName,core,out.rootDir(),BackendTools.of(docs,rtPath,capabilities),rtPath,sharedClasspath());
+    var tools= backendTools(pkgName,oracle,other,core,out.rootDir(),capabilities);
+    new NaiveBackendLogicMain().of(pkgName,core,out.rootDir(),tools,sharedClasspath());
+  }
+  default BackendTools backendTools(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, Path rootDir, CapabilityEnvironment capabilities){
+    return BackendTools.of(docBuilder(pkgName,oracle,other,core,rootDir), rtPath(), capabilities);
   }
   default DocBuilder docBuilder(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, Path rootDir){
     var docs= new HtmlDocBuilder(oracle,other,core,baseCachePath().map(p->p.resolve("base.html")));
