@@ -74,9 +74,11 @@ public interface Coordinator {
   default DocBuilder docBuilder(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, Path rootDir){
     var docs= new HtmlDocBuilder(oracle,other,core,baseCachePath().map(p->p.resolve("base.html")));
     var htmlPath= rootDir.resolve("gen_java",pkgName+".html");
-    var testPath= rootDir.getParent().resolve("auto_tests","_"+pkgName,pkgName+"_test.fear");
-    docs.packageLocation(pkgName,htmlPath,testPath);
+    docs.packageLocation(pkgName,htmlPath,testPath(pkgName,rootDir));
     return docs;
+  }
+  default Path testPath(String pkgName, Path rootDir){
+    return rootDir.getParent().resolve("auto_tests","_"+pkgName,pkgName+"_test.fear");
   }
   default Path modsPath(){
     var appDir= System.getProperty(JavacTool.appDirKey);
