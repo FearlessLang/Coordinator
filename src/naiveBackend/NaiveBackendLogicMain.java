@@ -11,12 +11,14 @@ import docBuilder.DocBuilder;
 import core.E.Literal;
 import tools.Fs;
 import tools.JavacTool;
+import tools.NativeOverrides;
 
 public class NaiveBackendLogicMain {
   public void of(String pkgName, List<Literal> core, Path rootDir, DocBuilder docs, Path rtPath, List<Path> extraClasspathDirs, CapabilityEnvironment capabilities){
     var outPath= rootDir.resolve("gen_java",pkgName);
-    var fixers= new Backend(outPath, pkgName, core, docs, capabilities).produceJavaCode();
     assert Files.exists(rtPath): "Missing extra folder: "+rtPath;
+    var natives= NativeOverrides.scan(rtPath);
+    var fixers= new Backend(outPath, pkgName, core, docs, natives, capabilities).produceJavaCode();
     if (pkgName.equals("base")){
     	Fs.copyTreeFlat(rtPath, outPath);
     }

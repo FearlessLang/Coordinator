@@ -13,23 +13,27 @@ import core.E.*;
 import coordinator.CapabilityEnvironment;
 import docBuilder.DocBuilder;
 import tools.Fs;
+import tools.NativeOverrides;
 import utils.Join;
 import utils.Pos;
 
 public class Backend{
-  public Backend(Path out, String pkgName, List<Literal> decs, DocBuilder docs, CapabilityEnvironment capabilities){
-    assert nonNull(out,pkgName,decs,docs,capabilities);
+  public Backend(Path out, String pkgName, List<Literal> decs, DocBuilder docs, NativeOverrides natives, CapabilityEnvironment capabilities){
+    assert nonNull(out,pkgName,decs,docs,natives,capabilities);
     assert unmodifiable(decs, "decs");
     this.out= out;
     this.pkgName= pkgName;
     this.decs= decs;
     this.docs= docs;
+    this.natives= natives;
     this.capabilities= capabilities;
   }
   Path out;
   String pkgName;
   List<Literal> decs;
   DocBuilder docs;
+  NativeOverrides natives;
+  Set<String> magicPairs= new HashSet<>();
   CapabilityEnvironment capabilities;
   List<Consumer<Path>> fixers= new ArrayList<>();
   private static final TName captureFreeName= new TName("base.CaptureFree",0,Pos.unknown);
@@ -43,11 +47,30 @@ public class Backend{
   boolean implementsFileLog(Literal l){ return l.cs().stream().anyMatch(c->c.name().equals(fileLogName)); }
   private static final TName reprName= new TName("base.Repr", 1,Pos.unknown);
   boolean isRepr(Literal l){ return l.name().equals(reprName); }
+  private static final TName magicName= new TName("base.Magic", 0,Pos.unknown);
+  boolean isMagicBody(M m){
+    return m.e().get() instanceof Call c && c.e() instanceof Type t && t.type().c().name().equals(magicName);
+  }
   public List<Consumer<Path>> produceJavaCode(){
     cleanOutFolder();
-    decs.forEach(d->{docs.visitLiteral(d); generateInterface(d,false);});
+    decs.forEach(d->{docs.visitLiteral(d); generateInterface(d,false); checkFileReplacement(d);});
+    checkMagicFulfilled();
     writeMainJava();
     return fixers;
+  }
+  private boolean hasRealBody(Literal l){
+    return l.ms().stream().anyMatch(m->m.sig().origin().equals(l.name()) && !m.sig().abs() && !isMagicBody(m));
+  }
+  private void checkFileReplacement(Literal l){
+    var typeName= decTypeName(l.name());
+    if (!natives.hasFile(typeName)){ return; }
+    assert l.name().equals(magicName) || !hasRealBody(l):
+      typeName+" is fully replaced by a hand-written rt/ file but still has a real (non-abstract, non-Magic!) method of its own";
+  }
+  private void checkMagicFulfilled(){
+    for (var pair: magicPairs){
+      assert natives.pairs().contains(pair): pair+" is a Magic! method with no hand-written rt/ override";
+    }
   }
   void cleanOutFolder(){
     Fs.ensureDir(out);
@@ -125,7 +148,15 @@ public class Backend{
         .a(iface).a(".").a(jName).a("\"+this.getClass().getName());\n")
         .a("  }\n");
       return;
-    }   
+    }
+    var typeName= decTypeName(l.name());
+    if (isMagicBody(m)){
+      if (!natives.hasFile(typeName)){ magicPairs.add(typeName+"#"+jName); }
+    }
+    else {
+      assert hasInstance(l, abstractOnly) || !natives.has(typeName, jName):
+        typeName+"."+jName+" has a real Fearless body and a hand-written rt/ override of the same method";
+    }
     sb.a("  default Object "+jName+paramsSig(m)+"{\n");
     new ProduceBody(sb,this, iface, l.thisName(), m).emitBody();
   }
