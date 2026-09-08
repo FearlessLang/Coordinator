@@ -18,14 +18,14 @@ import utils.Join;
 import utils.Pos;
 
 public class Backend{
-  public Backend(Path out, String pkgName, List<Literal> decs, DocBuilder docs, NativeOverrides natives, CapabilityEnvironment capabilities){
-    assert nonNull(out,pkgName,decs,docs,natives,capabilities);
+  public Backend(Path out, String pkgName, List<Literal> decs, DocBuilder docs, Path rtPath, CapabilityEnvironment capabilities){
+    assert nonNull(out,pkgName,decs,docs,rtPath,capabilities);
     assert unmodifiable(decs, "decs");
     this.out= out;
     this.pkgName= pkgName;
     this.decs= decs;
     this.docs= docs;
-    this.natives= natives;
+    this.natives= NativeOverrides.scan(rtPath);
     this.capabilities= capabilities;
   }
   Path out;
