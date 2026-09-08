@@ -66,10 +66,10 @@ public interface Coordinator {
   }
   default void backend(String pkgName, List<Literal> core, SourceOracle oracle, OtherPackages other, OutputOracle out, CapabilityEnvironment capabilities){
     var tools= backendTools(pkgName,oracle,other,core,out.rootDir(),capabilities);
-    new NaiveBackendLogicMain().of(pkgName,core,out.rootDir(),tools,sharedClasspath());
+    new NaiveBackendLogicMain().of(tools,sharedClasspath());
   }
   default BackendTools backendTools(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, Path rootDir, CapabilityEnvironment capabilities){
-    return BackendTools.of(docBuilder(pkgName,oracle,other,core,rootDir), rtPath(), capabilities);
+    return BackendTools.of(pkgName, core, rootDir, docBuilder(pkgName,oracle,other,core,rootDir), rtPath(), capabilities);
   }
   default DocBuilder docBuilder(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, Path rootDir){
     var docs= new HtmlDocBuilder(oracle,other,core,baseCachePath().map(p->p.resolve("base.html")));

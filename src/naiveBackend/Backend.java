@@ -15,17 +15,13 @@ import utils.Join;
 import utils.Pos;
 
 public class Backend{
-  public Backend(Path out, String pkgName, List<Literal> decs, BackendTools tools){
-    assert nonNull(out,pkgName,decs,tools);
-    assert unmodifiable(decs, "decs");
+  public Backend(Path out, BackendTools tools){
+    assert nonNull(out,tools);
+    assert unmodifiable(tools.decs(), "decs");
     this.out= out;
-    this.pkgName= pkgName;
-    this.decs= decs;
     this.tools= tools;
   }
   Path out;
-  String pkgName;
-  List<Literal> decs;
   BackendTools tools;
   List<Consumer<Path>> fixers= new ArrayList<>();
   private static final TName captureFreeName= new TName("base.CaptureFree",0,Pos.unknown);
@@ -41,7 +37,7 @@ public class Backend{
   boolean isRepr(Literal l){ return l.name().equals(reprName); }
   public List<Consumer<Path>> produceJavaCode(){
     cleanOutFolder();
-    decs.forEach(d->{tools.docs().visitLiteral(d); generateInterface(d,false); tools.checks().checkFileReplacement(d, decTypeName(d.name()));});
+    tools.decs().forEach(d->{tools.docs().visitLiteral(d); generateInterface(d,false); tools.checks().checkFileReplacement(d, decTypeName(d.name()));});
     tools.checks().checkMagicFulfilled();
     writeMainJava();
     return fixers;
@@ -53,7 +49,7 @@ public class Backend{
   void generateInterface(Literal l, boolean abstractOnly){
     var iface= decTypeName(l.name());
     var sb= new BytecodeLineFix(iface, l.pos().fileName())
-      .a("package "+pkgName+";\n")
+      .a("package "+tools.pkgName()+";\n")
       .a("public interface "+iface+extendsClause(l)+"{\n");
     for (var m:l.ms()){ emitTopMethod(sb, l, m, abstractOnly); }
     var hasInstance= hasInstance(l, abstractOnly);
@@ -64,7 +60,7 @@ public class Backend{
     if (hasInstance && implementsFileLog(l)){
       if (l.name().arity() == 0){
         var name= l.name().simpleName();
-        sb.a("  base.AppLog _appLog= base.AppLog.open(java.nio.file.Path.of(\".out\",\"logs\",\""+pkgName+"\",\""+name+".log\"), false);\n");
+        sb.a("  base.AppLog _appLog= base.AppLog.open(java.nio.file.Path.of(\".out\",\"logs\",\""+tools.pkgName()+"\",\""+name+".log\"), false);\n");
         sb.a("  default base.AppLog _log(){ return _appLog; }\n");
       } else {
         sb.a("  default base.AppLog _log(){ return null; }\n");
@@ -163,7 +159,7 @@ public class Backend{
     var all= Join.of(mains.keySet().stream().map(n->"\""+n+"\""),"{",",","}","{}");
     var assets= Join.of(tools.capabilities().autoloadedAssets().stream().map(Backend::assetLiteral),"{",",","}","{}");
     var sb= new StringBuilder(8_000)
-      .append("package ").append(pkgName).append(";\n\n")
+      .append("package ").append(tools.pkgName()).append(";\n\n")
       .append("public final class Main{\n")
       .append("  static{ base.Util.installParentLifeline(); }\n")
       .append("  static final String[] all= ").append(all).append(";\n")
@@ -173,7 +169,7 @@ public class Backend{
     mains.forEach((n,iface)->sb
       .append("    if (n.equals(\"").append(n).append("\")){ base.Util.topLevel(()->")
       .append(iface).append(".instance.imm$main$1(new ").append(typeName(systemName)).append("())); return; }\n"));
-    sb.append("    throw new AssertionError(\"No main called \"+n+\" in package ").append(pkgName).append("\");\n  }\n}\n");
+    sb.append("    throw new AssertionError(\"No main called \"+n+\" in package ").append(tools.pkgName()).append("\");\n  }\n}\n");
     Fs.writeUtf8(out.resolve("Main.java"), sb.toString());
   }
   static String assetLiteral(realSourceOracle.SourceOracleWithAutoload.Triple t){

@@ -11,20 +11,20 @@ import tools.Fs;
 import tools.JavacTool;
 
 public class NaiveBackendLogicMain {
-  public void of(String pkgName, List<Literal> core, Path rootDir, BackendTools tools, List<Path> extraClasspathDirs){
-    var outPath= rootDir.resolve("gen_java",pkgName);
+  public void of(BackendTools tools, List<Path> extraClasspathDirs){
+    var outPath= tools.rootDir().resolve("gen_java",tools.pkgName());
     assert Files.exists(tools.rtPath()): "Missing extra folder: "+tools.rtPath();
-    var fixers= new Backend(outPath, pkgName, core, tools).produceJavaCode();
-    if (pkgName.equals("base")){
+    var fixers= new Backend(outPath, tools).produceJavaCode();
+    if (tools.pkgName().equals("base")){
     	Fs.copyTreeFlat(tools.rtPath(), outPath);
     }
     assert foldDistinct(outPath);
-    var classes= rootDir.resolve("gen_java","_classes");
+    var classes= tools.rootDir().resolve("gen_java","_classes");
     Fs.ensureDir(classes);
     Fs.cleanDirContents(classes);
-    var pkgPath= classes.resolve(pkgName);
+    var pkgPath= classes.resolve(tools.pkgName());
     Runnable post= ()->fixers.forEach(f->f.accept(pkgPath));
-    var javacOut= Fs.of(()->JavacTool.compileTree(outPath, classes,post,rootDir.resolve("gen_java",pkgName+".jar"),extraClasspathDirs));
+    var javacOut= Fs.of(()->JavacTool.compileTree(outPath, classes,post,tools.rootDir().resolve("gen_java",tools.pkgName()+".jar"),extraClasspathDirs));
     assert javacOut.isEmpty(): javacOut;
     tools.docs().complete();
     Fs.rmTree(outPath); Fs.rmTree(classes);//comment out this line to keep the generated .java and .class files for debugging
