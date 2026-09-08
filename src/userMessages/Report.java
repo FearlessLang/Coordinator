@@ -174,7 +174,7 @@ or version control system (git).
   }
   public static UserError visibleInvalidChar(RefParent kid, char c){
     return fail(showRel(kid),
-      "- A visible folder/file name contains an unsupported character: '"+c+"'.\n"
+      "- A visible folder/file name contains an unsupported character: "+Message.displayChar(c)+".\n"
     + "  Visible names may use only lowercase letters (a-z), digits (0-9), and underscore (_).",
       "- Rename it to use only lowercase letters, digits, and underscores.\n"
     + "  Examples: \"foo_bar2\", \"src1\", \"_cache\"."
@@ -438,8 +438,8 @@ folder first, and then start Fearless on this one.
   public static UserError projectEmpty(Path root){ return new UserError("""
 The fearless project folder contains no *.fear files
 Folder:
- "%s"
-""".formatted(root));
+%s
+""".formatted(path(root.toString())));
   }
 
   public static UserError projectNoPackageSegment(Ref file){ return new UserError("""

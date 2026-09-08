@@ -398,7 +398,7 @@ Root: [###]
 Path: "_pkg/fo-o.fear"
 
 What went wrong
-- A visible folder/file name contains an unsupported character: '-'.
+- A visible folder/file name contains an unsupported character: "-".
   Visible names may use only lowercase letters (a-z), digits (0-9), and underscore (_).
 
 How to fix

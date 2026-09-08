@@ -110,7 +110,7 @@ public final class UserError extends RuntimeException{
   private static boolean isSimpleString(String s){
     return s.codePoints().allMatch(cp -> cp < 128 && Fs.allowed.indexOf((char)cp) >= 0);
   }
-  static String path(String path){ return "  "+path; }
+  static String path(String path){ return "  "+PrettyFileName.sanitizeAscii(path); }
 
   //-- reaching a human
   public static String crash(Throwable t){
