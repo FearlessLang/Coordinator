@@ -28,6 +28,7 @@ import coordinator.CapabilityEnvironment;
 import coordinator.Coordinator;
 import core.OtherPackages;
 import core.E.Literal;
+import docBuilder.HtmlDocBuilder;
 import mainCoordinator.BaseCacheBuilder;
 import mainCoordinator.ResolveResource;
 import naiveBackend.BackendTools;
@@ -61,7 +62,9 @@ public class RunIntegration {
       public Path modsPath(){  return ResolveResource.coordinatorJars; }
       public Optional<Path> baseCachePath(){ return Optional.of(baseCache); }
       public BackendTools backendTools(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, Path rootDir, CapabilityEnvironment capabilities){
-        return BackendTools.of(pkgName, core, rootDir, docBuilder(pkgName,oracle,other,core,rootDir), ResolveResource.stLibRTPath, capabilities);
+        var docs= new HtmlDocBuilder(oracle,other,core,baseCachePath().map(p->p.resolve("base.html")));
+        docs.packageLocation(pkgName, rootDir.resolve("gen_java",pkgName+".html"), rootDir.getParent().resolve("auto_tests","_"+pkgName,pkgName+"_test.fear"));
+        return BackendTools.of(pkgName, core, rootDir, docs, ResolveResource.stLibRTPath, capabilities);
       }
     };
   }

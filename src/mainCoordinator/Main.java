@@ -29,6 +29,7 @@ import coordinator.CapabilityEnvironment;
 import coordinator.Coordinator;
 import core.OtherPackages;
 import core.E.Literal;
+import docBuilder.HtmlDocBuilder;
 import fileAssociations.FileAssociations;
 import fileAssociations.Icon;
 import naiveBackend.BackendTools;
@@ -70,7 +71,9 @@ public final class Main{
     var c= new Coordinator(){
       @Override public Optional<Path> baseCachePath(){ return Optional.of(base.getParent().resolve("baseCache")); }
       @Override public BackendTools backendTools(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, Path rootDir, CapabilityEnvironment capabilities){
-        return BackendTools.of(pkgName, core, rootDir, docBuilder(pkgName,oracle,other,core,rootDir), rt, capabilities);
+        var docs= new HtmlDocBuilder(oracle,other,core,baseCachePath().map(p->p.resolve("base.html")));
+        docs.packageLocation(pkgName, rootDir.resolve("gen_java",pkgName+".html"), rootDir.getParent().resolve("auto_tests","_"+pkgName,pkgName+"_test.fear"));
+        return BackendTools.of(pkgName, core, rootDir, docs, rt, capabilities);
       }
     };
     c.main(project, c.sourceOracle(base));

@@ -11,7 +11,6 @@ import coordinator.Coordinator;
 import coordinator.OutputOracle;
 import core.E.Literal;
 import core.OtherPackages;
-import docBuilder.DocBuilder;
 import docBuilder.HtmlDocBuilder;
 import naiveBackend.BackendTools;
 import tools.Fs;
@@ -35,14 +34,10 @@ public final class BaseCacheBuilder{
     try{
       var c= new Coordinator(){
         @Override public Path modsPath(){ return modsDir; }
-        @Override public DocBuilder docBuilder(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, Path rootDir){
-          var docs= new HtmlDocBuilder(oracle,other,core,baseCachePath().map(p->p.resolve("base.html")));
-          var htmlPath= rootDir.resolve("gen_java",pkgName+".html");
-          docs.packageLocation(pkgName,htmlPath,testFileDest.orElseGet(()->scratch.resolve("_discardedTest.fear")));
-          return docs;
-        }
         @Override public BackendTools backendTools(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, Path rootDir, CapabilityEnvironment capabilities){
-          return BackendTools.of(pkgName, core, rootDir, docBuilder(pkgName,oracle,other,core,rootDir), ResolveResource.stLibRTPath, capabilities);
+          var docs= new HtmlDocBuilder(oracle,other,core,baseCachePath().map(p->p.resolve("base.html")));
+          docs.packageLocation(pkgName, rootDir.resolve("gen_java",pkgName+".html"), testFileDest.orElseGet(()->scratch.resolve("_discardedTest.fear")));
+          return BackendTools.of(pkgName, core, rootDir, docs, ResolveResource.stLibRTPath, capabilities);
         }
       };
       OutputOracle out= ()->scratch;

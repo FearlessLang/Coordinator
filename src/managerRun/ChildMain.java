@@ -9,6 +9,7 @@ import coordinator.CapabilityEnvironment;
 import coordinator.Coordinator;
 import core.OtherPackages;
 import core.E.Literal;
+import docBuilder.HtmlDocBuilder;
 import fileSupport.NativeLocaleForcer;
 import naiveBackend.BackendTools;
 import tools.ChildJvm;
@@ -37,7 +38,9 @@ public class ChildMain{
     var c= new Coordinator(){
       @Override public Optional<Path> baseCachePath(){ return Optional.of(appDir.resolve("stdLib").resolve("baseCache")); }
       @Override public BackendTools backendTools(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, Path rootDir, CapabilityEnvironment capabilities){
-        return BackendTools.of(pkgName, core, rootDir, docBuilder(pkgName,oracle,other,core,rootDir), rt, capabilities);
+        var docs= new HtmlDocBuilder(oracle,other,core,baseCachePath().map(p->p.resolve("base.html")));
+        docs.packageLocation(pkgName, rootDir.resolve("gen_java",pkgName+".html"), rootDir.getParent().resolve("auto_tests","_"+pkgName,pkgName+"_test.fear"));
+        return BackendTools.of(pkgName, core, rootDir, docs, rt, capabilities);
       }
     };
     c.compile(project, c.sourceOracle(base));

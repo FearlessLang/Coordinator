@@ -17,7 +17,6 @@ import core.LiteralDeclarations;
 import core.OtherPackages;
 import core.TName;
 import core.E.Literal;
-import docBuilder.DocBuilder;
 import docBuilder.HtmlDocBuilder;
 import main.FrontendLogicMain;
 import naiveBackend.BackendTools;
@@ -66,14 +65,9 @@ public interface Coordinator {
     new NaiveBackendLogicMain().of(tools,sharedClasspath());
   }
   default BackendTools backendTools(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, Path rootDir, CapabilityEnvironment capabilities){
-    return BackendTools.of(pkgName, core, rootDir, docBuilder(pkgName,oracle,other,core,rootDir), Path.of("unused"), capabilities);
-  }
-  default DocBuilder docBuilder(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, Path rootDir){
     var docs= new HtmlDocBuilder(oracle,other,core,baseCachePath().map(p->p.resolve("base.html")));
-    var htmlPath= rootDir.resolve("gen_java",pkgName+".html");
-    var testPath= rootDir.getParent().resolve("auto_tests","_"+pkgName,pkgName+"_test.fear");
-    docs.packageLocation(pkgName,htmlPath,testPath);
-    return docs;
+    docs.packageLocation(pkgName, rootDir.resolve("gen_java",pkgName+".html"), rootDir.getParent().resolve("auto_tests","_"+pkgName,pkgName+"_test.fear"));
+    return BackendTools.of(pkgName, core, rootDir, docs, Path.of("unused"), capabilities);
   }
   default Path modsPath(){
     var appDir= System.getProperty(JavacTool.appDirKey);

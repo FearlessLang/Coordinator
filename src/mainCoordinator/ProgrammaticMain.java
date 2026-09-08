@@ -10,6 +10,7 @@ import coordinator.CapabilityEnvironment;
 import coordinator.Coordinator;
 import core.OtherPackages;
 import core.E.Literal;
+import docBuilder.HtmlDocBuilder;
 import naiveBackend.BackendTools;
 import realSourceOracle.RealSourceOracleWithZip;
 import userMessages.UserError;
@@ -46,7 +47,9 @@ public record ProgrammaticMain(StringBuilder out, StringBuilder err,String fName
     var c= new Coordinator(){
       @Override public SourceOracle sourceOracle(Path path){ return oracle; }
       @Override public BackendTools backendTools(String pkgName, SourceOracle o, OtherPackages other, List<Literal> core, Path rootDir, CapabilityEnvironment capabilities){
-        return BackendTools.of(pkgName, core, rootDir, docBuilder(pkgName,o,other,core,rootDir), stdRt, capabilities);
+        var docs= new HtmlDocBuilder(o,other,core,baseCachePath().map(p->p.resolve("base.html")));
+        docs.packageLocation(pkgName, rootDir.resolve("gen_java",pkgName+".html"), rootDir.getParent().resolve("auto_tests","_"+pkgName,pkgName+"_test.fear"));
+        return BackendTools.of(pkgName, core, rootDir, docs, stdRt, capabilities);
       }
     };
     c.main(dest, new RealSourceOracleWithZip(stdLib));

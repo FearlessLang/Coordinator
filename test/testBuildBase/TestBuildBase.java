@@ -14,7 +14,6 @@ import coordinator.Coordinator;
 import coordinator.OutputOracle;
 import core.OtherPackages;
 import core.E.Literal;
-import docBuilder.DocBuilder;
 import docBuilder.HtmlDocBuilder;
 import mainCoordinator.ResolveResource;
 import naiveBackend.BackendTools;
@@ -25,14 +24,10 @@ import utils.Push;
 class TestBuildBase {
   Coordinator c= new Coordinator(){
     @Override public Path modsPath(){  return ResolveResource.coordinatorJars; }
-    @Override public DocBuilder docBuilder(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, Path rootDir){
-      var docs= new HtmlDocBuilder(oracle,other,core,baseCachePath().map(p->p.resolve("base.html")));
-      var htmlPath= rootDir.resolve("gen_java",pkgName+".html");
-      docs.packageLocation(pkgName,htmlPath,ResolveResource.stLibDebugOut.resolve("_baseTestOut","base_test.fear"));
-      return docs;
-    }
     @Override public BackendTools backendTools(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, Path rootDir, CapabilityEnvironment capabilities){
-      return BackendTools.of(pkgName, core, rootDir, docBuilder(pkgName,oracle,other,core,rootDir), ResolveResource.stLibRTPath, capabilities);
+      var docs= new HtmlDocBuilder(oracle,other,core,baseCachePath().map(p->p.resolve("base.html")));
+      docs.packageLocation(pkgName, rootDir.resolve("gen_java",pkgName+".html"), ResolveResource.stLibDebugOut.resolve("_baseTestOut","base_test.fear"));
+      return BackendTools.of(pkgName, core, rootDir, docs, ResolveResource.stLibRTPath, capabilities);
     }
 
     @Override public String main(Path path, SourceOracle stLib) throws InterruptedException{
