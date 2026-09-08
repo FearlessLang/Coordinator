@@ -21,6 +21,13 @@ import tools.SourceOracle.Ref;
 
 public interface OutputOracle{
   Path rootDir();
+  //Sibling of rootDir's own project root, like Java's src/test: separate from the real
+  //source so it is easy to spot and wipe, but still part of the same package once
+  //compiled, exactly like a hand-written test file would be. rootDir is normally
+  //<project>/.fearless_out, so its parent is <project> itself; an OutputOracle whose
+  //rootDir does not follow that shape (base's own special build paths) must override
+  //this instead of inheriting a meaningless location from the default.
+  default Path autoTestsDir(){ return rootDir().getParent().resolve("auto_tests"); }
   default long baseApiStamp(){ return Fs.lastModified(rootDir().resolve("base.json")); }
   default long mapStamp(){ return Fs.lastModified(rootDir().resolve("_map.json")); }
   default long pkgApiStamp(String pkg){ return Fs.lastModified(rootDir().resolve(pkg+".json")); }

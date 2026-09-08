@@ -53,13 +53,13 @@ public final class HtmlDocBuilder implements DocBuilder{
   final IdentityHashMap<Src,TypeDoc> typeBySrc= new IdentityHashMap<>();
   final Map<URI,SourceDocs> sources= new HashMap<>();
 
-  @Override public void packageLocation(String pkgName, Path htmlPath){
-    assert nonNull(pkgName,htmlPath);
+  @Override public void packageLocation(String pkgName, Path htmlPath, Path testPath){
+    assert nonNull(pkgName,htmlPath,testPath);
     assert this.pkgName == null;
     this.pkgName= pkgName;
     this.htmlPath= htmlPath;
     this.textPath= htmlPath.resolveSibling(pkgName+".txt");
-    this.testPath= htmlPath.resolveSibling(pkgName+"_test.fear");
+    this.testPath= testPath;
     this.uses= DocNames.uses(pkgName,core);
   }
 
@@ -102,7 +102,38 @@ public final class HtmlDocBuilder implements DocBuilder{
     var renderer= new HtmlDocRenderer(pkgName,uses,types,other,spans,baseDocLocation);
     Fs.writeUtf8(htmlPath,renderer.render());
     Fs.writeUtf8(textPath,renderer.renderText());
+    writeTest(renderer);
+  }
+
+  //A user's own type named exactly like the top-level generated suite opts that whole
+  //package out of test generation, the same way an autoloaded_assets.fear the user wrote
+  //themselves suppresses asset autoloading. A user's own type named like one of the
+  //per-type suites is instead almost certainly an accident, so that is a hard error.
+  //Never leaves an empty auto_tests/_pkgName folder behind: a project scan rejects those
+  //outright, and a package with nothing to test (or a suppressed one) must produce none.
+  void writeTest(HtmlDocRenderer renderer){
+    var names= renderer.testNames();
+    if (names.perType().isEmpty()){ Fs.rmTree(testPath.getParent()); return; }
+    var declared= types.stream().map(t->t.main().name().simpleName()).collect(Collectors.toUnmodifiableSet());
+    if (declared.contains(names.top())){ Fs.rmTree(testPath.getParent()); return; }
+    var collided= names.perType().stream().filter(declared::contains).findFirst();
+    if (collided.isPresent()){ throw Report.generatedTestNameReserved(reservedNameProblem(collided.get(),names.top())); }
+    Fs.ensureDir(testPath.getParent());
+    Fs.cleanDirContents(testPath.getParent());
     Fs.writeUtf8(testPath,renderer.renderTest());
+  }
+
+  String reservedNameProblem(String name, String topName){
+    var owner= types.stream().filter(t->t.main().name().simpleName().equals(name)).findFirst()
+      .orElseThrow().main();
+    var p= owner.pos();
+    var span= new Span(p.fileName(),p.line(),p.column(),p.line(),p.column()+name.length()-1);
+    var frame= new Frame("the documentation of package "+pkgName, span);
+    var msg= "The name \""+name+"\" is reserved: every package's build auto-generates a\n"
+     +"\""+name+"\" suite from this package's own doc-comment examples.\n"
+     +"Rename this type, or, to suppress test generation for this whole package instead,\n"
+     +"declare a type named \""+topName+"\" yourself.";
+    return Message.of(oracle::loadString, List.of(frame), msg);
   }
 
   //one group per declaration, carrying the scope its comment is written in: a fenced

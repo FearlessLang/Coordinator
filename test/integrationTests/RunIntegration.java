@@ -39,11 +39,15 @@ public class RunIntegration {
   static{ utils.Err.setUp(AssertionFailedError.class, Assertions::assertEquals, Assertions::assertTrue); }
 
   static final Path baseCache= ResolveResource.stLibDebugOut.resolve("baseCache");
+  //Deliberately outside stdLibDir/baseCache: baseCache is exactly what a built
+  //portable/manager app embeds and ships, and this generated test scaffolding must not
+  //reach end users the way base.html/base.txt/base.jar correctly do.
+  static final Path baseTestFile= ResolveResource.stLibDebugOut.resolve("base_test.fear");
   static final Path reportsDir= ResolveResource.coordinatorSrc.getParent().resolve(".out","junit_xml");
   static final Path reportsFile= reportsDir.resolve("all_auto_tests.xml");
   static final List<String> suites= new ArrayList<>();
   @BeforeAll static void buildBaseOnce(){
-    BaseCacheBuilder.buildInto(ResolveResource.coordinatorJars, ResolveResource.stLibDebugOut);
+    BaseCacheBuilder.buildInto(ResolveResource.coordinatorJars, ResolveResource.stLibDebugOut, Optional.of(baseTestFile));
     Fs.rmTree(reportsDir);
   }
   Coordinator coordinator(){
@@ -122,7 +126,7 @@ top level main
     UserError.root= root;
     var genDir= root.resolve("_gen");
     Fs.ensureDir(genDir);
-    Fs.writeUtf8(genDir.resolve("_rank_app.fear"), Fs.readUtf8(baseCache.resolve("base_test.fear")));
+    Fs.writeUtf8(genDir.resolve("_rank_app.fear"), Fs.readUtf8(baseTestFile));
     var out= coordinator().main(root);
     var fails= out.lines().filter(l->l.startsWith("Test failure ")).toList();
     Assertions.assertTrue(fails.isEmpty(), ()->"Fearless unit tests failed in base's generated examples:\n"+String.join("\n",fails));

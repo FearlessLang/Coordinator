@@ -537,7 +537,7 @@ Holder
 """, text);
   }
 
-  @Test void renderTestGroupsExamplesByMethodThenByTypeThenIntoOnePackageMain(){
+  @Test void renderTestNestsEachMethodsExamplesAsAnAnonymousTestInsideOneSuitePerTypeThenIntoOnePackageMain(){
     var ownerName= new TName("pkg.Holder",0,Pos.unknown);
     var bar= namedMethod(".bar", ownerName);
     var owner= namedType("pkg.Holder", List.of(), List.of());
@@ -553,16 +553,14 @@ use pkg.Holder as Holder;
 use base.Test as Test;
 use base.UnitTests as UnitTests;
 
-_HolderCheck1: Test {::
+_Holder_Examples: Test {::
+  .test Test{::
 .check{bar.assertOk}
   }
-
-_HolderExamples: Test {::
-  .test _HolderCheck1
   }
 
-_GeneratedExamples: UnitTests {::
-  .test _HolderExamples
+AllAutoTests_pkg: UnitTests {::
+  .test _Holder_Examples
   }
 """, test);
   }
@@ -595,16 +593,14 @@ use pkg.Visible as Visible;
 use base.Test as Test;
 use base.UnitTests as UnitTests;
 
-_VisibleCheck1: Test {::
+_Visible_Examples: Test {::
+  .test Test{::
 .check{bar.assertOk}
   }
-
-_VisibleExamples: Test {::
-  .test _VisibleCheck1
   }
 
-_GeneratedExamples: UnitTests {::
-  .test _VisibleExamples
+AllAutoTests_pkg: UnitTests {::
+  .test _Visible_Examples
   }
 """, test);
   }
@@ -626,17 +622,15 @@ use pkg.Holder as Holder;
 use base.Test as Test;
 use base.UnitTests as UnitTests;
 
-_HolderCheck1: Test {::
+_Holder_Examples: Test {::
+  .test Test{::
 .let x={1}
 .check{x.assertEq 1}
   }
-
-_HolderExamples: Test {::
-  .test _HolderCheck1
   }
 
-_GeneratedExamples: UnitTests {::
-  .test _HolderExamples
+AllAutoTests_pkg: UnitTests {::
+  .test _Holder_Examples
   }
 """, test);
 

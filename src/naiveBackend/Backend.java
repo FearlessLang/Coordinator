@@ -17,20 +17,22 @@ import utils.Join;
 import utils.Pos;
 
 public class Backend{
-  public Backend(Path out, String pkgName, List<Literal> decs, DocBuilder docs, CapabilityEnvironment capabilities){
-    assert nonNull(out,pkgName,decs,docs,capabilities);
+  public Backend(Path out, String pkgName, List<Literal> decs, DocBuilder docs, CapabilityEnvironment capabilities, Path testPath){
+    assert nonNull(out,pkgName,decs,docs,capabilities,testPath);
     assert unmodifiable(decs, "decs");
     this.out= out;
     this.pkgName= pkgName;
     this.decs= decs;
     this.docs= docs;
     this.capabilities= capabilities;
+    this.testPath= testPath;
   }
   Path out;
   String pkgName;
   List<Literal> decs;
   DocBuilder docs;
   CapabilityEnvironment capabilities;
+  Path testPath;
   List<Consumer<Path>> fixers= new ArrayList<>();
   private static final TName captureFreeName= new TName("base.CaptureFree",0,Pos.unknown);
   boolean captureFree(Literal l){ return l.cs().stream().anyMatch(c->c.name().equals(captureFreeName)); }
@@ -44,7 +46,7 @@ public class Backend{
   private static final TName reprName= new TName("base.Repr", 1,Pos.unknown);
   boolean isRepr(Literal l){ return l.name().equals(reprName); }
   public List<Consumer<Path>> produceJavaCode(){
-    docs.packageLocation(pkgName,out.getParent().resolve(pkgName+".html"));
+    docs.packageLocation(pkgName,out.getParent().resolve(pkgName+".html"),testPath);
     cleanOutFolder();
     decs.forEach(d->{docs.visitLiteral(d); generateInterface(d,false);});
     writeMainJava();

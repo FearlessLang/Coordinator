@@ -32,6 +32,7 @@ final class HtmlDocRenderer{
     this.types= types;
     this.spans= spans;
     this.baseDocLocation= baseDocLocation;
+    this.other= other;
     this.toStr= new ExportedToStr(pkgName, uses);
     this.resolver= new DocResolver(pkgName, types, other);
   }
@@ -39,6 +40,7 @@ final class HtmlDocRenderer{
   final String pkgName;
   final Map<String,String> uses;
   final List<TypeDoc> types;
+  final OtherPackages other;
   final Map<DocOcc,List<ResolvedSpan>> spans;
   final Optional<Path> baseDocLocation;
   //filled by href() as links are emitted, so every ambiguous link that reaches the
@@ -73,34 +75,61 @@ final class HtmlDocRenderer{
     return sb.toString();
   }
 
+  //Exactly one generated type per source type with examples, plus one global one: a
+  //method's own examples become one anonymous inline Test nested inside its type's
+  //suite, never a separately-named type, since Fearless has no shadowing and different
+  //methods routinely reuse the same local names (s1, s2, ...) in their own examples.
+  record GeneratedTestNames(String top, List<String> perType){}
+
+  List<TypeDoc> testableTypes(){
+    return visibleTypes().stream()
+      .filter(t->!t.main().infName() && t.main().name().isPublic())
+      .filter(t->visibleMethods(t).stream().anyMatch(this::hasTestContent))
+      .toList();
+  }
+
+  boolean hasTestContent(MethodDoc m){
+    return m.docs.stream().anyMatch(d->d.example() || d.testOnly());
+  }
+
+  GeneratedTestNames testNames(){
+    var shown= testableTypes();
+    return new GeneratedTestNames(
+      "AllAutoTests_"+pkgName,
+      shown.stream().map(t->"_"+t.main().name().simpleName()+"_Examples").toList()
+    );
+  }
+
   String renderTest(){
-    var shown= visibleTypes().stream().filter(t->!t.main().infName() && t.main().name().isPublic()).toList();
+    var shown= testableTypes();
+    var names= testNames();
     var aliases= new LinkedHashMap<String,String>();
-    shown.forEach(t->aliases.putIfAbsent(t.main().name().simpleName(), pkgName+"."+t.main().name().simpleName()));
+    //An example can reference any type in passing (True, Void, ...) whether or not that
+    //type has examples of its own, so every public type of this package is aliased, not
+    //just the ones in shown. When this package IS base, base's own True/False/etc. are
+    //here, not in other - other only holds base when compiling something else that
+    //depends on it - so both sources below are needed, neither is redundant.
+    types.stream().filter(t->!t.main().infName() && t.main().name().isPublic())
+      .forEach(t->aliases.putIfAbsent(t.main().name().simpleName(), pkgName+"."+t.main().name().simpleName()));
+    uses.forEach((full,alias)->aliases.putIfAbsent(alias,full));
+    other.dom().stream().filter(n->n.pkgName().equals("base") && n.isPublic())
+      .forEach(n->aliases.putIfAbsent(n.simpleName(), "base."+n.simpleName()));
     aliases.putIfAbsent("Test","base.Test");
     aliases.putIfAbsent("UnitTests","base.UnitTests");
     var sb= new StringBuilder(4_000);
     aliases.forEach((alias,full)->sb.append("use ").append(full).append(" as ").append(alias).append(";\n"));
     sb.append('\n');
-    var suiteNames= new ArrayList<String>();
-    for (var t: shown){
-      var checkNames= new ArrayList<String>();
-      for (var m: visibleMethods(t)){
+    for (int i= 0; i < shown.size(); i += 1){
+      sb.append(names.perType().get(i)).append(": Test {::\n");
+      for (var m: visibleMethods(shown.get(i))){
         var examples= m.docs.stream().filter(d->d.example() || d.testOnly()).map(DocOcc::text).toList();
         if (examples.isEmpty()){ continue; }
-        var name= "_"+t.main().name().simpleName()+"Check"+(checkNames.size()+1);
-        checkNames.add(name);
-        sb.append(name).append(": Test {::\n").append(String.join("\n",examples)).append("\n  }\n\n");
+        sb.append("  .test Test{::\n").append(String.join("\n",examples)).append("\n  }\n");
       }
-      if (checkNames.isEmpty()){ continue; }
-      var suiteName= "_"+t.main().name().simpleName()+"Examples";
-      suiteNames.add(suiteName);
-      sb.append(suiteName).append(": Test {::\n");
-      checkNames.forEach(n->sb.append("  .test ").append(n).append('\n'));
       sb.append("  }\n\n");
     }
-    sb.append("_GeneratedExamples: UnitTests {::\n");
-    suiteNames.forEach(n->sb.append("  .test ").append(n).append('\n'));
+    sb.append(names.top()).append(": UnitTests {::\n");
+    names.perType().forEach(n->sb.append("  .test ").append(n).append('\n'));
     sb.append("  }\n");
     return sb.toString();
   }

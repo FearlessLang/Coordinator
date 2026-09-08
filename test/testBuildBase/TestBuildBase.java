@@ -26,7 +26,13 @@ class TestBuildBase {
     @Override public Path modsPath(){  return ResolveResource.coordinatorJars; }
 
     @Override public String main(Path path) throws InterruptedException{
-      OutputOracle out= ()->ResolveResource.stLibDebugOut;
+      //Not a real project root, so the default auto_tests-next-to-rootDir would escape
+      //into the StandardLibrary checkout itself: kept inside stLibDebugOut instead,
+      //which is already build output, not source.
+      OutputOracle out= new OutputOracle(){
+        @Override public Path rootDir(){ return ResolveResource.stLibDebugOut; }
+        @Override public Path autoTestsDir(){ return ResolveResource.stLibDebugOut.resolve("auto_tests"); }
+      };
       var pkgName= "base";
       var other= OtherPackages.empty();
       SourceOracle o= sourceOracle(stLibPath());

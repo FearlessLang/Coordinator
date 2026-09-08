@@ -626,4 +626,10 @@ To show code that is not a name, use two backticks or more:
   ``this.foo(x)``   shown as code, never checked, never a link
 """.formatted(String.join("\n\n",problems)));
   }
+
+  public static UserError generatedTestNameReserved(String problem){ return new UserError("""
+A type collides with an auto-generated test suite.
+
+%s
+""".formatted(problem)); }
 }
