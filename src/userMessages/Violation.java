@@ -400,7 +400,7 @@ Parse error:
   }
   public static UserError cacheCanNotFindZipEntry(Path diskZip, List<String> steps, String entryName){
     return new UserError("""
-Can not find entry in zip (that was found before)
+Cannot find entry in zip (that was found before).
 Zip:
   %s
 Steps:
