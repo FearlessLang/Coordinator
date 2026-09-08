@@ -33,11 +33,9 @@ public class ProjectTreeErrorTest {
     }
     var oracle= b.build();
     var c= new Coordinator(){
-      @Override public Path rtPath(){ return Path.of("unused"); }
-      @Override public Path stLibPath(){ return Path.of("unused"); }
       @Override public SourceOracle sourceOracle(Path path){ return oracle; }
     };
-    try { c.main(fakeRoot); }
+    try { c.main(fakeRoot, oracle); }
     catch(RuntimeException e){ return e.getMessage(); }
     catch(InterruptedException e){ throw new AssertionError(e); }
     return Assertions.fail("Expected an error, but the project was accepted");
