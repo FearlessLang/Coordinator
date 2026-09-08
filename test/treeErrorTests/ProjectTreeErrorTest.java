@@ -33,8 +33,8 @@ public class ProjectTreeErrorTest {
     }
     var oracle= b.build();
     var c= new Coordinator(){
-      @Override public Path rtPath(){ return Path.of("unused"); }
-      @Override public Path stLibPath(){ return Path.of("unused"); }
+      @Override public Path rtPath(){ return Coordinator.unusedPath(); }
+      @Override public Path stLibPath(){ return Coordinator.unusedPath(); }
       @Override public SourceOracle sourceOracle(Path path){ return oracle; }
     };
     try { c.main(fakeRoot); }

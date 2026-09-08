@@ -34,6 +34,7 @@ import utils.Push;
 public interface Coordinator {
   Path rtPath();
   Path stLibPath();
+  static Path unusedPath(){ return Path.of("unused"); }
 
   default String runAllMains(String pkgName,OutputOracle out) throws InterruptedException{
     return JavaTool.runMainFromJars(runData(out.rootDir().getParent()), Push.of(out.rootDir().resolve("gen_java"),sharedClasspath()), pkgName+".Main");
