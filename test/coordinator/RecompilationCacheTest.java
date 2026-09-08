@@ -48,8 +48,6 @@ final class RecompilationCacheTest{
     final Map<String,Integer> frontendCalls= new LinkedHashMap<>();
     final Map<String,OtherPackages> lastOtherSeen= new LinkedHashMap<>();
     void fixedOutput(String pkg, List<Literal> core){ scripts.put(pkg, _->core); }
-    @Override public Path rtPath(){ return Coordinator.unusedPath(); }
-    @Override public Path stLibPath(){ return Coordinator.unusedPath(); }
     @Override public List<Literal> frontend(String pkgName, List<Ref> files, SourceOracle oracle, OtherPackages other, Map<String,String> vres){
       frontendCalls.merge(pkgName, 1, Integer::sum);
       lastOtherSeen.put(pkgName, other);
@@ -404,8 +402,6 @@ final class RecompilationCacheTest{
     private final Path mods;
     final Map<String,Integer> frontendCalls= new LinkedHashMap<>();
     RecordingCoordinator(Path stdLib, Path mods){ this.stdLib= stdLib; this.mods= mods; }
-    @Override public Path rtPath(){ return Coordinator.unusedPath(); }
-    @Override public Path stLibPath(){ return stdLib; }
     @Override public Path modsPath(){ return mods; }
     @Override public String runAllMains(String pkgName, OutputOracle out){ return ""; }
     @Override public List<Literal> frontend(String pkgName, List<Ref> files, SourceOracle oracle, OtherPackages other, Map<String,String> vres){
@@ -428,16 +424,16 @@ final class RecompilationCacheTest{
     Fs.writeUtf8(mods.resolve("dummy.jar"), "");
     var c= new RecordingCoordinator(stdLib, mods);
 
-    c.main(project);
+    c.main(project, c.sourceOracle(stdLib));
     assertEquals(1, c.calls("a"));
     assertEquals(1, c.calls("b"));
 
-    c.main(project);
+    c.main(project, c.sourceOracle(stdLib));
     assertEquals(1, c.calls("a"));
     assertEquals(1, c.calls("b"));
 
     touch(aRank, System.currentTimeMillis()+TOUCH);
-    c.main(project);
+    c.main(project, c.sourceOracle(stdLib));
     assertEquals(2, c.calls("a"));
     assertEquals(1, c.calls("b"));
   }
@@ -454,12 +450,12 @@ final class RecompilationCacheTest{
     Fs.writeUtf8(mods.resolve("dummy.jar"), "");
     var c= new RecordingCoordinator(stdLib, mods);
 
-    c.main(project);
+    c.main(project, c.sourceOracle(stdLib));
     assertEquals(1, c.calls("a"));
     assertEquals(1, c.calls("b"));
 
     Fs.ofV(()->Files.delete(extra));
-    c.main(project);
+    c.main(project, c.sourceOracle(stdLib));
     assertEquals(2, c.calls("a"));
     assertEquals(1, c.calls("b"));
   }

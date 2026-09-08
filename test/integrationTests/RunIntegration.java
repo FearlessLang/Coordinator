@@ -24,15 +24,21 @@ import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
 
+import coordinator.CapabilityEnvironment;
 import coordinator.Coordinator;
+import core.OtherPackages;
+import core.E.Literal;
 import mainCoordinator.BaseCacheBuilder;
 import mainCoordinator.ResolveResource;
+import naiveBackend.BackendTools;
+import realSourceOracle.RealSourceOracleWithZip;
 import realSourceOracle.SourceOracleWithAutoload;
 import testHelperFs.FsDsl;
 import java.util.ArrayList;
 import java.util.List;
 import tools.Fs;
 import tools.JavacTool;
+import tools.SourceOracle;
 import userMessages.UserError;
 
 public class RunIntegration {
@@ -43,6 +49,7 @@ public class RunIntegration {
   static final Path reportsDir= ResolveResource.coordinatorSrc.getParent().resolve(".out","junit_xml");
   static final Path reportsFile= reportsDir.resolve("all_auto_tests.xml");
   static final List<String> suites= new ArrayList<>();
+  static final SourceOracle stLib= new RealSourceOracleWithZip(ResolveResource.stLibPath);
   @BeforeAll static void buildBaseOnce(){
     BaseCacheBuilder.buildInto(ResolveResource.coordinatorJars, ResolveResource.stLibDebugOut, Optional.of(baseTestFile));
     Fs.rmTree(reportsDir);
@@ -51,10 +58,11 @@ public class RunIntegration {
     System.setProperty(JavacTool.appDirKey,ResolveResource.stLibPath.getParent()
       .resolve("fearlessArtefact","fearless","app").toString());
     return new Coordinator(){
-      public Path rtPath(){    return ResolveResource.stLibRTPath; }
-      public Path stLibPath(){ return ResolveResource.stLibPath; }
       public Path modsPath(){  return ResolveResource.coordinatorJars; }
       public Optional<Path> baseCachePath(){ return Optional.of(baseCache); }
+      public BackendTools backendTools(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, Path rootDir, CapabilityEnvironment capabilities){
+        return BackendTools.of(pkgName, core, rootDir, docBuilder(pkgName,oracle,other,core,rootDir), ResolveResource.stLibRTPath, capabilities);
+      }
     };
   }
   static Path freshIntegrationRoot(String name){
@@ -63,7 +71,7 @@ public class RunIntegration {
     return root;
   }
   String run(String name){
-    try { return coordinator().main(freshIntegrationRoot(name));}
+    try { return coordinator().main(freshIntegrationRoot(name), stLib);}
     catch (InterruptedException e){ return Assertions.fail(e);}
   }
   void testOk(String name){
@@ -125,7 +133,7 @@ top level main
     var genDir= root.resolve("_gen");
     Fs.ensureDir(genDir);
     Fs.writeUtf8(genDir.resolve("_rank_app.fear"), Fs.readUtf8(baseTestFile));
-    var out= coordinator().main(root);
+    var out= coordinator().main(root, stLib);
     writeJUnitReport("baseGeneratedExamples", root);
     var fails= out.lines().filter(l->l.startsWith("Test failure ")).toList();
     Assertions.assertTrue(fails.isEmpty(), ()->"Fearless unit tests failed in base's generated examples:\n"+String.join("\n",fails));
@@ -225,7 +233,7 @@ zeroMemo
 """, run("testingNorms"));
   }
   //@Test void testGui1(){ testOk("testGui1");}
-  void compileOk(String name){ coordinator().compile(freshIntegrationRoot(name)); }
+  void compileOk(String name){ coordinator().compile(freshIntegrationRoot(name), stLib); }
   @Test void theInteractiveProjectsStillCompile(){
     for (var name: List.of("testGui1","testGui2","testGuiImg","testBasketball","testTicTacToe")){ compileOk(name); }
   }
@@ -250,7 +258,7 @@ _col/foo.png
 iii
 ignored
 """);
-    var ex= Assertions.assertThrows(UserError.class, ()->coordinator().main(root));
+    var ex= Assertions.assertThrows(UserError.class, ()->coordinator().main(root, stLib));
     utils.Err.strCmp("""
 Invalid path in this project folder.
 
@@ -284,7 +292,7 @@ _col/_notes.txt
 iii
 hello
 """);
-    coordinator().main(root);
+    coordinator().main(root, stLib);
   }
 
   // TxtFile/ImageFile are ordinary public types: any Fearless type can implement one and
@@ -320,7 +328,7 @@ _col/note.txt
 iii
 REAL ASSET CONTENT
 """);
-    var out= coordinator().main(root);
+    var out= coordinator().main(root, stLib);
     Assertions.assertFalse(out.contains("TOP-SECRET-NOT-AN-ASSET"), out);
     Assertions.assertTrue(out.contains("was not recognized by the compiler as auto-imported"), out);
     Assertions.assertTrue(out.contains("REAL ASSET CONTENT"), out);
@@ -339,7 +347,7 @@ _col/_1.txt
 iii
 hello
 """);
-    var ex= Assertions.assertThrows(UserError.class, ()->coordinator().main(root));
+    var ex= Assertions.assertThrows(UserError.class, ()->coordinator().main(root, stLib));
     Assertions.assertFalse(ex.getMessage().contains(SourceOracleWithAutoload.autoloadFileSuffix), ex.getMessage());
     utils.Err.strCmp("""
 Invalid path in this project folder.
@@ -376,7 +384,7 @@ use a.Greeting as Greeting;
 Hello:Main{s->base.Debug#(Greeting.hi)}
 """);
     var c= coordinator();
-    c.main(root);
+    c.main(root, stLib);
     var out= root.resolve(".fearless_out");
     long aBuilt= Fs.lastModified(out.resolve("a.built"));
     long aJson= Fs.lastModified(out.resolve("a.json"));
@@ -384,7 +392,7 @@ Hello:Main{s->base.Debug#(Greeting.hi)}
     var aSrc= root.resolve("_a/_rank_core.fear");
     Fs.writeUtf8(aSrc, Fs.readUtf8(aSrc).replace("`hi`","`ho`"));
     Files.setLastModifiedTime(aSrc, FileTime.fromMillis(System.currentTimeMillis()+500));
-    c.main(root);
+    c.main(root, stLib);
 
     Assertions.assertNotEquals(aBuilt, Fs.lastModified(out.resolve("a.built")));
     Assertions.assertEquals(aJson, Fs.lastModified(out.resolve("a.json")));
@@ -406,7 +414,7 @@ iii
 use base.Main as Main;
 Hello:Main{s->base.Debug#(`from app`)}
 """);
-    var out= coordinator().main(root);
+    var out= coordinator().main(root, stLib);
     Assertions.assertTrue(out.contains("from app"), out);
     Assertions.assertFalse(out.contains("from core"), out);
   }
@@ -426,7 +434,7 @@ iii
 use base.Main as Main;
 Hello:Main{s->base.Debug#(`from z`)}
 """);
-    var out= coordinator().main(root);
+    var out= coordinator().main(root, stLib);
     Assertions.assertTrue(out.contains("from a"), out);
     Assertions.assertTrue(out.contains("from z"), out);
   }
@@ -455,7 +463,7 @@ iii
 use base.Str as Str;
 B:{.text:Str->a.C.text;}
 """);
-    var ex= Assertions.assertThrows(RuntimeException.class, ()->coordinator().main(root));
+    var ex= Assertions.assertThrows(RuntimeException.class, ()->coordinator().main(root, stLib));
     utils.Err.strCmp("""
 In file: fear:/_pkb/_rank_app200.fear
 
@@ -484,7 +492,7 @@ iii
 use base.Str as Str;
 Greeting:{ .hi: Str -> `hi` }
 """);
-    var ex= Assertions.assertThrows(RuntimeException.class, ()->coordinator().main(root));
+    var ex= Assertions.assertThrows(RuntimeException.class, ()->coordinator().main(root, stLib));
     utils.Err.strCmp("""
 In file: fear:/_a/_rank_core.fear
 
@@ -510,8 +518,8 @@ FOo:{ .fOo:Void->{} }
 Hello:Main{s->base.Debug#(`hi`)}
 """);
     var c= coordinator();
-    c.main(root);
-    c.main(root);
+    c.main(root, stLib);
+    c.main(root, stLib);
   }
 
   // --- DownloadCapability -------------------------------------------------
@@ -563,7 +571,7 @@ Hello:Main{s->base.Debug#("""+call.replace("$URL",url)+")}\n";
       UserError.root= root;
       FsDsl.materialize(root, downloadProject(url(server,"/ok"),
         "s.download.downloadStrUtf8(`$URL`, 1000, NeverRecovers)"));
-      var out= coordinator().main(root);
+      var out= coordinator().main(root, stLib);
       Assertions.assertTrue(out.contains("hello download"), out);
     }
     finally{ server.stop(0); }
@@ -576,7 +584,7 @@ Hello:Main{s->base.Debug#("""+call.replace("$URL",url)+")}\n";
       UserError.root= root;
       FsDsl.materialize(root, downloadProject(url(server,"/bytes"),
         "s.download.downloadBytes(`$URL`, 1000).size"));
-      var out= coordinator().main(root);
+      var out= coordinator().main(root, stLib);
       Assertions.assertTrue(out.contains("3"), out);
     }
     finally{ server.stop(0); }
@@ -587,7 +595,7 @@ Hello:Main{s->base.Debug#("""+call.replace("$URL",url)+")}\n";
     UserError.root= root;
     FsDsl.materialize(root, downloadProject("ftp://127.0.0.1/x",
       "s.download.downloadStrUtf8(`$URL`, 1000, NeverRecovers)"));
-    var out= coordinator().main(root);
+    var out= coordinator().main(root, stLib);
     Assertions.assertTrue(out.contains("Invalid URL descriptor"), out);
     Assertions.assertTrue(out.contains("unsupported scheme"), out);
   }
@@ -597,7 +605,7 @@ Hello:Main{s->base.Debug#("""+call.replace("$URL",url)+")}\n";
     UserError.root= root;
     FsDsl.materialize(root, downloadProject("not a url",
       "s.download.downloadStrUtf8(`$URL`, 1000, NeverRecovers)"));
-    var out= coordinator().main(root);
+    var out= coordinator().main(root, stLib);
     Assertions.assertTrue(out.contains("Invalid URL descriptor"), out);
   }
 
@@ -608,7 +616,7 @@ Hello:Main{s->base.Debug#("""+call.replace("$URL",url)+")}\n";
       UserError.root= root;
       FsDsl.materialize(root, downloadProject(url(server,"/big"),
         "s.download.downloadBytes(`$URL`, 4).size"));
-      var out= coordinator().main(root);
+      var out= coordinator().main(root, stLib);
       Assertions.assertTrue(out.contains("Download exceeds maxBytes"), out);
       Assertions.assertTrue(out.contains("contentLength"), out);
     }
@@ -622,7 +630,7 @@ Hello:Main{s->base.Debug#("""+call.replace("$URL",url)+")}\n";
       UserError.root= root;
       FsDsl.materialize(root, downloadProject(url(server,"/chunked"),
         "s.download.downloadBytes(`$URL`, 4).size"));
-      var out= coordinator().main(root);
+      var out= coordinator().main(root, stLib);
       Assertions.assertTrue(out.contains("Download exceeds maxBytes"), out);
       Assertions.assertTrue(out.contains("bytesRead"), out);
     }
@@ -643,7 +651,7 @@ Hello:Main{s->base.Debug#("""+call.replace("$URL",url)+")}\n";
       UserError.root= root;
       FsDsl.materialize(root, downloadProject(url(server,"/start"),
         "s.download.downloadStrUtf8(`$URL`, 1000, NeverRecovers)"));
-      var out= coordinator().main(root);
+      var out= coordinator().main(root, stLib);
       Assertions.assertTrue(out.contains("landed"), out);
     }
     finally{ server.stop(0); }
@@ -656,7 +664,7 @@ Hello:Main{s->base.Debug#("""+call.replace("$URL",url)+")}\n";
       UserError.root= root;
       FsDsl.materialize(root, downloadProject(url(server,"/loop"),
         "s.download.downloadStrUtf8(`$URL`, 1000, NeverRecovers)"));
-      var out= coordinator().main(root);
+      var out= coordinator().main(root, stLib);
       Assertions.assertTrue(out.contains("too many redirects"), out);
     }
     finally{ server.stop(0); }
@@ -669,7 +677,7 @@ Hello:Main{s->base.Debug#("""+call.replace("$URL",url)+")}\n";
       UserError.root= root;
       FsDsl.materialize(root, downloadProject(url(server,"/go"),
         "s.download.downloadStrUtf8(`$URL`, 1000, NeverRecovers)"));
-      var out= coordinator().main(root);
+      var out= coordinator().main(root, stLib);
       Assertions.assertTrue(out.contains("Invalid URL descriptor"), out);
       Assertions.assertTrue(out.contains("unsupported scheme"), out);
       Assertions.assertTrue(out.contains("file:///etc/passwd"), out);
@@ -684,7 +692,7 @@ Hello:Main{s->base.Debug#("""+call.replace("$URL",url)+")}\n";
       UserError.root= root;
       FsDsl.materialize(root, downloadProject(url(server,"/missing"),
         "s.download.downloadStrUtf8(`$URL`, 1000, NeverRecovers)"));
-      var out= coordinator().main(root);
+      var out= coordinator().main(root, stLib);
       Assertions.assertTrue(out.contains("HTTP status: 404"), out);
     }
     finally{ server.stop(0); }
@@ -713,7 +721,7 @@ Hello:Main{s->base.Debug#(
 `, 1000, RecoverToMarker)+`|`+(s.download.downloadUStrUtf8(`"""+u+"""
 `, 1000, NeverRecoversU).size.str))}
 """);
-      var out= coordinator().main(root);
+      var out= coordinator().main(root, stLib);
       Assertions.assertTrue(out.contains("caf?"), out);
       Assertions.assertTrue(out.contains("|4"), out);
     }
@@ -728,7 +736,7 @@ Hello:Main{s->base.Debug#(
       UserError.root= root;
       FsDsl.materialize(root, downloadProject(url(server,"/img.png"),
         "s.download.downloadImage(`$URL`, 100_000, 1_000_000).width"));
-      var out= coordinator().main(root);
+      var out= coordinator().main(root, stLib);
       Assertions.assertTrue(out.contains("3"), out);
     }
     finally{ server.stop(0); }
@@ -743,7 +751,7 @@ Hello:Main{s->base.Debug#(
       UserError.root= root;
       FsDsl.materialize(root, downloadProject(url(server,"/stall"),
         "s.download.downloadStrUtf8(`$URL`, 1000, NeverRecovers)"));
-      var out= coordinator().main(root);
+      var out= coordinator().main(root, stLib);
       Assertions.assertTrue(out.contains("Download timed out"), out);
     }
     finally{ server.stop(0); }

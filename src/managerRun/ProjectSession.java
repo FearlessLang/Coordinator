@@ -9,9 +9,14 @@ import java.util.concurrent.Executor;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
+import coordinator.CapabilityEnvironment;
 import coordinator.Coordinator;
+import core.OtherPackages;
+import core.E.Literal;
+import naiveBackend.BackendTools;
 import tools.ChildJvm;
 import tools.JavacTool;
+import tools.SourceOracle;
 import userMessages.UserError;
 import userMessages.Violation;
 import utils.Bug;
@@ -67,15 +72,16 @@ public final class ProjectSession{
   }
   private void readMains(){
     Optional<List<String>> res;
-    try{ res= appCoordinator().mains(folder); }
+    try{ var c= appCoordinator(); res= c.mains(folder, c.sourceOracle(stdLib("base"))); }
     catch(UserError _){ res= Optional.empty(); }
     synchronized(this){ mains= res; }
   }
   private static Coordinator appCoordinator(){
     return new Coordinator(){
-      @Override public Path stLibPath(){ return stdLib("base"); }
-      @Override public Path rtPath(){ return stdLib("rt"); }
       @Override public Optional<Path> baseCachePath(){ return Optional.of(stdLib("baseCache")); }
+      @Override public BackendTools backendTools(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, Path rootDir, CapabilityEnvironment capabilities){
+        return BackendTools.of(pkgName, core, rootDir, docBuilder(pkgName,oracle,other,core,rootDir), stdLib("rt"), capabilities);
+      }
     };
   }
   private void doCompile(){

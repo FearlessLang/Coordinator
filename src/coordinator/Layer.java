@@ -45,13 +45,13 @@ record MiddleLayer(Coordinator coordinator, Layer next, LinkedHashMap<String,Lis
     return res.nextOther;
   }  
 }
-record BaseLayer(Coordinator coordinator, Map<String,Map<String,String>> map, long baseStamp) implements Layer{
+record BaseLayer(Coordinator coordinator, Map<String,Map<String,String>> map, long baseStamp, SourceOracle stLib) implements Layer{
   @Override public OtherPackages compile(SourceOracle _ignoreSrc, OutputOracle out){
     var pkgName= "base";
     var cacheDir= coordinator.baseCachePath();
     if (cacheDir.isPresent()){ return deployedBaseApi(cacheDir.get(), pkgName); }
     var other= OtherPackages.empty();
-    SourceOracle o= coordinator.sourceOracle(coordinator.stLibPath());
+    SourceOracle o= stLib;
     long maxIn= o.allFiles().stream().mapToLong(Ref::lastModified).max().getAsLong();
     var stillCached= out.stillBuilt(pkgName, o.allFiles(), maxIn);
     if (stillCached){ return out.startCachedPkgApi(pkgName,map,Math.max(baseStamp,out.pkgApiStamp(pkgName))); }

@@ -25,12 +25,17 @@ import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.SwingUtilities;
 
+import coordinator.CapabilityEnvironment;
 import coordinator.Coordinator;
+import core.OtherPackages;
+import core.E.Literal;
 import fileAssociations.FileAssociations;
 import fileAssociations.Icon;
+import naiveBackend.BackendTools;
 import userMessages.UserError;
 import userMessages.Violation;
 import tools.Fs;
+import tools.SourceOracle;
 import tools.Utf8Sink;
 import tools.JavacTool;
 
@@ -62,11 +67,13 @@ public final class Main{
     run(project,base,rt);
   }
   public static void run(Path project, Path base, Path rt) throws InvocationTargetException, InterruptedException, ExecutionException{
-    new Coordinator(){
-      @Override public Path stLibPath(){ return base; }
-      @Override public Path rtPath(){ return rt; }
+    var c= new Coordinator(){
       @Override public Optional<Path> baseCachePath(){ return Optional.of(base.getParent().resolve("baseCache")); }
-    }.main(project);
+      @Override public BackendTools backendTools(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, Path rootDir, CapabilityEnvironment capabilities){
+        return BackendTools.of(pkgName, core, rootDir, docBuilder(pkgName,oracle,other,core,rootDir), rt, capabilities);
+      }
+    };
+    c.main(project, c.sourceOracle(base));
   }
   private static final Predicate<String> belongsToFamily= s->s.contains("earless");
   private static void offerAssociation(Path appDir){

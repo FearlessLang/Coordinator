@@ -17,14 +17,13 @@ import core.E.Literal;
 import docBuilder.DocBuilder;
 import docBuilder.HtmlDocBuilder;
 import mainCoordinator.ResolveResource;
+import naiveBackend.BackendTools;
 import tools.JavaTool;
 import tools.SourceOracle;
 import utils.Push;
 
 class TestBuildBase {
   Coordinator c= new Coordinator(){
-    @Override public Path rtPath(){    return ResolveResource.stLibRTPath; }
-    @Override public Path stLibPath(){ return ResolveResource.stLibPath; }
     @Override public Path modsPath(){  return ResolveResource.coordinatorJars; }
     @Override public DocBuilder docBuilder(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, Path rootDir){
       var docs= new HtmlDocBuilder(oracle,other,core,baseCachePath().map(p->p.resolve("base.html")));
@@ -32,12 +31,15 @@ class TestBuildBase {
       docs.packageLocation(pkgName,htmlPath,ResolveResource.stLibDebugOut.resolve("_baseTestOut","base_test.fear"));
       return docs;
     }
+    @Override public BackendTools backendTools(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, Path rootDir, CapabilityEnvironment capabilities){
+      return BackendTools.of(pkgName, core, rootDir, docBuilder(pkgName,oracle,other,core,rootDir), ResolveResource.stLibRTPath, capabilities);
+    }
 
-    @Override public String main(Path path) throws InterruptedException{
+    @Override public String main(Path path, SourceOracle stLib) throws InterruptedException{
       OutputOracle out= ()->ResolveResource.stLibDebugOut;
       var pkgName= "base";
       var other= OtherPackages.empty();
-      SourceOracle o= sourceOracle(stLibPath());
+      SourceOracle o= stLib;
       List<Literal> core= frontend(pkgName,o.allFiles(),o,other,Map.of());
       backend(pkgName,core,o,other,out,new CapabilityEnvironment(List.of()));
       var jars= Push.of(out.rootDir().resolve("gen_java"),sharedClasspath());
@@ -47,7 +49,7 @@ class TestBuildBase {
     }
   };
   @Test void test(){
-    try { c.main(c.stLibPath());}
+    try { c.main(ResolveResource.stLibPath, c.sourceOracle(ResolveResource.stLibPath));}
     catch (InterruptedException e){ Assertions.fail(e);}
   }
 }

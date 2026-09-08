@@ -32,8 +32,6 @@ import tools.SourceOracle.Ref;
 import utils.Push;
 
 public interface Coordinator {
-  Path rtPath();
-  Path stLibPath();
   static Path unusedPath(){ return Path.of("unused"); }
 
   default String runAllMains(String pkgName,OutputOracle out) throws InterruptedException{
@@ -51,9 +49,9 @@ public interface Coordinator {
     map.values().forEach(u->Helper.okPkgContent(u,path));
     return List.copyOf(map.keySet());
   }
-  default String main(Path path) throws InterruptedException{ return Helper.main(this, path); }
-  default List<String> compile(Path path){ return Helper.compile(this, path); }
-  default Optional<List<String>> mains(Path path){ return Helper.mains(this, path); }
+  default String main(Path path, SourceOracle stLib) throws InterruptedException{ return Helper.main(this, path, stLib); }
+  default List<String> compile(Path path, SourceOracle stLib){ return Helper.compile(this, path, stLib); }
+  default Optional<List<String>> mains(Path path, SourceOracle stLib){ return Helper.mains(this, path, stLib); }
   static ChildJvm startMain(Path project, String main, List<Path> sharedClasspath, java.util.function.Consumer<String> out){
     var pkg= main.substring(0, main.indexOf('.'));
     return JavaTool.startMainFromJars(runData(project), Push.of(genJava(project),sharedClasspath), pkg+".Main", out, main);
@@ -70,7 +68,14 @@ public interface Coordinator {
     new NaiveBackendLogicMain().of(tools,sharedClasspath());
   }
   default BackendTools backendTools(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, Path rootDir, CapabilityEnvironment capabilities){
-    return BackendTools.of(pkgName, core, rootDir, docBuilder(pkgName,oracle,other,core,rootDir), rtPath(), capabilities);
+    return testBackendTools(pkgName, oracle, other, core, rootDir, capabilities);
+  }
+  static BackendTools testBackendTools(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, Path rootDir, CapabilityEnvironment capabilities){
+    var docs= new HtmlDocBuilder(oracle,other,core,Optional.empty());
+    var htmlPath= rootDir.resolve("gen_java",pkgName+".html");
+    var testPath= rootDir.getParent().resolve("auto_tests","_"+pkgName,pkgName+"_test.fear");
+    docs.packageLocation(pkgName,htmlPath,testPath);
+    return BackendTools.of(pkgName, core, rootDir, docs, unusedPath(), capabilities);
   }
   default DocBuilder docBuilder(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, Path rootDir){
     var docs= new HtmlDocBuilder(oracle,other,core,baseCachePath().map(p->p.resolve("base.html")));
@@ -97,32 +102,32 @@ class Helper{
     var pOut= path.resolve(Coordinator.outDir);
     return ()->pOut;
   }
-  static Layer layerOf(Coordinator coordinator, SourceOracle o, Path path, OutputOracle out){
+  static Layer layerOf(Coordinator coordinator, SourceOracle o, Path path, OutputOracle out, SourceOracle stLib){
     var map= pkgMap(o,path);
     List<Ref> allRanks= map.values().stream().map(u->Helper.okPkgContent(u,path)).toList();
-    Layer l= mapFromRanks(coordinator,allRanks,o,out);
+    Layer l= mapFromRanks(coordinator,allRanks,o,out,stLib);
     return layers(coordinator,map,l,allRanks.stream()
       .sorted(Comparator.comparingInt(Helper::rankNumber).thenComparing(Object::toString)).toList());
   }
-  static List<String> compile(Coordinator coordinator, Path path){
+  static List<String> compile(Coordinator coordinator, Path path, SourceOracle stLib){
     SourceOracle o= coordinator.sourceOracle(path);
     var out= out(path);
-    Layer l= layerOf(coordinator,o,path,out);
+    Layer l= layerOf(coordinator,o,path,out,stLib);
     l.compile(o, out);
     return List.copyOf(l.pkgs().keySet());//by design: only the highest rank number's packages have their Main run
   }
-  static String main(Coordinator coordinator, Path path) throws InterruptedException{
+  static String main(Coordinator coordinator, Path path, SourceOracle stLib) throws InterruptedException{
     var out= out(path);
     var sb= new StringBuilder();
-    for(var p: compile(coordinator,path)){ sb.append(coordinator.runAllMains(p,out)); }
+    for(var p: compile(coordinator,path,stLib)){ sb.append(coordinator.runAllMains(p,out)); }
     return sb.toString();
   }
-  static Optional<List<String>> mains(Coordinator coordinator, Path path){
+  static Optional<List<String>> mains(Coordinator coordinator, Path path, SourceOracle stLib){
     var c= new NoCompile(coordinator);
     SourceOracle o= c.sourceOracle(path);
     var out= new NoCommit(out(path).rootDir());
     Layer l;
-    try{ l= layerOf(c,o,path,out); l.compile(o,out); }
+    try{ l= layerOf(c,o,path,out,stLib); l.compile(o,out); }
     catch(WouldCompile _){ return Optional.empty(); }
     return Optional.of(l.pkgs().keySet().stream().flatMap(p->mainsOf(out,p)).toList());
   }
@@ -159,12 +164,12 @@ class Helper{
     }
     return pkgs.isEmpty() ? l : new MiddleLayer(coordinator,l, pkgs);    
   }
-  static Layer mapFromRanks(Coordinator coordinator, List<Ref> allRanks, SourceOracle o, OutputOracle out){
+  static Layer mapFromRanks(Coordinator coordinator, List<Ref> allRanks, SourceOracle o, OutputOracle out, SourceOracle stLib){
     Map<String,Map<String,String>> res; try {res= new FrontendLogicMain()
       .parseRankFiles(allRanks,o, Comparator.comparingInt(Helper::rankNumber));}
     catch(FearlessException fe){ throw Report.sourceError(fe.render(o)); }
     long baseStamp= out.commitMap(res, allRanks.stream().mapToLong(Ref::lastModified).max().getAsLong());
-    return new BaseLayer(coordinator,res,baseStamp);
+    return new BaseLayer(coordinator,res,baseStamp,stLib);
   }
   static int rankNumber(Ref u){
     var name= u.toString();
@@ -212,8 +217,6 @@ class Helper{
   private static final long serialVersionUID= 1L;
 }
 record NoCompile(Coordinator inner) implements Coordinator{
-  @Override public Path rtPath(){ return inner.rtPath(); }
-  @Override public Path stLibPath(){ return inner.stLibPath(); }
   @Override public Path modsPath(){ return inner.modsPath(); }
   @Override public Optional<Path> baseCachePath(){ return inner.baseCachePath(); }
   @Override public SourceOracle sourceOracle(Path path){ return inner.sourceOracle(path); }

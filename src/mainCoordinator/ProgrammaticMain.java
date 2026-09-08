@@ -4,7 +4,14 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import java.io.PrintStream;
 import java.nio.file.Path;
 
+import java.util.List;
+
+import coordinator.CapabilityEnvironment;
 import coordinator.Coordinator;
+import core.OtherPackages;
+import core.E.Literal;
+import naiveBackend.BackendTools;
+import realSourceOracle.RealSourceOracleWithZip;
 import userMessages.UserError;
 import tools.SourceOracle;
 import tools.Utf8Sink;
@@ -36,13 +43,12 @@ public record ProgrammaticMain(StringBuilder out, StringBuilder err,String fName
     System.setOut(new PrintStream(new Utf8Sink(out::append), true, UTF_8));
     System.setErr(new PrintStream(new Utf8Sink(err::append), true, UTF_8));
     var oracle= SourceOracle.debugBuilder().put(fName,code).build();
-    new Coordinator(){
-      @Override public Path stLibPath(){ return stdLib; }
-      @Override public Path rtPath(){ return stdRt; }
-      @Override public SourceOracle sourceOracle(Path path){
-        if (path.equals(stdLib)){ return Coordinator.super.sourceOracle(path); }
-        return oracle;
+    var c= new Coordinator(){
+      @Override public SourceOracle sourceOracle(Path path){ return oracle; }
+      @Override public BackendTools backendTools(String pkgName, SourceOracle o, OtherPackages other, List<Literal> core, Path rootDir, CapabilityEnvironment capabilities){
+        return BackendTools.of(pkgName, core, rootDir, docBuilder(pkgName,o,other,core,rootDir), stdRt, capabilities);
       }
-    }.main(dest);
+    };
+    c.main(dest, new RealSourceOracleWithZip(stdLib));
   }
 }

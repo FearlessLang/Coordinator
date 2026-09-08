@@ -3,10 +3,17 @@ package managerRun;
 import java.nio.file.Path;
 import java.util.Optional;
 
+import java.util.List;
+
+import coordinator.CapabilityEnvironment;
 import coordinator.Coordinator;
+import core.OtherPackages;
+import core.E.Literal;
 import fileSupport.NativeLocaleForcer;
+import naiveBackend.BackendTools;
 import tools.ChildJvm;
 import tools.JavacTool;
+import tools.SourceOracle;
 import userMessages.UserError;
 import userMessages.Violation;
 
@@ -27,10 +34,12 @@ public class ChildMain{
     UserError.root= project;
     var base= appDir.resolve("stdLib").resolve("base");
     var rt= appDir.resolve("stdLib").resolve("rt");
-    new Coordinator(){
-      @Override public Path stLibPath(){ return base; }
-      @Override public Path rtPath(){ return rt; }
+    var c= new Coordinator(){
       @Override public Optional<Path> baseCachePath(){ return Optional.of(appDir.resolve("stdLib").resolve("baseCache")); }
-    }.compile(project);
+      @Override public BackendTools backendTools(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, Path rootDir, CapabilityEnvironment capabilities){
+        return BackendTools.of(pkgName, core, rootDir, docBuilder(pkgName,oracle,other,core,rootDir), rt, capabilities);
+      }
+    };
+    c.compile(project, c.sourceOracle(base));
   }
 }
