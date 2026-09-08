@@ -38,7 +38,10 @@ public final class FolderList extends JPanel{
       case codeInvalid, dataInvalid -> BadgeIcon.Mark.invalid;
       case codeRunning -> BadgeIcon.Mark.running;
       case codeNoCache, codeOutdated -> BadgeIcon.Mark.attention;
-      case idle, dataReadOnly, dataReadWrite, codeCompiled -> BadgeIcon.Mark.none;
+      case idle -> BadgeIcon.Mark.idle;
+      case dataReadOnly -> BadgeIcon.Mark.dataReadOnly;
+      case dataReadWrite -> BadgeIcon.Mark.dataReadWrite;
+      case codeCompiled -> BadgeIcon.Mark.compiled;
     };}
     String text(){ return switch(this){
       case codeInvalid -> "code: invalid content";

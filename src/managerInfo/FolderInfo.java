@@ -9,13 +9,18 @@ import java.awt.Toolkit;
 import java.awt.datatransfer.StringSelection;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -33,8 +38,10 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
+import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
 
+import core.TName;
 import managerData.Kind;
 import managerData.ManagerData;
 import managerIcons.BadgeIcon;
@@ -61,8 +68,11 @@ public final class FolderInfo{
   private final JButton clearOutputButton= small("Clear output",this::clearOutput);
   private final JLayeredPane outputLayer= new JLayeredPane();
   private final JTextArea details= new JTextArea(9,40);
+  private final JPanel kindControls= new JPanel(new FlowLayout(FlowLayout.LEFT,8,0));
   private final JPanel mainsBox= new JPanel();
   private final JScrollPane mainsScroll= new JScrollPane(mainsBox);
+  private final JPanel linksBox= new JPanel();
+  private final Collapsible links= new Collapsible("Links",new JScrollPane(linksBox),true);
   private final Collapsible information= new Collapsible("Information",new JScrollPane(details),true);
   private final JButton openDocsButton= small("Open docs",this::openDocs);
   private final JPanel mainsPanel= new JPanel(new BorderLayout());
@@ -87,6 +97,7 @@ public final class FolderInfo{
     details.setEditable(false);
     details.setFont(new Font(Font.MONOSPACED,Font.PLAIN,13));
     mainsBox.setLayout(new BoxLayout(mainsBox,BoxLayout.Y_AXIS));
+    linksBox.setLayout(new BoxLayout(linksBox,BoxLayout.Y_AXIS));
     mainsPanel.add(mainsPickerHeader(),BorderLayout.NORTH);
     mainsPanel.add(mainsScroll,BorderLayout.CENTER);
     mainsPanel.setBorder(BorderFactory.createEtchedBorder());
@@ -117,7 +128,9 @@ public final class FolderInfo{
     var res= new JPanel();
     res.setLayout(new BoxLayout(res,BoxLayout.Y_AXIS));
     res.add(header());
+    res.add(kindControls);
     res.add(mainsPanel);
+    res.add(links);
     res.add(information);
     res.add(logs);
     return res;
@@ -197,7 +210,9 @@ public final class FolderInfo{
     nameLabel.setText(entry.alias());
     details.setText(String.join("\n",lines(folder,facts,entry,data.linkProblem(entry),data.markerProblem(entry))));
     details.setCaretPosition(0);
+    fillKindControls();
     fillMains();
+    fillLinks();
     fillLogs();
     updateButtons();
     root.revalidate();
@@ -276,6 +291,95 @@ public final class FolderInfo{
     return known.get().stream().filter(chosen::contains).toList();
   }
   private boolean multiMains(){ return session.mains().filter(m->m.size() > 1).isPresent(); }
+  private void fillKindControls(){
+    kindControls.removeAll();
+    var enabled= !session.busy();
+    if (currentEntry().kind() == Kind.idle){
+      kindControls.add(kindButton("Become data",Kind.dataReadOnly,enabled));
+      kindControls.add(kindButton("Become editable data",Kind.dataReadWrite,enabled));
+      kindControls.add(kindButton("Become code",Kind.code,enabled));
+    } else {
+      kindControls.add(kindButton("Back to idle",Kind.idle,enabled));
+    }
+  }
+  private JButton kindButton(String text, Kind target, boolean enabled){
+    var res= small(text,()->changed(d->d.setKind(folder,target)));
+    res.setEnabled(enabled);
+    return res;
+  }
+  private void fillLinks(){
+    var entry= currentEntry();
+    var iAmCode= entry.kind() == Kind.code;
+    linksBox.removeAll();
+    links.setVisible(iAmCode || entry.kind().isData());
+    if (!links.isVisible()){ return; }
+    linksBox.add(new JLabel(iAmCode ? "Data projects this code project reads or edits:" : "Code projects that may read or edit this:"));
+    data.registered().stream()
+      .filter(o->!o.path().equals(folder))
+      .filter(o->iAmCode ? o.kind().isData() : o.kind() == Kind.code)
+      .sorted(Comparator.comparing(ManagerData.Entry::alias))
+      .forEach(o->linksBox.add(linkRow(entry,o,iAmCode)));
+  }
+  private JPanel linkRow(ManagerData.Entry me, ManagerData.Entry other, boolean iAmCode){
+    var codeFolder= iAmCode ? folder : other.path();
+    var codeEntry= iAmCode ? me : other;
+    var dataAlias= iAmCode ? other.alias() : me.alias();
+    var canWrite= iAmCode ? other.kind() == Kind.dataReadWrite : me.kind() == Kind.dataReadWrite;
+    var storedReads= codeEntry.reads().getOrDefault(dataAlias,List.of());
+    var storedEdits= codeEntry.edits().getOrDefault(dataAlias,List.of());
+    var readOn= codeEntry.reads().containsKey(dataAlias);
+    var writeOn= codeEntry.edits().containsKey(dataAlias);
+    var initial= !storedReads.isEmpty() ? storedReads : !storedEdits.isEmpty() ? storedEdits : List.of(FolderName.defaultTypeName(dataAlias));
+    var read= new JCheckBox("read",readOn);
+    var write= new JCheckBox("write",writeOn);
+    var field= new JTextField(String.join(" ",initial),14);
+    write.setEnabled(canWrite && read.isSelected());
+    field.setEnabled(read.isSelected());
+    Runnable apply= ()->{
+      var aliases= validAliases(field);
+      if (aliases.isEmpty()){ explainBadAlias(); return; }
+      applyLink(codeFolder,dataAlias,aliases.get(),read.isSelected(),write.isSelected());
+    };
+    read.addActionListener(_->{
+      if (!read.isSelected()){ write.setSelected(false); }
+      write.setEnabled(canWrite && read.isSelected());
+      field.setEnabled(read.isSelected());
+      apply.run();
+    });
+    write.addActionListener(_->apply.run());
+    field.addFocusListener(new FocusAdapter(){
+      @Override public void focusLost(FocusEvent e){ if (read.isSelected()){ apply.run(); } }
+    });
+    var row= new JPanel(new FlowLayout(FlowLayout.LEFT,6,0));
+    row.add(read);
+    if (canWrite || writeOn){ row.add(write); }
+    row.add(new JLabel(other.alias()));
+    row.add(field);
+    return row;
+  }
+  private Optional<List<String>> validAliases(JTextField field){
+    var text= field.getText().trim();
+    if (text.isEmpty()){ return Optional.of(List.of()); }
+    var names= List.of(text.split("\\s+"));
+    var valid= names.stream().allMatch(TName::isTypeName) && names.stream().distinct().count() == names.size();
+    return valid ? Optional.of(names) : Optional.empty();
+  }
+  private void explainBadAlias(){
+    JOptionPane.showMessageDialog(root,
+      "Aliases must be distinct Fearless type names: start with an uppercase letter, no repeats.",
+      "Fearless",JOptionPane.WARNING_MESSAGE);
+  }
+  private void applyLink(Path codeFolder, String dataAlias, List<String> aliases, boolean read, boolean write){
+    var codeEntry= data.entryOf(codeFolder).orElseThrow();
+    var reads= withKey(codeEntry.reads(),dataAlias,read,aliases);
+    var edits= withKey(codeEntry.edits(),dataAlias,write,aliases);
+    changed(d->d.setLinks(codeFolder,reads,edits));
+  }
+  private static Map<String,List<String>> withKey(Map<String,List<String>> map, String key, boolean present, List<String> aliases){
+    var out= new LinkedHashMap<>(map);
+    if (present){ out.put(key,aliases); } else { out.remove(key); }
+    return out;
+  }
   private void updateButtons(){
     var busy= session.busy();
     var running= session.running().isPresent();

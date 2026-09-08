@@ -133,6 +133,26 @@ final class InfoDataTest{
     var e= assertThrows(UserError.class, ()->d.commitInfoText(text));
     assertTrue(e.getMessage().contains("has the same path as"), e.getMessage());
   }
+  @Test void setKindSurvivesAReRead(@TempDir Path dir){
+    var project= folder(dir,"someproject");
+    var d= data(dir);
+    d.addRegisteredFolder("someproject",project);
+    d.setKind(project,Kind.dataReadWrite);
+    assertEquals(Kind.dataReadWrite, data(dir).registered().getFirst().kind());
+  }
+  @Test void setLinksSurvivesAReReadAndKeepsReadsAndEditsIndependent(@TempDir Path dir){
+    var code= folder(dir,"mycode");
+    var pub= folder(dir,"pub");
+    var d= data(dir);
+    d.addRegisteredFolder("mycode",code);
+    d.addRegisteredFolder("pub",pub);
+    d.setKind(code,Kind.code);
+    d.setKind(pub,Kind.dataReadWrite);
+    d.setLinks(code,Map.of("pub",List.of("Data1","Data2")),Map.of("pub",List.of("Data1")));
+    var reread= data(dir).registered().stream().filter(e->e.alias().equals("mycode")).findFirst().orElseThrow();
+    assertEquals(Map.of("pub",List.of("Data1","Data2")), reread.reads());
+    assertEquals(Map.of("pub",List.of("Data1")), reread.edits());
+  }
   @Test void turningACodeProjectIntoDataKeepsItsMainsReadsAndEdits(@TempDir Path dir){
     var code= folder(dir,"mycode");
     var pub= folder(dir,"pub");

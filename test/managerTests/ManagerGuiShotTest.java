@@ -118,4 +118,25 @@ final class ManagerGuiShotTest{
     var shot= shoot(info::panel,720,420,"folderInfoWithLogs");
     assertTrue(colours(shot) > 20);
   }
+  @Test void anIdleProjectOffersTheThreeBecomeButtons(@TempDir Path dir){
+    var data= new MockManagerData();
+    var project= FolderFactsTest.project(dir,"idleProject");
+    Fs.writeUtf8(project.resolve("idleProject.fearless"),"");
+    data.addRegisteredFolder("idleProject",project);
+    var shot= shoot(()->new FolderInfo(data,project.toAbsolutePath().normalize(),_->{},()->{}).panel(),720,420,"folderInfoIdle");
+    assertTrue(colours(shot) > 20, "the become-buttons drew nothing");
+  }
+  @Test void aDataReadWriteProjectOffersLinksToRegisteredCodeProjects(@TempDir Path dir){
+    var data= new MockManagerData();
+    var pub= FolderFactsTest.project(dir,"pub");
+    Fs.writeUtf8(pub.resolve("pub.fearless"),"");
+    data.addRegisteredFolder("pub",pub);
+    data.setKind(pub,Kind.dataReadWrite);
+    var code= FolderFactsTest.project(dir,"mycode");
+    Fs.writeUtf8(code.resolve("mycode.fearless"),"");
+    data.addRegisteredFolder("mycode",code);
+    data.setKind(code,Kind.code);
+    var shot= shoot(()->new FolderInfo(data,pub.toAbsolutePath().normalize(),_->{},()->{}).panel(),720,420,"folderInfoDataReadWrite");
+    assertTrue(colours(shot) > 20, "the links row drew nothing");
+  }
 }
