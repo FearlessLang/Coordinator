@@ -17,7 +17,6 @@ import utils.Pos;
 public class Backend{
   public Backend(Path out, BackendTools tools){
     assert nonNull(out,tools);
-    assert unmodifiable(tools.decs(), "decs");
     this.out= out;
     this.tools= tools;
   }

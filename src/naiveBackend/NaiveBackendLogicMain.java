@@ -1,6 +1,5 @@
 package naiveBackend;
 
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.List;
@@ -13,7 +12,6 @@ import tools.JavacTool;
 public class NaiveBackendLogicMain {
   public void of(BackendTools tools, List<Path> extraClasspathDirs){
     var outPath= tools.rootDir().resolve("gen_java",tools.pkgName());
-    assert Files.exists(tools.rtPath()): "Missing extra folder: "+tools.rtPath();
     var fixers= new Backend(outPath, tools).produceJavaCode();
     if (tools.pkgName().equals("base")){
     	Fs.copyTreeFlat(tools.rtPath(), outPath);
