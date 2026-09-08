@@ -20,6 +20,7 @@ import core.E.Literal;
 import docBuilder.DocBuilder;
 import docBuilder.HtmlDocBuilder;
 import main.FrontendLogicMain;
+import naiveBackend.BackendTools;
 import naiveBackend.NaiveBackendLogicMain;
 import realSourceOracle.RealSourceOracleWithZip;
 import tools.Fs;
@@ -65,7 +66,8 @@ public interface Coordinator {
   }
   default void backend(String pkgName, List<Literal> core, SourceOracle oracle, OtherPackages other, OutputOracle out, CapabilityEnvironment capabilities){
     var docs= docBuilder(pkgName,oracle,other,core,out.rootDir());
-    new NaiveBackendLogicMain().of(pkgName,core,out.rootDir(),docs,rtPath(),sharedClasspath(),capabilities);
+    var rtPath= rtPath();
+    new NaiveBackendLogicMain().of(pkgName,core,out.rootDir(),BackendTools.of(docs,rtPath,capabilities),rtPath,sharedClasspath());
   }
   default DocBuilder docBuilder(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, Path rootDir){
     var docs= new HtmlDocBuilder(oracle,other,core,baseCachePath().map(p->p.resolve("base.html")));

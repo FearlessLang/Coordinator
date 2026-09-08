@@ -6,17 +6,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 
-import coordinator.CapabilityEnvironment;
-import docBuilder.DocBuilder;
 import core.E.Literal;
 import tools.Fs;
 import tools.JavacTool;
 
 public class NaiveBackendLogicMain {
-  public void of(String pkgName, List<Literal> core, Path rootDir, DocBuilder docs, Path rtPath, List<Path> extraClasspathDirs, CapabilityEnvironment capabilities){
+  public void of(String pkgName, List<Literal> core, Path rootDir, BackendTools tools, Path rtPath, List<Path> extraClasspathDirs){
     var outPath= rootDir.resolve("gen_java",pkgName);
     assert Files.exists(rtPath): "Missing extra folder: "+rtPath;
-    var tools= BackendTools.of(docs, rtPath, capabilities);
     var fixers= new Backend(outPath, pkgName, core, tools).produceJavaCode();
     if (pkgName.equals("base")){
     	Fs.copyTreeFlat(rtPath, outPath);
@@ -29,7 +26,7 @@ public class NaiveBackendLogicMain {
     Runnable post= ()->fixers.forEach(f->f.accept(pkgPath));
     var javacOut= Fs.of(()->JavacTool.compileTree(outPath, classes,post,rootDir.resolve("gen_java",pkgName+".jar"),extraClasspathDirs));
     assert javacOut.isEmpty(): javacOut;
-    docs.complete();
+    tools.docs().complete();
     Fs.rmTree(outPath); Fs.rmTree(classes);//comment out this line to keep the generated .java and .class files for debugging
   }
   private static boolean foldDistinct(Path dir){
