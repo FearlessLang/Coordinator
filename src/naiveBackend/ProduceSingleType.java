@@ -58,7 +58,7 @@ record ProduceBody(BytecodeLineFix sb, Backend b, String iface, String thisName,
     case Type _ -> "";
   };}
   private void emitLit(Literal lit){
-    b.docs.visitLiteral(lit);
+    b.tools.docs().visitLiteral(lit);
     if (b.captureFree(lit)){
       b.generateInterface(lit, false);
       sb.a(b.decTypeName(lit.name())).a(".instance");

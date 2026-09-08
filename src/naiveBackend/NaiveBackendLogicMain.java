@@ -16,7 +16,8 @@ public class NaiveBackendLogicMain {
   public void of(String pkgName, List<Literal> core, Path rootDir, DocBuilder docs, Path rtPath, List<Path> extraClasspathDirs, CapabilityEnvironment capabilities){
     var outPath= rootDir.resolve("gen_java",pkgName);
     assert Files.exists(rtPath): "Missing extra folder: "+rtPath;
-    var fixers= new Backend(outPath, pkgName, core, docs, rtPath, capabilities).produceJavaCode();
+    var tools= BackendTools.of(docs, rtPath, capabilities);
+    var fixers= new Backend(outPath, pkgName, core, tools).produceJavaCode();
     if (pkgName.equals("base")){
     	Fs.copyTreeFlat(rtPath, outPath);
     }

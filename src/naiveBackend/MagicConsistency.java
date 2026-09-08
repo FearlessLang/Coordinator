@@ -12,11 +12,11 @@ import core.E.Type;
 import tools.NativeOverrides;
 import utils.Pos;
 
-final class NativeChecks{
+final class MagicConsistency{
   private static final TName magicName= new TName("base.Magic", 0,Pos.unknown);
   private final NativeOverrides natives;
   private final Set<String> magicPairs= new HashSet<>();
-  NativeChecks(Path rtPath){ this.natives= NativeOverrides.scan(rtPath); }
+  MagicConsistency(Path rtPath){ this.natives= NativeOverrides.scan(rtPath); }
   private boolean isMagicBody(M m){
     return m.e().get() instanceof Call c && c.e() instanceof Type t && t.type().c().name().equals(magicName);
   }
