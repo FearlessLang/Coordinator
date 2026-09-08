@@ -51,14 +51,13 @@ record BaseLayer(Coordinator coordinator, Map<String,Map<String,String>> map, lo
     var cacheDir= coordinator.baseCachePath();
     if (cacheDir.isPresent()){ return deployedBaseApi(cacheDir.get(), pkgName); }
     var other= OtherPackages.empty();
-    SourceOracle o= stLib;
-    long maxIn= o.allFiles().stream().mapToLong(Ref::lastModified).max().getAsLong();
-    var stillCached= out.stillBuilt(pkgName, o.allFiles(), maxIn);
+    long maxIn= stLib.allFiles().stream().mapToLong(Ref::lastModified).max().getAsLong();
+    var stillCached= out.stillBuilt(pkgName, stLib.allFiles(), maxIn);
     if (stillCached){ return out.startCachedPkgApi(pkgName,map,Math.max(baseStamp,out.pkgApiStamp(pkgName))); }
-    List<Literal> core= coordinator.frontend(pkgName,o.allFiles(),o,other,Map.of());
-    coordinator.backend(pkgName,core,o,other,out,new CapabilityEnvironment(List.of()));
+    List<Literal> core= coordinator.frontend(pkgName,stLib.allFiles(),stLib,other,Map.of());
+    coordinator.backend(pkgName,core,stLib,other,out,new CapabilityEnvironment(List.of()));
     long newStamp= out.commitPkgApi(pkgName, core, maxIn);
-    out.commitBuilt(pkgName, o.allFiles(), maxIn);
+    out.commitBuilt(pkgName, stLib.allFiles(), maxIn);
     return OtherPackages.start(map, AllLs.of(core).values(), Math.max(baseStamp,newStamp));
   }
   private OtherPackages deployedBaseApi(Path cacheDir, String pkgName){
