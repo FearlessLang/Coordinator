@@ -1,6 +1,6 @@
 package naiveBackend;
 
-import static offensiveUtils.Require.unmodifiable;
+import static offensiveUtils.Require.*;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -12,6 +12,7 @@ import docBuilder.DocBuilder;
 
 public record BackendTools(String pkgName, List<Literal> decs, Path rootDir, DocBuilder docs, MagicConsistency checks, CapabilityEnvironment capabilities, Path rtPath){
   public BackendTools{
+    assert nonNull(pkgName,rootDir,docs,checks,capabilities);
     assert unmodifiable(decs, "decs");
     assert Files.exists(rtPath): "Missing extra folder: "+rtPath;
   }
