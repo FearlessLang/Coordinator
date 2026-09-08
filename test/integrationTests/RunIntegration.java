@@ -83,30 +83,12 @@ public class RunIntegration {
     var fails= out.lines().filter(l->l.startsWith("Test failure ")).toList();
     Assertions.assertTrue(fails.isEmpty(), ()->"Fearless unit tests failed in "+name+":\n"+String.join("\n",fails));
   }
-  static String xmlAttr(String s){ return s.replace("&","&amp;").replace("<","&lt;").replace("\"","&quot;"); }
   static void writeJUnitReport(String name){ writeJUnitReport(name, ResolveResource.integrationTests.resolve(name)); }
   static void writeJUnitReport(String name, Path root){
-    var logs= managerInfo.LogFiles.list(root).stream()
-      .filter(e->e.path().getFileName().toString().startsWith("unit_test_log"))
-      .toList();
-    if (logs.isEmpty()){ return; }
-    var disabled= java.util.regex.Pattern.compile("(?m)^PLAN\\|DISABLED\\|([^|]*)\\|([^|]*)\\|([^|]*)\\|([^|]*)$");
-    var body= disabled.matcher(Fs.readUtf8(logs.get(0).path())).replaceAll(mr->
-      "<testcase classname=\""+xmlAttr(mr.group(2))+"\" name=\""+xmlAttr(mr.group(3))
-      +"\" file=\""+xmlAttr(mr.group(1))+"\" line=\""+mr.group(4)+"\"><skipped/></testcase>");
-    body= body.replaceAll("(?m)^PLAN\\|RUN\\|.*$\\r?\\n?","");
-    var tests= body.split("<testcase ",-1).length-1;
-    var failures= body.split("<failure>",-1).length-1;
-    suites.add("""
-<testsuite name="%s" tests="%d" failures="%d" errors="0">
-%s</testsuite>
-""".formatted(name,tests,failures,body));
-    Fs.ensureDir(reportsDir);
-    Fs.writeUtf8(reportsFile, """
-<?xml version="1.0" encoding="UTF-8"?>
-<testsuites>
-%s</testsuites>
-""".formatted(String.join("",suites)));
+    var one= managerInfo.JUnitReport.suite(name, root);
+    if (one.isEmpty()){ return; }
+    suites.add(one);
+    Fs.writeUtf8(reportsFile, managerInfo.JUnitReport.document(String.join("",suites)));
   }
   @Test void helloWorld(){ testOk("helloWorld");}
   //testUnitTests is the project that checks the failure report itself, so it must fail

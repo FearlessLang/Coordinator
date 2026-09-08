@@ -5,6 +5,7 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.LongStream;
+import java.util.stream.Stream;
 
 import coordinator.Coordinator;
 import managerData.Kind;
@@ -16,6 +17,8 @@ public record FolderFacts(
     Path folder, int files, long bytes, long modified,
     long jsonStamp, long cacheStamp, List<String> pkgs, Optional<String> problem){
   public static final String outDir= Coordinator.outDir;
+  ///Logs and reports Fearless writes about a project: never content, so writing one must not make the cache look stale.
+  public static final String runDir= ".out";
   public boolean valid(){ return problem.isEmpty(); }
   public boolean cacheUpToDate(){ return cacheStamp >= 0 && cacheStamp >= modified; }
   public boolean hasCache(){ return hasCache(folder); }
@@ -43,12 +46,15 @@ public record FolderFacts(
     return built >= 0 && built >= modified;
   }
   private static List<Path> sources(Path folder){
-    var out= folder.resolve(outDir);
-    return Fs.walk(folder,s->s.filter(p->!p.startsWith(out)).filter(Files::isRegularFile).toList());
+    return Fs.walk(folder,s->authored(folder,s).filter(Files::isRegularFile).toList());
   }
   private static List<Path> dirs(Path folder){
-    var out= folder.resolve(outDir);
-    return Fs.walk(folder,s->s.filter(p->!p.startsWith(out)).filter(Files::isDirectory).toList());
+    return Fs.walk(folder,s->authored(folder,s).filter(Files::isDirectory).toList());
+  }
+  private static Stream<Path> authored(Path folder, Stream<Path> all){
+    var cache= folder.resolve(outDir);
+    var written= folder.resolve(runDir);
+    return all.filter(p->!p.startsWith(cache) && !p.startsWith(written));
   }
   private static long newest(List<Path> files){ return files.stream().mapToLong(Fs::lastModified).max().orElse(-1); }
   private static long size(Path file){ return Fs.of(()->Files.size(file)); }

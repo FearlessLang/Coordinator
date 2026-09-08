@@ -5,6 +5,7 @@ import tools.PortableApp;
 
 public class DeployManagedFearless{
   public static void main(String[] a) throws InterruptedException{
+    var appRoot= ResolveResource.managedFolderOut.resolve("fearlessManaged"+ResolveResource.versionId);
     new PortableApp(
       ResolveResource.packaging,
       ResolveResource.managedFolderOut,//out
@@ -23,6 +24,7 @@ public class DeployManagedFearless{
     ModularBuild.commons();
     ModularBuild.frontendMain();
     ModularBuild.coordinatorTest();
-    ModularBuild.deployBaseCache(ResolveResource.managedFolderOut.resolve("fearlessManaged"+ResolveResource.versionId));
+    ModularBuild.deployBaseCache(appRoot);
+    ModularBuild.deployEclipsePlugin(appRoot);
   }
 }

@@ -19,7 +19,7 @@ public final class LogFiles{
     @Override public String toString(){ return path.getFileName()+"   "+shown.format(when); }
     @Override public int compareTo(Entry o){ return o.when.compareTo(when); }
   }
-  private static Path dir(Path folder){ return folder.resolve(".out").resolve("logs"); }
+  private static Path dir(Path folder){ return folder.resolve(FolderFacts.runDir).resolve("logs"); }
   public static List<Entry> list(Path folder){
     var dir= dir(folder);
     if (!Files.isDirectory(dir)){ return List.of(); }

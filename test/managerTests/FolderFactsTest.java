@@ -46,6 +46,18 @@ final class FolderFactsTest{
     assertEquals(2, facts.files());
     assertTrue(facts.jsonStamp() > facts.modified());
   }
+  //A log or an Eclipse report lands after the build stamp, inside the project folder
+  @Test void whatFearlessWritesAboutAProjectIsNotCountedAsSource(@TempDir Path dir){
+    var project= project(dir,"someProject");
+    var stamp= after(project);
+    cache(project,"hello",stamp);
+    var written= project.resolve(FolderFacts.runDir);
+    at(written.resolve("eclipse").resolve("problems.txt"),"",stamp+1000);
+    at(written.resolve("logs").resolve("_base").resolve("unit_test_log.log"),"x\n",stamp+1000);
+    var facts= FolderFacts.of(project,Kind.code);
+    assertEquals(2, facts.files());
+    assertTrue(facts.cacheUpToDate());
+  }
   @Test void recognisesThePackagesOfTheProject(@TempDir Path dir){
     var project= project(dir,"someProject");
     Fs.writeUtf8(project.resolve("_other").resolve("_rank_app.fear"),"");
