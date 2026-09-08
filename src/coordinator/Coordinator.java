@@ -32,8 +32,6 @@ import tools.SourceOracle.Ref;
 import utils.Push;
 
 public interface Coordinator {
-  static Path unusedPath(){ return Path.of("unused"); }
-
   default String runAllMains(String pkgName,OutputOracle out) throws InterruptedException{
     return JavaTool.runMainFromJars(runData(out.rootDir().getParent()), Push.of(out.rootDir().resolve("gen_java"),sharedClasspath()), pkgName+".Main");
   }
@@ -49,9 +47,9 @@ public interface Coordinator {
     map.values().forEach(u->Helper.okPkgContent(u,path));
     return List.copyOf(map.keySet());
   }
-  default String main(Path path, SourceOracle stLib) throws InterruptedException{ return Helper.main(this, path, stLib); }
-  default List<String> compile(Path path, SourceOracle stLib){ return Helper.compile(this, path, stLib); }
-  default Optional<List<String>> mains(Path path, SourceOracle stLib){ return Helper.mains(this, path, stLib); }
+  default String main(Path project, SourceOracle stLib) throws InterruptedException{ return Helper.main(this, project, stLib); }
+  default List<String> compile(Path project, SourceOracle stLib){ return Helper.compile(this, project, stLib); }
+  default Optional<List<String>> mains(Path project, SourceOracle stLib){ return Helper.mains(this, project, stLib); }
   static ChildJvm startMain(Path project, String main, List<Path> sharedClasspath, java.util.function.Consumer<String> out){
     var pkg= main.substring(0, main.indexOf('.'));
     return JavaTool.startMainFromJars(runData(project), Push.of(genJava(project),sharedClasspath), pkg+".Main", out, main);
@@ -68,14 +66,7 @@ public interface Coordinator {
     new NaiveBackendLogicMain().of(tools,sharedClasspath());
   }
   default BackendTools backendTools(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, Path rootDir, CapabilityEnvironment capabilities){
-    return testBackendTools(pkgName, oracle, other, core, rootDir, capabilities);
-  }
-  static BackendTools testBackendTools(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, Path rootDir, CapabilityEnvironment capabilities){
-    var docs= new HtmlDocBuilder(oracle,other,core,Optional.empty());
-    var htmlPath= rootDir.resolve("gen_java",pkgName+".html");
-    var testPath= rootDir.getParent().resolve("auto_tests","_"+pkgName,pkgName+"_test.fear");
-    docs.packageLocation(pkgName,htmlPath,testPath);
-    return BackendTools.of(pkgName, core, rootDir, docs, unusedPath(), capabilities);
+    return BackendTools.of(pkgName, core, rootDir, docBuilder(pkgName,oracle,other,core,rootDir), Path.of("unused"), capabilities);
   }
   default DocBuilder docBuilder(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, Path rootDir){
     var docs= new HtmlDocBuilder(oracle,other,core,baseCachePath().map(p->p.resolve("base.html")));
@@ -102,32 +93,32 @@ class Helper{
     var pOut= path.resolve(Coordinator.outDir);
     return ()->pOut;
   }
-  static Layer layerOf(Coordinator coordinator, SourceOracle o, Path path, OutputOracle out, SourceOracle stLib){
-    var map= pkgMap(o,path);
-    List<Ref> allRanks= map.values().stream().map(u->Helper.okPkgContent(u,path)).toList();
+  static Layer layerOf(Coordinator coordinator, SourceOracle o, Path project, OutputOracle out, SourceOracle stLib){
+    var map= pkgMap(o,project);
+    List<Ref> allRanks= map.values().stream().map(u->Helper.okPkgContent(u,project)).toList();
     Layer l= mapFromRanks(coordinator,allRanks,o,out,stLib);
     return layers(coordinator,map,l,allRanks.stream()
       .sorted(Comparator.comparingInt(Helper::rankNumber).thenComparing(Object::toString)).toList());
   }
-  static List<String> compile(Coordinator coordinator, Path path, SourceOracle stLib){
-    SourceOracle o= coordinator.sourceOracle(path);
-    var out= out(path);
-    Layer l= layerOf(coordinator,o,path,out,stLib);
+  static List<String> compile(Coordinator coordinator, Path project, SourceOracle stLib){
+    SourceOracle o= coordinator.sourceOracle(project);
+    var out= out(project);
+    Layer l= layerOf(coordinator,o,project,out,stLib);
     l.compile(o, out);
     return List.copyOf(l.pkgs().keySet());//by design: only the highest rank number's packages have their Main run
   }
-  static String main(Coordinator coordinator, Path path, SourceOracle stLib) throws InterruptedException{
-    var out= out(path);
+  static String main(Coordinator coordinator, Path project, SourceOracle stLib) throws InterruptedException{
+    var out= out(project);
     var sb= new StringBuilder();
-    for(var p: compile(coordinator,path,stLib)){ sb.append(coordinator.runAllMains(p,out)); }
+    for(var p: compile(coordinator,project,stLib)){ sb.append(coordinator.runAllMains(p,out)); }
     return sb.toString();
   }
-  static Optional<List<String>> mains(Coordinator coordinator, Path path, SourceOracle stLib){
+  static Optional<List<String>> mains(Coordinator coordinator, Path project, SourceOracle stLib){
     var c= new NoCompile(coordinator);
-    SourceOracle o= c.sourceOracle(path);
-    var out= new NoCommit(out(path).rootDir());
+    SourceOracle o= c.sourceOracle(project);
+    var out= new NoCommit(out(project).rootDir());
     Layer l;
-    try{ l= layerOf(c,o,path,out,stLib); l.compile(o,out); }
+    try{ l= layerOf(c,o,project,out,stLib); l.compile(o,out); }
     catch(WouldCompile _){ return Optional.empty(); }
     return Optional.of(l.pkgs().keySet().stream().flatMap(p->mainsOf(out,p)).toList());
   }
