@@ -553,16 +553,16 @@ use pkg.Holder as Holder;
 use base.Test as Test;
 use base.UnitTests as UnitTests;
 
-HolderCheck1: Test {::
+_HolderCheck1: Test {::
 .check{bar.assertOk}
   }
 
-HolderExamples: Test {::
-  .test HolderCheck1
+_HolderExamples: Test {::
+  .test _HolderCheck1
   }
 
-GeneratedExamples: UnitTests {::
-  .test HolderExamples
+_GeneratedExamples: UnitTests {::
+  .test _HolderExamples
   }
 """, test);
   }
@@ -595,16 +595,16 @@ use pkg.Visible as Visible;
 use base.Test as Test;
 use base.UnitTests as UnitTests;
 
-VisibleCheck1: Test {::
+_VisibleCheck1: Test {::
 .check{bar.assertOk}
   }
 
-VisibleExamples: Test {::
-  .test VisibleCheck1
+_VisibleExamples: Test {::
+  .test _VisibleCheck1
   }
 
-GeneratedExamples: UnitTests {::
-  .test VisibleExamples
+_GeneratedExamples: UnitTests {::
+  .test _VisibleExamples
   }
 """, test);
   }
@@ -626,17 +626,17 @@ use pkg.Holder as Holder;
 use base.Test as Test;
 use base.UnitTests as UnitTests;
 
-HolderCheck1: Test {::
+_HolderCheck1: Test {::
 .let x={1}
 .check{x.assertEq 1}
   }
 
-HolderExamples: Test {::
-  .test HolderCheck1
+_HolderExamples: Test {::
+  .test _HolderCheck1
   }
 
-GeneratedExamples: UnitTests {::
-  .test HolderExamples
+_GeneratedExamples: UnitTests {::
+  .test _HolderExamples
   }
 """, test);
 

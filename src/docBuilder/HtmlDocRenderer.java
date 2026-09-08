@@ -88,18 +88,18 @@ final class HtmlDocRenderer{
       for (var m: visibleMethods(t)){
         var examples= m.docs.stream().filter(d->d.example() || d.testOnly()).map(DocOcc::text).toList();
         if (examples.isEmpty()){ continue; }
-        var name= t.main().name().simpleName()+"Check"+(checkNames.size()+1);
+        var name= "_"+t.main().name().simpleName()+"Check"+(checkNames.size()+1);
         checkNames.add(name);
         sb.append(name).append(": Test {::\n").append(String.join("\n",examples)).append("\n  }\n\n");
       }
       if (checkNames.isEmpty()){ continue; }
-      var suiteName= t.main().name().simpleName()+"Examples";
+      var suiteName= "_"+t.main().name().simpleName()+"Examples";
       suiteNames.add(suiteName);
       sb.append(suiteName).append(": Test {::\n");
       checkNames.forEach(n->sb.append("  .test ").append(n).append('\n'));
       sb.append("  }\n\n");
     }
-    sb.append("GeneratedExamples: UnitTests {::\n");
+    sb.append("_GeneratedExamples: UnitTests {::\n");
     suiteNames.forEach(n->sb.append("  .test ").append(n).append('\n'));
     sb.append("  }\n");
     return sb.toString();
