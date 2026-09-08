@@ -39,10 +39,7 @@ public class RunIntegration {
   static{ utils.Err.setUp(AssertionFailedError.class, Assertions::assertEquals, Assertions::assertTrue); }
 
   static final Path baseCache= ResolveResource.stLibDebugOut.resolve("baseCache");
-  //Deliberately outside stdLibDir/baseCache: baseCache is exactly what a built
-  //portable/manager app embeds and ships, and this generated test scaffolding must not
-  //reach end users the way base.html/base.txt/base.jar correctly do.
-  static final Path baseTestFile= ResolveResource.stLibDebugOut.resolve("base_test.fear");
+  static final Path baseTestFile= ResolveResource.stLibDebugOut.resolve("_baseTestOut","base_test.fear");
   static final Path reportsDir= ResolveResource.coordinatorSrc.getParent().resolve(".out","junit_xml");
   static final Path reportsFile= reportsDir.resolve("all_auto_tests.xml");
   static final List<String> suites= new ArrayList<>();

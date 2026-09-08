@@ -627,9 +627,18 @@ To show code that is not a name, use two backticks or more:
 """.formatted(String.join("\n\n",problems)));
   }
 
-  public static UserError generatedTestNameReserved(String problem){ return new UserError("""
+  public static UserError generatedTestNameReserved(String problem, String topName){ return new UserError("""
 A type collides with an auto-generated test suite.
 
 %s
-""".formatted(problem)); }
+
+Compiling a package with doc comments also generates a UnitTests suite from that
+package's own examples, using two reserved name patterns:
+- "_<Type>_Examples", one such suite per documented type. A type of your own using
+  this exact pattern is almost certainly an accident - that is the error above.
+- "%s", the whole package's own top-level suite. A type of your own using this
+  exact name is instead treated as deliberate, and suppresses generation entirely.
+
+Rename this type, or use the second pattern above to opt the whole package out.
+""".formatted(problem,topName)); }
 }

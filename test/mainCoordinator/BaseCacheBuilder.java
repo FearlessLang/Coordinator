@@ -11,6 +11,8 @@ import coordinator.Coordinator;
 import coordinator.OutputOracle;
 import core.E.Literal;
 import core.OtherPackages;
+import docBuilder.DocBuilder;
+import docBuilder.HtmlDocBuilder;
 import tools.Fs;
 import tools.SourceOracle;
 import utils.OneOr;
@@ -25,12 +27,6 @@ public final class BaseCacheBuilder{
     var found= Fs.walk(root, s->s.filter(Files::isDirectory).filter(p->p.getFileName().toString().equals(name)).toList());
     return OneOr.of("Expected exactly one '"+name+"' dir under "+root, found.stream());
   }
-  //base_test.fear is generated for the fast Coordinator/StandardLibrary test suite only:
-  //nothing under baseCache's own generated-content copies below reaches it, since
-  //baseCache is exactly what a built portable/manager app embeds and ships. testFileDest,
-  //when given, is where the caller wants that one file preserved instead; deployInto
-  //never asks for it, and out's own auto_tests folder lives inside scratch, so it is
-  //gone along with everything else in scratch once this method returns either way.
   public static void buildInto(Path modsDir, Path stdLibDir, Optional<Path> testFileDest){
     var pkgName= "base";
     var scratch= stdLibDir.resolve("_baseScratch");
@@ -40,11 +36,14 @@ public final class BaseCacheBuilder{
         @Override public Path rtPath(){ return ResolveResource.stLibRTPath; }
         @Override public Path stLibPath(){ return ResolveResource.stLibPath; }
         @Override public Path modsPath(){ return modsDir; }
+        @Override public DocBuilder docBuilder(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, Path rootDir){
+          var docs= new HtmlDocBuilder(oracle,other,core,baseCachePath().map(p->p.resolve("base.html")));
+          var htmlPath= rootDir.resolve("gen_java",pkgName+".html");
+          docs.packageLocation(pkgName,htmlPath,testFileDest.orElseGet(()->scratch.resolve("_discardedTest.fear")));
+          return docs;
+        }
       };
-      OutputOracle out= new OutputOracle(){
-        @Override public Path rootDir(){ return scratch; }
-        @Override public Path autoTestsDir(){ return scratch.resolve("auto_tests"); }
-      };
+      OutputOracle out= ()->scratch;
       var other= OtherPackages.empty();
       SourceOracle o= c.sourceOracle(c.stLibPath());
       List<Literal> core= c.frontend(pkgName, o.allFiles(), o, other, Map.of());
@@ -55,7 +54,6 @@ public final class BaseCacheBuilder{
       Fs.copyFresh(scratch.resolve("gen_java").resolve("base.jar"), baseCache.resolve("base.jar"));
       Fs.copyFresh(scratch.resolve("gen_java").resolve("base.html"), baseCache.resolve("base.html"));
       Fs.copyFresh(scratch.resolve("gen_java").resolve("base.txt"), baseCache.resolve("base.txt"));
-      testFileDest.ifPresent(dest->Fs.copyFresh(out.autoTestsDir().resolve("_base","base_test.fear"), dest));
     } finally{ Fs.rmTree(scratch); }
   }
 }

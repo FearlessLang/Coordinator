@@ -75,10 +75,6 @@ final class HtmlDocRenderer{
     return sb.toString();
   }
 
-  //Exactly one generated type per source type with examples, plus one global one: a
-  //method's own examples become one anonymous inline Test nested inside its type's
-  //suite, never a separately-named type, since Fearless has no shadowing and different
-  //methods routinely reuse the same local names (s1, s2, ...) in their own examples.
   record GeneratedTestNames(String top, List<String> perType){}
 
   List<TypeDoc> testableTypes(){
@@ -104,11 +100,6 @@ final class HtmlDocRenderer{
     var shown= testableTypes();
     var names= testNames();
     var aliases= new LinkedHashMap<String,String>();
-    //An example can reference any type in passing (True, Void, ...) whether or not that
-    //type has examples of its own, so every public type of this package is aliased, not
-    //just the ones in shown. When this package IS base, base's own True/False/etc. are
-    //here, not in other - other only holds base when compiling something else that
-    //depends on it - so both sources below are needed, neither is redundant.
     types.stream().filter(t->!t.main().infName() && t.main().name().isPublic())
       .forEach(t->aliases.putIfAbsent(t.main().name().simpleName(), pkgName+"."+t.main().name().simpleName()));
     uses.forEach((full,alias)->aliases.putIfAbsent(alias,full));

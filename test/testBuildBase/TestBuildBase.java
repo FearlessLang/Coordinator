@@ -14,6 +14,8 @@ import coordinator.Coordinator;
 import coordinator.OutputOracle;
 import core.OtherPackages;
 import core.E.Literal;
+import docBuilder.DocBuilder;
+import docBuilder.HtmlDocBuilder;
 import mainCoordinator.ResolveResource;
 import tools.JavaTool;
 import tools.SourceOracle;
@@ -24,15 +26,15 @@ class TestBuildBase {
     @Override public Path rtPath(){    return ResolveResource.stLibRTPath; }
     @Override public Path stLibPath(){ return ResolveResource.stLibPath; }
     @Override public Path modsPath(){  return ResolveResource.coordinatorJars; }
+    @Override public DocBuilder docBuilder(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, Path rootDir){
+      var docs= new HtmlDocBuilder(oracle,other,core,baseCachePath().map(p->p.resolve("base.html")));
+      var htmlPath= rootDir.resolve("gen_java",pkgName+".html");
+      docs.packageLocation(pkgName,htmlPath,ResolveResource.stLibDebugOut.resolve("_baseTestOut","base_test.fear"));
+      return docs;
+    }
 
     @Override public String main(Path path) throws InterruptedException{
-      //Not a real project root, so the default auto_tests-next-to-rootDir would escape
-      //into the StandardLibrary checkout itself: kept inside stLibDebugOut instead,
-      //which is already build output, not source.
-      OutputOracle out= new OutputOracle(){
-        @Override public Path rootDir(){ return ResolveResource.stLibDebugOut; }
-        @Override public Path autoTestsDir(){ return ResolveResource.stLibDebugOut.resolve("auto_tests"); }
-      };
+      OutputOracle out= ()->ResolveResource.stLibDebugOut;
       var pkgName= "base";
       var other= OtherPackages.empty();
       SourceOracle o= sourceOracle(stLibPath());

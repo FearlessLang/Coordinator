@@ -3,15 +3,19 @@ package docBuilder;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.net.URI;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import core.B;
 import core.E.Literal;
@@ -25,6 +29,7 @@ import core.T;
 import core.TName;
 import core.TSpan;
 import tools.SourceOracle;
+import userMessages.UserError;
 import utils.Pos;
 
 final class DocBuilderTest{
@@ -645,6 +650,54 @@ Holder
       .check{x.assertEq 1}
 
 """, text);
+  }
+
+  @Test void aTypeNamedLikeTheTopLevelSuiteSuppressesGenerationForTheWholePackage(@TempDir Path tmp){
+    var holderName= new TName("pkg.Holder",0,Pos.unknown);
+    var bar= namedMethod(".bar", holderName);
+    var holder= namedType("pkg.Holder", List.of(), List.of());
+    var suppressor= namedType("pkg.AllAutoTests_pkg", List.of(), List.of());
+    SourceOracle oracle= List::of;
+    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(holder,suppressor));
+    builder.visitLiteral(holder);
+    builder.visitLiteral(suppressor);
+    builder.type(holder).declared(Pos.of(file,9,1), bar, List.of(
+      new DocOcc(file,9,1,4,".check{bar.assertOk}",true,true,false)
+    ), List.of());
+    var testPath= tmp.resolve("auto_tests","pkg_test.fear");
+    builder.packageLocation("pkg", tmp.resolve("pkg.html"), testPath);
+
+    var renderer= new HtmlDocRenderer("pkg", Map.of(), builder.types, OtherPackages.empty(), Map.of());
+    builder.writeTest(renderer);
+
+    assertFalse(Files.exists(testPath), "a type matching the top-level generated name must suppress generation entirely");
+  }
+
+  @Test void aTypeNamedLikeAPerTypeSuiteIsAHardErrorNamingTheConvention(@TempDir Path tmp){
+    var holderName= new TName("pkg.Holder",0,Pos.unknown);
+    var bar= namedMethod(".bar", holderName);
+    var holder= namedType("pkg.Holder", List.of(), List.of());
+    var collidingPos= Pos.of(file,5,1);
+    var collidingSrc= new Src(new Src.SrcObj(){
+      @Override public Pos pos(){ return collidingPos; }
+      @Override public TSpan span(){ return TSpan.fromPos(collidingPos,1); }
+    });
+    var colliding= new Literal(RC.imm, new TName("pkg._Holder_Examples",0,collidingPos),
+      List.of(), List.of(), "this", List.of(), collidingSrc, false);
+    SourceOracle oracle= SourceOracle.debugBuilder().putURI(file, "l1\nl2\nl3\nl4\n_Holder_Examples: Test {}\n").build();
+    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(holder,colliding));
+    builder.visitLiteral(holder);
+    builder.visitLiteral(colliding);
+    builder.type(holder).declared(Pos.of(file,9,1), bar, List.of(
+      new DocOcc(file,9,1,4,".check{bar.assertOk}",true,true,false)
+    ), List.of());
+    builder.packageLocation("pkg", tmp.resolve("pkg.html"), tmp.resolve("auto_tests","pkg_test.fear"));
+
+    var renderer= new HtmlDocRenderer("pkg", Map.of(), builder.types, OtherPackages.empty(), Map.of());
+    var ex= assertThrows(UserError.class, ()->builder.writeTest(renderer));
+
+    assertTrue(ex.getMessage().contains("_Holder_Examples"), ex.getMessage());
+    assertTrue(ex.getMessage().contains("AllAutoTests_pkg"), ex.getMessage());
   }
 
   @Test void renderTextShowsPlainFromProvenanceForAnInheritedMethod(){

@@ -17,6 +17,8 @@ import core.LiteralDeclarations;
 import core.OtherPackages;
 import core.TName;
 import core.E.Literal;
+import docBuilder.DocBuilder;
+import docBuilder.HtmlDocBuilder;
 import main.FrontendLogicMain;
 import naiveBackend.NaiveBackendLogicMain;
 import realSourceOracle.RealSourceOracleWithZip;
@@ -62,7 +64,15 @@ public interface Coordinator {
     catch(FearlessException fe){ throw Report.sourceError(fe.render(oracle)); }
   }
   default void backend(String pkgName, List<Literal> core, SourceOracle oracle, OtherPackages other, OutputOracle out, CapabilityEnvironment capabilities){
-    new NaiveBackendLogicMain().of(pkgName,oracle,other,core,out.rootDir(),out.autoTestsDir(),rtPath(),sharedClasspath(),baseCachePath().map(p->p.resolve("base.html")),capabilities);
+    var docs= docBuilder(pkgName,oracle,other,core,out.rootDir());
+    new NaiveBackendLogicMain().of(pkgName,core,out.rootDir(),docs,rtPath(),sharedClasspath(),capabilities);
+  }
+  default DocBuilder docBuilder(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, Path rootDir){
+    var docs= new HtmlDocBuilder(oracle,other,core,baseCachePath().map(p->p.resolve("base.html")));
+    var htmlPath= rootDir.resolve("gen_java",pkgName+".html");
+    var testPath= rootDir.getParent().resolve("auto_tests","_"+pkgName,pkgName+"_test.fear");
+    docs.packageLocation(pkgName,htmlPath,testPath);
+    return docs;
   }
   default Path modsPath(){
     var appDir= System.getProperty(JavacTool.appDirKey);
