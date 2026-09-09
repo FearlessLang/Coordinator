@@ -13,14 +13,15 @@ public class NaiveBackendLogicMain {
   public void of(BackendTools tools, List<Path> extraClasspathDirs){
     var outPath= tools.rootDir().resolve("gen_java",tools.pkgName());
     var fixers= new Backend(outPath, tools).produceJavaCode();
-    if (tools.pkgName().equals("base")){
-    	Fs.copyTreeFlat(tools.rtPath(), outPath);
-    }
-    assert foldDistinct(outPath);
     var classes= tools.rootDir().resolve("gen_java","_classes");
     Fs.ensureDir(classes);
     Fs.cleanDirContents(classes);
     var pkgPath= classes.resolve(tools.pkgName());
+    if (tools.pkgName().equals("base")){
+    	Fs.copyTreeFlat(tools.rtPath(), outPath);
+    	Fs.copyTreeFlat(tools.rtPath().resolveSibling("fonts"), pkgPath);
+    }
+    assert foldDistinct(outPath);
     Runnable post= ()->fixers.forEach(f->f.accept(pkgPath));
     var javacOut= Fs.of(()->JavacTool.compileTree(outPath, classes,post,tools.rootDir().resolve("gen_java",tools.pkgName()+".jar"),extraClasspathDirs));
     assert javacOut.isEmpty(): javacOut;
