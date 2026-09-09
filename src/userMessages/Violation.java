@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.function.Supplier;
 
 import metaParser.Message;
-import metaParser.PrettyFileName;
 import utils.Join;
 
 import static userMessages.UserError.die;
@@ -400,23 +399,23 @@ Delete this project's .fearless_out folder, then recompile.
 Build cache contains an invalid cached file.
 
 Fearless tried to read:
-  %s
+%s
 but the file content is not valid.
 
 Parse error:
   %s
-""".formatted(PrettyFileName.displayFileName(mapJson.toUri()), parseErr));
+""".formatted(path(mapJson.toString()), parseErr));
   }
   public static UserError cacheCanNotFindZipEntry(Path diskZip, List<String> steps, String entryName){
     return new UserError("""
 Cannot find entry in zip (that was found before).
 Zip:
-  %s
+%s
 Steps:
   %s
 Entry name:
   %s
-""".formatted(PrettyFileName.displayFileName(diskZip.toUri()),
+""".formatted(path(diskZip.toString()),
       Join.of(steps.stream().map(Message::displayString),"[",", ","]", "<no steps>"),
       Message.displayString(entryName)));
   }
