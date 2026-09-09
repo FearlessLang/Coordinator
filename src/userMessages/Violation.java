@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.function.Supplier;
 
 import metaParser.Message;
-import metaParser.PrettyFileName;
 import utils.Join;
 
 import static userMessages.UserError.die;
@@ -68,8 +67,6 @@ public final class Violation {
   }
   public static UserError programFolderNotFound(Path startedFrom, String expectedDirName){
     return new UserError("""
-      Fearless could not find its own program folder.
-
       This copy of Fearless appears to have been moved, renamed, or damaged:
       no folder named "%s" exists above
       %s
@@ -135,7 +132,7 @@ public final class Violation {
     return new UserError("""
       Fearless could not load its own icon.
 
-      The icon is part of Fearless and travels inside its program folder:
+      This copy of Fearless should already have this file:
       %s
 
       %s
@@ -150,13 +147,23 @@ public final class Violation {
     return new UserError("""
       Fearless could not load its own icon.
 
-      The icon is part of Fearless and travels inside its program folder:
+      This copy of Fearless should already have this file:
       %s
       The file is there and could be read, but it does not hold an image this
       Java runtime can decode.
 
       %s""".formatted(
         path(icon.toString()),
+        freshCopyThenReport()
+      ));
+  }
+  public static UserError cacheMissingBaseApiFile(Path apiJson){
+    return new UserError("""
+      This copy of Fearless should already have this file:
+      %s
+
+      %s""".formatted(
+        path(apiJson.toString()),
         freshCopyThenReport()
       ));
   }
@@ -383,31 +390,32 @@ public final class Violation {
     return new UserError("""
 Build cache is missing a generated package API file.
 That metadata should be stored in:
-  %s
-""".formatted(PrettyFileName.displayFileName(apiJson.toUri())));
+%s
+Delete this project's .fearless_out folder, then recompile.
+""".formatted(path(apiJson.toString())));
   }
   public static UserError cacheInvalidFile(Path mapJson, String parseErr){
     return new UserError("""
 Build cache contains an invalid cached file.
 
 Fearless tried to read:
-  %s
+%s
 but the file content is not valid.
 
 Parse error:
   %s
-""".formatted(PrettyFileName.displayFileName(mapJson.toUri()), parseErr));
+""".formatted(path(mapJson.toString()), parseErr));
   }
   public static UserError cacheCanNotFindZipEntry(Path diskZip, List<String> steps, String entryName){
     return new UserError("""
 Cannot find entry in zip (that was found before).
 Zip:
-  %s
+%s
 Steps:
   %s
 Entry name:
   %s
-""".formatted(PrettyFileName.displayFileName(diskZip.toUri()),
+""".formatted(path(diskZip.toString()),
       Join.of(steps.stream().map(Message::displayString),"[",", ","]", "<no steps>"),
       Message.displayString(entryName)));
   }
