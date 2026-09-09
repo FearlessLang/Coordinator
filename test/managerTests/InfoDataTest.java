@@ -58,8 +58,8 @@ final class InfoDataTest{
     var project= folder(dir,"someproject");
     var d= data(dir);
     d.addRegisteredFolder("someproject",project);
-    d.setSelectedMains(project,List.of("Main1","Main2"));
-    assertEquals(List.of("Main1","Main2"), data(dir).registered().getFirst().mains());
+    d.setSelectedMains(project,List.of("hello.Hello1","hello.Hello3"));
+    assertEquals(List.of("hello.Hello1","hello.Hello3"), data(dir).registered().getFirst().mains());
   }
   @Test void forgettingAFolderRemovesOnlyThatOne(@TempDir Path dir){
     var kept= folder(dir,"kept");
@@ -160,13 +160,13 @@ final class InfoDataTest{
     d.commitInfoText("""
       {
       "pub": {"path": "%s", "kind": "data:readWrite"},
-      "mycode": {"path": "%s", "kind": "code", "mains": ["Main1"], "reads": {"pub": ["Data1"]}}
+      "mycode": {"path": "%s", "kind": "code", "mains": ["my.Main1"], "reads": {"pub": ["Data1"]}}
       }
       """.formatted(unixPath(pub),unixPath(code)));
     d.commitInfoText(d.infoText().replace("\"kind\": \"code\"","\"kind\": \"idle\""));
     var entry= d.registered().stream().filter(e->e.alias().equals("mycode")).findFirst().orElseThrow();
     assertEquals(Kind.idle, entry.kind());
-    assertEquals(List.of("Main1"), entry.mains());
+    assertEquals(List.of("my.Main1"), entry.mains());
     assertEquals(Map.of("pub",List.of("Data1")), entry.reads());
   }
 }

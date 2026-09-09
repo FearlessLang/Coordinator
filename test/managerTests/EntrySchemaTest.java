@@ -33,13 +33,13 @@ final class EntrySchemaTest{
       {"someproject":{
         "path":"C:/abs/someproject",
         "kind":"code",
-        "mains":["Main1","Main2"],
+        "mains":["some.Main1","some.Main2"],
         "reads":{"publicfiles":["Data1"]},
         "edits":{"publicdata":["Data2","Data3"]}
       }}""";
     var e= entries(text).getFirst();
     assertEquals(new Entry("someproject",Path.of("C:/abs/someproject"),Kind.code,
-      List.of("Main1","Main2"),Map.of("publicfiles",List.of("Data1")),Map.of("publicdata",List.of("Data2","Data3")),-1,-1),e);
+      List.of("some.Main1","some.Main2"),Map.of("publicfiles",List.of("Data1")),Map.of("publicdata",List.of("Data2","Data3")),-1,-1),e);
   }
   @Test void allFourKindsParse(){
     assertEquals(Kind.idle, entries("{\"a\":{\"path\":\"C:/a\",\"kind\":\"idle\"}}").getFirst().kind());
@@ -67,10 +67,26 @@ final class EntrySchemaTest{
     assertTrue(msg.contains("\"idle\", \"code\", \"data:readOnly\" or \"data:readWrite\""), msg);
   }
   @Test void repeatedMainsAreRejected(){
-    assertTrue(fails("{\"a\":{\"path\":\"C:/a\",\"mains\":[\"Main1\",\"Main1\"]}}").getMessage().contains("is repeated in \"mains\""));
+    assertTrue(fails("{\"a\":{\"path\":\"C:/a\",\"mains\":[\"a.Main1\",\"a.Main1\"]}}").getMessage().contains("is repeated in \"mains\""));
   }
-  @Test void aLowercaseMainIsNotAValidTypeName(){
-    assertTrue(fails("{\"a\":{\"path\":\"C:/a\",\"mains\":[\"lowercase\"]}}").getMessage().contains("not a valid Fearless type name"));
+  @Test void aLowercaseMainIsNotAValidMainName(){
+    assertTrue(fails("{\"a\":{\"path\":\"C:/a\",\"mains\":[\"lowercase\"]}}").getMessage().contains("not a valid Fearless main name"));
+  }
+  @Test void mainsAreThePackageQualifiedNamesTheCompilerReports(){
+    var e= entries("{\"a\":{\"path\":\"C:/a\",\"mains\":[\"hello.Hello1\",\"hello.Hello3\"]}}").getFirst();
+    assertEquals(List.of("hello.Hello1","hello.Hello3"), e.mains());
+  }
+  @Test void aMainWithoutAPackageIsRejected(){
+    assertTrue(fails("{\"a\":{\"path\":\"C:/a\",\"mains\":[\"Hello1\"]}}").getMessage().contains("not a valid Fearless main name"));
+  }
+  @Test void aMainWithAnUppercasePackageIsRejected(){
+    assertTrue(fails("{\"a\":{\"path\":\"C:/a\",\"mains\":[\"Hello.Hello1\"]}}").getMessage().contains("not a valid Fearless main name"));
+  }
+  @Test void aMainWithALowercaseTypeIsRejected(){
+    assertTrue(fails("{\"a\":{\"path\":\"C:/a\",\"mains\":[\"hello.hello1\"]}}").getMessage().contains("not a valid Fearless main name"));
+  }
+  @Test void aPackageQualifiedNameIsRejectedInReads(){
+    assertTrue(fails("{\"a\":{\"path\":\"C:/a\",\"reads\":{\"b\":[\"hello.Data1\"]}}}").getMessage().contains("not a valid Fearless type name"));
   }
   @Test void repeatedNamesInsideAReadsTargetAreRejected(){
     assertTrue(fails("{\"a\":{\"path\":\"C:/a\",\"reads\":{\"b\":[\"Data1\",\"Data1\"]}}}").getMessage().contains("is repeated in \"reads\".\"b\""));
@@ -88,13 +104,13 @@ final class EntrySchemaTest{
   }
   @Test void toInfoThenFromInfoRoundTripsAnEntry(){
     var e= new Entry("someproject",Path.of("C:/abs/someproject"),Kind.code,
-      List.of("Main1"),Map.of("publicfiles",List.of("Data1")),Map.of(),999,999);
+      List.of("some.Main1"),Map.of("publicfiles",List.of("Data1")),Map.of(),999,999);
     var text= managerData.InfoPrinter.print(EntrySchema.toInfo(List.of(e)));
     var back= entries(text).getFirst();
     assertEquals("someproject",back.alias());
     assertEquals(Path.of("C:/abs/someproject"),back.path());
     assertEquals(Kind.code,back.kind());
-    assertEquals(List.of("Main1"),back.mains());
+    assertEquals(List.of("some.Main1"),back.mains());
     assertEquals(Map.of("publicfiles",List.of("Data1")),back.reads());
     assertEquals(Map.of(),back.edits());
     assertEquals(-1,back.compiled());

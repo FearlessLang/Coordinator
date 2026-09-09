@@ -9,6 +9,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Predicate;
 
 import core.TName;
 import managerData.Info.Obj.Field;
@@ -46,7 +47,7 @@ public final class EntrySchema{
     }
     var path= pathOf(source,field.key(),obj);
     var kind= kindOf(source,obj);
-    var mains= nameListOf(source,obj,"mains","\"mains\"");
+    var mains= nameListOf(source,obj,"mains","\"mains\"",EntrySchema::isMainName,mainShape);
     var reads= aliasMapOf(source,obj,"reads");
     var edits= aliasMapOf(source,obj,"edits");
     return new Entry(field.key(),path,kind,mains,reads,edits,-1,-1);
@@ -68,14 +69,14 @@ public final class EntrySchema{
     return Kind.of(s.value()).orElseThrow(()->err(source,field.get().value().span(),
       "\"kind\" must be one of \"idle\", \"code\", \"data:readOnly\" or \"data:readWrite\", not \""+s.value()+"\"."));
   }
-  private static List<String> nameListOf(String source, Info.Obj obj, String key, String label){
+  private static List<String> nameListOf(String source, Info.Obj obj, String key, String label, Predicate<String> ok, String shape){
     var field= obj.field(key);
     if (field.isEmpty()){ return List.of(); }
     if (!(field.get().value() instanceof Info.Lst l)){ throw err(source,field.get().value().span(),label+" must be a list."); }
     var seen= new LinkedHashSet<String>();
     var out= new ArrayList<String>();
     for (var item: l.items()){
-      var s= typeNameOf(source,item,label);
+      var s= nameOf(source,item,label,ok,shape);
       if (!seen.add(s.value())){ throw err(source,s.span(),"\""+s.value()+"\" is repeated in "+label+"."); }
       out.add(s.value());
     }
@@ -90,15 +91,19 @@ public final class EntrySchema{
     var out= new LinkedHashMap<String,List<String>>();
     for (var f: o.fields()){
       if (!FolderName.isName(dummyRoot,f.key())){ throw err(source,f.keySpan(),"\""+f.key()+"\" in \""+key+"\" is not a valid project name."); }
-      out.put(f.key(),nameListOf(source,o,f.key(),"\""+key+"\".\""+f.key()+"\""));
+      out.put(f.key(),nameListOf(source,o,f.key(),"\""+key+"\".\""+f.key()+"\"",TName::isTypeName,typeShape));
     }
     return Collections.unmodifiableMap(out);
   }
-  private static Info.Str typeNameOf(String source, Info value, String label){
+  private static final String typeShape= "a valid Fearless type name: it must start with an uppercase letter";
+  private static final String mainShape= "a valid Fearless main name: a package name, a dot, then a type name, like \"hello.Hello1\"";
+  private static boolean isMainName(String s){
+    var dot= s.indexOf('.');
+    return dot > 0 && TName.isPkgName(s.substring(0,dot)) && TName.isTypeName(s.substring(dot+1));
+  }
+  private static Info.Str nameOf(String source, Info value, String label, Predicate<String> ok, String shape){
     if (!(value instanceof Info.Str s)){ throw err(source,value.span(),"Every entry in "+label+" must be a string."); }
-    if (!TName.isTypeName(s.value())){
-      throw err(source,s.span(),"\""+s.value()+"\" in "+label+" is not a valid Fearless type name: it must start with an uppercase letter.");
-    }
+    if (!ok.test(s.value())){ throw err(source,s.span(),"\""+s.value()+"\" in "+label+" is not "+shape+"."); }
     return s;
   }
   private static void checkNoOverlappingPaths(String source, List<Field> fields, List<Entry> entries){
