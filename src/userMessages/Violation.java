@@ -160,6 +160,18 @@ public final class Violation {
         freshCopyThenReport()
       ));
   }
+  public static UserError cacheMissingBaseApiFile(Path apiJson){
+    return new UserError("""
+      Fearless is missing its own standard-library build cache.
+
+      This file is part of Fearless and travels inside its program folder:
+      %s
+
+      %s""".formatted(
+        path(apiJson.toString()),
+        freshCopyThenReport()
+      ));
+  }
   public static UserError multipleIcons(Path dir, List<Path> found){
     return new UserError("""
       More than one .png file was found for this project's icon.
@@ -383,8 +395,9 @@ public final class Violation {
     return new UserError("""
 Build cache is missing a generated package API file.
 That metadata should be stored in:
-  %s
-""".formatted(PrettyFileName.displayFileName(apiJson.toUri())));
+%s
+Delete this project's .fearless_out folder, then recompile.
+""".formatted(path(apiJson.toString())));
   }
   public static UserError cacheInvalidFile(Path mapJson, String parseErr){
     return new UserError("""

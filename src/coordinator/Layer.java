@@ -63,7 +63,7 @@ record BaseLayer(Coordinator coordinator, Map<String,Map<String,String>> map, lo
   private OtherPackages deployedBaseApi(Path cacheDir, String pkgName){
     var json= cacheDir.resolve(pkgName+".json");
     var api= new OutputHelper().pgkApiFromJSon(json);
-    if (api.isEmpty()){ throw Violation.cacheMissingPkgApiFile(json); }
+    if (api.isEmpty()){ throw Violation.cacheMissingBaseApiFile(json); }
     return OtherPackages.start(map, api.get(), Math.max(baseStamp, Fs.lastModified(json)));
   }
 }
