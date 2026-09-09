@@ -24,6 +24,11 @@ public final class FolderName{
     var all= fearlessFiles(f);
     return all.size() == 1 ? stem(all.getFirst()) : f.getFileName().toString();
   }
+  public static String defaultTypeName(String alias){
+    var i= 0;
+    while(alias.charAt(i) == '_'){ i+= 1; }
+    return alias.substring(0,i)+Character.toUpperCase(alias.charAt(i))+alias.substring(i+1);
+  }
   public static boolean isName(Path folder, String name){
     var kid= candidate(folder,name);
     if (kid.isEmpty() || BuildWithZip.isInvisible(kid.get())){ return false; }

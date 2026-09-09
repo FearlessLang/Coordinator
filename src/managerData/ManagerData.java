@@ -17,6 +17,8 @@ public interface ManagerData{
   void setCompiled(Path folder, long millis);
   void setRun(Path folder, long millis);
   void setSelectedMains(Path folder, List<String> mains);
+  void setKind(Path folder, Kind kind);
+  void setLinks(Path folder, Map<String,List<String>> reads, Map<String,List<String>> edits);
   String infoText();
   void commitInfoText(String text);
   default boolean isRegistered(Path folder){

@@ -29,8 +29,8 @@ public final class MockManagerData implements ManagerData{
   @Override public void setSelectedMains(Path folder, List<String> mains){ update(folder,e->new Entry(e.alias(),e.path(),e.kind(),List.copyOf(mains),e.reads(),e.edits(),e.compiled(),e.run())); }
   @Override public String infoText(){ return InfoPrinter.print(EntrySchema.toInfo(registered())); }
   @Override public void commitInfoText(String text){ throw new UnsupportedOperationException(); }
-  public void setKind(Path folder, Kind kind){ update(folder,e->new Entry(e.alias(),e.path(),kind,e.mains(),e.reads(),e.edits(),e.compiled(),e.run())); }
-  public void setLinks(Path folder, Map<String,List<String>> reads, Map<String,List<String>> edits){
+  @Override public void setKind(Path folder, Kind kind){ update(folder,e->new Entry(e.alias(),e.path(),kind,e.mains(),e.reads(),e.edits(),e.compiled(),e.run())); }
+  @Override public void setLinks(Path folder, Map<String,List<String>> reads, Map<String,List<String>> edits){
     update(folder,e->new Entry(e.alias(),e.path(),e.kind(),e.mains(),reads,edits,e.compiled(),e.run()));
   }
   private void update(Path folder, UnaryOperator<Entry> op){

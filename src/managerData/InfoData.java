@@ -52,6 +52,12 @@ public record InfoData(Path managerDir) implements ManagerData{
   @Override public void setSelectedMains(Path folder, List<String> mains){
     updateEntry(folder,e->new Entry(e.alias(),e.path(),e.kind(),List.copyOf(mains),e.reads(),e.edits(),-1,-1));
   }
+  @Override public void setKind(Path folder, Kind kind){
+    updateEntry(folder,e->new Entry(e.alias(),e.path(),kind,e.mains(),e.reads(),e.edits(),-1,-1));
+  }
+  @Override public void setLinks(Path folder, Map<String,List<String>> reads, Map<String,List<String>> edits){
+    updateEntry(folder,e->new Entry(e.alias(),e.path(),e.kind(),e.mains(),Map.copyOf(reads),Map.copyOf(edits),-1,-1));
+  }
   private void updateEntry(Path folder, UnaryOperator<Entry> op){
     var f= norm(folder);
     var current= rawEntries();

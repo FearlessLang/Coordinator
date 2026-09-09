@@ -98,6 +98,14 @@ final class FolderNameTest{
     var problem= FolderName.markerProblem(project,"my_game");
     assertTrue(problem.orElseThrow().contains("my_game.fearless"), problem.orElseThrow());
   }
+  @Test void defaultTypeNameUppercasesTheFirstLetter(){
+    assertEquals("Mydata", FolderName.defaultTypeName("mydata"));
+    assertEquals("My_data_2", FolderName.defaultTypeName("my_data_2"));
+    assertEquals("_Foo", FolderName.defaultTypeName("_foo"));
+    assertTrue(core.TName.isTypeName(FolderName.defaultTypeName("mydata")));
+    assertTrue(core.TName.isTypeName(FolderName.defaultTypeName("my_data_2")));
+    assertTrue(core.TName.isTypeName(FolderName.defaultTypeName("_foo")));
+  }
   @Test void markerProblemReportsMoreThanOneMarker(@TempDir Path dir){
     var project= folder(dir,"someProject");
     Fs.writeUtf8(project.resolve("my_game.fearless"),"");
