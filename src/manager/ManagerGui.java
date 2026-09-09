@@ -205,6 +205,7 @@ final class ManagerGui {
     manager.setMnemonic('M');
     manager.add(item("Edit project metadata...",true,this::editMetadata));
     manager.add(item("Show raw project state...",true,this::showRawState));
+    manager.add(item("Connect Eclipse...",true,this::connectEclipse));
     manager.addSeparator();
     manager.add(item("Forget association",true,()->onForget.accept(this)));
     manager.add(item("Quit manager",true,onQuit));
@@ -282,6 +283,19 @@ final class ManagerGui {
         return true;
       }
     };
+  }
+  private void connectEclipse(){
+    var chooser= new JFileChooser();
+    chooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+    chooser.setDialogTitle("Select the Eclipse executable");
+    if (chooser.showOpenDialog(frame) != JFileChooser.APPROVE_OPTION){ return; }
+    worker.execute(()->tryConnect(chooser.getSelectedFile().toPath()));
+  }
+  private void tryConnect(Path chosen){
+    String done;
+    try{ done= EclipseConnect.connect(chosen, data.registered()); }
+    catch(UserError e){ explain(e); return; }
+    SwingUtilities.invokeLater(()->JOptionPane.showMessageDialog(frame,done,"Fearless",JOptionPane.INFORMATION_MESSAGE));
   }
   private void editMetadata(){
     var area= new JTextArea(data.infoText(),30,100);

@@ -434,6 +434,21 @@ folder first, and then start Fearless on this one.
     path(registered.toString())
   ));}
 
+  //-- the Eclipse installation the user picks to connect to
+  public static UserError notAnEclipseInstall(Path folder){ return new UserError("""
+That is not an Eclipse installation.
+
+Folder:
+%s
+
+Fearless expects the file you pick to sit next to Eclipse's own ".eclipseproduct"
+file, as it does in an unpacked Eclipse download.
+
+Pick the Eclipse executable itself, for example "eclipse.exe" inside the folder
+you unpacked Eclipse into.
+""".formatted(path(folder.toString())));
+  }
+
   //-- project layout: which folder defines a package, and the rank file of each package
   public static UserError projectEmpty(Path root){ return new UserError("""
 The fearless project folder contains no *.fear files

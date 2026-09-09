@@ -14,6 +14,7 @@ import coordinator.Coordinator;
 import core.OtherPackages;
 import core.E.Literal;
 import docBuilder.HtmlDocBuilder;
+import managerInfo.JUnitReport;
 import naiveBackend.BackendTools;
 import tools.ChildJvm;
 import tools.JavacTool;
@@ -100,9 +101,11 @@ public final class ProjectSession{
     selected.stream().filter(known.get()::contains).forEach(this::runOne);
   }
   private void runOne(String main){
+    var started= Instant.now();
     starting(main);
     out.accept("--- running "+main+" ---\n");
     var ec= await(()->Coordinator.startMain(folder, main, appCoordinator().sharedClasspath(), out));
+    JUnitReport.write(folder, main, started);
     out.accept("--- "+main+" exited with "+ec+" after "+elapsed().toSeconds()+"s ---\n");
   }
   private int await(Supplier<ChildJvm> start){

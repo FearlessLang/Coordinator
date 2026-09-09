@@ -11,6 +11,7 @@ import core.OtherPackages;
 import core.E.Literal;
 import docBuilder.HtmlDocBuilder;
 import fileSupport.NativeLocaleForcer;
+import managerInfo.ProblemReport;
 import naiveBackend.BackendTools;
 import tools.ChildJvm;
 import tools.JavacTool;
@@ -22,10 +23,16 @@ public class ChildMain{
   public static void main(String[] args){
     NativeLocaleForcer.forceEnglish();
     ChildJvm.watchParent();
+    var project= Path.of(args[0]);
+    //Clears the previous problem; also puts .out in place before the compile stamps
+    //.fearless_out, so the project root's mtime cannot end up newer than that stamp.
+    ProblemReport.write(project, "");
     var exitCode= 0;
-    try{ compile(Path.of(args[0])); }
-    catch(UserError e){ exitCode= 1; System.err.print(e.getMessage()); }
+    var problem= "";
+    try{ compile(project); }
+    catch(UserError e){ exitCode= 1; problem= e.getMessage(); System.err.print(problem); }
     catch(Throwable t){ exitCode= 2; System.err.print(UserError.crash(t)); }
+    ProblemReport.write(project, problem);
     System.out.flush();
     System.err.flush();
     System.exit(exitCode);
