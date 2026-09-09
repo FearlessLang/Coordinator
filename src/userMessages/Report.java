@@ -438,8 +438,8 @@ folder first, and then start Fearless on this one.
   public static UserError projectEmpty(Path root){ return new UserError("""
 The fearless project folder contains no *.fear files
 Folder:
- "%s"
-""".formatted(root));
+%s
+""".formatted(path(root.toString())));
   }
 
   public static UserError projectNoPackageSegment(Ref file){ return new UserError("""
