@@ -105,8 +105,7 @@ public final class Main{
   }
   private static void spawnMac(Path appDir, Path file){
     var bundle= appDir.getParent().getParent();
-    try{ 
-      //new ProcessBuilder("open","-n","-a",bundle.toString(),"--args",file.toString()).start();
+    try{
       var pb= new ProcessBuilder("open","-n","-a",bundle.toString(),"--args",file.toString());
       pb.environment().remove("_JPACKAGE_LAUNCHER");
       pb.start();
