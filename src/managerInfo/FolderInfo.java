@@ -333,19 +333,10 @@ public final class FolderInfo{
     var read= new JCheckBox("read",readOn);
     var write= new JCheckBox("write",writeOn);
     var field= new JTextField(String.join(" ",initial),14);
-    write.setEnabled(canWrite && read.isSelected());
-    field.setEnabled(read.isSelected());
-    Runnable apply= ()->{
-      var aliases= validAliases(field);
-      if (aliases.isEmpty()){ explainBadAlias(); return; }
-      applyLink(codeFolder,dataAlias,aliases.get(),read.isSelected(),write.isSelected());
-    };
-    read.addActionListener(_->{
-      if (!read.isSelected()){ write.setSelected(false); }
-      write.setEnabled(canWrite && read.isSelected());
-      field.setEnabled(read.isSelected());
-      apply.run();
-    });
+    write.setEnabled(canWrite && readOn);
+    field.setEnabled(readOn);
+    Runnable apply= ()->applyLink(codeFolder,dataAlias,field,read.isSelected(),write.isSelected());
+    read.addActionListener(_->apply.run());
     write.addActionListener(_->apply.run());
     field.addFocusListener(new FocusAdapter(){
       @Override public void focusLost(FocusEvent e){ if (read.isSelected()){ apply.run(); } }
@@ -369,10 +360,12 @@ public final class FolderInfo{
       "Aliases must be distinct Fearless type names: start with an uppercase letter, no repeats.",
       "Fearless",JOptionPane.WARNING_MESSAGE);
   }
-  private void applyLink(Path codeFolder, String dataAlias, List<String> aliases, boolean read, boolean write){
+  private void applyLink(Path codeFolder, String dataAlias, JTextField field, boolean read, boolean write){
+    var aliases= validAliases(field);
+    if (aliases.isEmpty()){ explainBadAlias(); refresh(); return; }
     var codeEntry= data.entryOf(codeFolder).orElseThrow();
-    var reads= withKey(codeEntry.reads(),dataAlias,read,aliases);
-    var edits= withKey(codeEntry.edits(),dataAlias,write,aliases);
+    var reads= withKey(codeEntry.reads(),dataAlias,read,aliases.get());
+    var edits= withKey(codeEntry.edits(),dataAlias,read && write,aliases.get());
     changed(d->d.setLinks(codeFolder,reads,edits));
   }
   private static Map<String,List<String>> withKey(Map<String,List<String>> map, String key, boolean present, List<String> aliases){
