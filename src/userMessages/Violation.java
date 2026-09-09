@@ -68,8 +68,6 @@ public final class Violation {
   }
   public static UserError programFolderNotFound(Path startedFrom, String expectedDirName){
     return new UserError("""
-      Fearless could not find its own program folder.
-
       This copy of Fearless appears to have been moved, renamed, or damaged:
       no folder named "%s" exists above
       %s
@@ -135,7 +133,7 @@ public final class Violation {
     return new UserError("""
       Fearless could not load its own icon.
 
-      The icon is part of Fearless and travels inside its program folder:
+      This copy of Fearless should already have this file:
       %s
 
       %s
@@ -150,7 +148,7 @@ public final class Violation {
     return new UserError("""
       Fearless could not load its own icon.
 
-      The icon is part of Fearless and travels inside its program folder:
+      This copy of Fearless should already have this file:
       %s
       The file is there and could be read, but it does not hold an image this
       Java runtime can decode.
@@ -162,9 +160,7 @@ public final class Violation {
   }
   public static UserError cacheMissingBaseApiFile(Path apiJson){
     return new UserError("""
-      Fearless is missing its own standard-library build cache.
-
-      This file is part of Fearless and travels inside its program folder:
+      This copy of Fearless should already have this file:
       %s
 
       %s""".formatted(
