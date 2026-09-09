@@ -246,9 +246,9 @@ iii
 Root: [###]
 Path: "_pkg"
 This directory is empty.
-Different systems handleds empty directories differently,
+Different systems handle empty directories differently,
 and they may not be supported by compression tools (zip)
-or version control system (git).
+or version control systems (git).
 
 
 We check this so that you[###]
@@ -398,7 +398,7 @@ Root: [###]
 Path: "_pkg/fo-o.fear"
 
 What went wrong
-- A visible folder/file name contains an unsupported character: '-'.
+- A visible folder/file name contains an unsupported character: "-".
   Visible names may use only lowercase letters (a-z), digits (0-9), and underscore (_).
 
 How to fix

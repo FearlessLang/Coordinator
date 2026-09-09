@@ -48,8 +48,8 @@ Entry: "r/r.zip"
 
 Too many layers of nested zips.
 We explored 65 layers and there was still more.
-Different systems handleds very nested zips differenty; overall if
-recursivelly unzipped, it would clearly go over the OS path lenght limit.
+Different systems handle very nested zips differently; overall if
+recursively unzipped, it would clearly go over the OS path length limit.
 
 
 We check this so that you[###]

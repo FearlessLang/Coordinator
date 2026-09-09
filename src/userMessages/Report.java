@@ -128,9 +128,9 @@ Other rules (everywhere)
   public static UserError emptyDirectory(Path kid){
     return directFail(showRel(kid),"""
 This directory is empty.
-Different systems handleds empty directories differently,
+Different systems handle empty directories differently,
 and they may not be supported by compression tools (zip)
-or version control system (git).
+or version control systems (git).
 """);}
 
   //-- visible names
@@ -174,7 +174,7 @@ or version control system (git).
   }
   public static UserError visibleInvalidChar(RefParent kid, char c){
     return fail(showRel(kid),
-      "- A visible folder/file name contains an unsupported character: '"+c+"'.\n"
+      "- A visible folder/file name contains an unsupported character: "+Message.displayChar(c)+".\n"
     + "  Visible names may use only lowercase letters (a-z), digits (0-9), and underscore (_).",
       "- Rename it to use only lowercase letters, digits, and underscores.\n"
     + "  Examples: \"foo_bar2\", \"src1\", \"_cache\"."
@@ -373,8 +373,8 @@ Invalid entry names (based on the exact text of the entry name):
     return directFail(showZipRel(diskZip,all,steps.getLast()),"""
 Too many layers of nested zips.
 We explored %s layers and there was still more.
-Different systems handleds very nested zips differenty; overall if
-recursivelly unzipped, it would clearly go over the OS path lenght limit.
+Different systems handle very nested zips differently; overall if
+recursively unzipped, it would clearly go over the OS path length limit.
 """.formatted(depth));}
   //Reached when reading THIS ONE entry exhausted the memory of the whole program,
   //so the size we could report is exactly the size we could not measure.
