@@ -10,16 +10,10 @@ import java.util.concurrent.Executor;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-import coordinator.CapabilityEnvironment;
 import coordinator.Coordinator;
-import core.OtherPackages;
-import core.E.Literal;
-import docBuilder.HtmlDocBuilder;
 import managerInfo.JUnitReport;
-import naiveBackend.BackendTools;
 import tools.ChildJvm;
 import tools.JavacTool;
-import tools.SourceOracle;
 import userMessages.UserError;
 import userMessages.Violation;
 import utils.Bug;
@@ -86,11 +80,7 @@ public final class ProjectSession{
   private static Coordinator appCoordinator(){
     return new Coordinator(){
       @Override public Optional<Path> baseCachePath(){ return Optional.of(stdLib("baseCache")); }
-      @Override public BackendTools backendTools(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, Path rootDir, CapabilityEnvironment capabilities){
-        var docs= new HtmlDocBuilder(oracle,other,core,baseCachePath().map(p->p.resolve("base.html")));
-        docs.packageLocation(pkgName, rootDir.resolve("gen_java",pkgName+".html"), rootDir.getParent().resolve("auto_tests","_"+pkgName,pkgName+"_test.fear"));
-        return BackendTools.of(pkgName, core, rootDir, docs, stdLib("rt"), capabilities);
-      }
+      @Override public Path rtPath(){ return stdLib("rt"); }
     };
   }
   private void doCompile(){

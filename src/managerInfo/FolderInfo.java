@@ -265,7 +265,7 @@ public final class FolderInfo{
   private void fillMains(){
     var known= session.mains();
     mainsBox.removeAll();
-    var multi= known.filter(m->m.size() > 1).isPresent();
+    var multi= multiMains();
     if (multi){
       var chosen= selectedMains();
       for(var main: known.get()){

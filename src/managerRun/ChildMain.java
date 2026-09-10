@@ -3,21 +3,13 @@ package managerRun;
 import java.nio.file.Path;
 import java.util.Optional;
 
-import java.util.List;
-
-import coordinator.CapabilityEnvironment;
 import coordinator.Coordinator;
-import core.OtherPackages;
-import core.E.Literal;
-import docBuilder.HtmlDocBuilder;
 import fileSupport.NativeLocaleForcer;
 import managerInfo.FolderFacts;
 import managerInfo.ProblemReport;
-import naiveBackend.BackendTools;
 import tools.ChildJvm;
 import tools.Fs;
 import tools.JavacTool;
-import tools.SourceOracle;
 import userMessages.UserError;
 import userMessages.Violation;
 
@@ -48,11 +40,7 @@ public class ChildMain{
     var rt= appDir.resolve("stdLib").resolve("rt");
     var c= new Coordinator(){
       @Override public Optional<Path> baseCachePath(){ return Optional.of(appDir.resolve("stdLib").resolve("baseCache")); }
-      @Override public BackendTools backendTools(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, Path rootDir, CapabilityEnvironment capabilities){
-        var docs= new HtmlDocBuilder(oracle,other,core,baseCachePath().map(p->p.resolve("base.html")));
-        docs.packageLocation(pkgName, rootDir.resolve("gen_java",pkgName+".html"), rootDir.getParent().resolve("auto_tests","_"+pkgName,pkgName+"_test.fear"));
-        return BackendTools.of(pkgName, core, rootDir, docs, rt, capabilities);
-      }
+      @Override public Path rtPath(){ return rt; }
     };
     c.compile(project, c.sourceOracle(base));
   }

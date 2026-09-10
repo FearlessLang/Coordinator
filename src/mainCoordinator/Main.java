@@ -25,18 +25,12 @@ import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.SwingUtilities;
 
-import coordinator.CapabilityEnvironment;
 import coordinator.Coordinator;
-import core.OtherPackages;
-import core.E.Literal;
-import docBuilder.HtmlDocBuilder;
 import fileAssociations.FileAssociations;
 import fileAssociations.Icon;
-import naiveBackend.BackendTools;
 import userMessages.UserError;
 import userMessages.Violation;
 import tools.Fs;
-import tools.SourceOracle;
 import tools.Utf8Sink;
 import tools.JavacTool;
 
@@ -70,11 +64,7 @@ public final class Main{
   public static void run(Path project, Path base, Path rt) throws InvocationTargetException, InterruptedException, ExecutionException{
     var c= new Coordinator(){
       @Override public Optional<Path> baseCachePath(){ return Optional.of(base.getParent().resolve("baseCache")); }
-      @Override public BackendTools backendTools(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, Path rootDir, CapabilityEnvironment capabilities){
-        var docs= new HtmlDocBuilder(oracle,other,core,baseCachePath().map(p->p.resolve("base.html")));
-        docs.packageLocation(pkgName, rootDir.resolve("gen_java",pkgName+".html"), rootDir.getParent().resolve("auto_tests","_"+pkgName,pkgName+"_test.fear"));
-        return BackendTools.of(pkgName, core, rootDir, docs, rt, capabilities);
-      }
+      @Override public Path rtPath(){ return rt; }
     };
     c.main(project, c.sourceOracle(base));
   }
