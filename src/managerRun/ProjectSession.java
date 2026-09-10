@@ -5,6 +5,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -25,6 +26,7 @@ import utils.Bug;
 
 public final class ProjectSession{
   private final Path folder;
+  private final Path reports;
   private final Executor worker;
   private final Consumer<String> out;
   private final Runnable changed;
@@ -32,8 +34,9 @@ public final class ProjectSession{
   private String current= "";
   private Instant since= Instant.now();
   private Optional<List<String>> mains= Optional.empty();
-  public ProjectSession(Path folder, Executor worker, Consumer<String> out, Runnable changed){
+  public ProjectSession(Path folder, Path reports, Executor worker, Consumer<String> out, Runnable changed){
     this.folder= folder;
+    this.reports= reports;
     this.worker= worker;
     this.out= out;
     this.changed= changed;
@@ -53,6 +56,7 @@ public final class ProjectSession{
     child.kill();
   }
   private synchronized void submit(String what, Runnable job){
+    while(current.equals("reading")){ waitOrBug(0); }
     if (busy()){ return; }
     starting(what);
     worker.execute(()->guard(job));
@@ -65,6 +69,7 @@ public final class ProjectSession{
   }
   private synchronized void done(){
     current= "";
+    notifyAll();
     changed.run();
   }
   private synchronized void starting(String what){
@@ -90,7 +95,7 @@ public final class ProjectSession{
   }
   private void doCompile(){
     out.accept("--- compiling "+folder.getFileName()+" ---\n");
-    var ec= await(()->ChildJvm.start(compileArgs(), out));
+    var ec= await(()->ChildJvm.start(compileArgs(), out), ()->{});
     out.accept("--- compile "+(ec == 0 ? "done" : "failed with "+ec)+" ---\n");
     readMains();
   }
@@ -98,22 +103,37 @@ public final class ProjectSession{
     readMains();
     var known= mains();
     if (known.isEmpty()){ out.accept("--- this project needs compiling ---\n"); return; }
-    selected.stream().filter(known.get()::contains).forEach(this::runOne);
+    var chosen= known.get().size() == 1 ? known.get() : selected;
+    chosen.stream().filter(known.get()::contains).forEach(this::runOne);
   }
   private void runOne(String main){
     var started= Instant.now();
     starting(main);
     out.accept("--- running "+main+" ---\n");
-    var ec= await(()->Coordinator.startMain(folder, main, appCoordinator().sharedClasspath(), out));
-    JUnitReport.write(folder, main, started);
+    var ec= await(()->Coordinator.startMain(folder, main, appCoordinator().sharedClasspath(), out), ()->JUnitReport.write(reports, folder, main, started));
     out.accept("--- "+main+" exited with "+ec+" after "+elapsed().toSeconds()+"s ---\n");
   }
-  private int await(Supplier<ChildJvm> start){
+  //meanwhile runs every two seconds while the child lives, and once more after it exits.
+  private int await(Supplier<ChildJvm> start, Runnable meanwhile){
     ChildJvm started;
     synchronized(this){ started= start.get(); child= started; }
+    var publishing= CompletableFuture.runAsync(()->publish(meanwhile), worker);
     try{ return started.await(); }
     catch(InterruptedException e){ throw Bug.of(e.toString()); }
-    finally{ synchronized(this){ child= null; } }
+    finally{
+      synchronized(this){ child= null; notifyAll(); }
+      publishing.join();
+    }
+  }
+  private synchronized void publish(Runnable meanwhile){
+    do{
+      if (child != null){ waitOrBug(2000); }
+      meanwhile.run();
+    } while(child != null);
+  }
+  private void waitOrBug(long millis){
+    try{ wait(millis); }
+    catch(InterruptedException e){ throw Bug.of(e.toString()); }
   }
   private static Path stdLib(String name){
     return JavacTool.reqAppDir(Violation::mustUseLauncher).resolve("stdLib").resolve(name);
@@ -128,6 +148,7 @@ public final class ProjectSession{
       "--enable-native-access=Commons,Coordinator",
       "-p", appDir.resolve(JavacTool.deployedModsDirName).toString(),
       "-m", "Coordinator/managerRun.ChildMain",
-      folder.toString());
+      folder.toString(),
+      reports.toString());
   }
 }

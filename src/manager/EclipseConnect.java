@@ -1,5 +1,7 @@
 package manager;
 
+import static java.nio.file.StandardCopyOption.ATOMIC_MOVE;
+
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -10,34 +12,32 @@ import tools.JavacTool;
 import userMessages.Report;
 import userMessages.Violation;
 
+/// The manager's side of the Eclipse plugin (FearlessLang/EclipsePlugin). Eclipse writes
+/// nothing into a project folder: it reads projects.txt and each alias's reports from
+/// dir(), and asks for work through the messages folder named in manager.txt.
 final class EclipseConnect{
   private EclipseConnect(){}
-  static String connect(Path chosen, List<ManagerData.Entry> known){
+  static Path dir(){ return ManagerMain.managerDir.resolve("eclipse"); }
+  static Path reports(String alias){ return dir().resolve(alias); }
+  static String connect(Path chosen){
     var eclipse= chosen.getParent();
     if (!Files.isRegularFile(eclipse.resolve(".eclipseproduct"))){ throw Report.notAnEclipseInstall(eclipse); }
     var plugin= JavacTool.reqAppDir(Violation::mustUseLauncher).resolve("eclipsePlugin");
-    Fs.copyFresh(plugin, eclipse.resolve("dropins").resolve("fearless").resolve("plugins"));
-    known.forEach(e->writeDescription(e.path(), e.alias()));
+    var fearless= eclipse.resolve("dropins").resolve("fearless");
+    Fs.copyFresh(plugin, fearless.resolve("plugins"));
+    Fs.writeUtf8(fearless.resolve("manager.txt"), ManagerMain.msgDir()+"\n"+dir()+"\n");
     return """
 Eclipse is now connected:
 %s
 
-Restart Eclipse, then use File > Open Projects from File System on any project
-folder this manager knows.
+Restart Eclipse: every project this manager knows appears in its workspace,
+and the Fearless menu offers New project, Run and Terminate.
 """.formatted(eclipse);
   }
-  static void writeDescription(Path folder, String alias){
-    var file= folder.resolve(".project");
-    if (Files.exists(file)){ return; }
-    Fs.writeUtf8(file, """
-<?xml version="1.0" encoding="UTF-8"?>
-<projectDescription>
-  <name>%s</name>
-  <comment></comment>
-  <projects></projects>
-  <buildSpec></buildSpec>
-  <natures></natures>
-</projectDescription>
-""".formatted(alias));
+  static void publish(List<ManagerData.Entry> known){
+    var lines= known.stream().map(e->e.alias()+" "+e.path()+"\n").toList();
+    var tmp= dir().resolve("projects.tmp");
+    Fs.writeUtf8(tmp, String.join("",lines));
+    Fs.ofV(()->Files.move(tmp, dir().resolve("projects.txt"), ATOMIC_MOVE));
   }
 }

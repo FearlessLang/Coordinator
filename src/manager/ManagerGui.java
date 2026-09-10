@@ -175,9 +175,14 @@ final class ManagerGui {
   //size) would otherwise restore to that same edge position on every future
   //selection, silently reopening each panel too narrow to see.
   private static final int minPanelWidth= 300;
+  private FolderInfo info(Path folder){
+    return open.computeIfAbsent(folder, f->new FolderInfo(data, f, EclipseConnect.reports(data.entryOf(f).orElseThrow().alias()), worker, this::foldersChangedHere));
+  }
+  void run(Path folder){ SwingUtilities.invokeLater(()->info(folder).compileOrRun()); }
+  void terminate(Path folder){ SwingUtilities.invokeLater(()->info(folder).session().terminate()); }
   private void showFolder(Optional<Path> folder){
     if (folder.isEmpty()){ hidePanel(); return; }
-    shown= open.computeIfAbsent(folder.get(), f->new FolderInfo(data, f, worker, this::foldersChangedHere));
+    shown= info(folder.get());
     shown.reload();
     var where= split.getDividerLocation();
     if (split.getWidth() > 0){ where= Math.min(where, split.getWidth()-minPanelWidth); }
@@ -261,7 +266,7 @@ final class ManagerGui {
     chooser.setAcceptAllFileFilterUsed(false);
     chooser.setDialogTitle("Add a Fearless project folder");
     if (chooser.showOpenDialog(frame) != JFileChooser.APPROVE_OPTION){ return; }
-    worker.execute(()->{ Manager.register(this, data, chooser.getSelectedFile().toString()); foldersChanged(); });
+    worker.execute(()->Manager.register(this, data, chooser.getSelectedFile().toString()));
   }
   private static FileFilter projectFilter(){
     return new FileFilter(){
@@ -279,7 +284,7 @@ final class ManagerGui {
       @Override public boolean importData(TransferSupport support){
         var paths= FolderDrop.pathsOf(support.getTransferable());
         if (paths.isEmpty()){ return false; }
-        worker.execute(()->{ paths.forEach(p->Manager.register(ManagerGui.this,data,p.toString())); foldersChanged(); });
+        worker.execute(()->paths.forEach(p->Manager.register(ManagerGui.this,data,p.toString())));
         return true;
       }
     };
@@ -293,7 +298,7 @@ final class ManagerGui {
   }
   private void tryConnect(Path chosen){
     String done;
-    try{ done= EclipseConnect.connect(chosen, data.registered()); }
+    try{ done= EclipseConnect.connect(chosen); }
     catch(UserError e){ explain(e); return; }
     SwingUtilities.invokeLater(()->JOptionPane.showMessageDialog(frame,done,"Fearless",JOptionPane.INFORMATION_MESSAGE));
   }
@@ -356,14 +361,16 @@ final class ManagerGui {
   }
   private void foldersChangedHere(){
     folders.refresh();
-    var live= data.registered().stream().map(ManagerData.Entry::path).toList();
+    var known= data.registered();
+    EclipseConnect.publish(known);
+    var live= known.stream().map(ManagerData.Entry::path).toList();
     open.values().stream().filter(i->!live.contains(i.folder())).forEach(i->i.session().terminate());
     open.keySet().removeIf(f->!live.contains(f));
     fillRunningMenu();
     if (shown != null && !live.contains(shown.folder())){ hidePanel(); return; }
     fillProjectMenu();
   }
-  void foldersChanged(){ SwingUtilities.invokeLater(folders::refresh); }
+  void foldersChanged(){ SwingUtilities.invokeLater(this::foldersChangedHere); }
   static ManagerGui create(Runnable onQuit, ManagerData data, Executor worker, Consumer<ManagerGui> onForget){
     var result= new AtomicReference<ManagerGui>();
     try {

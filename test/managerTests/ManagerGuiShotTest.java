@@ -95,7 +95,7 @@ final class ManagerGuiShotTest{
     data.setKind(project,Kind.code);
     data.setCompiled(project,System.currentTimeMillis()-3600000);
     data.setRun(project,System.currentTimeMillis()-60000);
-    var shot= shoot(()->new FolderInfo(data,project.toAbsolutePath().normalize(),_->{},()->{}).panel(),720,420,"folderInfo");
+    var shot= shoot(()->new FolderInfo(data,project.toAbsolutePath().normalize(),dir.resolve("reports"),_->{},()->{}).panel(),720,420,"folderInfo");
     assertTrue(colours(shot) > 20, "the facts drew nothing");
   }
   @Test void aFolderWithBrokenNamesOffersItsReport(@TempDir Path dir){
@@ -105,7 +105,7 @@ final class ManagerGuiShotTest{
     Fs.writeUtf8(project.resolve("brokenProject.fearless"),"");
     data.addRegisteredFolder("brokenProject",project);
     data.setKind(project,Kind.code);
-    var shot= shoot(()->new FolderInfo(data,project.toAbsolutePath().normalize(),_->{},()->{}).panel(),720,420,"folderInfoBroken");
+    var shot= shoot(()->new FolderInfo(data,project.toAbsolutePath().normalize(),dir.resolve("reports"),_->{},()->{}).panel(),720,420,"folderInfoBroken");
     assertTrue(colours(shot) > 20);
   }
   @Test void aFolderWithLogsListsThemInTheLogsSection(@TempDir Path dir){
@@ -114,7 +114,7 @@ final class ManagerGuiShotTest{
     Fs.writeUtf8(project.resolve(".out").resolve("logs").resolve("_base").resolve("log$20260904_123456_789Z.log"),"hello\n");
     Fs.writeUtf8(project.resolve("loggedProject.fearless"),"");
     data.addRegisteredFolder("loggedProject",project);
-    var info= onEdtGet(()->new FolderInfo(data,project,_->{},()->{}));
+    var info= onEdtGet(()->new FolderInfo(data,project,dir.resolve("reports"),_->{},()->{}));
     var shot= shoot(info::panel,720,420,"folderInfoWithLogs");
     assertTrue(colours(shot) > 20);
   }
@@ -123,7 +123,7 @@ final class ManagerGuiShotTest{
     var project= FolderFactsTest.project(dir,"idleProject");
     Fs.writeUtf8(project.resolve("idleProject.fearless"),"");
     data.addRegisteredFolder("idleProject",project);
-    var shot= shoot(()->new FolderInfo(data,project.toAbsolutePath().normalize(),_->{},()->{}).panel(),720,420,"folderInfoIdle");
+    var shot= shoot(()->new FolderInfo(data,project.toAbsolutePath().normalize(),dir.resolve("reports"),_->{},()->{}).panel(),720,420,"folderInfoIdle");
     assertTrue(colours(shot) > 20, "the become-buttons drew nothing");
   }
   @Test void aDataReadWriteProjectOffersLinksToRegisteredCodeProjects(@TempDir Path dir){
@@ -136,7 +136,7 @@ final class ManagerGuiShotTest{
     Fs.writeUtf8(code.resolve("mycode.fearless"),"");
     data.addRegisteredFolder("mycode",code);
     data.setKind(code,Kind.code);
-    var shot= shoot(()->new FolderInfo(data,pub.toAbsolutePath().normalize(),_->{},()->{}).panel(),720,420,"folderInfoDataReadWrite");
+    var shot= shoot(()->new FolderInfo(data,pub.toAbsolutePath().normalize(),dir.resolve("reports"),_->{},()->{}).panel(),720,420,"folderInfoDataReadWrite");
     assertTrue(colours(shot) > 20, "the links row drew nothing");
   }
 }

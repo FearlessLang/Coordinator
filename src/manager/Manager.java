@@ -113,17 +113,28 @@ public class Manager {
     }
     catch(IOException e){ throw Violation.couldNotDrainMessageFolder(msgDir, e); }
   }
+  //A message is the folder to select, or a verb, a newline, then the folder.
   static void register(ManagerGui gui, ManagerData data, String message){
-    var folder= projectFolder(message, ManagerMain.managerDir);
+    var nl= message.indexOf('\n');
+    var verb= nl < 0 ? "select" : message.substring(0,nl);
+    var folder= projectFolder(message.substring(nl+1), ManagerMain.managerDir);
     if (folder.isEmpty()){ return; }
     if (!data.isRegistered(folder.get())){
       var nested= data.nestedWith(folder.get());
       if (nested.isPresent()){ gui.explain(Report.folderNestedWithRegistered(folder.get(),nested.get())); return; }
       var alias= gui.nameFolder(data,folder.get());
       Fs.rmTree(folder.get().resolve(FolderFacts.outDir));
+      Fs.rmTree(EclipseConnect.reports(alias));
       data.addRegisteredFolder(alias,folder.get());
+      gui.foldersChanged();
     }
     gui.select(folder.get());
+    switch(verb){
+      case "select" -> {}
+      case "run" -> gui.run(folder.get());
+      case "terminate" -> gui.terminate(folder.get());
+      default -> throw Bug.unreachable();
+    }
   }
   static Optional<Path> projectFolder(String message, Path managerDir){
     var folder= folderOf(message);

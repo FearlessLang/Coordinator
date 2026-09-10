@@ -85,12 +85,12 @@ public final class FolderInfo{
   private final JButton deleteLogButton= small("Delete",this::deleteLog);
   private final Collapsible logs= new Collapsible("Logs",logScroll,false,viewLogButton,copyLogButton,deleteLogButton);
   private FolderFacts facts;
-  public FolderInfo(ManagerData data, Path folder, Executor worker, Runnable onChange){
+  public FolderInfo(ManagerData data, Path folder, Path reports, Executor worker, Runnable onChange){
     this.data= data;
     this.folder= folder;
     this.worker= worker;
     this.onChange= onChange;
-    this.session= new ProjectSession(folder, worker, this::append, this::refreshLater);
+    this.session= new ProjectSession(folder, reports, worker, this::append, this::refreshLater);
     this.facts= FolderFacts.of(folder, currentEntry().kind());
     output.setEditable(false);
     output.setFont(new Font(Font.MONOSPACED,Font.PLAIN,13));
@@ -391,6 +391,9 @@ public final class FolderInfo{
   }
   private void onAction(){
     if (session.running().isPresent()){ session.terminate(); return; }
+    compileOrRun();
+  }
+  public void compileOrRun(){
     if (currentEntry().kind() != Kind.code){ check(); return; }
     if (!facts.cacheUpToDate()){ compile(); return; }
     run();
@@ -414,9 +417,8 @@ public final class FolderInfo{
   }
   private void run(){
     information.setOpen(false);
-    var chosen= selectedMains();
     changed(d->d.setRun(folder,System.currentTimeMillis()));
-    session.run(chosen);
+    session.run(currentEntry().mains());
   }
   public void clearCache(){
     Fs.rmTree(folder.resolve(FolderFacts.outDir));

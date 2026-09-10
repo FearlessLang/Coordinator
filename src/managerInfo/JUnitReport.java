@@ -14,11 +14,11 @@ import tools.Fs;
 public final class JUnitReport{
   private JUnitReport(){}
   private static final Pattern disabled= Pattern.compile("(?m)^PLAN\\|DISABLED\\|([^|\\r\\n]*)\\|([^|\\r\\n]*)\\|([^|\\r\\n]*)\\|([^|\\r\\n]*)$");
-  public static Path file(Path folder){ return folder.resolve(FolderFacts.runDir).resolve("eclipse").resolve("junit_xml").resolve("report.xml"); }
-  public static void write(Path folder, String name, Instant since){
+  public static Path file(Path reports){ return reports.resolve("report.xml"); }
+  public static void write(Path reports, Path folder, String name, Instant since){
     var log= newest(folder).filter(e->e.when().isAfter(since));
     if (log.isEmpty()){ return; }
-    Fs.writeUtf8(file(folder), document(suiteOf(name, log.get().path())));
+    Fs.writeUtf8(file(reports), document(suiteOf(name, log.get().path())));
   }
   public static String suite(String name, Path folder){
     return newest(folder).map(e->suiteOf(name, e.path())).orElse("");
