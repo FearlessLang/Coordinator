@@ -18,6 +18,7 @@ import tools.Fs;
 import tools.SourceOracle;
 import tools.SourceOracle.Ref;
 import tools.SourceOracle.RefParent;
+import utils.Range;
 record Tree(
   Path root,
   ArrayList<Ref> visibleFiles,
@@ -129,7 +130,7 @@ public final class BuildWithZip{
     char c0= atom.charAt(0);
     var letterOr_= c0 == '_' || ('a' <= c0 && c0 <= 'z');
     if (!letterOr_){ throw Report.visibleMustStartWithLetterOrUnderscore(kid); }
-    for (int i= 1; i < atom.length(); i++){
+    for (int i : Range.of(1,atom.length())){
       char c= atom.charAt(i);
       boolean ok= ('a' <= c && c <= 'z') || ('0' <= c && c <= '9') || c == '_';
       if (!ok){ throw Report.visibleInvalidChar(kid, c); }
@@ -147,7 +148,7 @@ public final class BuildWithZip{
   private static void checkExtSeg(RefParent kid, String seg){
     int n= seg.length();
     if (n < 1 || n > 16){ throw Report.extLenMustBe1To16(kid); }
-    for (int i= 0; i < n; i++){
+    for (int i : Range.of(0,n)){
       char c= seg.charAt(i);
       boolean ok= ('a' <= c && c <= 'z') || ( '0' <= c && c <= '9' );
       if (!ok){ throw Report.extInvalidChar(kid, c); }

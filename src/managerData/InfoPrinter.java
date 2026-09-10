@@ -1,5 +1,7 @@
 package managerData;
 
+import utils.Range;
+
 public final class InfoPrinter{
   private InfoPrinter(){}
   public static String print(Info info){
@@ -16,7 +18,7 @@ public final class InfoPrinter{
   }
   private static void writeList(Info.Lst l, StringBuilder sb){
     sb.append('[');
-    for (int i= 0; i < l.items().size(); i+= 1){
+    for (int i : Range.of(l.items())){
       if (i > 0){ sb.append(", "); }
       write(l.items().get(i),0,sb);
     }
@@ -26,7 +28,7 @@ public final class InfoPrinter{
     if (o.fields().isEmpty()){ sb.append("{}"); return; }
     sb.append("{\n");
     var pad= "  ".repeat(indent+1);
-    for (int i= 0; i < o.fields().size(); i+= 1){
+    for (int i : Range.of(o.fields())){
       var f= o.fields().get(i);
       sb.append(pad);
       quote(f.key(),sb);
@@ -39,7 +41,7 @@ public final class InfoPrinter{
   }
   private static void quote(String value, StringBuilder sb){
     sb.append('"');
-    for (int i= 0; i < value.length(); i+= 1){
+    for (int i : Range.of(0,value.length())){
       char c= value.charAt(i);
       switch(c){
         case '"' -> sb.append("\\\"");

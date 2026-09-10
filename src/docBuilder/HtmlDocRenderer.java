@@ -17,6 +17,7 @@ import java.util.stream.Stream;
 import core.*;
 import core.E.*;
 import utils.Pos;
+import utils.Range;
 
 final class HtmlDocRenderer{
   HtmlDocRenderer(String pkgName, Map<String,String> uses, List<TypeDoc> types, OtherPackages other,
@@ -109,7 +110,7 @@ final class HtmlDocRenderer{
     var sb= new StringBuilder(4_000);
     aliases.forEach((alias,full)->sb.append("use ").append(full).append(" as ").append(alias).append(";\n"));
     sb.append('\n');
-    for (int i= 0; i < shown.size(); i += 1){
+    for (int i : Range.of(shown)){
       sb.append(names.perType().get(i)).append(": Test {::\n");
       for (var m: visibleMethods(shown.get(i))){
         var examples= m.docs.stream().filter(d->d.example() || d.testOnly()).map(DocOcc::text).toList();
@@ -398,7 +399,7 @@ code{
     var refs= fromRefs(m);
     if (refs.isEmpty()){ return; }
     sb.append("<p class=\"doc from\">From: ");
-    for (int i= 0; i < refs.size(); i += 1){
+    for (int i : Range.of(refs)){
       if (i > 0){ sb.append(", "); }
       var r= refs.get(i);
       sb.append("<a href=\"")
@@ -629,7 +630,7 @@ code{
 
   static String id(String s){
     var sb= new StringBuilder(s.length()*2);
-    for (int i= 0; i < s.length(); i += 1){
+    for (int i : Range.of(0,s.length())){
       var c= s.charAt(i);
       if (c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9'){ sb.append(c); }
       else{ sb.append('_').append(Integer.toHexString(c)).append('_'); }

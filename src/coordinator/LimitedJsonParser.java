@@ -21,6 +21,7 @@ import core.T;
 import core.TName;
 import core.TSpan;
 import utils.Pos;
+import utils.Range;
 
 final class LimitedJsonParser{
   private final String s;
@@ -94,7 +95,7 @@ final class LimitedJsonParser{
     if (a.size() < 2){ throw err("Bad B"); }
     var x= asStr(a.get(0));
     var rcs= EnumSet.noneOf(RC.class);
-    for (int j= 1; j < a.size(); j += 1){ rcs.add(RC.valueOf(asStr(a.get(j)))); }
+    for (int j : Range.of(1,a.size())){ rcs.add(RC.valueOf(asStr(a.get(j)))); }
     if (rcs.isEmpty()){ throw err("Empty B.rcs"); }
     return new B(x, rcs);
   }
