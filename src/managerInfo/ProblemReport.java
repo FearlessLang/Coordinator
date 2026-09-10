@@ -11,8 +11,8 @@ import tools.Fs;
 public final class ProblemReport{
   private ProblemReport(){}
   private static final Pattern at= Pattern.compile("(?m)^In file: fear:/(\\S+)\\n\\n(\\d+)\\| ");
-  public static Path file(Path folder){ return folder.resolve(FolderFacts.runDir).resolve("eclipse").resolve("problems.txt"); }
-  public static void write(Path folder, String message){ Fs.writeUtf8(file(folder), body(message)); }
+  public static Path file(Path reports){ return reports.resolve("problems.txt"); }
+  public static void write(Path reports, String message){ Fs.writeUtf8(file(reports), body(message)); }
   private static String body(String message){
     var m= at.matcher(message);
     return m.find() ? m.group(1)+"\n"+m.group(2)+"\n"+message : "";

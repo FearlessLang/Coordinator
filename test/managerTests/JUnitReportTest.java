@@ -50,20 +50,20 @@ Assertion failure.
   }
   @Test void writingWrapsTheSuiteInAJUnitDocument(@TempDir Path project){
     writeLog(project,"20260904_012117_731Z",log);
-    JUnitReport.write(project,"demo",Instant.parse("2026-09-03T00:00:00Z"));
+    JUnitReport.write(project,project,"demo",Instant.parse("2026-09-03T00:00:00Z"));
     var xml= Fs.readUtf8(JUnitReport.file(project));
     assertTrue(xml.startsWith("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<testsuites>\n"), xml);
     assertTrue(xml.endsWith("</testsuites>\n"), xml);
   }
   @Test void aRunThatLoggedNoUnitTestsReportsNothing(@TempDir Path project){
     assertEquals("", JUnitReport.suite("demo", project));
-    JUnitReport.write(project,"demo",Instant.parse("2026-09-03T00:00:00Z"));
+    JUnitReport.write(project,project,"demo",Instant.parse("2026-09-03T00:00:00Z"));
     assertFalse(Files.exists(JUnitReport.file(project)));
   }
   //A main that runs no unit tests must not republish the log some earlier run left behind
   @Test void aLogOlderThanThisRunIsNotReported(@TempDir Path project){
     writeLog(project,"20260904_012117_731Z",log);
-    JUnitReport.write(project,"demo",Instant.parse("2026-09-05T00:00:00Z"));
+    JUnitReport.write(project,project,"demo",Instant.parse("2026-09-05T00:00:00Z"));
     assertFalse(Files.exists(JUnitReport.file(project)));
   }
 }

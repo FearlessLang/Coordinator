@@ -11,9 +11,11 @@ import core.OtherPackages;
 import core.E.Literal;
 import docBuilder.HtmlDocBuilder;
 import fileSupport.NativeLocaleForcer;
+import managerInfo.FolderFacts;
 import managerInfo.ProblemReport;
 import naiveBackend.BackendTools;
 import tools.ChildJvm;
+import tools.Fs;
 import tools.JavacTool;
 import tools.SourceOracle;
 import userMessages.UserError;
@@ -24,15 +26,17 @@ public class ChildMain{
     NativeLocaleForcer.forceEnglish();
     ChildJvm.watchParent();
     var project= Path.of(args[0]);
-    //Clears the previous problem; also puts .out in place before the compile stamps
-    //.fearless_out, so the project root's mtime cannot end up newer than that stamp.
-    ProblemReport.write(project, "");
+    var reports= Path.of(args[1]);
+    ProblemReport.write(reports, "");
+    //Puts .out in place before the compile stamps .fearless_out, so the project
+    //root's mtime cannot end up newer than that stamp.
+    Fs.ensureDir(project.resolve(FolderFacts.runDir));
     var exitCode= 0;
     var problem= "";
     try{ compile(project); }
     catch(UserError e){ exitCode= 1; problem= e.getMessage(); System.err.print(problem); }
     catch(Throwable t){ exitCode= 2; System.err.print(UserError.crash(t)); }
-    ProblemReport.write(project, problem);
+    ProblemReport.write(reports, problem);
     System.out.flush();
     System.err.flush();
     System.exit(exitCode);
