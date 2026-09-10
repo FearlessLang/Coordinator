@@ -5,7 +5,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 
-import core.E.Literal;
 import tools.Fs;
 import tools.JavacTool;
 

@@ -398,10 +398,9 @@ final class RecompilationCacheTest{
   }
 
   private static final class RecordingCoordinator implements Coordinator{
-    private final Path stdLib;
     private final Path mods;
     final Map<String,Integer> frontendCalls= new LinkedHashMap<>();
-    RecordingCoordinator(Path stdLib, Path mods){ this.stdLib= stdLib; this.mods= mods; }
+    RecordingCoordinator(Path stdLib, Path mods){ this.mods= mods; }
     @Override public Path modsPath(){ return mods; }
     @Override public String runAllMains(String pkgName, OutputOracle out){ return ""; }
     @Override public List<Literal> frontend(String pkgName, List<Ref> files, SourceOracle oracle, OtherPackages other, Map<String,String> vres){

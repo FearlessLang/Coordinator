@@ -67,7 +67,6 @@ public class NativeLocaleForcer {
   // char* setlocale(int category, const char* locale);
   // Returns NULL when the request is rejected; per the fail-loudly policy (and unlike
   // the old Os version, which never looked at the result) NULL is now an Error.
-  @SuppressWarnings("restricted")
   private static void setCLocale(int lcAll) throws Throwable {
     MethodHandle setlocale= LINKER.downcallHandle(
       LINKER.defaultLookup().findOrThrow("setlocale"),
@@ -77,7 +76,6 @@ public class NativeLocaleForcer {
       if (MemorySegment.NULL.equals(res)){ throw Violation.couldNotForceEnglish("The C runtime rejected setlocale(LC_ALL, \"C\")"); }
     }
   }
-  @SuppressWarnings("restricted")
   private static void forceWindowsUiLanguage() throws Throwable {
     var kernel32= SymbolLookup.libraryLookup("kernel32.dll", Arena.global());
     var captureLastError= Linker.Option.captureCallState("GetLastError");

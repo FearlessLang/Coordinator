@@ -26,7 +26,7 @@ final class StringFilesTest{
     Files.write(file, bytes);
     var captured= new Box<String>(null);
     assertThrows(Marker.class, ()->
-      StringFiles.read(file, (actionTxt,reportTxt)-> { captured.set(actionTxt); throw new Marker(); }));
+      StringFiles.read(file, (actionTxt,_)-> { captured.set(actionTxt); throw new Marker(); }));
     var msg= captured.get();
     assertTrue(msg.contains("..."), msg);
     assertTrue(msg.codePoints().allMatch(cp-> cp < 128 && Fs.allowed.indexOf((char)cp) >= 0), msg);
