@@ -3,14 +3,12 @@ package mainCoordinator;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import java.io.PrintStream;
 import java.nio.file.Path;
-
 import java.util.List;
 
 import coordinator.CapabilityEnvironment;
 import coordinator.Coordinator;
-import core.OtherPackages;
 import core.E.Literal;
-import docBuilder.HtmlDocBuilder;
+import core.OtherPackages;
 import naiveBackend.BackendTools;
 import realSourceOracle.RealSourceOracleWithZip;
 import userMessages.UserError;
@@ -44,10 +42,8 @@ public record ProgrammaticMain(StringBuilder out, StringBuilder err,String fName
     var oracle= SourceOracle.debugBuilder().put(fName,code).build();
     var c= new Coordinator(){
       @Override public SourceOracle sourceOracle(Path path){ return oracle; }
-      @Override public BackendTools backendTools(String pkgName, SourceOracle o, OtherPackages other, List<Literal> core, Path rootDir, CapabilityEnvironment capabilities){
-        var docs= new HtmlDocBuilder(o,other,core,baseCachePath().map(p->p.resolve("base.html")));
-        docs.packageLocation(pkgName, rootDir.resolve("gen_java",pkgName+".html"), rootDir.getParent().resolve("auto_tests","_"+pkgName,pkgName+"_test.fear"));
-        return BackendTools.of(pkgName, core, rootDir, docs, stdRt, capabilities);
+      @Override public BackendTools backendTools(String pkgName, SourceOracle o, OtherPackages other, List<Literal> core, CapabilityEnvironment capabilities){
+        return BackendTools.of(pkgName, o, other, core, dest.resolve(Coordinator.outDir), baseCachePath(), stdRt, capabilities);
       }
     };
     c.main(dest, new RealSourceOracleWithZip(stdLib));

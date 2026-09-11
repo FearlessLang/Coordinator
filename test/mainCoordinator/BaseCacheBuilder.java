@@ -11,7 +11,6 @@ import coordinator.Coordinator;
 import coordinator.OutputOracle;
 import core.E.Literal;
 import core.OtherPackages;
-import docBuilder.HtmlDocBuilder;
 import naiveBackend.BackendTools;
 import tools.Fs;
 import tools.SourceOracle;
@@ -34,17 +33,16 @@ public final class BaseCacheBuilder{
     try{
       var c= new Coordinator(){
         @Override public Path modsPath(){ return modsDir; }
-        @Override public BackendTools backendTools(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, Path rootDir, CapabilityEnvironment capabilities){
-          var docs= new HtmlDocBuilder(oracle,other,core,baseCachePath().map(p->p.resolve("base.html")));
-          docs.packageLocation(pkgName, rootDir.resolve("gen_java",pkgName+".html"), testFileDest.orElseGet(()->scratch.resolve("_discardedTest","_discardedTest.fear")));
-          return BackendTools.of(pkgName, core, rootDir, docs, ResolveResource.stLibRTPath, capabilities);
+        @Override public BackendTools backendTools(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, CapabilityEnvironment capabilities){
+          var dest= testFileDest.orElseGet(()->scratch.resolve("_discardedTest","_discardedTest.fear"));
+          return BackendTools.of(pkgName, oracle, other, core, scratch, baseCachePath(), dest, ResolveResource.stLibRTPath, capabilities);
         }
       };
       OutputOracle out= ()->scratch;
       var other= OtherPackages.empty();
       SourceOracle o= c.sourceOracle(ResolveResource.stLibPath);
       List<Literal> core= c.frontend(pkgName, o.allFiles(), o, other, Map.of());
-      c.backend(pkgName, core, o, other, out, new CapabilityEnvironment(List.of()));
+      c.backend(pkgName, core, o, other, new CapabilityEnvironment(List.of()));
       out.commitPkgApi(pkgName, core, -1);
       var baseCache= stdLibDir.resolve("baseCache");
       Fs.copyFresh(scratch.resolve("base.json"), baseCache.resolve("base.json"));

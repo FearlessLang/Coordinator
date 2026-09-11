@@ -35,7 +35,7 @@ record MiddleLayer(Coordinator coordinator, Layer next, LinkedHashMap<String,Lis
         var rich= SourceOracleWithAutoload.of(src, "_"+pkg);
         var srcs= Push.of(files.stream().filter(f->f.fearPath().endsWith(".fear")).toList(),rich.newRefs());
         List<Literal> core= coordinator.frontend(pkg, srcs, rich.oracle(), other,other.virtualizationMap().getOrDefault(pkg,Map.of()));
-        coordinator.backend(pkg, core, rich.oracle(), other, out, new CapabilityEnvironment(rich.autoloadedAssets()));
+        coordinator.backend(pkg, core, rich.oracle(), other, new CapabilityEnvironment(rich.autoloadedAssets()));
         long newStamp= out.commitPkgApi(pkg, core, maxIn); // newStamp will be the old api file mtime if there was no reason to commit.
         out.commitBuilt(pkg, files, maxIn);
         var map= AllLs.of(core).values().stream().collect(Collectors.toUnmodifiableMap (Literal::name, d->d));
@@ -55,7 +55,7 @@ record BaseLayer(Coordinator coordinator, Map<String,Map<String,String>> map, lo
     var stillCached= out.stillBuilt(pkgName, stLib.allFiles(), maxIn);
     if (stillCached){ return out.startCachedPkgApi(pkgName,map,Math.max(baseStamp,out.pkgApiStamp(pkgName))); }
     List<Literal> core= coordinator.frontend(pkgName,stLib.allFiles(),stLib,other,Map.of());
-    coordinator.backend(pkgName,core,stLib,other,out,new CapabilityEnvironment(List.of()));
+    coordinator.backend(pkgName,core,stLib,other,new CapabilityEnvironment(List.of()));
     long newStamp= out.commitPkgApi(pkgName, core, maxIn);
     out.commitBuilt(pkgName, stLib.allFiles(), maxIn);
     return OtherPackages.start(map, AllLs.of(core).values(), Math.max(baseStamp,newStamp));

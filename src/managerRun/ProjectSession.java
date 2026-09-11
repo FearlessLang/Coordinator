@@ -12,9 +12,8 @@ import java.util.function.Supplier;
 
 import coordinator.CapabilityEnvironment;
 import coordinator.Coordinator;
-import core.OtherPackages;
 import core.E.Literal;
-import docBuilder.HtmlDocBuilder;
+import core.OtherPackages;
 import managerInfo.JUnitReport;
 import naiveBackend.BackendTools;
 import tools.ChildJvm;
@@ -83,13 +82,11 @@ public final class ProjectSession{
     catch(UserError _){ res= Optional.empty(); }
     synchronized(this){ mains= res; }
   }
-  private static Coordinator appCoordinator(){
+  private Coordinator appCoordinator(){
     return new Coordinator(){
       @Override public Optional<Path> baseCachePath(){ return Optional.of(stdLib("baseCache")); }
-      @Override public BackendTools backendTools(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, Path rootDir, CapabilityEnvironment capabilities){
-        var docs= new HtmlDocBuilder(oracle,other,core,baseCachePath().map(p->p.resolve("base.html")));
-        docs.packageLocation(pkgName, rootDir.resolve("gen_java",pkgName+".html"), rootDir.getParent().resolve("auto_tests","_"+pkgName,pkgName+"_test.fear"));
-        return BackendTools.of(pkgName, core, rootDir, docs, stdLib("rt"), capabilities);
+      @Override public BackendTools backendTools(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, CapabilityEnvironment capabilities){
+        return BackendTools.of(pkgName, oracle, other, core, folder.resolve(Coordinator.outDir), baseCachePath(), stdLib("rt"), capabilities);
       }
     };
   }

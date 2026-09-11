@@ -27,9 +27,8 @@ import javax.swing.SwingUtilities;
 
 import coordinator.CapabilityEnvironment;
 import coordinator.Coordinator;
-import core.OtherPackages;
 import core.E.Literal;
-import docBuilder.HtmlDocBuilder;
+import core.OtherPackages;
 import fileAssociations.FileAssociations;
 import fileAssociations.Icon;
 import naiveBackend.BackendTools;
@@ -70,10 +69,8 @@ public final class Main{
   public static void run(Path project, Path base, Path rt) throws InvocationTargetException, InterruptedException, ExecutionException{
     var c= new Coordinator(){
       @Override public Optional<Path> baseCachePath(){ return Optional.of(base.getParent().resolve("baseCache")); }
-      @Override public BackendTools backendTools(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, Path rootDir, CapabilityEnvironment capabilities){
-        var docs= new HtmlDocBuilder(oracle,other,core,baseCachePath().map(p->p.resolve("base.html")));
-        docs.packageLocation(pkgName, rootDir.resolve("gen_java",pkgName+".html"), rootDir.getParent().resolve("auto_tests","_"+pkgName,pkgName+"_test.fear"));
-        return BackendTools.of(pkgName, core, rootDir, docs, rt, capabilities);
+      @Override public BackendTools backendTools(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, CapabilityEnvironment capabilities){
+        return BackendTools.of(pkgName, oracle, other, core, project.resolve(Coordinator.outDir), baseCachePath(), rt, capabilities);
       }
     };
     c.main(project, c.sourceOracle(base));
