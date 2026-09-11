@@ -120,6 +120,15 @@ Other rules (everywhere)
   }
 
   //-- the project folder itself
+  public static UserError launchPathNotFound(Path given){ return new UserError("""
+Nothing exists at the given path.
+
+Path:
+%s
+
+Start Fearless on an existing project folder, or on a file inside one.
+""".formatted(path(given.toString())));
+  }
   public static UserError rootNotDirectory(){
     return fail(".",
       "Problem: root is not a directory.",

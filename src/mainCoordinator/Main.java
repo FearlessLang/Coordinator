@@ -4,6 +4,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 
 import java.awt.Desktop;
 import java.awt.Font;
+import java.awt.GraphicsEnvironment;
 import java.awt.Taskbar;
 import java.io.PrintStream;
 import java.lang.reflect.InvocationTargetException;
@@ -32,6 +33,7 @@ import core.OtherPackages;
 import fileAssociations.FileAssociations;
 import fileAssociations.Icon;
 import naiveBackend.BackendTools;
+import userMessages.Report;
 import userMessages.UserError;
 import userMessages.Violation;
 import tools.Fs;
@@ -61,6 +63,7 @@ public final class Main{
     }          
     if (launch.isEmpty()){ InitialSupportGuiMain.main(new String[]{}); return; }
     Path l= launch.get();
+    if (!Files.exists(l)){ throw Report.launchPathNotFound(l); }
     var project= Files.isDirectory(l) ? l : l.getParent();
     var base= appDir.resolve("stdLib").resolve("base");
     var rt= appDir.resolve("stdLib").resolve("rt");
@@ -135,7 +138,10 @@ public final class Main{
     frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
     frame.add(new JScrollPane(area));
     frame.pack();
-    frame.setLocationByPlatform(true);
+    var screen= GraphicsEnvironment.getLocalGraphicsEnvironment().getMaximumWindowBounds();
+    var pref= frame.getSize();
+    frame.setSize(Math.min(pref.width, screen.width), Math.min(pref.height, screen.height));
+    frame.setLocationRelativeTo(null);
     return s->SwingUtilities.invokeLater(() -> {
       if (!frame.isVisible()){ frame.setVisible(true); }
       area.append(s);
