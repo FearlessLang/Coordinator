@@ -28,6 +28,7 @@ import managerData.ManagerData;
 import managerIcons.BadgeIcon;
 import managerIcons.FolderIcon;
 import managerInfo.FolderFacts;
+import utils.Range;
 
 @SuppressWarnings("serial")
 public final class FolderList extends JPanel{
@@ -113,7 +114,7 @@ public final class FolderList extends JPanel{
     syncSpinner();
   }
   public void updateFreshness(Path folder, long modified, boolean upToDate){
-    for(int i= 0; i < model.size(); i+= 1){
+    for(int i : Range.of(0,model.size())){
       var row= model.get(i);
       if (!row.entry().path().equals(folder)){ continue; }
       if (row.state() == State.codeInvalid || row.state() == State.dataInvalid){ return; }
@@ -133,7 +134,7 @@ public final class FolderList extends JPanel{
   }
   public void sortBy(Sort order){ sort.setSelectedItem(order); }
   public void select(Path folder){
-    for(int i= 0; i < model.size(); i+= 1){
+    for(int i : Range.of(0,model.size())){
       if (!model.get(i).entry().path().equals(folder)){ continue; }
       list.setSelectedIndex(i);
       list.ensureIndexIsVisible(i);

@@ -29,6 +29,7 @@ import tools.JavacTool;
 import tools.SourceOracle;
 import tools.SourceOracle.Ref;
 import utils.Push;
+import utils.Range;
 
 public interface Coordinator {
   default String runAllMains(String pkgName,OutputOracle out) throws InterruptedException{
@@ -160,7 +161,7 @@ class Helper{
     var name= u.toString();
     if(!u.toString().endsWith(".fear")){ throw Report.projectMalformedRankFileName(u); }
     var stem= Fs.fileNameWithoutExtension(name);
-    for(int i=0;i<ranks.size();i++){
+    for(int i : Range.of(ranks)){
       var pref= ranks.get(i);
       int base= (i+1)*1000;
       if(stem.equals(pref)){ return base+999; } // shortcut: _rank_app.fear == _rank_app999.fear

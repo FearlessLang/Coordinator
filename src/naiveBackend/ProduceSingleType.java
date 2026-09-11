@@ -2,6 +2,7 @@ package naiveBackend;
 
 import core.*;
 import core.E.*;
+import utils.Range;
 import utils.Streams;
 
 record ProduceBody(BytecodeLineFix sb, Backend b, String iface, String thisName, M m){
@@ -45,7 +46,7 @@ record ProduceBody(BytecodeLineFix sb, Backend b, String iface, String thisName,
     sb.a(".").a(b.mangledMethodName(c.rc(), c.name()),c.pos());//Is this the right point? the line with the method name?
     //What exactly counts as 'the line of the method call' in Java? we can have a method call spanning many lines!
     sb.a("(\n");
-    for (int i= 0; i < c.es().size(); i++){
+    for (int i : Range.of(c.es())){
       emitE(c.es().get(i));
       if (i != c.es().size() - 1){ sb.a(",\n"); }
     }

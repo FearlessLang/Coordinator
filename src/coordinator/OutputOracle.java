@@ -5,6 +5,7 @@ import java.nio.file.Path;
 import java.util.Map;
 import java.util.Optional;
 import utils.Join;
+import utils.Range;
 import java.io.BufferedWriter;
 import java.util.List;
 import java.util.function.Consumer;
@@ -114,7 +115,7 @@ class OutputHelper{
   }
   private static boolean eqMs(List<M> a, List<M> b){
     if (a.size() != b.size()){ return false; }
-    for (int i= 0; i < a.size(); i += 1){
+    for (int i : Range.of(a)){
       if (!a.get(i).sig().equals(b.get(i).sig())){ return false; }
     }
     return true;

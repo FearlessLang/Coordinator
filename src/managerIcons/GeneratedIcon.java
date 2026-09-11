@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Random;
 import java.util.stream.IntStream;
+import utils.Range;
 
 final class GeneratedIcon{
   private GeneratedIcon(){}
@@ -33,7 +34,7 @@ final class GeneratedIcon{
     int[] at= {0,half};
     int[] len= {half,size-half};
     var bevel= Math.max(1,size/16);
-    for (int i= 0; i < 4; i++){
+    for (int i : Range.of(0,4)){
       tile(g,colors.get(i),at[i%2],at[i/2],len[i%2],len[i/2],bevel);
     }
   }
@@ -80,13 +81,13 @@ final class GeneratedIcon{
     var w= img.getWidth();
     var h= img.getHeight();
     var core= new boolean[w][h];
-    for (int x= 0; x < w; x++){
-      for (int y= 0; y < h; y++){ core[x][y]= alpha(mask,x,y) >= 128; }
+    for (int x : Range.of(0,w)){
+      for (int y : Range.of(0,h)){ core[x][y]= alpha(mask,x,y) >= 128; }
     }
     var ring1= dilate(core,w,h);
     var ring2= dilate(ring1,w,h);
-    for (int x= 0; x < w; x++){
-      for (int y= 0; y < h; y++){
+    for (int x : Range.of(0,w)){
+      for (int y : Range.of(0,h)){
         if (core[x][y]){ continue; }
         if (ring1[x][y]){ img.setRGB(x,y,Color.white.getRGB()); }
         else if (ring2[x][y]){ img.setRGB(x,y,blend(new Color(img.getRGB(x,y)),Color.white).getRGB()); }
@@ -99,14 +100,14 @@ final class GeneratedIcon{
   }
   private static boolean[][] dilate(boolean[][] mask, int w, int h){
     var res= new boolean[w][h];
-    for (int x= 0; x < w; x++){
-      for (int y= 0; y < h; y++){ res[x][y]= mask[x][y] || hasSetNeighbour(mask,x,y,w,h); }
+    for (int x : Range.of(0,w)){
+      for (int y : Range.of(0,h)){ res[x][y]= mask[x][y] || hasSetNeighbour(mask,x,y,w,h); }
     }
     return res;
   }
   private static boolean hasSetNeighbour(boolean[][] mask, int x, int y, int w, int h){
-    for (int dx= -1; dx <= 1; dx++){
-      for (int dy= -1; dy <= 1; dy++){
+    for (int dx : Range.of(-1,2)){
+      for (int dy : Range.of(-1,2)){
         var nx= x+dx;
         var ny= y+dy;
         if (nx >= 0 && nx < w && ny >= 0 && ny < h && mask[nx][ny]){ return true; }

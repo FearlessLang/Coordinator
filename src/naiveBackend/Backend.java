@@ -13,6 +13,7 @@ import core.E.*;
 import tools.Fs;
 import utils.Join;
 import utils.Pos;
+import utils.Range;
 
 public class Backend{
   public Backend(Path out, BackendTools tools){
@@ -139,7 +140,7 @@ public class Backend{
   String typeName(TName n){ return encodeTrailingPrimes(n.s())+"$"+caseTag(n.simpleName())+"$"+n.arity(); }
   static String caseTag(String s){
     var bits= new StringBuilder("1");
-    for (int i= 0; i < s.length(); i++){
+    for (int i : Range.of(0,s.length())){
       char c= s.charAt(i);
       if ('A' <= c && c <= 'Z'){ bits.append('1'); }
       if ('a' <= c && c <= 'z'){ bits.append('0'); }
@@ -180,7 +181,7 @@ public class Backend{
   }
   String mangleOp(String op){
     var sb= new StringBuilder(op.length()*6);
-    for (int i= 0; i < op.length(); i += 1){
+    for (int i : Range.of(0,op.length())){
       if (i>0){ sb.append('_'); }
       sb.append(opTok(op.charAt(i)));
     }

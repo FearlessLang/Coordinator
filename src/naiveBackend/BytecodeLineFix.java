@@ -15,6 +15,7 @@ import java.util.HashMap;
 import java.util.function.Consumer;
 import tools.Fs;
 import utils.Pos;
+import utils.Range;
 
 final class BytecodeLineFix implements Consumer<Path>{
   StringBuilder sb= new StringBuilder(8_000);
@@ -42,7 +43,7 @@ final class BytecodeLineFix implements Consumer<Path>{
     return a(s);
   }
   private void advanceLines(String s){
-    for (int i= 0; i < s.length(); i++){
+    for (int i : Range.of(0,s.length())){
       if (s.charAt(i) == '\n'){ javaLine++; }
     }
   }
