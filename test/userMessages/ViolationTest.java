@@ -142,19 +142,19 @@ If this keeps happening, report the problem.
 """, Violation.cacheMissingBaseApiFile(apiJson).getMessage());
   }
   @Test void multipleIcons(){
-    var dir= Path.of("C:\\Users\\ada\\projects\\myproject\\.icons");
-    var found= List.of(Path.of("C:\\Users\\ada\\projects\\myproject\\.icons\\logo.png"), Path.of("C:\\Users\\ada\\projects\\myproject\\.icons\\logo_v2.png"));
+    var dir= Path.of("C:","Users","ada","projects","myproject",".icons");
+    var found= List.of(dir.resolve("logo.png"), dir.resolve("logo_v2.png"));
     utils.Err.strCmp("""
 More than one .png file was found for this project's icon.
 
 Looked in:
-  C:\\Users\\ada\\projects\\myproject\\.icons
+  %s
 
 Found:
   logo.png
   logo_v2.png
 
-Keep exactly one .png file there.""", Violation.multipleIcons(dir, found).getMessage());
+Keep exactly one .png file there.""".formatted(dir), Violation.multipleIcons(dir, found).getMessage());
   }
 
   @Test void couldNotCreateManagerFolder(){
