@@ -10,10 +10,15 @@ import java.util.concurrent.Executor;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
+import coordinator.CapabilityEnvironment;
 import coordinator.Coordinator;
+import core.E.Literal;
+import core.OtherPackages;
 import managerInfo.JUnitReport;
+import naiveBackend.BackendTools;
 import tools.ChildJvm;
 import tools.JavacTool;
+import tools.SourceOracle;
 import userMessages.UserError;
 import userMessages.Violation;
 import utils.Bug;
@@ -80,7 +85,9 @@ public final class ProjectSession{
   private static Coordinator appCoordinator(){
     return new Coordinator(){
       @Override public Optional<Path> baseCachePath(){ return Optional.of(stdLib("baseCache")); }
-      @Override public Path rtPath(){ return stdLib("rt"); }
+      @Override public BackendTools backendTools(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, Path rootDir, CapabilityEnvironment capabilities){
+        return BackendTools.of(pkgName, oracle, other, core, rootDir, baseCachePath(), stdLib("rt"), capabilities);
+      }
     };
   }
   private void doCompile(){

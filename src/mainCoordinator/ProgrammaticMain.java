@@ -3,8 +3,13 @@ package mainCoordinator;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import java.io.PrintStream;
 import java.nio.file.Path;
+import java.util.List;
 
+import coordinator.CapabilityEnvironment;
 import coordinator.Coordinator;
+import core.E.Literal;
+import core.OtherPackages;
+import naiveBackend.BackendTools;
 import realSourceOracle.RealSourceOracleWithZip;
 import userMessages.UserError;
 import tools.SourceOracle;
@@ -37,7 +42,9 @@ public record ProgrammaticMain(StringBuilder out, StringBuilder err,String fName
     var oracle= SourceOracle.debugBuilder().put(fName,code).build();
     var c= new Coordinator(){
       @Override public SourceOracle sourceOracle(Path path){ return oracle; }
-      @Override public Path rtPath(){ return stdRt; }
+      @Override public BackendTools backendTools(String pkgName, SourceOracle o, OtherPackages other, List<Literal> core, Path rootDir, CapabilityEnvironment capabilities){
+        return BackendTools.of(pkgName, o, other, core, rootDir, baseCachePath(), stdRt, capabilities);
+      }
     };
     c.main(dest, new RealSourceOracleWithZip(stdLib));
   }

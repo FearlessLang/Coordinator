@@ -24,9 +24,13 @@ import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
 
+import coordinator.CapabilityEnvironment;
 import coordinator.Coordinator;
+import core.E.Literal;
+import core.OtherPackages;
 import mainCoordinator.BaseCacheBuilder;
 import mainCoordinator.ResolveResource;
+import naiveBackend.BackendTools;
 import realSourceOracle.RealSourceOracleWithZip;
 import realSourceOracle.SourceOracleWithAutoload;
 import testHelperFs.FsDsl;
@@ -56,7 +60,9 @@ public class RunIntegration {
     return new Coordinator(){
       public Path modsPath(){  return ResolveResource.coordinatorJars; }
       public Optional<Path> baseCachePath(){ return Optional.of(baseCache); }
-      public Path rtPath(){ return ResolveResource.stLibRTPath; }
+      public BackendTools backendTools(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, Path rootDir, CapabilityEnvironment capabilities){
+        return BackendTools.of(pkgName, oracle, other, core, rootDir, baseCachePath(), ResolveResource.stLibRTPath, capabilities);
+      }
     };
   }
   static Path freshIntegrationRoot(String name){
