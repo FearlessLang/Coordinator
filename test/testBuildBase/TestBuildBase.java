@@ -23,9 +23,9 @@ import utils.Push;
 class TestBuildBase {
   Coordinator c= new Coordinator(){
     @Override public Path modsPath(){  return ResolveResource.coordinatorJars; }
-    @Override public BackendTools backendTools(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, Path rootDir, CapabilityEnvironment capabilities){
+    @Override public BackendTools backendTools(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, CapabilityEnvironment capabilities){
       var testFileDest= ResolveResource.stLibDebugOut.resolve("_baseTestOut","base_test.fear");
-      return BackendTools.of(pkgName, oracle, other, core, rootDir, baseCachePath(), testFileDest, ResolveResource.stLibRTPath, capabilities);
+      return BackendTools.of(pkgName, oracle, other, core, ResolveResource.stLibDebugOut, baseCachePath(), testFileDest, ResolveResource.stLibRTPath, capabilities);
     }
 
     @Override public String main(Path path, SourceOracle stLib) throws InterruptedException{
@@ -34,7 +34,7 @@ class TestBuildBase {
       var other= OtherPackages.empty();
       SourceOracle o= stLib;
       List<Literal> core= frontend(pkgName,o.allFiles(),o,other,Map.of());
-      backend(pkgName,core,o,other,out,new CapabilityEnvironment(List.of()));
+      backend(pkgName,core,o,other,new CapabilityEnvironment(List.of()));
       var jars= Push.of(out.rootDir().resolve("gen_java"),sharedClasspath());
       var runOut= JavaTool.runMainFromJars(List.of("-DfearlessUser.dir="+out.rootDir().getParent()),jars,pkgName+".Main");
       assertEquals("", runOut);

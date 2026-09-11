@@ -82,11 +82,11 @@ public final class ProjectSession{
     catch(UserError _){ res= Optional.empty(); }
     synchronized(this){ mains= res; }
   }
-  private static Coordinator appCoordinator(){
+  private Coordinator appCoordinator(){
     return new Coordinator(){
       @Override public Optional<Path> baseCachePath(){ return Optional.of(stdLib("baseCache")); }
-      @Override public BackendTools backendTools(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, Path rootDir, CapabilityEnvironment capabilities){
-        return BackendTools.of(pkgName, oracle, other, core, rootDir, baseCachePath(), stdLib("rt"), capabilities);
+      @Override public BackendTools backendTools(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, CapabilityEnvironment capabilities){
+        return BackendTools.of(pkgName, oracle, other, core, folder.resolve(Coordinator.outDir), baseCachePath(), stdLib("rt"), capabilities);
       }
     };
   }

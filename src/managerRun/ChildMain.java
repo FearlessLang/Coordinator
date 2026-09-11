@@ -46,8 +46,8 @@ public class ChildMain{
     var rt= appDir.resolve("stdLib").resolve("rt");
     var c= new Coordinator(){
       @Override public Optional<Path> baseCachePath(){ return Optional.of(appDir.resolve("stdLib").resolve("baseCache")); }
-      @Override public BackendTools backendTools(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, Path rootDir, CapabilityEnvironment capabilities){
-        return BackendTools.of(pkgName, oracle, other, core, rootDir, baseCachePath(), rt, capabilities);
+      @Override public BackendTools backendTools(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, CapabilityEnvironment capabilities){
+        return BackendTools.of(pkgName, oracle, other, core, project.resolve(Coordinator.outDir), baseCachePath(), rt, capabilities);
       }
     };
     c.compile(project, c.sourceOracle(base));

@@ -69,8 +69,8 @@ public final class Main{
   public static void run(Path project, Path base, Path rt) throws InvocationTargetException, InterruptedException, ExecutionException{
     var c= new Coordinator(){
       @Override public Optional<Path> baseCachePath(){ return Optional.of(base.getParent().resolve("baseCache")); }
-      @Override public BackendTools backendTools(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, Path rootDir, CapabilityEnvironment capabilities){
-        return BackendTools.of(pkgName, oracle, other, core, rootDir, baseCachePath(), rt, capabilities);
+      @Override public BackendTools backendTools(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, CapabilityEnvironment capabilities){
+        return BackendTools.of(pkgName, oracle, other, core, project.resolve(Coordinator.outDir), baseCachePath(), rt, capabilities);
       }
     };
     c.main(project, c.sourceOracle(base));

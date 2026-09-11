@@ -59,12 +59,13 @@ public interface Coordinator {
     try{ return new FrontendLogicMain().of(pkgName,vres, files, oracle, other); }
     catch(FearlessException fe){ throw Report.sourceError(fe.render(oracle)); }
   }
-  default void backend(String pkgName, List<Literal> core, SourceOracle oracle, OtherPackages other, OutputOracle out, CapabilityEnvironment capabilities){
-    var tools= backendTools(pkgName,oracle,other,core,out.rootDir(),capabilities);
+  default void backend(String pkgName, List<Literal> core, SourceOracle oracle, OtherPackages other, CapabilityEnvironment capabilities){
+    var tools= backendTools(pkgName,oracle,other,core,capabilities);
     new NaiveBackendLogicMain().of(tools,sharedClasspath());
   }
-  default BackendTools backendTools(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, Path rootDir, CapabilityEnvironment capabilities){
-    return BackendTools.of(pkgName, oracle, other, core, rootDir, baseCachePath(), Path.of("unused"), capabilities);
+  default BackendTools backendTools(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, CapabilityEnvironment capabilities){
+    var unused= Path.of("unused");
+    return BackendTools.of(pkgName, oracle, other, core, unused, baseCachePath(), unused, unused, capabilities);
   }
   default Path modsPath(){
     var appDir= System.getProperty(JavacTool.appDirKey);
@@ -203,7 +204,7 @@ record NoCompile(Coordinator inner) implements Coordinator{
   @Override public Optional<Path> baseCachePath(){ return inner.baseCachePath(); }
   @Override public SourceOracle sourceOracle(Path path){ return inner.sourceOracle(path); }
   @Override public List<Literal> frontend(String pkgName, List<Ref> files, SourceOracle oracle, OtherPackages other, Map<String,String> vres){ throw new WouldCompile(); }
-  @Override public void backend(String pkgName, List<Literal> core, SourceOracle oracle, OtherPackages other, OutputOracle out, CapabilityEnvironment capabilities){ throw new WouldCompile(); }
+  @Override public void backend(String pkgName, List<Literal> core, SourceOracle oracle, OtherPackages other, CapabilityEnvironment capabilities){ throw new WouldCompile(); }
 }
 record NoCommit(Path rootDir) implements OutputOracle{
   @Override public long commitMap(Map<String,Map<String,String>> map, long minExclusiveMillis){
