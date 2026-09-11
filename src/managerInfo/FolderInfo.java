@@ -55,7 +55,7 @@ import utils.Push;
 
 public final class FolderInfo{
   private static final DateTimeFormatter when= DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(ZoneId.systemDefault());
-  private static final int iconSize= 48;
+  private static final int iconSize= 32;
   private final ManagerData data;
   private final Path folder;
   private final Executor worker;
@@ -72,7 +72,7 @@ public final class FolderInfo{
   private final JPanel mainsBox= new JPanel();
   private final JScrollPane mainsScroll= new JScrollPane(mainsBox);
   private final JPanel linksBox= new JPanel();
-  private final Collapsible links= new Collapsible("Links",new JScrollPane(linksBox),true);
+  private final Collapsible links= new Collapsible("Links",new JScrollPane(linksBox),false);
   private final Collapsible information= new Collapsible("Information",new JScrollPane(details),true);
   private final JButton openDocsButton= small("Open docs",this::openDocs);
   private final JPanel mainsPanel= new JPanel(new BorderLayout());
@@ -112,7 +112,7 @@ public final class FolderInfo{
     outputLayer.addComponentListener(new ComponentAdapter(){
       @Override public void componentResized(ComponentEvent e){ layoutOutputOverlay(); }
     });
-    root.setBorder(BorderFactory.createEmptyBorder(8,8,8,8));
+    root.setBorder(BorderFactory.createEmptyBorder(4,8,4,8));
     root.setMinimumSize(new Dimension(0,0));//let the split divider shrink this panel past its natural content width
     root.add(top(),BorderLayout.NORTH);
     root.add(outputLayer,BorderLayout.CENTER);
@@ -274,7 +274,7 @@ public final class FolderInfo{
         box.addActionListener(_->toggleMain(main,box.isSelected()));
         mainsBox.add(box);
       }
-      mainsScroll.setPreferredSize(new Dimension(0,Math.min(6,known.get().size())*26+8));
+      mainsScroll.setPreferredSize(new Dimension(0,Math.min(3,known.get().size())*26+8));
     }
     mainsPanel.setVisible(multi);
   }
@@ -401,6 +401,7 @@ public final class FolderInfo{
   private void clearOutput(){ output.setText(""); }
   private void check(){
     information.setOpen(false);
+    links.setOpen(false);
     worker.execute(()->{
       var entry= currentEntry();
       var problem= FolderFacts.of(folder,entry.kind()).problem().or(()->data.linkProblem(entry)).or(()->data.markerProblem(entry));
@@ -410,6 +411,7 @@ public final class FolderInfo{
   }
   private void compile(){
     information.setOpen(false);
+    links.setOpen(false);
     var link= data.linkProblem(currentEntry());
     if (link.isPresent()){ append(link.get()+"\n"); return; }
     changed(d->d.setCompiled(folder,System.currentTimeMillis()));
@@ -417,6 +419,7 @@ public final class FolderInfo{
   }
   private void run(){
     information.setOpen(false);
+    links.setOpen(false);
     changed(d->d.setRun(folder,System.currentTimeMillis()));
     session.run(currentEntry().mains());
   }
