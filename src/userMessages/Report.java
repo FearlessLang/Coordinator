@@ -82,7 +82,6 @@ While scanning the project, we reject any path that could cause trouble later, i
 - Folder names and file base names must:
   - use only lowercase letters (a-z), digits (0-9), and underscore (_)
   - start with a letter or underscore
-  - never contain a double underscore (__)
   - not use Windows reserved device names: `con`, `prn`, `aux`, `nul`, `com1`..`com9`, `lpt1`..`lpt9`
 - Files must:
   - have a single extension "name.ext" with exactly one dot
@@ -187,14 +186,6 @@ or version control systems (git).
     + "  Visible names may use only lowercase letters (a-z), digits (0-9), and underscore (_).",
       "- Rename it to use only lowercase letters, digits, and underscores.\n"
     + "  Examples: \"foo_bar2\", \"src1\", \"_cache\"."
-    );
-  }
-  public static UserError visibleNoDoubleUnderscore(RefParent kid){
-    return fail(showRel(kid),
-      "- A visible folder/file name contains a double underscore (__).\n"
-    + "  Double underscores are reserved to avoid accidental collisions and confusion.",
-      "- Rename it to remove '__'.\n"
-    + "  Example: change \"foo__bar\" to \"foo_bar\"."
     );
   }
   public static UserError windowsReservedName(RefParent kid){
@@ -340,7 +331,7 @@ or version control systems (git).
     + "  That is not a Fearless type name: after any leading underscores, a type name\n"
     + "  must start with an uppercase letter.",
       "- Rename the file so that its name starts with a letter.\n"
-    + "  Examples: \"notes.txt\" auto-loads as \"Notes\", \"_notes.txt\" as \"_Notes\"."
+    + "  Examples: \"my_notes.txt\" auto-loads as \"MyNotes\", \"__notes.txt\" as \"_Notes\"."
     );
   }
 
@@ -448,7 +439,7 @@ Fearless keeps track of this project folder as "%s", not as "%s".
 
 You started Fearless on:
 %s
-A project name uses only lowercase letters, digits and single underscores,
+A project name uses only lowercase letters, digits and underscores,
 starts with a letter or an underscore, and is not the name of another
 project Fearless keeps track of.
 

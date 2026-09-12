@@ -36,6 +36,7 @@ import realSourceOracle.SourceOracleWithAutoload;
 import testHelperFs.FsDsl;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import fileSupport.JUnitReport;
 import tools.Fs;
 import tools.JavacTool;
@@ -263,6 +264,23 @@ We check this so that you[###]
 """, ex.getMessage());
   }
 
+  @Test void mainsAreListedWithTheFileDeclaringThem(@TempDir Path tmp){
+    Path root= tmp.resolve("root");
+    UserError.root= root;
+    FsDsl.materialize(root, """
+_col/_rank_app.fear
+iii
+use base.Main as Main;
+Hello:Main{s->base.Debug#(`hi`)}
+jjj
+_col/more.fear
+iii
+Again:Main{s->base.Debug#(`again`)}
+""");
+    coordinator(root).compile(root, stLib);
+    Assertions.assertEquals("col.Again _col/more.fear\ncol.Hello _col/_rank_app.fear\n", Fs.readUtf8(root.resolve(Coordinator.outDir).resolve("col.mains")));
+    Assertions.assertEquals(Map.of("col.Again","_col/more.fear","col.Hello","_col/_rank_app.fear"), coordinator(root).mains(root, stLib).orElseThrow());
+  }
   @Test void anAssetWhoseNameStartsWithUnderscoreAutoLoadsAsAPrivateType(@TempDir Path tmp) throws InterruptedException{
     Path root= tmp.resolve("root");
     UserError.root= root;
@@ -272,7 +290,7 @@ iii
 use base.Main as Main;
 Hello:Main{s->base.Debug#(_Notes.path)}
 jjj
-_col/_notes.txt
+_col/__notes.txt
 iii
 hello
 """);
@@ -346,7 +364,7 @@ What went wrong
 
 How to fix
 - Rename the file so that its name starts with a letter.
-  Examples: "notes.txt" auto-loads as "Notes", "_notes.txt" as "_Notes".
+  Examples: "my_notes.txt" auto-loads as "MyNotes", "__notes.txt" as "_Notes".
 
 We check this so that you[###]
 """, ex.getMessage());
