@@ -6,9 +6,7 @@ import java.util.Map;
 import java.util.Optional;
 import utils.Join;
 import utils.Range;
-import java.io.BufferedWriter;
 import java.util.List;
-import java.util.function.Consumer;
 import java.util.function.Function;
 import apiJson.ApiJson;
 import userMessages.Violation;
@@ -31,12 +29,6 @@ public interface OutputOracle{
   }
   default void commitBuilt(String pkg, List<Ref> files, long minExclusiveMillis){
     Fs.writeUtf8(builtPath(pkg), OutputHelper.fileList(files), minExclusiveMillis);
-  }
-  
-  default void write(String path, Consumer<Consumer<String>> dataProducer){
-    Fs.ofV(()->{try (BufferedWriter writer = Files.newBufferedWriter(rootDir().resolve(path))){
-      dataProducer.accept(content -> Fs.ofV(()->writer.write(content)));
-    }});
   }
   default OtherPackages addCachedPkgApi(OtherPackages other, String pkg){
     var path= rootDir().resolve(pkg+".json");
