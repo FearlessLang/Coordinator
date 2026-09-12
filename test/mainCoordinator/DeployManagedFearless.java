@@ -20,7 +20,7 @@ public class DeployManagedFearless{
       ResolveResource.coordinatorJars,
       "fearlessManaged"+ResolveResource.versionId,
       ResolveResource.versionId,
-      "Controller/manager.ManagerMain"
+      "Controller/controller.Main"
     ).build();
     ModularBuild.commons();
     ModularBuild.frontendMain();
