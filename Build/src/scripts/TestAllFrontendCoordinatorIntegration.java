@@ -1,5 +1,5 @@
-// java --module-path ../../Commons/Commons.jar --add-modules Commons mainCoordinator/TestAllFrontendCoordinatorIntegration.java
-package mainCoordinator;
+// java --module-path ../../../Commons/Commons.jar --add-modules Commons scripts/TestAllFrontendCoordinatorIntegration.java
+package scripts;
 
 public class TestAllFrontendCoordinatorIntegration{
   public static void main(String[] args) throws InterruptedException{

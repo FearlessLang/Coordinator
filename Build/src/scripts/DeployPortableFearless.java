@@ -1,7 +1,8 @@
-// java --module-path ../../Commons/Commons.jar --add-modules Commons mainCoordinator/DeployPortableFearless.java
-package mainCoordinator;
+// java --module-path ../../../Commons/Commons.jar --add-modules Commons scripts/DeployPortableFearless.java
+package scripts;
 
 import java.util.List;
+import resources.ResolveResource;
 import tools.PortableApp;
 
 public class DeployPortableFearless{

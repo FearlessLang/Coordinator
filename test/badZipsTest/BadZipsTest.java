@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Test;
 import org.opentest4j.AssertionFailedError;
 
 import userMessages.UserError;
-import mainCoordinator.ResolveResource;
+import resources.ResolveResource;
 import realSourceOracle.RealSourceOracleWithZip;
 import testHelperFs.FsDsl;
 
