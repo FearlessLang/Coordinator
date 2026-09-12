@@ -1,13 +1,11 @@
 package mainCoordinator;
 
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import tools.Fs;
 import tools.JavacTool;
 import tools.JavaTool;
-import utils.OneOr;
 
 public class ModularBuild{
   static final Path out= ResolveResource.coordinatorSrc.getParent().getParent().resolve("out").resolve("modular");
@@ -46,11 +44,5 @@ public class ModularBuild{
 
   static void deployBaseCache(Path appRoot) throws InterruptedException{
     JavaTool.runMain(List.of("-ea"), out.resolve("coordinator-test"), mods, "mainCoordinator.BaseCacheBuilder", appRoot.toString());
-  }
-
-  static void deployEclipsePlugin(Path appRoot){
-    var found= Fs.walk(appRoot, s->s.filter(Files::isDirectory).filter(p->p.getFileName().toString().equals("mods")).toList());
-    var appDir= OneOr.of("Expected exactly one 'mods' dir under "+appRoot, found.stream()).getParent();
-    Fs.copyFresh(ResolveResource.coordinatorSrc.getParent().resolve("eclipsePlugin"), appDir.resolve("eclipsePlugin"));
   }
 }

@@ -1,6 +1,7 @@
 // java --module-path ../../Commons/Commons.jar --add-modules Commons mainCoordinator/DeployPortableFearless.java
 package mainCoordinator;
 
+import java.util.List;
 import tools.PortableApp;
 
 public class DeployPortableFearless{
@@ -8,11 +9,10 @@ public class DeployPortableFearless{
     new PortableApp(
       ResolveResource.packaging,
       ResolveResource.portableFolderOut,//out
-      ResolveResource.commonsSrc,
-      ResolveResource.frontendSrc,
-      ResolveResource.frontendSrcModule,
-      ResolveResource.coordinatorSrc,
-      ResolveResource.coordinatorSrcModule,
+      List.of(
+        List.of(ResolveResource.commonsSrc),
+        List.of(ResolveResource.frontendSrc, ResolveResource.frontendSrcModule),
+        List.of(ResolveResource.coordinatorSrc, ResolveResource.coordinatorSrcModule)),
       ResolveResource.stLibPath,//base
       ResolveResource.stLibRTPath,//rt
       ResolveResource.coordinatorJars,
