@@ -57,6 +57,7 @@ public interface OutputOracle{
     if (new OutputHelper().consistent(res.get(),core)){ return Fs.lastModified(path); }
     return Fs.writeUtf8(path, ApiJson.toJSon(core),minExclusiveMillis);
     }
+  default void commitMains(String pkg, List<Literal> core){ Fs.writeUtf8(rootDir().resolve(pkg+".mains"), Helper.mainsText(core)); }
   default long commitMap(Map<String,Map<String,String>> map, long minExclusiveMillis){
     var path= rootDir().resolve("_map.json");
     var res= new OutputHelper().mapFromJSon(path);

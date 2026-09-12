@@ -27,6 +27,7 @@ import tools.JavaTool;
 import tools.JavacTool;
 import tools.SourceOracle;
 import tools.SourceOracle.Ref;
+import utils.Join;
 import utils.Push;
 import utils.Range;
 
@@ -48,7 +49,7 @@ public interface Coordinator {
   }
   default String main(Path project, SourceOracle stLib) throws InterruptedException{ return Helper.main(this, project, stLib); }
   default List<String> compile(Path project, SourceOracle stLib){ return Helper.compile(this, project, stLib); }
-  default Optional<List<String>> mains(Path project, SourceOracle stLib){ return Helper.mains(this, project, stLib); }
+  default Optional<Map<String,String>> mains(Path project, SourceOracle stLib){ return Helper.mains(this, project, stLib); }
   static ChildJvm startMain(Path project, String main, List<Path> sharedClasspath, java.util.function.Consumer<String> out){
     var pkg= main.substring(0, main.indexOf('.'));
     return JavaTool.startMainFromJars(runData(project), Push.of(genJava(project),sharedClasspath), pkg+".Main", out, main);
@@ -106,20 +107,21 @@ class Helper{
     for(var p: compile(coordinator,project,stLib)){ sb.append(coordinator.runAllMains(p,out)); }
     return sb.toString();
   }
-  static Optional<List<String>> mains(Coordinator coordinator, Path project, SourceOracle stLib){
+  static Optional<Map<String,String>> mains(Coordinator coordinator, Path project, SourceOracle stLib){
     var c= new NoCompile(coordinator);
     SourceOracle o= c.sourceOracle(project);
     var out= new NoCommit(out(project).rootDir());
     Layer l;
     try{ l= layerOf(c,o,project,out,stLib); l.compile(o,out); }
     catch(WouldCompile _){ return Optional.empty(); }
-    return Optional.of(l.pkgs().keySet().stream().flatMap(p->mainsOf(out,p)).toList());
+    var res= new LinkedHashMap<String,String>();
+    l.pkgs().keySet().stream().flatMap(p->Fs.readUtf8(out.rootDir().resolve(p+".mains")).lines()).forEach(line->res.put(line.substring(0,line.indexOf(' ')),line.substring(line.indexOf(' ')+1)));
+    return Optional.of(res);
   }
   private static final TName baseMain= new TName("base.Main",0,utils.Pos.unknown);
-  static Stream<String> mainsOf(OutputOracle out, String pkg){
-    var api= new OutputHelper().pgkApiFromJSon(out.rootDir().resolve(pkg+".json"));
-    if (api.isEmpty()){ throw Violation.cacheMissingPkgApiFile(out.rootDir().resolve(pkg+".json")); }
-    return api.get().values().stream().filter(Helper::isMain).map(l->l.name().s()).sorted();
+  static String mainsText(List<Literal> core){
+    var lines= core.stream().filter(Helper::isMain).map(l->l.name().s()+" "+l.name().pos().fileName().toString().substring(SourceOracle.root.length())).sorted();
+    return Join.of(lines,"","\n","\n","");
   }
   static boolean isMain(Literal l){
     var hasInstance= l.thisName().equals("this") || LiteralDeclarations.has(l.cs(),LiteralDeclarations.captureFree);

@@ -1,6 +1,8 @@
 package realSourceOracle;
 
 import java.util.List;
+import java.util.Locale;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -37,12 +39,11 @@ public interface AutoloadHandler{
     if (!TName.isTypeName(res)){ throw Report.autoloadedNameNotAType(ref, res); }
     return res;
   }
+  Pattern leading= Pattern.compile("^_*[a-z]");
+  Pattern inner= Pattern.compile("_([a-z])");
   static String capFirst(String s){
-    int i= 0;
-    while (i < s.length() && s.charAt(i) == '_'){ i++; }
-    if (i == s.length()){ return s; }
-    char c= s.charAt(i);
-    if ('a' > c || c > 'z'){ return s; }
-    return s.substring(0,i)+(char)(c - 'a' + 'A')+s.substring(i+1);
+    var m= leading.matcher(s);
+    var head= m.find() ? m.end() : 0;
+    return s.substring(0,head).toUpperCase(Locale.ROOT)+inner.matcher(s.substring(head)).replaceAll(r->r.group(1).toUpperCase(Locale.ROOT));
   }
 }

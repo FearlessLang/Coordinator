@@ -408,27 +408,6 @@ How to fix
 We check this so that you[###]
 """);}
 
-  @Test void err_visible_no_double_underscore(@TempDir Path tmp){ runErrIOE(tmp, """
-_pkg/a__b.fear
-iii
-X
-""","""
-Invalid path in this project folder.
-
-Root: [###]
-Path: "_pkg/a__b.fear"
-
-What went wrong
-- A visible folder/file name contains a double underscore (__).
-  Double underscores are reserved to avoid accidental collisions and confusion.
-
-How to fix
-- Rename it to remove '__'.
-  Example: change "foo__bar" to "foo_bar".
-
-We check this so that you[###]
-""");}
-
   @Test void err_missing_extension_after_dot_in_zip(@TempDir Path tmp){ runErrIOE(tmp, """
 _pkg/z.zip/a.
 iii

@@ -134,8 +134,6 @@ public final class BuildWithZip{
       char c= atom.charAt(i);
       boolean ok= ('a' <= c && c <= 'z') || ('0' <= c && c <= '9') || c == '_';
       if (!ok){ throw Report.visibleInvalidChar(kid, c); }
-      var double_ = c == '_' && atom.charAt(i - 1) == '_';
-      if (double_){ throw Report.visibleNoDoubleUnderscore(kid); }
     }
     if (winReserved.contains(atom)){ throw Report.windowsReservedName(kid); }
   }
