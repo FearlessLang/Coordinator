@@ -331,7 +331,7 @@ or version control systems (git).
     + "  That is not a Fearless type name: after any leading underscores, a type name\n"
     + "  must start with an uppercase letter.",
       "- Rename the file so that its name starts with a letter.\n"
-    + "  Examples: \"my_notes.txt\" auto-loads as \"MyNotes\", \"__notes.txt\" as \"_Notes\"."
+    + "  Examples: \"my_notes.txt\" auto-loads as \"MyNotes\", \"_notes.txt\" as \"_Notes\"."
     );
   }
 

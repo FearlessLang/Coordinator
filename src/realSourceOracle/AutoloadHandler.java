@@ -39,6 +39,11 @@ public interface AutoloadHandler{
     if (!TName.isTypeName(res)){ throw Report.autoloadedNameNotAType(ref, res); }
     return res;
   }
-  Pattern lowerToCap= Pattern.compile("(^|_)([a-z])");
-  static String capFirst(String s){ return lowerToCap.matcher(s).replaceAll(m->m.group(2).toUpperCase(Locale.ROOT)); }
+  Pattern leading= Pattern.compile("^_*[a-z]");
+  Pattern inner= Pattern.compile("_([a-z])");
+  static String capFirst(String s){
+    var m= leading.matcher(s);
+    var head= m.find() ? m.end() : 0;
+    return s.substring(0,head).toUpperCase(Locale.ROOT)+inner.matcher(s.substring(head)).replaceAll(r->r.group(1).toUpperCase(Locale.ROOT));
+  }
 }

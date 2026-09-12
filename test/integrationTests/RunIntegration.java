@@ -290,7 +290,7 @@ iii
 use base.Main as Main;
 Hello:Main{s->base.Debug#(_Notes.path)}
 jjj
-_col/__notes.txt
+_col/_notes.txt
 iii
 hello
 """);
@@ -364,7 +364,7 @@ What went wrong
 
 How to fix
 - Rename the file so that its name starts with a letter.
-  Examples: "my_notes.txt" auto-loads as "MyNotes", "__notes.txt" as "_Notes".
+  Examples: "my_notes.txt" auto-loads as "MyNotes", "_notes.txt" as "_Notes".
 
 We check this so that you[###]
 """, ex.getMessage());
