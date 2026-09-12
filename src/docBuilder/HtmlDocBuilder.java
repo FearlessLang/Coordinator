@@ -91,8 +91,7 @@ public final class HtmlDocBuilder implements DocBuilder{
   }
 
   @Override public void complete(){
-    assert pkgName != null;
-    assert htmlPath != null;
+    assert nonNull(pkgName,htmlPath);
     var resolver= new DocResolver(pkgName,types,other);
     var spans= new IdentityHashMap<DocOcc,List<ResolvedSpan>>();
     var problems= new ArrayList<String>();
