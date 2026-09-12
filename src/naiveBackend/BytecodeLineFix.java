@@ -29,7 +29,6 @@ final class BytecodeLineFix implements Consumer<Path>{
     this.base= base;
     this.sourceFile= sourceFile;
   }
-  String emitString(){ return sb.toString(); }
   @Override public String toString(){ return sb.toString(); }
   BytecodeLineFix a(String s){ //this call == s does not contain any method call
     sb.append(s);
