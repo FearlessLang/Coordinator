@@ -9,7 +9,7 @@ import java.util.regex.Pattern;
 import tools.Fs;
 
 /// A Fearless unit test log rendered as JUnit XML. `write` is for the Eclipse plugin
-/// (FearlessLang/EclipsePlugin), which polls that file into the JUnit view.
+/// (FearlessLang/Controllers), which polls that file into the JUnit view.
 public final class JUnitReport{
   private JUnitReport(){}
   private static final Pattern disabled= Pattern.compile("(?m)^PLAN\\|DISABLED\\|([^|\\r\\n]*)\\|([^|\\r\\n]*)\\|([^|\\r\\n]*)\\|([^|\\r\\n]*)$");
