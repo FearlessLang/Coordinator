@@ -5,5 +5,4 @@ module Coordinator {
   requires java.desktop;
   requires jdk.httpserver;
   exports mainCoordinator;
-  exports manager;
 }

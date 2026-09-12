@@ -35,7 +35,10 @@ import realSourceOracle.RealSourceOracleWithZip;
 import realSourceOracle.SourceOracleWithAutoload;
 import testHelperFs.FsDsl;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.regex.MatchResult;
+import java.util.regex.Pattern;
 import tools.Fs;
 import tools.JavacTool;
 import tools.SourceOracle;
@@ -82,12 +85,22 @@ public class RunIntegration {
     Assertions.assertTrue(fails.isEmpty(), ()->"Fearless unit tests failed in "+name+":\n"+String.join("\n",fails));
   }
   static void writeJUnitReport(String name){ writeJUnitReport(name, ResolveResource.integrationTests.resolve(name)); }
+  static final Pattern disabled= Pattern.compile("(?m)^PLAN\\|DISABLED\\|([^|\\r\\n]*)\\|([^|\\r\\n]*)\\|([^|\\r\\n]*)\\|([^|\\r\\n]*)$");
   static void writeJUnitReport(String name, Path root){
-    var one= managerInfo.JUnitReport.suite(name, root);
-    if (one.isEmpty()){ return; }
-    suites.add(one);
-    Fs.writeUtf8(reportsFile, managerInfo.JUnitReport.document(String.join("",suites)));
+    var logs= root.resolve(".out","logs");
+    if (!Files.isDirectory(logs)){ return; }
+    var newest= Fs.walk(logs, s->s.filter(p->p.getFileName().toString().startsWith("unit_test_log")).max(Comparator.comparing(p->p.getFileName().toString())));
+    if (newest.isEmpty()){ return; }
+    var body= disabled.matcher(Fs.readUtf8(newest.get())).replaceAll(RunIntegration::skipped).replaceAll("(?m)^PLAN\\|RUN\\|.*$\\r?\\n?","");
+    suites.add("<testsuite name=\"%s\" tests=\"%d\" failures=\"%d\" errors=\"0\">\n%s</testsuite>\n".formatted(name, count(body,"<testcase "), count(body,"<failure>"), body));
+    Fs.writeUtf8(reportsFile, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<testsuites>\n"+String.join("",suites)+"</testsuites>\n");
   }
+  static int count(String body, String what){ return body.split(what,-1).length-1; }
+  static String skipped(MatchResult mr){
+    return "<testcase classname=\""+xmlAttr(mr.group(2))+"\" name=\""+xmlAttr(mr.group(3))
+      +"\" file=\""+xmlAttr(mr.group(1))+"\" line=\""+mr.group(4)+"\"><skipped/></testcase>";
+  }
+  static String xmlAttr(String s){ return s.replace("&","&amp;").replace("<","&lt;").replace("\"","&quot;"); }
   @Test void helloWorld(){ testOk("helloWorld");}
   //testUnitTests is the project that checks the failure report itself, so it must fail
   @Test void testUnitTests(){

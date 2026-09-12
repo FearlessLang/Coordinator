@@ -1,8 +1,12 @@
 module Coordinator {
   requires transitive Commons;
-  requires FearlessFrontend;
-  requires java.desktop;
+  requires transitive FearlessFrontend;
+  requires transitive java.desktop;
   exports mainCoordinator;
-  exports manager;
-  exports managerRun;
+  exports coordinator;
+  exports docBuilder;
+  exports fileSupport;
+  exports naiveBackend;
+  exports realSourceOracle;
+  exports userMessages;
 }
