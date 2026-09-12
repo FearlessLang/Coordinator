@@ -1,9 +1,10 @@
-package mainCoordinator;
+package scripts;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import resources.ResolveResource;
 import tools.Fs;
 import tools.JavacTool;
 import tools.JavaTool;
@@ -12,6 +13,7 @@ import utils.OneOr;
 public class ModularBuild{
   static final Path out= ResolveResource.coordinatorSrc.getParent().getParent().resolve("out").resolve("modular");
   static final Path mods= out.resolve("mods");
+  static final Path resources= ResolveResource.coordinatorSrc.getParent().resolve("Build","src","resources");
 
   static void commons(){
     Fs.cleanDir(mods); Fs.ensureDir(mods);
@@ -31,7 +33,7 @@ public class ModularBuild{
   }
   static void coordinatorTest(){
     var co= ResolveResource.coordinatorSrc.getParent();
-    JavacTool.javac(List.of(ResolveResource.coordinatorSrc, co.resolve("test"), co.resolve("testModule")), out.resolve("coordinator-test"), mods);
+    JavacTool.javac(List.of(ResolveResource.coordinatorSrc, co.resolve("test"), co.resolve("testModule"), resources), out.resolve("coordinator-test"), mods);
   }
   static void controllerTest(){
     var co= ResolveResource.controllerSrc.getParent();
@@ -52,7 +54,7 @@ public class ModularBuild{
   }
 
   static void deployBaseCache(Path appRoot) throws InterruptedException{
-    JavaTool.runMain(List.of("-ea"), out.resolve("coordinator-test"), mods, "mainCoordinator.BaseCacheBuilder", appRoot.toString());
+    JavaTool.runMain(List.of("-ea"), out.resolve("coordinator-test"), mods, "testBuildBase.BaseCacheBuilder", appRoot.toString());
   }
 
   static void deployEclipsePlugin(Path appRoot){

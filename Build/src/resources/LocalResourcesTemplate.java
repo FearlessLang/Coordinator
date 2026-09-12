@@ -1,4 +1,4 @@
-package mainCoordinator;
+package resources;
 
 import java.nio.file.Path;
 

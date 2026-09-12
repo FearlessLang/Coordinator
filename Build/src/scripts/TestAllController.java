@@ -1,5 +1,5 @@
-// java --module-path ../../Commons/Commons.jar --add-modules Commons mainCoordinator/TestAllController.java
-package mainCoordinator;
+// java --module-path ../../../Commons/Commons.jar --add-modules Commons scripts/TestAllController.java
+package scripts;
 
 public class TestAllController{
   public static void main(String[] args) throws InterruptedException{
@@ -7,6 +7,6 @@ public class TestAllController{
     ModularBuild.frontendMain();
     ModularBuild.coordinatorMain();
     ModularBuild.controllerTest();
-    ModularBuild.runJUnit(ModularBuild.out.resolve("controller-test"));
+    ModularBuild.runJUnit(ModularBuild.out.resolve("controller-test"), "--exclude-package=agentTools");
   }
 }

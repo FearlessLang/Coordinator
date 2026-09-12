@@ -1,4 +1,4 @@
-package mainCoordinator;
+package testBuildBase;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -12,6 +12,7 @@ import coordinator.OutputOracle;
 import core.E.Literal;
 import core.OtherPackages;
 import naiveBackend.BackendTools;
+import resources.ResolveResource;
 import tools.Fs;
 import tools.SourceOracle;
 import utils.OneOr;

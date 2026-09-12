@@ -14,7 +14,7 @@ import coordinator.Coordinator;
 import coordinator.OutputOracle;
 import core.OtherPackages;
 import core.E.Literal;
-import mainCoordinator.ResolveResource;
+import resources.ResolveResource;
 import naiveBackend.BackendTools;
 import tools.JavaTool;
 import tools.SourceOracle;
