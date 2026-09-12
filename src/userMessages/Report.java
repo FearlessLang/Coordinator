@@ -443,6 +443,18 @@ folder first, and then start Fearless on this one.
     path(registered.toString())
   ));}
 
+  public static UserError projectNamed(Path folder, String wanted, String alias){ return new UserError("""
+Fearless keeps track of this project folder as "%s", not as "%s".
+
+You started Fearless on:
+%s
+A project name uses only lowercase letters, digits and single underscores,
+starts with a letter or an underscore, and is not the name of another
+project Fearless keeps track of.
+
+The marker file "%s%s" in that folder holds the name: rename it to change the name.
+""".formatted(alias,wanted,path(folder.toString()),alias,".fearless"));}
+
   //-- the Eclipse installation the user picks to connect to
   public static UserError notAnEclipseInstall(Path folder){ return new UserError("""
 That is not an Eclipse installation.
