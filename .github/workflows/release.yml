@@ -1,0 +1,109 @@
+name: Release Fearless artefacts
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Release tag to publish, e.g. v0.001
+        required: true
+        type: string
+      draft:
+        description: Create the release as a draft for manual review before publishing
+        required: false
+        type: boolean
+        default: true
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            label: linux-x64
+          - os: windows-latest
+            label: windows-x64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { repository: FearlessLang/Commons, path: src/Commons }
+      - uses: actions/checkout@v4
+        with: { repository: FearlessLang/Frontend, path: src/Frontend }
+      - uses: actions/checkout@v4
+        with: { path: src/Coordinator }
+      - uses: actions/checkout@v4
+        with: { repository: FearlessLang/StandardLibrary, path: src/StandardLibrary }
+      - uses: actions/checkout@v4
+        with: { repository: FearlessLang/Controllers, path: src/Controllers }
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '26' }
+      - name: Generate LocalResources.java
+        shell: bash
+        run: |
+          prefix="$GITHUB_WORKSPACE/src"
+          cat > "$prefix/Coordinator/Build/src/resources/LocalResources.java" <<JAVA
+          package resources;
+          import java.nio.file.Path;
+          public class LocalResources{
+            private static Path prefix= Path.of("$prefix");
+            static public final Path stLibPath= prefix.resolve("StandardLibrary","base");
+            static public final Path stLibRTPath= prefix.resolve("StandardLibrary","rt");
+            static public final Path stLibDebugOut= prefix.resolve("StandardLibrary","dbgOut");
+            static public final Path integrationTests= prefix.resolve("StandardLibrary","integrationTests");
+            static public final Path commonsSrc= prefix.resolve("Commons","src");
+            static public final Path frontendSrc= prefix.resolve("Frontend","FearlessFrontend","src");
+            static public final Path frontendSrcModule= prefix.resolve("Frontend","FearlessFrontend","srcModule");
+            static public final Path coordinatorSrc= prefix.resolve("Coordinator","src");
+            static public final Path coordinatorSrcModule= prefix.resolve("Coordinator","srcModule");
+            static public final Path controllerSrc= prefix.resolve("Controllers","src");
+            static public final Path controllerSrcModule= prefix.resolve("Controllers","srcModule");
+            static public final Path portableFolderOut= prefix.resolve("out","fearlessArtefact");
+            static public final Path managedFolderOut= prefix.resolve("out","fearlessManagedArtefact");
+            static public final Path badZipCorpous= prefix.resolve("Coordinator","badZips");
+            static public final Path packaging= prefix.resolve("Coordinator","_fearless_packaging");
+          }
+          JAVA
+      - name: Build portable Fearless
+        shell: bash
+        working-directory: src/Coordinator/Build/src
+        run: java -ea --module-path ../../../Commons/Commons.jar --add-modules Commons scripts/DeployPortableFearless.java
+      - name: Build managed Fearless
+        shell: bash
+        working-directory: src/Coordinator/Build/src
+        run: java -ea --module-path ../../../Commons/Commons.jar --add-modules Commons scripts/DeployManagedFearless.java
+      - name: Package artefacts (linux)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/dist"
+          (cd "$GITHUB_WORKSPACE/src/out/fearlessArtefact" && zip -r "$GITHUB_WORKSPACE/dist/fearless-portable-${{ matrix.label }}-${{ inputs.version }}.zip" .)
+          (cd "$GITHUB_WORKSPACE/src/out/fearlessManagedArtefact" && zip -r "$GITHUB_WORKSPACE/dist/fearless-managed-${{ matrix.label }}-${{ inputs.version }}.zip" .)
+      - name: Package artefacts (windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path "$env:GITHUB_WORKSPACE/dist" | Out-Null
+          Compress-Archive -Path "$env:GITHUB_WORKSPACE/src/out/fearlessArtefact/*" -DestinationPath "$env:GITHUB_WORKSPACE/dist/fearless-portable-${{ matrix.label }}-${{ inputs.version }}.zip"
+          Compress-Archive -Path "$env:GITHUB_WORKSPACE/src/out/fearlessManagedArtefact/*" -DestinationPath "$env:GITHUB_WORKSPACE/dist/fearless-managed-${{ matrix.label }}-${{ inputs.version }}.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fearless-${{ matrix.label }}-${{ inputs.version }}
+          path: dist/*.zip
+          if-no-files-found: error
+
+  publish-release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { path: dist, merge-multiple: true }
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ inputs.version }}" dist/*.zip \
+            --repo "${{ github.repository }}" \
+            --title "Fearless ${{ inputs.version }}" \
+            --notes "Portable and Managed Fearless builds for Linux and Windows, built from FearlessLang/Commons, Frontend, Coordinator, StandardLibrary and Controllers at their current main." \
+            ${{ inputs.draft && '--draft' || '' }}
