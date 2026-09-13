@@ -11,7 +11,6 @@ import java.util.Set;
 import java.util.stream.Stream;
 
 import userMessages.Report;
-import userMessages.Violation;
 import core.FearlessException;
 import core.LiteralDeclarations;
 import core.OtherPackages;
