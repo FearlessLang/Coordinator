@@ -5,6 +5,7 @@ import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 import tools.SourceOracle;
+import utils.Bug;
 
 final class AssetAutoload{
   private AssetAutoload(){ throw new AssertionError(); }
@@ -28,13 +29,13 @@ final class AssetAutoload{
         .map(AssetAutoload::portableZipPath)
         .collect(Collectors.joining(";"));
     }
-    throw new AssertionError(ref.getClass());
+    throw Bug.unreachable();
   }
 
   private static String zipEntry(SourceOracle.Ref ref){
     if (ref instanceof PathEntry){ return ""; }
     if (ref instanceof ZipEntry z){ return portableZipPath(z.lastZips()); }
-    throw new AssertionError(ref.getClass());
+    throw Bug.unreachable();
   }
 
   private static String localPath(java.nio.file.Path local){
@@ -70,6 +71,6 @@ final class AssetAutoload{
   private static String diskPath(SourceOracle.Ref ref){
     if (ref instanceof PathEntry p){ return localPath(p.local()); }
     if (ref instanceof ZipEntry z){ return localPath(z.local()); }
-    throw new AssertionError(ref.getClass());
+    throw Bug.unreachable();
   }
 }
