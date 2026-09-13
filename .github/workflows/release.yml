@@ -41,15 +41,15 @@ jobs:
           curl -fsSL -o "$RUNNER_TEMP/jdk.tar.gz" https://download.oracle.com/java/26/archive/jdk-26.0.2_linux-x64_bin.tar.gz
           mkdir -p "$RUNNER_TEMP/jdk"
           tar -xzf "$RUNNER_TEMP/jdk.tar.gz" -C "$RUNNER_TEMP/jdk" --strip-components=1
-          echo "$RUNNER_TEMP/jdk/bin" >> "$GITHUB_PATH"
+          echo "JAVA_BIN=$RUNNER_TEMP/jdk/bin/java" >> "$GITHUB_ENV"
       - name: Install JDK 26 (windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
           Invoke-WebRequest -Uri "https://download.oracle.com/java/26/archive/jdk-26.0.2_windows-x64_bin.zip" -OutFile "$env:RUNNER_TEMP\jdk.zip"
           Expand-Archive -Path "$env:RUNNER_TEMP\jdk.zip" -DestinationPath "$env:RUNNER_TEMP\jdk"
-          $jdkDir = Get-ChildItem "$env:RUNNER_TEMP\jdk" | Select-Object -First 1
-          echo "$($jdkDir.FullName)\bin" >> $env:GITHUB_PATH
+          $javaBin= "$env:RUNNER_TEMP\jdk\jdk-26.0.2\bin\java.exe" -replace '\\','/'
+          Add-Content -Path $env:GITHUB_ENV -Value "JAVA_BIN=$javaBin"
       - name: Generate LocalResources.java
         shell: bash
         run: |
@@ -79,11 +79,11 @@ jobs:
       - name: Build portable Fearless
         shell: bash
         working-directory: src/Coordinator/Build/src
-        run: java -ea --module-path ../../../Commons/Commons.jar --add-modules Commons scripts/DeployPortableFearless.java
+        run: "\"$JAVA_BIN\" -ea --module-path ../../../Commons/Commons.jar --add-modules Commons scripts/DeployPortableFearless.java"
       - name: Build managed Fearless
         shell: bash
         working-directory: src/Coordinator/Build/src
-        run: java -ea --module-path ../../../Commons/Commons.jar --add-modules Commons scripts/DeployManagedFearless.java
+        run: "\"$JAVA_BIN\" -ea --module-path ../../../Commons/Commons.jar --add-modules Commons scripts/DeployManagedFearless.java"
       - name: Package artefacts (linux)
         if: runner.os != 'Windows'
         shell: bash
