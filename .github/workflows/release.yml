@@ -53,8 +53,8 @@ jobs:
       - name: Generate LocalResources.java
         shell: bash
         run: |
-          prefix="$GITHUB_WORKSPACE/src"
-          cat > "$prefix/Coordinator/Build/src/resources/LocalResources.java" <<JAVA
+          prefix="${GITHUB_WORKSPACE//\\//}/src"
+          cat > "$GITHUB_WORKSPACE/src/Coordinator/Build/src/resources/LocalResources.java" <<JAVA
           package resources;
           import java.nio.file.Path;
           public class LocalResources{
