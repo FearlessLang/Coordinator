@@ -121,6 +121,15 @@ public final class Violation {
       Enable the system tray of this desktop, then start Fearless again.
       """);
   }
+  public static UserError trayIconRemoved(){
+    return new UserError("""
+      The desktop removed the Fearless icon from the system tray.
+
+      The tray icon is how a closed manager window is brought back, and the
+      desktop took it away: its system tray went away or rejected the icon.
+      Restore the system tray of this desktop, then start Fearless again.
+      """);
+  }
   public static UserError couldNotAddTrayIcon(Throwable cause){
     return new UserError("""
       Fearless could not add its icon to the system tray.
