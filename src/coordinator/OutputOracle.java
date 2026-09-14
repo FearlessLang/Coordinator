@@ -20,7 +20,6 @@ import tools.SourceOracle.Ref;
 
 public interface OutputOracle{
   Path rootDir();
-  default long baseApiStamp(){ return Fs.lastModified(rootDir().resolve("base.json")); }
   default long mapStamp(){ return Fs.lastModified(rootDir().resolve("_map.json")); }
   default long pkgApiStamp(String pkg){ return Fs.lastModified(rootDir().resolve(pkg+".json")); }
   private Path builtPath(String pkg){ return rootDir().resolve(pkg+".built"); }

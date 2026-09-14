@@ -16,15 +16,6 @@ import tools.SourceOracle;
 import tools.Utf8Sink;
 
 public record ProgrammaticMain(StringBuilder out, StringBuilder err,String fName, String code, Path stdLib, Path stdRt, Path dest){
-  static public void runFearless(Path projectPath, Path base, Path rt) throws Throwable {
-    try{ Main.run(projectPath, base,rt); }
-    catch(UserError e){ System.err.print(e.getMessage()); }
-    catch (InterruptedException e){ throw e; }
-    catch(Throwable t){
-      System.err.println(t.getClass().getCanonicalName());
-      System.err.print(UserError.crash(t));
-    }
-  }
   public void runFearless(){
     var oldOut= System.out;
     var oldErr= System.err;
