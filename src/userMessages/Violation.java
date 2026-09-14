@@ -101,6 +101,17 @@ public final class Violation {
 
       %s""".formatted(reported(cause)), cause);
   }
+  public static UserError desktopHidesWindow(){
+    return new UserError("""
+      The desktop did not show the Fearless manager window.
+
+      Fearless asked the desktop to show its window, and the desktop keeps
+      reporting the window as minimized. When this happens every program with
+      decorated windows is affected, not only Fearless: on GNOME it means the
+      process that decorates windows (mutter-x11-frames) has died.
+      Log out and log in again, then start Fearless again.
+      """).bare();
+  }
   public static UserError noSystemTray(){
     return new UserError("""
       Fearless could not add its icon to the system tray.
