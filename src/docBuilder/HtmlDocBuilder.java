@@ -22,6 +22,7 @@ import metaParser.Span;
 import tools.Fs;
 import tools.SourceOracle;
 import userMessages.Report;
+import utils.Bug;
 import utils.Pos;
 
 public final class HtmlDocBuilder implements DocBuilder{
@@ -117,7 +118,7 @@ public final class HtmlDocBuilder implements DocBuilder{
 
   String reservedNameProblem(String name){
     var owner= types.stream().filter(t->t.main().name().simpleName().equals(name)).findFirst()
-      .orElseThrow().main();
+      .orElseThrow(Bug::unreachable).main();
     var p= owner.pos();
     var span= new Span(p.fileName(),p.line(),p.column(),p.line(),p.column()+name.length()-1);
     var frame= new Frame("the documentation of package "+pkgName, span);
