@@ -25,14 +25,14 @@ public class Backend{
   BackendTools tools;
   List<Consumer<Path>> fixers= new ArrayList<>();
   private static final TName captureFreeName= new TName("base.CaptureFree",0,Pos.unknown);
-  boolean captureFree(Literal l){ return l.cs().stream().anyMatch(c->c.name().equals(captureFreeName)); }
+  boolean captureFree(Literal l){ return implementsType(l,captureFreeName); }
   private static final TName mainName= new TName("base.Main", 0,Pos.unknown);
   private static final TName systemName= new TName("base._System", 0,Pos.unknown);
-  boolean implementsBaseMain(Literal l){ return l.cs().stream().anyMatch(c->c.name().equals(mainName)); }
+  boolean implementsBaseMain(Literal l){ return implementsType(l,mainName); }
   private static final TName inMemoryLogName= new TName("base.InMemoryLog", 1,Pos.unknown);
-  boolean implementsInMemoryLog(Literal l){ return l.cs().stream().anyMatch(c->c.name().equals(inMemoryLogName)); }
+  boolean implementsInMemoryLog(Literal l){ return implementsType(l,inMemoryLogName); }
   private static final TName fileLogName= new TName("base.FileLog", 0,Pos.unknown);
-  boolean implementsFileLog(Literal l){ return l.cs().stream().anyMatch(c->c.name().equals(fileLogName)); }
+  boolean implementsFileLog(Literal l){ return implementsType(l,fileLogName); }
   private static final TName reprName= new TName("base.Repr", 1,Pos.unknown);
   boolean isRepr(Literal l){ return l.name().equals(reprName); }
   public List<Consumer<Path>> produceJavaCode(){
@@ -71,26 +71,20 @@ public class Backend{
       sb.a("  void _reprCacheFlush();\n");
     }
     if (hasInstance){ sb.a("  "+iface+" instance= new "+iface+"(){};"); }
-    if (hasInstance && (implementsType(l,cacheF1Name)||implementsType(l,cacheMemo1Name)||implementsType(l,cacheF2Name)||implementsType(l,cacheMemo2Name)||implementsType(l,cacheF3Name)||implementsType(l,cacheMemo3Name))){ emitCacheField(sb, l); }
+    if (hasInstance){ var shape= cacheShape(l); if (shape >= 0){ emitCacheField(sb, shape); } }
     Fs.writeUtf8(ifaceFile(l, out), sb.a("}").toString());
     if (hasInstance && implementsBaseMain(l)){ mains.put(l.name().s(), iface); }
     fixers.add(sb);
   }
-  private static final TName cacheF1Name= new TName("base.CacheF", 1,Pos.unknown);
-  private static final TName cacheF2Name= new TName("base.CacheF", 2,Pos.unknown);
-  private static final TName cacheF3Name= new TName("base.CacheF", 3,Pos.unknown);
-  private static final TName cacheMemo1Name= new TName("base.CacheMemo", 1,Pos.unknown);
-  private static final TName cacheMemo2Name= new TName("base.CacheMemo", 2,Pos.unknown);
-  private static final TName cacheMemo3Name= new TName("base.CacheMemo", 3,Pos.unknown);
   private boolean implementsType(Literal l, TName n){ return l.cs().stream().anyMatch(c->c.name().equals(n)); }
+  private static TName cacheName(String base, int shape){ return new TName("base."+base, shape+1, Pos.unknown); }
   private int cacheShape(Literal l){
-    if (implementsType(l,cacheF1Name) || implementsType(l,cacheMemo1Name)){ return 0; }
-    if (implementsType(l,cacheF2Name) || implementsType(l,cacheMemo2Name)){ return 1; }
-    if (implementsType(l,cacheF3Name) || implementsType(l,cacheMemo3Name)){ return 2; }
-    throw utils.Bug.unreachable();
+    for (int shape : Range.of(0,3)){
+      if (implementsType(l,cacheName("CacheF",shape)) || implementsType(l,cacheName("CacheMemo",shape))){ return shape; }
+    }
+    return -1;
   }
-  void emitCacheField(BytecodeLineFix sb, Literal l){
-    var shape= cacheShape(l);
+  void emitCacheField(BytecodeLineFix sb, int shape){
     var t= "base.Cache"+shape;
     sb.a("  "+t+" _cache= new "+t+"(1, instance);\n  default "+t+" _cache"+shape+"(){ return _cache; }\n");
   }

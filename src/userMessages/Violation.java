@@ -21,8 +21,6 @@ public final class Violation {
 
   //-- the pieces of text that more than one message needs, written once
   static String reported(Throwable cause){ return "Reported reason:\n"+cause.getMessage(); }
-  static String crashed(){ return "Fearless crashed."; }
-  static String reportProblem(){ return "Please report this problem."; }
   private static Supplier<List<String>> running= List::of;
   public static void running(Supplier<List<String>> live){ running= live; }
   static String associatedPrograms(){ return Join.of(running.get().stream().map(s->"  "+s),"","\n","",""); }
