@@ -101,6 +101,24 @@ public final class Violation {
 
       %s""".formatted(reported(cause)), cause);
   }
+  public static UserError noSystemTray(){
+    return new UserError("""
+      Fearless could not add its icon to the system tray.
+
+      This desktop offers no system tray, and the tray icon is how a closed
+      manager window is brought back.
+      Enable the system tray of this desktop, then start Fearless again.
+      """);
+  }
+  public static UserError couldNotAddTrayIcon(Throwable cause){
+    return new UserError("""
+      Fearless could not add its icon to the system tray.
+
+      This desktop offers a system tray, and the tray icon is how a closed
+      manager window is brought back, but adding the icon failed.
+
+      %s""".formatted(reported(cause)), cause);
+  }
   //Fearless asks the operating system for English so that the failures it reports back
   //to us are text we can recognise. Without it we cannot tell one failure from another.
   public static UserError couldNotForceEnglish(String what, Throwable cause){
