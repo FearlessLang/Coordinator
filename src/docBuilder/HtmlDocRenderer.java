@@ -146,8 +146,12 @@ final class HtmlDocRenderer{
       .collect(Collectors.joining(", "))).append('\n');
   }
 
+  static List<DocOcc> visibleDocs(Object owner, List<DocOcc> docs, Map<DocOcc,Object> claims){
+    return docs.stream().filter(c->!c.inline() || claims.get(c) == owner).filter(c->!c.testOnly()).toList();
+  }
+
   void renderDocText(StringBuilder sb, String indent, Object owner, List<DocOcc> docs, Map<DocOcc,Object> claims){
-    var visible= docs.stream().filter(c->!c.inline() || claims.get(c) == owner).filter(c->!c.testOnly()).toList();
+    var visible= visibleDocs(owner,docs,claims);
     if (visible.isEmpty()){ return; }
     visible.stream().filter(c->!c.example()).forEach(c->appendIndented(sb,indent,c.text()));
     var examples= visible.stream().filter(DocOcc::example).map(DocOcc::text).toList();
@@ -448,10 +452,7 @@ code{
   }
 
   void renderDoc(StringBuilder sb, Object owner, List<DocOcc> docs, Map<DocOcc,Object> claims){
-    var visible= docs.stream()
-      .filter(c->!c.inline() || claims.get(c) == owner)
-      .filter(c->!c.testOnly())
-      .toList();
+    var visible= visibleDocs(owner,docs,claims);
     if (visible.isEmpty()){
       sb.append("<p class=\"doc missing\">No documentation yet.</p>\n");
       return;
