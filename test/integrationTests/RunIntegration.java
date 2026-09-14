@@ -93,9 +93,16 @@ public class RunIntegration {
   @Test void helloWorld(){ testOk("helloWorld");}
   //testUnitTests is the project that checks the failure report itself, so it must fail
   @Test void testUnitTests(){
-    var fails= run("testUnitTests").lines().filter(l->l.startsWith("Test failure ")).toList();
+    var out= run("testUnitTests");
     writeJUnitReport("testUnitTests");
-    utils.Err.strCmp("Test failure MyTests at line: 5 in file: _hello/_rank_app.fear [###]", String.join("\n",fails));
+    utils.Err.strCmp("""
+Test failure MyTests at line: 5 in file: _hello/_rank_app.fear
+Assertion failure.
+Expected: 3
+Actual: 1
+imm Assert._fail(_) error line: [###]
+imm MyTests# error line: 5 in file _hello/_rank_app.fear
+""", out);
   }
   @Test void map_a_to_pkc(){ testOk("map_a_to_pkc");}
   // What counts as a main of a package: a top level type implementing base.Main, and
