@@ -8,7 +8,7 @@ import tools.SourceOracle;
 import utils.Bug;
 
 final class AssetAutoload{
-  private AssetAutoload(){ throw new AssertionError(); }
+  private AssetAutoload(){}
 
   static String descriptorMethods(SourceOracle.Ref ref){
     return ""
@@ -39,13 +39,13 @@ final class AssetAutoload{
   }
 
   private static String localPath(java.nio.file.Path local){
-    if (local.isAbsolute()){ throw new AssertionError(local); }
-    if (!local.normalize().equals(local)){ throw new AssertionError(local); }
+    if (local.isAbsolute()){ throw Bug.of(""+local); }
+    if (!local.normalize().equals(local)){ throw Bug.of(""+local); }
     var res= StreamSupport.stream(local.spliterator(), false)
       .map(java.nio.file.Path::toString)
       .map(AssetAutoload::portableSegment)
       .collect(Collectors.joining("/"));
-    if (res.isEmpty()){ throw new AssertionError(local); }
+    if (res.isEmpty()){ throw Bug.of(""+local); }
     return res;
   }
 
@@ -53,7 +53,7 @@ final class AssetAutoload{
     var res= Arrays.stream(path.split("/", -1))
       .map(AssetAutoload::portableSegment)
       .collect(Collectors.joining("/"));
-    if (res.isEmpty()){ throw new AssertionError(path); }
+    if (res.isEmpty()){ throw Bug.of(path); }
     return res;
   }
 
@@ -64,7 +64,7 @@ final class AssetAutoload{
       || s.indexOf('/') >= 0
       || s.indexOf('\\') >= 0
       || s.indexOf(';') >= 0
-      ){ throw new AssertionError(s); }
+      ){ throw Bug.of(s); }
     return s;
   }
 
