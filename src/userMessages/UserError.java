@@ -1,5 +1,6 @@
 package userMessages;
 
+import java.awt.Dialog;
 import java.awt.HeadlessException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -8,6 +9,7 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.function.BiConsumer;
 
+import javax.swing.JDialog;
 import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
 
@@ -42,10 +44,12 @@ public final class UserError extends RuntimeException{
 
   private String recoveryLabel;
   private Runnable recovery;
+  private boolean bare;
   public UserError withRecovery(String label, Runnable action){
     recoveryLabel= label; recovery= action;
     return this;
   }
+  UserError bare(){ bare= true; return this; }
 
   //The project root this run actually used, so that a message always shows the folder
   //that was really involved. Tests set it to whatever fake root they use; a real run
@@ -146,14 +150,16 @@ Details:
     catch(InvocationTargetException e){ displayStderr(e.getCause()); }//Rare, could be a memory overflow or other JVM stuff?
   }
   private void displayNow(){
-    if (recovery == null){
-      JOptionPane.showMessageDialog(owner, displayText(), "Fearless", JOptionPane.ERROR_MESSAGE);
-      return;
-    }
-    var options= new Object[]{"OK", recoveryLabel};
-    var choice= JOptionPane.showOptionDialog(owner, displayText(), "Fearless",
-      JOptionPane.DEFAULT_OPTION, JOptionPane.ERROR_MESSAGE, null, options, options[0]);
-    if (choice == 1){ recovery.run(); }
+    var options= recovery == null ? null : new Object[]{"OK", recoveryLabel};
+    var pane= new JOptionPane(displayText(), JOptionPane.ERROR_MESSAGE, JOptionPane.DEFAULT_OPTION, null, options, null);
+    var dialog= new JDialog(owner, "Fearless", Dialog.ModalityType.APPLICATION_MODAL);
+    dialog.setUndecorated(bare);
+    dialog.setContentPane(pane);
+    pane.addPropertyChangeListener(JOptionPane.VALUE_PROPERTY, _->dialog.dispose());
+    dialog.pack();
+    dialog.setLocationRelativeTo(owner);
+    dialog.setVisible(true);
+    if (recovery != null && recoveryLabel.equals(pane.getValue())){ recovery.run(); }
   }
   public void displayStderr(Throwable displayFailure){
     System.err.print(displayText()+"\n\n");
