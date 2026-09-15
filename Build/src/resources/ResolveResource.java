@@ -26,8 +26,8 @@ public record ResolveResource(Path assetRoot, Path artefactRoot, Optional<Path> 
   static public final Path controllerSrc= LocalResources.controllerSrc;
   static public final Path controllerSrcModule= LocalResources.controllerSrcModule;
   static public final Path controllerPluginSrc= controllerSrc.getParent().resolve("fearlessPluginProject");
-  static public final Path eclipseHome= LocalResources.eclipseHome;
-  static public final Path eclipsePlugins= eclipseHome.resolve("plugins");
+  static public final Path portableEclipse= LocalResources.portableEclipse;
+  static public final Path eclipsePlugins= portableEclipse.resolve("plugins");
 
   static public final Path portableFolderOut= LocalResources.portableFolderOut;
   static public final Path managedFolderOut= LocalResources.managedFolderOut;
