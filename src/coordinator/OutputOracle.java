@@ -65,26 +65,18 @@ class OutputHelper{
     if (map.isEmpty()){ return "{}"; }
     return obj(map, m->obj(m, s->"\""+s+"\""));
   }
-  Optional<Map<TName,Literal>> pgkApiFromJSon(Path p){
-    if (!Fs.of(()->Files.exists(p))){ return Optional.empty(); }
-    var s= Fs.readUtf8(p);
-    var allowed= s.chars().allMatch(c -> Fs.allowed.indexOf(c) >= 0);
-    if (!allowed){ throw Violation.cacheInvalidFile(p, "Non-whitelisted char"); }
-    var out= new LimitedJsonParser(s, p).apiJsonToMap();
-    return Optional.of(out);
-  }
+  Optional<Map<TName,Literal>> pgkApiFromJSon(Path p){ return readAllowed(p).map(s->new LimitedJsonParser(s, p).apiJsonToMap()); }
   private <T> String obj(Map<String,T> m, Function<T,String> v){
     return Join.of(m.entrySet().stream()
       .map(e->"\""+e.getKey()+"\":"+v.apply(e.getValue())),
       "{",",\n","}\n");//correctly throw for empty
   }
-  Optional<Map<String,Map<String,String>>> mapFromJSon(Path p){
+  Optional<Map<String,Map<String,String>>> mapFromJSon(Path p){ return readAllowed(p).map(s->new LimitedJsonParser(s,p).obj2()); }
+  private Optional<String> readAllowed(Path p){
     if (!Fs.of(()->Files.exists(p))){ return Optional.empty(); }
     var s= Fs.readUtf8(p);
-    var allowed= s.chars().allMatch(c -> Fs.allowed.indexOf(c) >= 0);
-    if (!allowed){ throw Violation.cacheInvalidFile(p, "Non-whitelisted char"); }
-    var out= new LimitedJsonParser(s,p).obj2();
-    return Optional.of(out);
+    if (!s.chars().allMatch(c -> Fs.allowed.indexOf(c) >= 0)){ throw Violation.cacheInvalidFile(p, "Non-whitelisted char"); }
+    return Optional.of(s);
   }
   boolean consistent(Map<TName,Literal> map, List<Literal> core){
     var allCore= AllLs.of(core).values();

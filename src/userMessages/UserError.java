@@ -87,24 +87,19 @@ public final class UserError extends RuntimeException{
 
   //-- path rendering, shared by both message files
   public static String disp(String s){ return Message.displayString(s); }
-  public static String showRel(Path rel){
-    return "Root: "+PrettyFileName.displayFileName(root.toUri())+"\nPath: "+disp(rel.toString().replace("\\","/"))+"\n";
-  }
+  public static String showRel(Path rel){ return showRelText(rel.toString().replace("\\","/")); }
   public static String showRel(RefParent rel){
     var s= rel.fearPath();
     assert s.startsWith(SourceOracle.root);
-    s= s.substring(SourceOracle.root.length(),s.length());
-    return "Root: "+PrettyFileName.displayFileName(root.toUri())+"\nPath: "+disp(s)+"\n";
+    return showRelText(s.substring(SourceOracle.root.length()));
   }
+  private static String showRelText(String p){ return "Root: "+PrettyFileName.displayFileName(root.toUri())+"\nPath: "+disp(p)+"\n"; }
   public static String showZipRel(Path diskZip, List<String> steps, String entryName){
     assert diskZip.isAbsolute();
     diskZip= root.relativize(diskZip);
     String zipPath= diskZip.toString().replace("\\","/");
     if (!steps.isEmpty()){ zipPath+="/"+String.join("/", steps); }
-    return ""
-      + "Root: "+PrettyFileName.displayFileName(root.toUri())+"\n"
-      + "Path: "+disp(zipPath)+"\n"
-      + printEntryName(entryName)+"\n\n";
+    return showRelText(zipPath)+printEntryName(entryName)+"\n\n";
   }
   static String printEntryName(String entryName){
     if (!isSimpleString(entryName)){
