@@ -2,7 +2,6 @@ package realSourceOracle;
 
 import java.util.Arrays;
 import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
 
 import tools.SourceOracle;
 import utils.Bug;
@@ -41,8 +40,7 @@ final class AssetAutoload{
   private static String localPath(java.nio.file.Path local){
     if (local.isAbsolute()){ throw Bug.of(""+local); }
     if (!local.normalize().equals(local)){ throw Bug.of(""+local); }
-    var res= StreamSupport.stream(local.spliterator(), false)
-      .map(java.nio.file.Path::toString)
+    var res= PathEntry.localSegments(local).stream()
       .map(AssetAutoload::portableSegment)
       .collect(Collectors.joining("/"));
     if (res.isEmpty()){ throw Bug.of(""+local); }
