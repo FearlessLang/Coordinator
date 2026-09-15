@@ -68,7 +68,7 @@ final class LimitedJsonParser{
     var cs= asArr(a.get(3)).stream().map(x->cFrom(asArr(x))).toList();
     var ms= asArr(a.get(4)).stream().map(x->mFrom(asArr(x))).toList();
     //Non-public types are kept too: needed for subtyping reasoning.
-    return new Literal(rc, tn, bs, cs, asStr(a.get(5)), ms, dummySrc(), false);
+    return new Literal(rc, tn, bs, cs, asStr(a.get(5)), ms, Src.syntetic, false);
   }
   private M mFrom(List<Object> a){
     if (a.size() != 8){ throw err("Bad M"); }
@@ -156,7 +156,6 @@ final class LimitedJsonParser{
   }
   private Pos dummyPos(){ return Pos.unknown; }
   private TSpan dummySpan(){ return TSpan.fromPos(dummyPos(), 1); }
-  private Src dummySrc(){ return Src.syntetic; }
 
   void ws(){ for (; i < s.length() && (s.charAt(i)==' ' || s.charAt(i)=='\n'); i++); }
   private void req(char c){ if (!eat(c)){ throw err("Expected '"+c+"'"); } }
