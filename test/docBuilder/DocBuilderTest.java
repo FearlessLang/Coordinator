@@ -513,7 +513,7 @@ final class DocBuilderTest{
 package pkg
 
 Holder
-  .bar:base.Void
+\t.bar:base.Void
 
 """, text);
   }
@@ -534,10 +534,31 @@ Holder
 package pkg
 
 Holder
-  .bar:base.Void
+\t.bar:base.Void
     does the bar thing
     example:
       .check{bar.assertOk}
+
+""", text);
+  }
+
+  @Test void renderTextOpensEveryMethodLineWithATabAndNoDocumentationLineWithOne(){
+    var ownerName= new TName("pkg.Holder",0,Pos.unknown);
+    var bar= namedMethod(".bar", ownerName);
+    var owner= namedType("pkg.Holder", List.of(), List.of());
+    var typeDoc= new TypeDoc(owner, List.of(
+      new DocOcc(file,8,1,2,".bar is drawn at this very indent",true,false,false)
+    ));
+    typeDoc.declared(Pos.of(file,9,1), bar, List.of(), List.of());
+
+    var text= new HtmlDocRenderer("pkg", Map.of(), List.of(typeDoc), OtherPackages.empty(), Map.of()).renderText();
+
+    assertEquals("""
+package pkg
+
+Holder
+  .bar is drawn at this very indent
+\t.bar:base.Void
 
 """, text);
   }
@@ -645,7 +666,7 @@ AllAutoTests_pkg: UnitTests {::
 package pkg
 
 Holder
-  .bar:base.Void
+\t.bar:base.Void
     example:
       .check{x.assertEq 1}
 
