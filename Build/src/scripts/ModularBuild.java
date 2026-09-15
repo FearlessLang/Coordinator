@@ -40,9 +40,10 @@ public class ModularBuild{
     var co= ResolveResource.controllerSrc.getParent();
     JavacTool.javac(List.of(ResolveResource.controllerSrc, co.resolve("test"), co.resolve("testModule")), out.resolve("controller-test"), mods);
   }
-  static void buildJar(String name, List<Path> srcs){
+  static void buildJar(String name, List<Path> srcs){ buildJar(name, srcs, List.of()); }
+  static void buildJar(String name, List<Path> srcs, List<String> extraLintDisables){
     var classes= out.resolve(name);
-    JavacTool.javac(srcs, classes, mods);
+    JavacTool.javac(srcs, classes, mods, extraLintDisables);
     JavacTool.jar(classes, mods.resolve(name+".jar"));
   }
 
