@@ -1,5 +1,6 @@
 package scripts;
 
+import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -60,6 +61,43 @@ public class ModularBuild{
   static void deployEclipsePlugin(Path appRoot){
     var found= Fs.walk(appRoot, s->s.filter(Files::isDirectory).filter(p->p.getFileName().toString().equals("mods")).toList());
     var appDir= OneOr.of("Expected exactly one 'mods' dir under "+appRoot, found.stream()).getParent();
-    Fs.copyFresh(ResolveResource.controllerPluginJars, appDir.resolve("eclipsePlugin"));
+    Fs.copyFresh(buildEclipsePlugin(), appDir.resolve("eclipsePlugin"));
+  }
+  //the plugin is loaded by the java the eclipse it drops into runs, which is older than the one
+  //everything else here is built with, and it sees the suggest package as plain sources, not as
+  //the Controller module: it is the one thing built to a class path and to an older release.
+  //The path lint is off because the bundles carry Class-Path entries for jars they ship without.
+  static Path buildEclipsePlugin(){
+    var plugin= ResolveResource.controllerPluginSrc;
+    var classes= out.resolve("eclipsePluginClasses");
+    Fs.cleanDir(classes); Fs.ensureDir(classes);
+    var plugins= ResolveResource.eclipsePlugins;
+    var bundles= Fs.walk(plugins, s->s.filter(p->p.getParent().equals(plugins) && p.toString().endsWith(".jar")).map(Path::toString).sorted().toList());
+    var args= new ArrayList<>(JavacTool.javacArgs);
+    args.addAll(List.of("--release", ResolveResource.eclipseJavaVersion, "-Xlint:-path",
+      "-d", classes.toString(),
+      "-cp", String.join(File.pathSeparator, bundles)));
+    List.of(plugin.resolve("src"), ResolveResource.controllerSrc.resolve("suggest")).forEach(src->
+      Fs.walkV(src, s->s.filter(p->p.toString().endsWith(".java")).forEach(p->args.add(p.toString()))));
+    Fs.runTool("javac", args);
+    var res= out.resolve("eclipsePlugin");
+    Fs.cleanDir(res); Fs.ensureDir(res);
+    Fs.runTool("jar", List.of("--create",
+      "--file", res.resolve(bundleFileName(plugin)).toString(),
+      "--manifest", plugin.resolve("META-INF","MANIFEST.MF").toString(),
+      "-C", classes.toString(), ".",
+      "-C", plugin.toString(), "plugin.xml",
+      "-C", plugin.toString(), "icons",
+      "-C", plugin.toString(), "syntaxes",
+      "-C", plugin.toString(), "themes"));
+    return res;
+  }
+  static String bundleFileName(Path plugin){
+    var lines= Fs.readUtf8(plugin.resolve("META-INF","MANIFEST.MF")).lines().toList();
+    return manifestValue(lines, "Bundle-SymbolicName").split(";")[0]+"_"+manifestValue(lines, "Bundle-Version")+".jar";
+  }
+  static String manifestValue(List<String> lines, String key){
+    var found= lines.stream().filter(l->l.startsWith(key+": "));
+    return OneOr.of("Expected exactly one "+key+" in the plugin manifest", found).substring(key.length()+2).strip();
   }
 }

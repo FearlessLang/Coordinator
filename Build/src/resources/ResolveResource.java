@@ -25,7 +25,9 @@ public record ResolveResource(Path assetRoot, Path artefactRoot, Optional<Path> 
   static public final Path coordinatorTestJars= coordinatorSrc.getParent().resolve("testJars");
   static public final Path controllerSrc= LocalResources.controllerSrc;
   static public final Path controllerSrcModule= LocalResources.controllerSrcModule;
-  static public final Path controllerPluginJars= controllerSrc.getParent().resolve("Artefact","plugins");
+  static public final Path controllerPluginSrc= controllerSrc.getParent().resolve("fearlessPluginProject");
+  static public final Path eclipseHome= LocalResources.eclipseHome;
+  static public final Path eclipsePlugins= eclipseHome.resolve("plugins");
 
   static public final Path portableFolderOut= LocalResources.portableFolderOut;
   static public final Path managedFolderOut= LocalResources.managedFolderOut;
@@ -33,5 +35,6 @@ public record ResolveResource(Path assetRoot, Path artefactRoot, Optional<Path> 
   static public final Path packaging= LocalResources.packaging;
 
   static public final String javaVersion= "26";
+  static public final String eclipseJavaVersion= "21";
   public static final String versionId= "0_001";
 }
