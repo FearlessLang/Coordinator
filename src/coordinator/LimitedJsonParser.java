@@ -2,6 +2,7 @@ package coordinator;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -41,7 +42,7 @@ final class LimitedJsonParser{
       var k= name();
       req(':');
       if (out.put(k, v.get()) != null){ throw err("Duplicate key "+k); }
-      if (eat('}')){ return out; }
+      if (eat('}')){ return Collections.unmodifiableMap(out); }
     }
   }
   private String name(){
@@ -57,7 +58,7 @@ final class LimitedJsonParser{
       var lit= typeLit(asArr(x));
       if (out.put(lit.name(), lit) != null){ throw err("Duplicate type "+lit.name().s()); }
     }
-    return out;
+    return Collections.unmodifiableMap(out);
   }
   private Literal typeLit(List<Object> a){
     if (a.size() != 6){ throw err("Bad type record size"); }
