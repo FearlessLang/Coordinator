@@ -2,7 +2,6 @@ package realSourceOracle;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -23,7 +22,7 @@ public final class ZipWellFormedness{
     var out= new ArrayList<ZipEntry>();
     reqCollect(root.resolve(local),root,local, List.of(), 0, out);
     reqNoFileUsedAsDirectory(out);
-    return Collections.unmodifiableList(out);
+    return List.copyOf(out);
   }
   private static void reqCollect(Path diskZip, Path root, Path local, List<String> steps, int depth, ArrayList<ZipEntry> out){
     if (depth > maxZipNesting){ throw Report.zipNestingTooDeep(diskZip, steps, depth, maxZipNesting); }

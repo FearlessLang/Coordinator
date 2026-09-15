@@ -40,7 +40,7 @@ public class Backend{
     tools.decs().forEach(d->{tools.docs().visitLiteral(d); generateInterface(d,false); tools.checks().checkFileReplacement(d, decTypeName(d.name()));});
     tools.checks().checkMagicFulfilled();
     writeMainJava();
-    return fixers;
+    return List.copyOf(fixers);
   }
   void cleanOutFolder(){
     Fs.ensureDir(out);
