@@ -25,4 +25,5 @@ public class LocalResourcesTemplate { //public class LocalResources {
   static public final Path managedFolderOut= prefix.resolve("StandardLibrary","fearlessManagedArtefact");
   static public final Path badZipCorpous= prefix.resolve("Coordinator","badZips");
   static public final Path packaging= prefix.resolve("Coordinator","_fearless_packaging");
+  static public final Path portableEclipse= prefix.resolve("eclipse");
 }
