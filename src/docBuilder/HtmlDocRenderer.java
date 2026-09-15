@@ -136,8 +136,11 @@ final class HtmlDocRenderer{
     sb.append('\n');
   }
 
+  //a tab opens every method line and nothing else, so a reader tells a signature from the
+  //documentation of the type, written at the same indent, without parsing either: the source
+  //whitelist (Fs.allowed) has no tab, so neither a signature nor a doc comment can carry one.
   void renderMethodText(StringBuilder sb, MethodDoc m, Map<DocOcc,Object> claims){
-    sb.append("  ").append(toStr.sig(m.main().sig())).append('\n');
+    sb.append('\t').append(toStr.sig(m.main().sig())).append('\n');
     if (m.declared){ renderDocText(sb,"    ",m,m.docs,claims); }
     var refs= fromRefs(m);
     if (refs.isEmpty()){ return; }
