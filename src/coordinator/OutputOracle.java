@@ -31,54 +31,54 @@ public interface OutputOracle{
   }
   default OtherPackages addCachedPkgApi(OtherPackages other, String pkg){
     var path= rootDir().resolve(pkg+".json");
-    var api= new OutputHelper().pgkApiFromJSon(path);
+    var api= OutputHelper.pgkApiFromJSon(path);
     if (api.isEmpty()){ throw Violation.cacheMissingPkgApiFile(path); }
     return other.mergeWith(api.get(), Math.max(other.stamp(), Fs.lastModified(path)));
   }//READS the pkg info and adds to other; Does not update the disk. Just reads info
   default OtherPackages startCachedPkgApi(String pkg,Map<String,Map<String,String>> map,long stamp){
     var path= rootDir().resolve(pkg+".json");
-    var api= new OutputHelper().pgkApiFromJSon(path);
+    var api= OutputHelper.pgkApiFromJSon(path);
     if (api.isEmpty()){ throw Violation.cacheMissingPkgApiFile(path); }
     return OtherPackages.start(map,api.get(),stamp);
   }
   default long commitPkgApi(String pkg, List<Literal> core, long minExclusiveMillis){
     var path= rootDir().resolve(pkg+".json");
-    var res= new OutputHelper().pgkApiFromJSon(path);
+    var res= OutputHelper.pgkApiFromJSon(path);
     if (res.isEmpty()){ return Fs.writeUtf8(path, ApiJson.toJSon(core),-1); }
-    if (new OutputHelper().consistent(res.get(),core)){ return Fs.lastModified(path); }
+    if (OutputHelper.consistent(res.get(),core)){ return Fs.lastModified(path); }
     return Fs.writeUtf8(path, ApiJson.toJSon(core),minExclusiveMillis);
     }
   default void commitMains(String pkg, List<Literal> core){ Fs.writeUtf8(rootDir().resolve(pkg+".mains"), Helper.mainsText(core)); }
   default long commitMap(Map<String,Map<String,String>> map, long minExclusiveMillis){
     var path= rootDir().resolve("_map.json");
-    var res= new OutputHelper().mapFromJSon(path);
-    if (res.isEmpty()){ return Fs.writeUtf8(path, new OutputHelper().toJSon(map),-1); }
+    var res= OutputHelper.mapFromJSon(path);
+    if (res.isEmpty()){ return Fs.writeUtf8(path, OutputHelper.toJSon(map),-1); }
     if (res.get().equals(map)){ return Fs.lastModified(path); }
-    return Fs.writeUtf8(path, new OutputHelper().toJSon(map),minExclusiveMillis);
+    return Fs.writeUtf8(path, OutputHelper.toJSon(map),minExclusiveMillis);
   }
   //commitMap only write if different from the old, and in that case it will bumps mtime strictly above minExclusiveMillis
 }
 
 class OutputHelper{
   static String fileList(List<Ref> files){ return Join.of(files.stream().map(Ref::fearPath).sorted(),"","\n",""); }
-  String toJSon(Map<String,Map<String,String>> map){
+  static String toJSon(Map<String,Map<String,String>> map){
     if (map.isEmpty()){ return "{}"; }
     return obj(map, m->obj(m, s->"\""+s+"\""));
   }
-  Optional<Map<TName,Literal>> pgkApiFromJSon(Path p){ return readAllowed(p).map(s->new LimitedJsonParser(s, p).apiJsonToMap()); }
-  private <T> String obj(Map<String,T> m, Function<T,String> v){
+  static Optional<Map<TName,Literal>> pgkApiFromJSon(Path p){ return readAllowed(p).map(s->new LimitedJsonParser(s, p).apiJsonToMap()); }
+  private static <T> String obj(Map<String,T> m, Function<T,String> v){
     return Join.of(m.entrySet().stream()
       .map(e->"\""+e.getKey()+"\":"+v.apply(e.getValue())),
       "{",",\n","}\n");//correctly throw for empty
   }
-  Optional<Map<String,Map<String,String>>> mapFromJSon(Path p){ return readAllowed(p).map(s->new LimitedJsonParser(s,p).obj2()); }
-  private Optional<String> readAllowed(Path p){
+  static Optional<Map<String,Map<String,String>>> mapFromJSon(Path p){ return readAllowed(p).map(s->new LimitedJsonParser(s,p).obj2()); }
+  private static Optional<String> readAllowed(Path p){
     if (!Fs.of(()->Files.exists(p))){ return Optional.empty(); }
     var s= Fs.readUtf8(p);
     if (!s.chars().allMatch(c -> Fs.allowed.indexOf(c) >= 0)){ throw Violation.cacheInvalidFile(p, "Non-whitelisted char"); }
     return Optional.of(s);
   }
-  boolean consistent(Map<TName,Literal> map, List<Literal> core){
+  static boolean consistent(Map<TName,Literal> map, List<Literal> core){
     var allCore= AllLs.of(core).values();
     if (map.size() != allCore.size()){ return false; }
     for (var l: allCore){
