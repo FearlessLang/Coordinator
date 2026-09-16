@@ -640,7 +640,7 @@ NetworkProvider order, or WNetOpenEnum), and none of them claimed this path.
 
   //[Windows-only]
   static final String networkResourceGone= NetInfo.serverLine+"""
-The shared folder holding this path is no longer offered by the server named above(error 55, ERROR_DEV_NOT_EXIST).
+The shared folder holding this path is no longer offered by the server named above (error 55, ERROR_DEV_NOT_EXIST).
 It was reachable before; since then, [[the server still answers but refuses this share name - it stopped sharing the
 folder/the server no longer answers at all - it went offline]](checked by the same
 probe as error 53: name lookup, reachability, share).
@@ -881,7 +881,7 @@ class MediaIoText{
   static final String generic= """
 The device named above reported a failure while `reading` (I/O error).
 This failure does not report whether this file's stored bytes are damaged or the device itself is failing.
-- stored bytes damaged: the medium is damaged at the spots holding this file's data.
+- stored bytes damaged: the storage medium is damaged at the spots holding this file's data.
 - device failing: the hardware is degrading; errors appear on other files of the same volume too, and grow over time.
 """+Terms.glossary;
 //CHANGED: "the medium is unreadable at the spots" -> "damaged at the spots": for a
