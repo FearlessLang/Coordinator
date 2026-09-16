@@ -34,27 +34,22 @@ final class TypeDoc{
   }
 
   void declared(Pos pos, M m, List<DocOcc> docs, List<MethodRef> inheritedFrom){
-    var k= DeclaredMethodKey.of(pos,m);
-    var d= declaredByKey.get(k);
-    if (d == null){
-      d= new MethodDoc(this,true,docs,inheritedFrom);
-      declaredByKey.put(k,d);
-      methods.add(d);
-    }
-    else{ d.addInheritedFrom(inheritedFrom); }
-    d.add(m);
+    oneOf(declaredByKey, DeclaredMethodKey.of(pos,m), true, docs, inheritedFrom).add(m);
   }
 
   void imported(M m, List<MethodRef> from){
-    var k= ImportedKey.of(m);
-    var d= importedByKey.get(k);
+    oneOf(importedByKey, ImportedKey.of(m), false, List.of(), from).add(m);
+  }
+
+  private <K> MethodDoc oneOf(Map<K,MethodDoc> byKey, K k, boolean declared, List<DocOcc> docs, List<MethodRef> inheritedFrom){
+    var d= byKey.get(k);
     if (d == null){
-      d= new MethodDoc(this,false,List.of(),from);
-      importedByKey.put(k,d);
+      d= new MethodDoc(this,declared,docs,inheritedFrom);
+      byKey.put(k,d);
       methods.add(d);
     }
-    else{ d.addInheritedFrom(from); }
-    d.add(m);
+    else{ d.addInheritedFrom(inheritedFrom); }
+    return d;
   }
 }
 

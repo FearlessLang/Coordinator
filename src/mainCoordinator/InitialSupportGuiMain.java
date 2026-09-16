@@ -163,13 +163,8 @@ public final class InitialSupportGuiMain{
     return b;
   }
   private static JButton addBtn(Container parent, String text){
-    var b= new JButton(text);
-    b.setAlignmentX(Component.CENTER_ALIGNMENT);
-    b.setMaximumSize(new Dimension(Integer.MAX_VALUE, b.getPreferredSize().height + 6));
+    var b= addBtn(parent, text, comingSoon, _->{});
     b.setEnabled(false);
-    b.setToolTipText(comingSoon);
-    parent.add(b);
-    parent.add(Box.createVerticalStrut(8));
     return b;
   }
   private void afterCreate(Path projectDir){
