@@ -964,7 +964,7 @@ class InvalidOperationText{
 //[POSIX-only]
   static final String invalidArgument= """
 The operating system rejected the `read` request as nonsensical for this file ("invalid argument").
-This file is [[not an ordinary file: it is a device endpoint, which can not be `written` by the Fearless API
+This file is [[not an ordinary file: it is a device endpoint, which cannot be `written` by the Fearless API
 /on a volume of an unusual kind, which sets its own rules on how its files may be accessed
 /an ordinary file on an ordinary volume, so the malformed request shows a JVM bug]]
 (checked by asking the file's kind and the volume's kind: one metadata query plus the Device-line queries).
@@ -977,7 +977,7 @@ This file is [[not an ordinary file: it is a device endpoint, which can not be `
   static final String invalidParameter= """
 The operating system rejected the `read` request as nonsensical for this file
 (error 87, ERROR_INVALID_PARAMETER).
-This file is [[not an ordinary file: it is a device endpoint, which can not be `written` by the Fearless API
+This file is [[not an ordinary file: it is a device endpoint, which cannot be `written` by the Fearless API
 /on a volume of an unusual kind, which sets its own rules on how its files may be accessed
 /an ordinary file on an ordinary volume, so the malformed request shows a JVM bug]]
 (checked by asking the file's kind and the volume's kind: one metadata query plus the Device-line queries).
@@ -988,7 +988,7 @@ This file is [[not an ordinary file: it is a device endpoint, which can not be `
 A component involved in `reading` this file refused an operation as one it does not
 perform (error 1, ERROR_INVALID_FUNCTION).
 This failure does not report the failure level:
-it could be the device, its driver, or the file-system.
+it could be the device, its driver, or the file system.
 
 [[The device behind the volume named above is a special-purpose device (a virtual
 volume provided by another program), and such devices set their own rules on how
@@ -1004,7 +1004,7 @@ class UnsupportedText{
   static final String unsupportedFileSystem= """
 A component involved in `reading` this file refused an operation as one it does not perform.
 Ordinary disk and network volumes support everything needed.
-This file is [[not an ordinary file: it is a device endpoint, which can not be `written`
+This file is [[not an ordinary file: it is a device endpoint, which cannot be `written`
 by the Fearless API
 /on a volume of an unusual kind - one that presents device controls or live system information as if they were files - which sets its own rules on how its files may be accessed
 /an ordinary file on an ordinary volume; thus the refusal itself is the anomaly: a bug in the driver, in the operating system, or in the JVM]]
