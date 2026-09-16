@@ -14,7 +14,7 @@ import tools.NativeOverrides;
 import utils.Pos;
 
 public final class MagicConsistency{
-  private static final TName magicName= new TName("base.Magic", 0,Pos.unknown);
+  private static final TName magicName= new TName("base._Magic", 0,Pos.unknown);
   private final Optional<NativeOverrides> natives;
   private final Set<String> magicPairs= new HashSet<>();
   MagicConsistency(String pkgName, Path rtPath){
