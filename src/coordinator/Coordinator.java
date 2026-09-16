@@ -2,6 +2,7 @@ package coordinator;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -115,7 +116,7 @@ class Helper{
     catch(WouldCompile _){ return Optional.empty(); }
     var res= new LinkedHashMap<String,String>();
     l.pkgs().keySet().stream().flatMap(p->Fs.readUtf8(out.rootDir().resolve(p+".mains")).lines()).forEach(line->res.put(line.substring(0,line.indexOf(' ')),line.substring(line.indexOf(' ')+1)));
-    return Optional.of(res);
+    return Optional.of(Collections.unmodifiableMap(res));
   }
   private static final TName baseMain= new TName("base.Main",0,utils.Pos.unknown);
   static String mainsText(List<Literal> core){
