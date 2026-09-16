@@ -1,15 +1,16 @@
 package realSourceOracle;
 
 import java.util.List;
+import java.util.function.Predicate;
 
 import tools.SourceOracle;
 
-public final class TxtAutoloadHandler implements AutoloadHandler{
+public record ExtAutoloadHandler(Predicate<String> matches, String baseType) implements AutoloadHandler{
   @Override public AutoloadedRes generate(SourceOracle.Ref ref, String pkgName){
-    if (!ref.fearPath().endsWith(".txt")){ return AutoloadedRes.none(); }
+    if (!matches.test(ref.fearPath())){ return AutoloadedRes.none(); }
     var type= AutoloadHandler.standardTypeName(pkgName, ref);
     return new AutoloadedRes(
-      type+": base.TxtFile{\n"
+      type+": "+baseType+"{\n"
       +AssetAutoload.descriptorMethods(ref)
       +"}\n",
       List.of(type)

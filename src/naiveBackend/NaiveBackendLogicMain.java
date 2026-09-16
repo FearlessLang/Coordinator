@@ -17,8 +17,8 @@ public class NaiveBackendLogicMain {
     Fs.cleanDirContents(classes);
     var pkgPath= classes.resolve(tools.pkgName());
     if (tools.pkgName().equals("base")){
-    	Fs.copyTreeFlat(tools.rtPath(), outPath);
-    	Fs.copyTreeFlat(tools.rtPath().resolveSibling("fonts"), pkgPath);
+      Fs.copyTreeFlat(tools.rtPath(), outPath);
+      Fs.copyTreeFlat(tools.rtPath().resolveSibling("fonts"), pkgPath);
     }
     assert foldDistinct(outPath);
     Runnable post= ()->fixers.forEach(f->f.accept(pkgPath));
