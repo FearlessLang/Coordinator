@@ -104,7 +104,7 @@ class Helper{
   static String main(Coordinator coordinator, Path project, SourceOracle stLib) throws InterruptedException{
     var out= out(project);
     var sb= new StringBuilder();
-    for(var p: compile(coordinator,project,stLib)){ sb.append(coordinator.runAllMains(p,out)); }
+    for (var p: compile(coordinator,project,stLib)){ sb.append(coordinator.runAllMains(p,out)); }
     return sb.toString();
   }
   static Optional<Map<String,String>> mains(Coordinator coordinator, Path project, SourceOracle stLib){
@@ -133,13 +133,13 @@ class Helper{
     if (o.allFiles().stream().noneMatch(Helper::isFear)){ throw Report.projectEmpty(path); }
     o.allFiles().stream().filter(Helper::isFear).forEach(Helper::pkgName);//err if not under a pkg
     var map= new LinkedHashMap<String,List<Ref>>();
-    for(Ref u:o.allFiles()){ pkgNameOpt(u).ifPresent(pn->map.computeIfAbsent(pn,_->new ArrayList<>()).add(u)); }
+    for (Ref u:o.allFiles()){ pkgNameOpt(u).ifPresent(pn->map.computeIfAbsent(pn,_->new ArrayList<>()).add(u)); }
     return map;
   }
   static Layer layers(Coordinator coordinator, Map<String,List<Ref>> map, Layer l, List<Ref> ranks){
     int lastNum= rankNumber(ranks.getFirst());
     var pkgs= new LinkedHashMap<String, List<Ref>>();
-    for(Ref u:ranks){
+    for (Ref u:ranks){
       var pkgName= pkgName(u);
       int currNum= rankNumber(u);
       if (currNum == lastNum){ pkgs.put(pkgName,map.get(pkgName)); continue; }
@@ -159,16 +159,16 @@ class Helper{
   }
   static int rankNumber(Ref u){
     var name= u.toString();
-    if(!u.toString().endsWith(".fear")){ throw Report.projectMalformedRankFileName(u); }
+    if (!u.toString().endsWith(".fear")){ throw Report.projectMalformedRankFileName(u); }
     var stem= Fs.fileNameWithoutExtension(name);
-    for(int i : Range.of(ranks)){
+    for (int i : Range.of(ranks)){
       var pref= ranks.get(i);
       int base= (i+1)*1000;
-      if(stem.equals(pref)){ return base+999; } // shortcut: _rank_app.fear == _rank_app999.fear
-      if(!stem.startsWith(pref)){ continue; }
-      if(stem.length()!=pref.length()+3){ throw Report.projectMalformedRankFileName(u); }
+      if (stem.equals(pref)){ return base+999; } // shortcut: _rank_app.fear == _rank_app999.fear
+      if (!stem.startsWith(pref)){ continue; }
+      if (stem.length()!=pref.length()+3){ throw Report.projectMalformedRankFileName(u); }
       var digits= stem.substring(pref.length());
-      if(!digits.chars().allMatch(Character::isDigit)){ throw Report.projectMalformedRankFileName(u); }
+      if (!digits.chars().allMatch(Character::isDigit)){ throw Report.projectMalformedRankFileName(u); }
       return base+Integer.parseInt(digits);
     }
     throw Report.projectMalformedRankFileName(u);

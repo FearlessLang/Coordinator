@@ -9,6 +9,7 @@ import resources.ResolveResource;
 import tools.Fs;
 import tools.JavacTool;
 import tools.JavaTool;
+import tools.PortableApp;
 import utils.OneOr;
 
 public class ModularBuild{
@@ -57,6 +58,17 @@ public class ModularBuild{
 
   static void deployBaseCache(Path appRoot) throws InterruptedException{
     JavaTool.runMain(List.of("-ea"), out.resolve("coordinator-test"), mods, "testBuildBase.BaseCacheBuilder", appRoot.toString());
+  }
+
+  static void deploy(Path folderOut, List<List<Path>> srcs, String binName, String mainClass, boolean eclipsePlugin) throws InterruptedException{
+    var appRoot= folderOut.resolve(binName);
+    new PortableApp(ResolveResource.packaging, folderOut, srcs, ResolveResource.stLibPath, ResolveResource.stLibRTPath,
+      ResolveResource.coordinatorJars, binName, ResolveResource.versionId, mainClass).build();
+    commons();
+    frontendMain();
+    coordinatorTest();
+    deployBaseCache(appRoot);
+    if (eclipsePlugin){ deployEclipsePlugin(appRoot); }
   }
 
   static void deployEclipsePlugin(Path appRoot){

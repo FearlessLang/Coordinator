@@ -739,6 +739,53 @@ Holder
     assertFalse(text.contains("<a "), text);
   }
 
+  //KNOWN BUG, not fixed by this test: two declarations sharing one physical source
+  //line can both capture the very same trailing inline doc comment, because
+  //SourceDocs.inlineAfter only requires "the first inline doc at or after my column",
+  //so an earlier declaration with no comment of its own also "sees" a later sibling's
+  //comment. HtmlDocRenderer.inlineClaims then decides the one true owner by iterating
+  //visibleMethods, which is sorted ALPHABETICALLY (methodSortKey), not by source
+  //position: whichever method name sorts last wins the claim via Map.put overwrite,
+  //even when that method is declared FARTHER from the comment than its sibling.
+  //Here ".aaa" is declared second, right before the comment (its true owner), but
+  //".zzz", declared first with no comment of its own, still "sees" the same comment
+  //and wins the claim because "zzz" sorts after "aaa". The comment ends up rendered
+  //under the wrong method.
+  @Test void aTrailingInlineDocIsMisattributedWhenTwoDeclarationsShareALineAndSortOutOfSourceOrder(){
+    var text= ".zzz->1;  .aaa->2 /// trailing note\n";
+    var docs= new SourceDocs(file, text);
+    var zzzDocs= docs.docsAt(Pos.of(file,1,1), false);
+    var aaaDocs= docs.docsAt(Pos.of(file,1,11), false);
+    assertEquals(1, zzzDocs.size());
+    assertEquals(1, aaaDocs.size());
+    assertTrue(zzzDocs.get(0)==aaaDocs.get(0),
+      "SourceDocs attaches the same DocOcc to both declarations sharing this line: "
+      +zzzDocs+" vs "+aaaDocs);
+
+    var ownerName= new TName("pkg.Holder",0,Pos.unknown);
+    var zzz= namedMethod(".zzz", ownerName);
+    var aaa= namedMethod(".aaa", ownerName);
+    var owner= namedType("pkg.Holder", List.of(), List.of());
+    var typeDoc= new TypeDoc(owner, List.of());
+    typeDoc.declared(Pos.of(file,1,1), zzz, zzzDocs, List.of());
+    typeDoc.declared(Pos.of(file,1,11), aaa, aaaDocs, List.of());
+
+    var rendered= new HtmlDocRenderer("pkg", Map.of(), List.of(typeDoc), OtherPackages.empty(), Map.of()).renderText();
+
+    //Correct attribution would show "trailing note" under .aaa, the declaration it is
+    //physically written right after. Instead it renders under .zzz: this assertion
+    //pins down the CURRENT (buggy) behavior, it is not the desired one.
+    assertEquals("""
+package pkg
+
+Holder
+\t.aaa:base.Void
+\t.zzz:base.Void
+    trailing note
+
+""", rendered);
+  }
+
   private static HtmlDocBuilder fixtureBuilder(){
     var aName= new TName("pkg.A",0,Pos.unknown);
     var bName= new TName("pkg.B",0,Pos.unknown);
