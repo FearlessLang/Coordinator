@@ -25,7 +25,7 @@ public final class ApiJson{
     q(s.origin().s()), q(""+s.origin().arity()), q(s.abs() ?"abs":"concrete")), "[", ",", "]", "[]"); }
   static String tsJ(List<T> ts){ return Join.of(ts.stream().map(ApiJson::tJ), "[", ",", "]", "[]"); }
   static String tJ(T t){
-    var es= switch (t){
+    var es= switch(t){
       case T.X(var n,_) -> Stream.of(q("x"), q(n));
       case T.ReadImmX(var x) -> Stream.of(q("x"), q("read/imm"), q(x.name()));
       case T.RCX(var rc, var x) -> Stream.of(q("x"), q(rc.name()), q(x.name()));

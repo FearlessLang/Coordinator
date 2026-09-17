@@ -52,8 +52,8 @@ public class NativeLocaleForcer {
       if (Fs.isWindows()){ forceWindowsEnglish(); return; }
       forcePosixEnglish();
     }
-    catch (UserError e){ throw e; }
-    catch (Throwable t){ throw Violation.couldNotForceEnglish("The call into the operating system failed.", t); }
+    catch(UserError e){ throw e; }
+    catch(Throwable t){ throw Violation.couldNotForceEnglish("The call into the operating system failed.", t); }
   }
   private static void forceWindowsEnglish() throws Throwable {
     forceWindowsUiLanguage();

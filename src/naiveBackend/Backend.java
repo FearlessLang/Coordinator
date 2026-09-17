@@ -158,7 +158,7 @@ public class Backend{
       .append("  static{ base.Util.installParentLifeline(); }\n")
       .append("  static final String[] all= ").append(all).append(";\n")
       .append("  public static final String[][] autoloadedAssets= ").append(assets).append(";\n")
-      .append("  public static void main(String[] args){ for(String n: args.length == 0 ? all : args){ run(n); } }\n")
+      .append("  public static void main(String[] args){ for (String n: args.length == 0 ? all : args){ run(n); } }\n")
       .append("  static void run(String n){\n");
     mains.forEach((n,iface)->sb
       .append("    if (n.equals(\"").append(n).append("\")){ base.Util.topLevel(()->")

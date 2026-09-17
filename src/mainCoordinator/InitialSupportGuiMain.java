@@ -118,7 +118,7 @@ public final class InitialSupportGuiMain{
     fc.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES);
     fc.setCurrentDirectory(FileSystemView.getFileSystemView().getHomeDirectory()); // often Desktop on Windows
     fc.setSelectedFile(new File("demo")); 
-    if(fc.showSaveDialog(b) != JFileChooser.APPROVE_OPTION){ return; }
+    if (fc.showSaveDialog(b) != JFileChooser.APPROVE_OPTION){ return; }
     var filePath=fc.getSelectedFile().toPath();
     MakeDemo.of(filePath);
     afterCreate(filePath);
