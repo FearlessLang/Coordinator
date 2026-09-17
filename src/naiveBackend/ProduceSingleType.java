@@ -17,7 +17,7 @@ record ProduceBody(BytecodeLineFix sb, Backend b, String iface, String thisName,
     emitE(m.e().get());
     sb.a(";\n  }\n");
   }
-  private String optCast(core.T t){ return switch(t){
+  private String optCast(core.T t){ return switch (t){
     case core.T.RCC rcc -> "("+b.typeName(rcc.c().name())+")";
     default -> "";
   };}
