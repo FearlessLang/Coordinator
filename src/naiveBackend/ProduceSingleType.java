@@ -65,7 +65,7 @@ record ProduceBody(BytecodeLineFix sb, Backend b, String iface, String thisName,
       sb.a(b.decTypeName(lit.name())).a(".instance");
       return;
     }
-    if(!lit.infName()){ b.generateInterface(lit, true); }
+    if (!lit.infName()){ b.generateInterface(lit, true); }
     var base= b.ifaceNameFor(lit);
       sb.a("new ").a(base).a("(){");
     if (b.isRepr(lit)){
