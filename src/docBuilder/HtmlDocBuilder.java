@@ -50,7 +50,7 @@ public final class HtmlDocBuilder implements DocBuilder{
   Path testPath;
   Map<String,String> uses= Map.of();
 
-  final List<TypeDoc> types= new java.util.ArrayList<>();
+  final List<TypeDoc> types= new ArrayList<>();
   final IdentityHashMap<Src,TypeDoc> typeBySrc= new IdentityHashMap<>();
   final Map<URI,SourceDocs> sources= new HashMap<>();
 
