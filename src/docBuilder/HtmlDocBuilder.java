@@ -97,6 +97,7 @@ public final class HtmlDocBuilder implements DocBuilder{
     var spans= new IdentityHashMap<DocOcc,List<ResolvedSpan>>();
     var problems= new ArrayList<String>();
     orphans(problems);
+    ambiguousInline(problems);
     docGroups().forEach(g->linkGroup(resolver,g,spans,problems));
     if (!problems.isEmpty()){ throw Report.docReferences(problems); }
     var renderer= new HtmlDocRenderer(pkgName,uses,types,other,spans,baseDocLocation);
@@ -182,11 +183,29 @@ public final class HtmlDocBuilder implements DocBuilder{
     return Message.of(oracle::loadString, List.of(new Frame("the documentation of package "+pkgName, span)), notAttached);
   }
 
+  //a trailing /// or //> reached by more than one declaration sharing its physical
+  //line: which one it documents is genuinely ambiguous, so it is reported rather than
+  //silently attached to one of them.
+  void ambiguousInline(List<String> problems){
+    sources.values().stream()
+      .flatMap(s->s.ambiguousInlineDocs().stream())
+      .forEach(occ->problems.add(ambiguousInline(occ)));
+  }
+
+  String ambiguousInline(DocOcc occ){
+    var span= new Span(occ.file(), occ.line(), occ.textColumn(), occ.line(), occ.textColumn()+occ.text().length());
+    return Message.of(oracle::loadString, List.of(new Frame("the documentation of package "+pkgName, span)), ambiguousTrailingDoc);
+  }
+
   static final String notAttached=
     "This documentation is attached to nothing.\n"
    +"A /// or //> block documents the declaration right below it, and nothing else\n"
    +"may come between them. A line starting with // ends the block, so check whether\n"
    +"one of these was meant to start with /// instead.";
+  static final String ambiguousTrailingDoc=
+    "This documentation follows more than one declaration on the same line.\n"
+   +"Move it directly after the one declaration it documents, or put each declaration\n"
+   +"on its own line.";
   static final String notAName=
     "This is written as a reference, but it is not a name.\n"
    +"Use two backticks or more to show it as code instead.";
