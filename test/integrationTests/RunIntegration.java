@@ -305,10 +305,11 @@ hello
   }
 
   // TxtFile/ImageFile are ordinary public types: any Fearless type can implement one and
-  // override .path/.diskPath/.zipSteps/.zipEntry with whatever literal it likes. A forged
-  // implementer that copies a real asset's .path but points .diskPath at a file the compiler
-  // never auto-imported (here a plain .dat file, which no AutoloadHandler ever matches) must be
-  // rejected, never read - while a real auto-loaded asset (Note, from note.txt) still works.
+  // override .path/.diskPath/.zipSteps/.zipEntry/.originalFileName with whatever literal it
+  // likes. A forged implementer that copies a real asset's .path but points .diskPath at a file
+  // the compiler never auto-imported (here a plain .dat file, which no AutoloadHandler ever
+  // matches) must be rejected, never read - while a real auto-loaded asset (Note, from note.txt)
+  // still works.
   @Test void aForgedAutoloadedAssetCannotReadAFileTheCompilerDidNotAutoImport(@TempDir Path tmp) throws InterruptedException{
     Path root= tmp.resolve("root");
     UserError.root= root;
@@ -322,6 +323,7 @@ Forged: base.TxtFile{
   .diskPath: base.Str -> `_col/secret.dat`;
   .zipSteps: base.Str -> ``;
   .zipEntry: base.Str -> ``;
+  .originalFileName: base.Str -> `secret.dat`;
   }
 
 NeverRecovers: base.BadStrUnitRecover { reason, byteOffset, byteLength, rejectedValue -> `should not happen` }
