@@ -25,7 +25,7 @@ import userMessages.Report;
 import utils.Bug;
 import utils.Pos;
 
-public final class HtmlDocBuilder implements DocBuilder{
+public final class HtmlDocBuilder{
   public HtmlDocBuilder(SourceOracle oracle, OtherPackages other, List<Literal> core){
     this(oracle,other,core,Optional.empty());
   }
@@ -54,7 +54,7 @@ public final class HtmlDocBuilder implements DocBuilder{
   final IdentityHashMap<Src,TypeDoc> typeBySrc= new IdentityHashMap<>();
   final Map<URI,SourceDocs> sources= new HashMap<>();
 
-  @Override public void packageLocation(String pkgName, Path htmlPath, Path testPath){
+  public void packageLocation(String pkgName, Path htmlPath, Path testPath){
     assert nonNull(pkgName,htmlPath,testPath);
     assert this.pkgName == null;
     this.pkgName= pkgName;
@@ -64,7 +64,7 @@ public final class HtmlDocBuilder implements DocBuilder{
     this.uses= DocNames.uses(pkgName,core);
   }
 
-  @Override public void visitLiteral(Literal l){
+  public void visitLiteral(Literal l){
     assert nonNull(l);
     var t= typeBySrc.get(l.src());
     if (t == null){
@@ -79,19 +79,19 @@ public final class HtmlDocBuilder implements DocBuilder{
     }
   }
 
-  @Override public void visitDeclaredM(Literal owner, M m){
+  public void visitDeclaredM(Literal owner, M m){
     assert nonNull(owner,m);
     assert m.sig().origin().equals(owner.name());
     type(owner).declared(methodPos(m),m,methodDocAt(owner,m),inheritedMethods(owner,m));
   }
 
-  @Override public void visitImportedM(Literal owner, M m){
+  public void visitImportedM(Literal owner, M m){
     assert nonNull(owner,m);
     assert !m.sig().origin().equals(owner.name());
     type(owner).imported(m,inheritedMethods(owner,m));
   }
 
-  @Override public void complete(){
+  public void complete(){
     assert nonNull(pkgName,htmlPath);
     var resolver= new DocResolver(pkgName,types,other);
     var spans= new IdentityHashMap<DocOcc,List<ResolvedSpan>>();

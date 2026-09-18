@@ -10,11 +10,10 @@ import java.util.Optional;
 import coordinator.CapabilityEnvironment;
 import core.E.Literal;
 import core.OtherPackages;
-import docBuilder.DocBuilder;
 import docBuilder.HtmlDocBuilder;
 import tools.SourceOracle;
 
-public record BackendTools(String pkgName, List<Literal> decs, Path rootDir, DocBuilder docs, MagicConsistency checks, CapabilityEnvironment capabilities, Path rtPath){
+public record BackendTools(String pkgName, List<Literal> decs, Path rootDir, HtmlDocBuilder docs, MagicConsistency checks, CapabilityEnvironment capabilities, Path rtPath){
   public BackendTools{
     assert nonNull(pkgName,rootDir,docs,checks,capabilities);
     assert unmodifiable(decs, "decs");
