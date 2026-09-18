@@ -787,6 +787,32 @@ Holder
     assertTrue(ex.getMessage().contains("more than one declaration on the same line"), ex.getMessage());
   }
 
+  @Test void aTrailingDocAfterAClosedNestedBraceOnTheSameLineIsNotAmbiguous(@TempDir Path tmp){
+    var ownerName= new TName("pkg.Holder",0,Pos.unknown);
+    var outer= namedMethodAt(".hash", ownerName, Pos.of(file,1,1));
+    var inner= namedMethodAt(".then", ownerName, Pos.of(file,1,9));
+    var owner= namedType("pkg.Holder", List.of(), List.of(outer,inner));
+    var oracle= SourceOracle.debugBuilder().putURI(file, ".hash->{.then->1};/// hash via str\n").build();
+    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(owner));
+    builder.visitLiteral(owner);
+    builder.packageLocation("pkg", tmp.resolve("pkg.html"), tmp.resolve("auto_tests","pkg_test.fear"));
+
+    builder.complete();
+  }
+
+  @Test void aTrailingDocRightAfterAnOpeningBraceIsAmbiguousBetweenTheOuterDeclarationAndTheNestedOne(@TempDir Path tmp){
+    var ownerName= new TName("pkg.Holder",0,Pos.unknown);
+    var outer= namedMethodAt(".outer", ownerName, Pos.of(file,1,1));
+    var inner= namedMethodAt(".inner", ownerName, Pos.of(file,1,9));
+    var owner= namedType("pkg.Holder", List.of(), List.of(outer,inner));
+    var oracle= SourceOracle.debugBuilder().putURI(file, ".outer->{///doc\n}\n").build();
+    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(owner));
+    builder.visitLiteral(owner);
+    builder.packageLocation("pkg", tmp.resolve("pkg.html"), tmp.resolve("auto_tests","pkg_test.fear"));
+
+    assertThrows(UserError.class, builder::complete);
+  }
+
   @Test void aTrailingDocAfterTheLastOfTwoDeclarationsOnSeparateLinesIsNotAmbiguous(@TempDir Path tmp){
     var ownerName= new TName("pkg.Holder",0,Pos.unknown);
     var zzz= namedMethodAt(".zzz", ownerName, Pos.of(file,1,1));

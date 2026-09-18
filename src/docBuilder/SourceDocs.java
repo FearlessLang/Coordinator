@@ -15,6 +15,7 @@ final class SourceDocs{
   final URI uri;
   final List<String> lines;
   final Map<Integer,List<DocOcc>> docsByLine= new HashMap<>();
+  final Map<Integer,int[]> depthByLine= new HashMap<>();
   final Set<DocOcc> attached= Collections.newSetFromMap(new IdentityHashMap<>());
   final Map<DocOcc,Integer> inlineClaimedFromColumn= new IdentityHashMap<>();
   final Set<DocOcc> ambiguousInline= Collections.newSetFromMap(new IdentityHashMap<>());
@@ -23,13 +24,20 @@ final class SourceDocs{
     assert pos.line() > 0 && pos.line() <= lines.size(): pos;
     var res= new ArrayList<DocOcc>();
     if (includeBefore){ collectBefore(pos.line(),res); }
-    inlineAfter(pos.line(),pos.column()).ifPresent(occ->{
-      var firstColumn= inlineClaimedFromColumn.putIfAbsent(occ, pos.column());
-      if (firstColumn != null && firstColumn != pos.column()){ ambiguousInline.add(occ); }
-      res.add(occ);
-    });
+    inlineAfter(pos.line(),pos.column())
+      .filter(occ->depthAt(occ.line(),occ.column()) >= depthAt(pos.line(),pos.column()))
+      .ifPresent(occ->{
+        var firstColumn= inlineClaimedFromColumn.putIfAbsent(occ, pos.column());
+        if (firstColumn != null && firstColumn != pos.column()){ ambiguousInline.add(occ); }
+        res.add(occ);
+      });
     attached.addAll(res);
     return res;
+  }
+
+  int depthAt(int line, int column){
+    var arr= depthByLine.get(line);
+    return arr == null || column > arr.length ? 0 : arr[column-1];
   }
 
   List<DocOcc> ambiguousInlineDocs(){ return List.copyOf(ambiguousInline); }
@@ -100,9 +108,12 @@ final class SourceDocs{
 
   void scan(){
     var mode= Mode.Normal;
+    var depth= 0;
     for (int l= 1; l <= lines.size(); l += 1){
       var s= lines.get(l-1);
+      var arr= new int[s.length()];
       for (int i= 0; i < s.length();){
+        var start= i;
         switch(mode){
           case Normal -> {
             if (s.startsWith("///",i)){
@@ -121,6 +132,8 @@ final class SourceDocs{
             else if (s.startsWith("/*",i)){ mode= Mode.Block; i += 2; }
             else if (s.charAt(i) == '"'){ mode= Mode.DoubleString; i += 1; }
             else if (s.charAt(i) == '`'){ mode= Mode.BacktickString; i += 1; }
+            else if (s.charAt(i) == '{'){ depth += 1; i += 1; }
+            else if (s.charAt(i) == '}'){ depth -= 1; i += 1; }
             else{ i += 1; }
           }
           case DoubleString -> {
@@ -136,7 +149,9 @@ final class SourceDocs{
             else{ i += 1; }
           }
         }
+        Arrays.fill(arr,start,i,depth);
       }
+      depthByLine.put(l,arr);
     }
   }
 
