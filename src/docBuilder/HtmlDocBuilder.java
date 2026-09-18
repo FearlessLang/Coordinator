@@ -183,9 +183,6 @@ public final class HtmlDocBuilder implements DocBuilder{
     return Message.of(oracle::loadString, List.of(new Frame("the documentation of package "+pkgName, span)), notAttached);
   }
 
-  //a trailing /// or //> reached by more than one declaration sharing its physical
-  //line: which one it documents is genuinely ambiguous, so it is reported rather than
-  //silently attached to one of them.
   void ambiguousInline(List<String> problems){
     sources.values().stream()
       .flatMap(s->s.ambiguousInlineDocs().stream())

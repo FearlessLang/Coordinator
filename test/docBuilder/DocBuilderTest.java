@@ -772,6 +772,21 @@ Holder
     assertThrows(UserError.class, builder::complete);
   }
 
+  @Test void aTrailingTestOnlyLineSharedByTwoDeclarationsOnOneLineIsAnAmbiguousReferenceError(@TempDir Path tmp){
+    var ownerName= new TName("pkg.Holder",0,Pos.unknown);
+    var zzz= namedMethodAt(".zzz", ownerName, Pos.of(file,1,1));
+    var aaa= namedMethodAt(".aaa", ownerName, Pos.of(file,1,11));
+    var owner= namedType("pkg.Holder", List.of(), List.of(zzz,aaa));
+    var oracle= SourceOracle.debugBuilder().putURI(file, ".zzz->1;  .aaa->2 //- let x={1}\n").build();
+    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(owner));
+    builder.visitLiteral(owner);
+    builder.packageLocation("pkg", tmp.resolve("pkg.html"), tmp.resolve("auto_tests","pkg_test.fear"));
+
+    var ex= assertThrows(UserError.class, builder::complete);
+
+    assertTrue(ex.getMessage().contains("more than one declaration on the same line"), ex.getMessage());
+  }
+
   @Test void aTrailingDocAfterTheLastOfTwoDeclarationsOnSeparateLinesIsNotAmbiguous(@TempDir Path tmp){
     var ownerName= new TName("pkg.Holder",0,Pos.unknown);
     var zzz= namedMethodAt(".zzz", ownerName, Pos.of(file,1,1));

@@ -24,10 +24,6 @@ final class SourceDocs{
     var res= new ArrayList<DocOcc>();
     if (includeBefore){ collectBefore(pos.line(),res); }
     inlineAfter(pos.line(),pos.column()).ifPresent(occ->{
-      //a declaration with no rc of its own is realized once per required rc, all at the
-      //same source column: that is one declaration claiming its own comment several
-      //times, not two declarations sharing it, so only a claim from a DIFFERENT column
-      //makes the comment ambiguous.
       var firstColumn= inlineClaimedFromColumn.putIfAbsent(occ, pos.column());
       if (firstColumn != null && firstColumn != pos.column()){ ambiguousInline.add(occ); }
       res.add(occ);
@@ -36,9 +32,6 @@ final class SourceDocs{
     return res;
   }
 
-  //two declarations sharing one physical line, with only one trailing inline doc
-  //comment between them: it is unclear which one it documents, so this is reported
-  //rather than silently attaching it to both.
   List<DocOcc> ambiguousInlineDocs(){ return List.copyOf(ambiguousInline); }
 
   //every /// and //> that no declaration took, as runs of consecutive lines
