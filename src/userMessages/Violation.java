@@ -424,35 +424,35 @@ public final class Violation {
   //the filesystem returned partial writes or stale directory state.
   public static UserError cacheMissingPkgApiFile(Path apiJson){
     return new UserError("""
-Build cache is missing a generated package API file.
-That metadata should be stored in:
-%s
-Delete this project's .fearless_out folder, then recompile.
-""".formatted(path(apiJson.toString())));
+      Build cache is missing a generated package API file.
+      That metadata should be stored in:
+      %s
+      Delete this project's .fearless_out folder, then recompile.
+      """.formatted(path(apiJson.toString())));
   }
   public static UserError cacheInvalidFile(Path mapJson, String parseErr){
     return new UserError("""
-Build cache contains an invalid cached file.
+      Build cache contains an invalid cached file.
 
-Fearless tried to read:
-%s
-but the file content is not valid.
+      Fearless tried to read:
+      %s
+      but the file content is not valid.
 
-Parse error:
-  %s
-""".formatted(path(mapJson.toString()), parseErr));
+      Parse error:
+        %s
+      """.formatted(path(mapJson.toString()), parseErr));
   }
   public static UserError cacheCanNotFindZipEntry(Path diskZip, List<String> steps, String entryName){
     return new UserError("""
-Cannot find entry in zip (that was found before).
-Zip:
-%s
-Steps:
-  %s
-Entry name:
-  %s
-""".formatted(path(diskZip.toString()),
-      Join.of(steps.stream().map(Message::displayString),"[",", ","]", "<no steps>"),
-      Message.displayString(entryName)));
+      Cannot find entry in zip (that was found before).
+      Zip:
+      %s
+      Steps:
+        %s
+      Entry name:
+        %s
+      """.formatted(path(diskZip.toString()),
+        Join.of(steps.stream().map(Message::displayString),"[",", ","]", "<no steps>"),
+        Message.displayString(entryName)));
   }
 }
