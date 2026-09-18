@@ -1125,6 +1125,25 @@ world
     assertTrue(generated.contains("Bar: base.TxtFile{"), generated);
   }
 
+  @Test void ok_asset_autoload_original_file_name_is_the_bare_file_name(@TempDir Path tmp){
+    Path root= tmp.resolve("root");
+    UserError.root= root;
+    FsDsl.materialize(root, """
+_assets/foo.txt
+iii
+hello
+jjj
+_assets/z.zip/sub/bar.txt
+iii
+world
+""");
+    var base= new RealSourceOracleWithZip(root);
+    var res= SourceOracleWithAutoload.of(base, "_assets");
+    var generated= res.newRefs().getFirst().loadString();
+    assertTrue(generated.contains(".originalFileName: base.Str -> `foo.txt`;"), generated);
+    assertTrue(generated.contains(".originalFileName: base.Str -> `bar.txt`;"), generated);
+  }
+
   // A .fear file with invalid UTF-8 bytes fails loudly (Files.readString is strict) when
   // read directly off disk. The same bytes, read through a zip entry, must fail the same
   // way: FrontendLogicMain.of calls Ref.loadString() on every source file regardless of
