@@ -10,3 +10,9 @@ https://repo.maven.apache.org/maven2/org/junit/jupiter/junit-jupiter-api/maven-m
 (and the equivalent path for the other org.junit.platform/org.opentest4j/
 org.apiguardian/org.jspecify artifacts) and search for
 <versioning>...<release>????</release>
+
+## JMH 1.37 (jmh-core, jmh-generator-annprocess) and its transitive
+## dependencies (jopt-simple, commons-math3)
+Used only by Controllers/benchmarks, built and run by
+Coordinator/Build/src/scripts/RunBenchmarks.java. To find the latest version:
+https://repo.maven.apache.org/maven2/org/openjdk/jmh/jmh-core/maven-metadata.xml
