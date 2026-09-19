@@ -1,6 +1,6 @@
 package naiveBackend;
 
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.lang.reflect.InvocationTargetException;
@@ -17,7 +17,7 @@ import tools.Fs;
 import utils.Pos;
 
 final class BytecodeLineFixTest{
-  @Test void aCastOnALineNeverGivenAPosIsBlamedOnTheInternalSentinelLine(@TempDir Path tmp) throws Exception{
+  @Test void aCastOnALineNeverGivenAPosIsBlamedOnItsEnclosingCallsLine(@TempDir Path tmp) throws Exception{
     var pos= Pos.of(URI.create("fear:/_app/greet.fear"), 42, 3);
     var fix= new BytecodeLineFix("Greet", "fear:/_app/greet.fear")
       .a("package generated;\n")
@@ -30,6 +30,22 @@ final class BytecodeLineFixTest{
       .a("  default Object self(Object v){ return v; }\n")
       .a("  Greet instance= new Greet(){};\n")
       .a("}\n");
+    var castLine= runAndCaptureCastLine(tmp, fix);
+    assertEquals(42, castLine);
+  }
+  @Test void aCastInAFileWithNoRegisteredLineAtAllFallsBackToTheSentinelLine(@TempDir Path tmp) throws Exception{
+    var fix= new BytecodeLineFix("Greet", "fear:/_app/greet.fear")
+      .a("package generated;\n")
+      .a("public interface Greet{\n")
+      .a("  default Object run(Object p0){\n")
+      .a("    var x$= (String)p0;\n")
+      .a("    return x$;\n  }\n")
+      .a("  Greet instance= new Greet(){};\n")
+      .a("}\n");
+    var castLine= runAndCaptureCastLine(tmp, fix);
+    assertEquals(1000, castLine);
+  }
+  private static int runAndCaptureCastLine(Path tmp, BytecodeLineFix fix) throws Exception{
     var srcFile= tmp.resolve("Greet.java");
     var classesDir= tmp.resolve("classes");
     Fs.writeUtf8(srcFile, fix.toString());
@@ -42,8 +58,7 @@ final class BytecodeLineFixTest{
       var run= cls.getMethod("run", Object.class);
       var thrown= assertThrows(InvocationTargetException.class, ()->run.invoke(instance, 5));
       var cause= (ClassCastException)thrown.getCause();
-      var castLine= cause.getStackTrace()[0].getLineNumber();
-      assertNotEquals(1000, castLine);
+      return cause.getStackTrace()[0].getLineNumber();
     }
   }
 }
