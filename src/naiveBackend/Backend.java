@@ -24,17 +24,11 @@ public class Backend{
   Path out;
   BackendTools tools;
   List<Consumer<Path>> fixers= new ArrayList<>();
-  private static final TName captureFreeName= new TName("base.CaptureFree",0,Pos.unknown);
-  boolean captureFree(Literal l){ return implementsType(l,captureFreeName); }
-  private static final TName mainName= new TName("base.Main", 0,Pos.unknown);
-  private static final TName systemName= new TName("base._System", 0,Pos.unknown);
-  boolean implementsBaseMain(Literal l){ return implementsType(l,mainName); }
-  private static final TName inMemoryLogName= new TName("base.InMemoryLog", 1,Pos.unknown);
-  boolean implementsInMemoryLog(Literal l){ return implementsType(l,inMemoryLogName); }
-  private static final TName fileLogName= new TName("base.FileLog", 0,Pos.unknown);
-  boolean implementsFileLog(Literal l){ return implementsType(l,fileLogName); }
-  private static final TName reprName= new TName("base.Repr", 1,Pos.unknown);
-  boolean isRepr(Literal l){ return l.name().equals(reprName); }
+  boolean captureFree(Literal l){ return implementsType(l,new TName("base.CaptureFree",0,Pos.unknown)); }
+  boolean implementsBaseMain(Literal l){ return implementsType(l,new TName("base.Main",0,Pos.unknown)); }
+  boolean implementsInMemoryLog(Literal l){ return implementsType(l,new TName("base.InMemoryLog",1,Pos.unknown)); }
+  boolean implementsFileLog(Literal l){ return implementsType(l,new TName("base.FileLog",0,Pos.unknown)); }
+  boolean isRepr(Literal l){ return l.name().equals(new TName("base.Repr",1,Pos.unknown)); }
   public List<Consumer<Path>> produceJavaCode(){
     cleanOutFolder();
     tools.decs().forEach(d->{tools.docs().visitLiteral(d); generateInterface(d,false); tools.checks().checkFileReplacement(d, decTypeName(d.name()));});
@@ -162,7 +156,7 @@ public class Backend{
       .append("  static void run(String n){\n");
     mains.forEach((n,iface)->sb
       .append("    if (n.equals(\"").append(n).append("\")){ base.Util.topLevel(()->")
-      .append(iface).append(".instance.imm$main$1(new ").append(typeName(systemName)).append("())); return; }\n"));
+      .append(iface).append(".instance.imm$main$1(new ").append(typeName(new TName("base._System",0,Pos.unknown))).append("())); return; }\n"));
     sb.append("    throw new AssertionError(\"No main called \"+n+\" in package ").append(tools.pkgName()).append("\");\n  }\n}\n");
     Fs.writeUtf8(out.resolve("Main.java"), sb.toString());
   }
