@@ -9,6 +9,14 @@ import core.TName;
 import realSourceOracle.AutoloadHandler;
 
 final class AutoloadNamesTest{
+  //BUG: AutoloadHandler.dropExt uses lastIndexOf('.') to strip only the final
+  //extension (so a base name may legitimately still contain a dot, e.g. "readme.v2"
+  //from "readme.v2.txt"), but then asserts the result contains NO dot at all. That
+  //self-contradicts the very use of lastIndexOf and throws AssertionError on any
+  //name with more than one dot, instead of returning the correctly-computed base name.
+  @Test void dropExtWronglyRejectsABaseNameThatStillHasADot(){
+    assertEquals("readme.v2",AutoloadHandler.dropExt("readme.v2.txt"));
+  }
   @Test void anInnerUnderscoreCapitalisesTheNextLetter(){
     assertEquals("ExampleData",AutoloadHandler.capFirst("example_data"));
     assertEquals("Mydata",AutoloadHandler.capFirst("mydata"));

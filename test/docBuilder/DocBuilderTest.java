@@ -371,6 +371,29 @@ final class DocBuilderTest{
     assertEquals(2, ((DocLink.Ambiguous)link.get()).options().size());
   }
 
+  //Fearless allows a type to declare the same selector once per receiver capability
+  //("RC overloads", see typeSystem.Sources.findCanonical): here pkg.Foo genuinely
+  //declares two different methods, `imm .foo` and `mut .foo`, at two different source
+  //positions. A qualified reference to `Foo.foo` must offer both, the same as it would
+  //for two same-named methods declared by two different types.
+  @Test void aQualifiedSelectorMatchingTwoRcOverloadsOnTheSameLocalTypeIsAmbiguous(){
+    var name= new TName("pkg.Foo",0,Pos.unknown);
+    var imm= fooMethodAt(RC.imm, name, TSpan.fromPos(Pos.of(file,0,1),1));
+    var mut= fooMethodAt(RC.mut, name, TSpan.fromPos(Pos.of(file,0,2),1));
+    var foo= namedType("pkg.Foo", List.of(), List.of(imm, mut));
+    SourceOracle oracle= List::of;
+    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(foo));
+    builder.visitLiteral(foo);
+    var resolver= new DocResolver("pkg", builder.types, OtherPackages.empty());
+
+    var ref= new DocRef.MethodName(Optional.of(new DocRef.TypeName(Optional.empty(),"Foo",OptionalInt.empty())),".foo",OptionalInt.empty());
+    var link= resolver.resolve(ref, Scope.of(foo));
+
+    assertTrue(link.get() instanceof DocLink.Ambiguous,
+      "Foo declares .foo once per RC (imm and mut): both are real, independently callable methods, so this must be Ambiguous, not silently Resolved to only one of them: "+link.get());
+    assertEquals(2, ((DocLink.Ambiguous)link.get()).options().size());
+  }
+
   @Test void aQualifiedMethodOnAForeignTypeResolvesThroughAnInheritedSupertypeMethod(){
     var supName= new TName("other.Sup",0,Pos.unknown);
     var subName= new TName("other.Sub",0,Pos.unknown);
