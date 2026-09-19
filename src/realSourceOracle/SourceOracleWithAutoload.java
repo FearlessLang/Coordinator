@@ -17,8 +17,8 @@ public record SourceOracleWithAutoload(SourceOracle base, Ref autoload, URI auto
   public record Res(SourceOracle oracle, List<Ref> newRefs, List<Triple> autoloadedAssets){}
   public static final String autoloadFileSuffix= "/autoloaded_assets.fear";
   public static final List<AutoloadHandler> handlers= List.of(
-    new ExtAutoloadHandler(p->p.endsWith(".txt"), "base.TxtFile"),
-    new ExtAutoloadHandler(p->p.endsWith(".png")||p.endsWith(".jpg")||p.endsWith(".jpeg")||p.endsWith(".gif")||p.endsWith(".bmp"), "base.ImageFile")
+    new AutoloadHandler(p->p.endsWith(".txt"), "base.TxtFile"),
+    new AutoloadHandler(p->p.endsWith(".png")||p.endsWith(".jpg")||p.endsWith(".jpeg")||p.endsWith(".gif")||p.endsWith(".bmp"), "base.ImageFile")
   );
   private record Generated(String text, List<Triple> autoloadedAssets){}
   public static Res of(SourceOracle base, String pkgName){
