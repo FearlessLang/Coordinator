@@ -516,6 +516,59 @@ Error 7 WellFormedness
 """, ex.getMessage());
   }
 
+  @Test void anActorLambdaCanNotAnswerOuterReturn(@TempDir Path tmp){
+    Path root= tmp.resolve("root");
+    UserError.root= root;
+    FsDsl.materialize(root, """
+_col/_rank_app.fear
+iii
+use base.Nat as Nat;
+Stage:{ #(es: mut base.Flow[Nat]): mut base.Flow[Nat] ->
+  es.actor[mut base.Var[Nat], Nat](base.Vars#[Nat](0), {down, s, e -> base.OuterReturn#e}) }
+""");
+    var ex= Assertions.assertThrows(RuntimeException.class, ()->coordinator(root).compile(root, stLib));
+    utils.Err.strCmp("""
+In file: fear:/_col/_rank_app.fear
+
+002| Stage:{ #(es: mut base.Flow[Nat]): mut base.Flow[Nat] ->
+003|   es.actor[mut base.Var[Nat], Nat](base.Vars#[Nat](0), {down, s, e -> base.OuterReturn#e}) }
+   |                                                         --------------^^^^^^^^^^^^^^^^^^^
+
+While inspecting method call "#(_)" > "#(_,_,_)" line 3 > "#(_)" line 2
+Method "#(_,_,_)" inside the object literal instance of "iso base.ActorImpl[mut base.Var[Nat],Nat,Nat]" (line 3)
+is implemented with an expression returning "iso base.ControlFlow[Nat]".
+Method call "base.OuterReturn#(_)" has type "iso base.ControlFlow[Nat]" instead of a subtype of "mut base.ContinueBreak[base.Void]".
+
+See inferred typing context below for how type "mut base.ContinueBreak[base.Void]" was introduced: (compression indicated by `-`)
+[###]
+Error 8 TypeError
+""", ex.getMessage());
+  }
+
+  @Test void onlyBaseImplementsActorSink(@TempDir Path tmp){
+    Path root= tmp.resolve("root");
+    UserError.root= root;
+    FsDsl.materialize(root, """
+_col/_rank_app.fear
+iii
+Stash: base.ActorSink[base.Nat]{}
+""");
+    var ex= Assertions.assertThrows(RuntimeException.class, ()->coordinator(root).compile(root, stLib));
+    utils.Err.strCmp("""
+In file: fear:/_col/_rank_app.fear
+
+001| Stash: base.ActorSink[base.Nat]{}
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+While inspecting type declaration "Stash"
+Type declaration "Stash" implements sealed type "base.ActorSink[_]".
+Sealed types can only be implemented in their own package.
+Type declaration "Stash" is defined in package "col".
+Type "ActorSink" is defined in package "base".
+Error 7 WellFormedness
+""", ex.getMessage());
+  }
+
   @Test void twoTypeNamesDifferingOnlyByCaseMustStillBuildOnASecondRun(@TempDir Path tmp) throws InterruptedException{
     Path root= tmp.resolve("root");
     UserError.root= root;
