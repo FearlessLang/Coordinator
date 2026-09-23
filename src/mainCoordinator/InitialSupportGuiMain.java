@@ -3,7 +3,6 @@ package mainCoordinator;
 import java.awt.*;
 import java.io.File;
 import java.net.URI;
-import java.nio.file.Path;
 import java.util.function.Consumer;
 
 import javax.swing.*;
@@ -84,7 +83,7 @@ public final class InitialSupportGuiMain{
 
   private JComponent footer(){
     var p= new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
-    var info= addBtn(p, "Info", "About Fearless", this::showInfo);
+    var info= addBtn(p, "Info", "About Fearless", _->showHtml(aboutHtml, "About Fearless"));
     info.setFont(uiFont.deriveFont(uiFont.getSize2D() - 2f));
     info.setMargin(new Insets(2,8,2,8));
     return p;
@@ -97,20 +96,18 @@ public final class InitialSupportGuiMain{
     actions.revalidate();
     actions.repaint();
   }
-  private void showInfo(JButton b){
-    var p= textPaneHtml(aboutHtml);
-    var s= new JScrollPane(p);
+  private void showHtml(String html, String title){
+    var s= new JScrollPane(textPaneHtml(html));
     s.setPreferredSize(new Dimension(780,560));
     s.getViewport().setViewPosition(new Point(0,0));
-    JOptionPane.showMessageDialog(frame, s, "About Fearless", JOptionPane.INFORMATION_MESSAGE);
+    JOptionPane.showMessageDialog(frame, s, title, JOptionPane.INFORMATION_MESSAGE);
   }
   private static void openUri(String s){
     try{
-      if (!Desktop.isDesktopSupported()){ Toolkit.getDefaultToolkit().beep(); return; }
-      var d= Desktop.getDesktop();
-      if (!d.isSupported(Desktop.Action.BROWSE)){ Toolkit.getDefaultToolkit().beep(); return; }
-      d.browse(URI.create(s));
-    }catch(Exception _){ Toolkit.getDefaultToolkit().beep(); }
+      var browse= Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE);
+      if (browse){ Desktop.getDesktop().browse(URI.create(s)); return; }
+    }catch(Exception _){}
+    Toolkit.getDefaultToolkit().beep();
   }
   private void selectFile(JButton b){
     var fc= new JFileChooser();
@@ -119,9 +116,8 @@ public final class InitialSupportGuiMain{
     fc.setCurrentDirectory(FileSystemView.getFileSystemView().getHomeDirectory()); // often Desktop on Windows
     fc.setSelectedFile(new File("demo")); 
     if (fc.showSaveDialog(b) != JFileChooser.APPROVE_OPTION){ return; }
-    var filePath=fc.getSelectedFile().toPath();
-    MakeDemo.of(filePath);
-    afterCreate(filePath);
+    MakeDemo.of(fc.getSelectedFile().toPath());
+    showHtml(Fs.isWindows() ? afterCreateWinHtml : Fs.isMac() ? afterCreateMacHtml : afterCreateLinuxHtml, "Next steps");
   }
   private static void setUiFont(Font f){
     var d= UIManager.getDefaults();
@@ -140,9 +136,7 @@ public final class InitialSupportGuiMain{
     p.setFont(uiFont);
     p.setBorder(new EmptyBorder(10,10,10,10));
     p.addHyperlinkListener(e->{
-      if (e.getEventType() != HyperlinkEvent.EventType.ACTIVATED){ return; }
-      if (e.getURL() != null) openUri(e.getURL().toString());
-      else openUri(e.getDescription());
+      if (e.getEventType() == HyperlinkEvent.EventType.ACTIVATED){ openUri(e.getURL() != null ? e.getURL().toString() : e.getDescription()); }
     });
     return p;
   }
@@ -156,7 +150,7 @@ public final class InitialSupportGuiMain{
     var b= new JButton(text);
     b.setAlignmentX(Component.CENTER_ALIGNMENT);
     b.setMaximumSize(new Dimension(Integer.MAX_VALUE, b.getPreferredSize().height + 6));
-    if (tooltip != null && !tooltip.isEmpty()){ b.setToolTipText(tooltip); }
+    b.setToolTipText(tooltip);
     b.addActionListener(_->c.accept(b));
     parent.add(b);
     parent.add(Box.createVerticalStrut(8));
@@ -166,14 +160,6 @@ public final class InitialSupportGuiMain{
     var b= addBtn(parent, text, comingSoon, _->{});
     b.setEnabled(false);
     return b;
-  }
-  private void afterCreate(Path projectDir){
-    var html= Fs.isWindows() ? afterCreateWinHtml : Fs.isMac() ? afterCreateMacHtml : afterCreateLinuxHtml;
-    var p= textPaneHtml(html);
-    var s= new JScrollPane(p);
-    s.setPreferredSize(new Dimension(780,560));
-    s.getViewport().setViewPosition(new Point(0,0));
-    JOptionPane.showMessageDialog(frame, s, "Next steps", JOptionPane.INFORMATION_MESSAGE);
   }
   private static final Font uiFont= new Font(Font.SANS_SERIF, Font.PLAIN, 16);
   public static final String startText= "Predictable programming at scale";

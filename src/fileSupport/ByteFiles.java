@@ -179,12 +179,7 @@ public final class ByteFiles {
   }
   private static void appendText(StringBuilder out, Throwable e){
     if (e == null){ return; }
-    if (e instanceof FileSystemException fs){
-      var reason= fs.getReason();
-      if (reason != null ){ append(out, reason); }
-      else{ append(out, fs.getMessage()); }
-      }
-    else{ append(out, e.getMessage()); }
+    append(out, e instanceof FileSystemException fs && fs.getReason() != null ? fs.getReason() : e.getMessage());
     appendText(out, e.getCause());
     for (var suppressed : e.getSuppressed()){ appendText(out, suppressed); }
   }

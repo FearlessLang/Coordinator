@@ -21,10 +21,6 @@ import utils.Range;
 
 final class HtmlDocRenderer{
   HtmlDocRenderer(String pkgName, Map<String,String> uses, List<TypeDoc> types, OtherPackages other,
-      Map<DocOcc,List<ResolvedSpan>> spans){
-    this(pkgName,uses,types,other,spans,Optional.empty());
-  }
-  HtmlDocRenderer(String pkgName, Map<String,String> uses, List<TypeDoc> types, OtherPackages other,
       Map<DocOcc,List<ResolvedSpan>> spans, Optional<Path> baseDocLocation){
     assert nonNull(pkgName,uses,types,other,spans,baseDocLocation);
     this.pkgName= pkgName;
