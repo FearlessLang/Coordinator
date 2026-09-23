@@ -288,6 +288,20 @@ Again:Main{s->base.Debug#(`again`)}
     Assertions.assertEquals("col.Again _col/more.fear\ncol.Hello _col/_rank_app.fear\n", Fs.readUtf8(root.resolve(Coordinator.outDir).resolve("col.mains")));
     Assertions.assertEquals(Map.of("col.Again","_col/more.fear","col.Hello","_col/_rank_app.fear"), coordinator(root).mains(root, stLib).orElseThrow());
   }
+  @Test void aCaptureFreeMainDeclaredInAMethodIsListedLikeTheOnesItRuns(@TempDir Path tmp) throws InterruptedException{
+    Path root= tmp.resolve("root");
+    UserError.root= root;
+    FsDsl.materialize(root, """
+_col/_rank_app.fear
+iii
+use base.Main as Main;
+use base.CaptureFree as CaptureFree;
+Top:Main{s->base.Debug#(`top`)}
+MkFree:{.mk:Main->Free:Main,CaptureFree{s->base.Debug#(`free`)}}
+""");
+    utils.Err.strCmp("free\ntop\n", coordinator(root).main(root, stLib));
+    Assertions.assertEquals(Map.of("col.Free","_col/_rank_app.fear","col.Top","_col/_rank_app.fear"), coordinator(root).mains(root, stLib).orElseThrow());
+  }
   @Test void anAssetWhoseNameStartsWithUnderscoreAutoLoadsAsAPrivateType(@TempDir Path tmp) throws InterruptedException{
     Path root= tmp.resolve("root");
     UserError.root= root;
