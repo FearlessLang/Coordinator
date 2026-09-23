@@ -450,6 +450,21 @@ Hello:Main{s->base.Debug#(`from z`)}
     Assertions.assertTrue(out.contains("from z"), out);
   }
 
+  @Test void flowsAreDeterministic(){ testOk("testFlowDeterminism"); }
+  // The sequential flow returns 0 without evaluating any other element, so the parallel one must
+  // return as well, whatever the elements past the decision do: here they never return.
+  @Test void flowFirstDoesNotWaitForDivergingElements() throws InterruptedException{
+    var project= freshIntegrationRoot("testFlowTermination");
+    var c= coordinator(project);
+    c.compile(project, stLib);
+    var out= new StringBuilder();
+    var child= Coordinator.startMain(project, "term.FirstDoesNotWaitForTheRest", c.sharedClasspath(), out::append);
+    var waiter= new Thread(()->{ try{ child.await(); } catch(InterruptedException e){ child.kill(); } });
+    waiter.start();
+    waiter.join(60_000);
+    if (waiter.isAlive()){ child.kill(); Assertions.fail("first! did not return within 60s while the later elements diverge:\n"+out); }
+    utils.Err.strCmp("0\n", out.toString());
+  }
   @Test void aStackTraceNamesTheFearlessTypesMethodsAndLines(){
     utils.Err.strCmp("""
 AAAAh
