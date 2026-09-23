@@ -845,23 +845,24 @@ Y
 Invalid path in this project folder.
 
 Root: [###]
-Path: "_pkg/z/foo.fear"
+Path: "_pkg/z.zip"
 
 What went wrong
-- Expanding zip files into folders makes this path exist twice, from two
-  different places in the project:
-  Entry inside a zip, expanded as a folder:
+- A zip file and a folder share the same base name.
+  Zip file:
   Root: [###]
   Path: "_pkg/z.zip"
-  Entry: "foo.fear"
 
-  Real file/folder:
+  Folder:
   Root: [###]
-  Path: "_pkg/z/foo.fear"
+  Path: "_pkg/z"
+
+  Fearless expands each zip file into a folder named after it (without the
+  ".zip"); that folder would have the exact same name as this folder.
 
 How to fix
-- Rename one of them, or move/rename the zip file involved, so this path is no
-  longer produced twice.
+- Rename one of them, or move/rename the zip file, so this name is no longer
+  produced twice.
 
 We check this so that you[###]
 """);}
@@ -891,11 +892,79 @@ What went wrong
   Path: "_pkg/readme"
 
   Fearless expands each zip file into a folder named after it (without the
-  ".zip"); that folder would have the exact same name as this file.
+  ".zip"); that folder would have the exact same name as this plain file.
 
 How to fix
 - Rename one of them, or move/rename the zip file, so this name is no longer
   produced twice.
+
+We check this so that you[###]
+""");}
+
+  @Test void err_real_folder_clashes_with_zip_file_same_base_name(@TempDir Path tmp){ runErrIOE(tmp, """
+_pkg/z/foo.fear
+iii
+A
+jjj
+_pkg/z.zip/bar.fear
+iii
+B
+""","""
+Invalid path in this project folder.
+
+Root: [###]
+Path: "_pkg/z.zip"
+
+What went wrong
+- A zip file and a folder share the same base name.
+  Zip file:
+  Root: [###]
+  Path: "_pkg/z.zip"
+
+  Folder:
+  Root: [###]
+  Path: "_pkg/z"
+
+  Fearless expands each zip file into a folder named after it (without the
+  ".zip"); that folder would have the exact same name as this folder.
+
+How to fix
+- Rename one of them, or move/rename the zip file, so this name is no longer
+  produced twice.
+
+We check this so that you[###]
+""");}
+
+  @Test void err_nested_zip_expanded_folder_collides_with_zip_folder(@TempDir Path tmp){ runErrIOE(tmp, """
+_pkg/o.zip/z/foo.fear
+iii
+A
+jjj
+_pkg/o.zip/z.zip/foo.fear
+iii
+B
+""","""
+Invalid path in this project folder.
+
+Root: [###]
+Path: "_pkg/o/z/foo.fear"
+
+What went wrong
+- Expanding zip files into folders makes this path exist twice, from two
+  different places in the project:
+  Entry inside a zip, expanded as a folder:
+  Root: [###]
+  Path: "_pkg/o.zip/z.zip"
+  Entry: "foo.fear"
+
+  Entry inside a zip, expanded as a folder:
+  Root: [###]
+  Path: "_pkg/o.zip"
+  Entry: "z/foo.fear"
+
+How to fix
+- Rename one of them, or move/rename the zip file involved, so this path is no
+  longer produced twice.
 
 We check this so that you[###]
 """);}
@@ -1171,29 +1240,5 @@ world
     var zipRef= new RealSourceOracleWithZip(zipRoot).allFiles().stream()
       .filter(r->r.fearPath().equals("fear:/_pkg/z/a.fear")).findFirst().get();
     assertThrows(UncheckedIOException.class, zipRef::loadString);
-  }
-
-  // reqNoSiblingFileForZipName (BuildWithZip.Tree) rejects a zip "z.zip" that has a plain
-  // FILE sibling named "z" (see err_real_file_clashes_with_zip_file_same_base_name above),
-  // because expanding "z.zip" into a folder "z" would collide with that file. But it only
-  // ever calls isRegularFile on the sibling, so it never notices a same-named DIRECTORY
-  // sibling, even though expanding "z.zip" collides with a real directory "z" exactly the
-  // same way. Expected: this is rejected like the file case. Actual: no error at all, and
-  // the real directory's files and the zip's expanded files are silently merged into one
-  // folder ("fear:/_pkg/z/foo.fear" from disk, "fear:/_pkg/z/bar.fear" from the zip), which
-  // is demonstrated directly below since there is no UserError to catch here.
-  @Test void realDirectoryWronglyMergesWithSameNamedZipInsteadOfBeingRejected(@TempDir Path tmp){
-    Path root= tmp.resolve("root").toAbsolutePath().normalize();
-    UserError.root= root;
-    FsDsl.materialize(root, """
-_pkg/z/foo.fear
-iii
-A
-jjj
-_pkg/z.zip/bar.fear
-iii
-B
-""");
-    assertThrows(UserError.class, ()->new RealSourceOracleWithZip(root));
   }
 }
