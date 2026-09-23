@@ -33,7 +33,7 @@ record MiddleLayer(Coordinator coordinator, Layer next, LinkedHashMap<String,Lis
         var stillCached= out.stillBuilt(pkg, files, maxIn);
         if (stillCached){ nextOther = out.addCachedPkgApi(nextOther, pkg); return; }       
         var rich= SourceOracleWithAutoload.of(src, "_"+pkg);
-        var srcs= Push.of(files.stream().filter(f->f.fearPath().endsWith(".fear")).toList(),rich.newRefs());
+        var srcs= Push.of(files.stream().filter(Helper::isFear).toList(),rich.newRefs());
         List<Literal> core= coordinator.frontend(pkg, srcs, rich.oracle(), other,other.virtualizationMap().getOrDefault(pkg,Map.of()));
         coordinator.backend(pkg, core, rich.oracle(), other, new CapabilityEnvironment(rich.autoloadedAssets()));
         long newStamp= out.commitPkgApi(pkg, core, maxIn); // newStamp will be the old api file mtime if there was no reason to commit.

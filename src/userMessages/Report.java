@@ -584,7 +584,7 @@ Rank files:
   %s
 
 Each package must contain exactly one rank file.
-""".formatted(disp(pkg), Join.of(rankFiles.stream().map(f->disp(f.toString())), "",", ","")));
+""".formatted(disp(pkg), Join.of(rankFiles.stream().map(f->disp(f.fearPath())), "",", ","")));
   }
   public static UserError projectMalformedRankFileName(Ref rankFile){ return new UserError("""
 Malformed rank file name.

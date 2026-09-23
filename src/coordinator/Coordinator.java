@@ -82,7 +82,7 @@ public interface Coordinator {
   }
 }
 class Helper{
-  static boolean isFear(Ref u){ return u.toString().endsWith(".fear"); }
+  static boolean isFear(Ref u){ return u.fearPath().endsWith(".fear"); }
   static OutputOracle out(Path path){
     var pOut= path.resolve(Coordinator.outDir);
     return ()->pOut;
@@ -92,7 +92,7 @@ class Helper{
     List<Ref> allRanks= map.values().stream().map(u->Helper.okPkgContent(u,project)).toList();
     Layer l= mapFromRanks(coordinator,allRanks,o,out,stLib);
     return layers(coordinator,map,l,allRanks.stream()
-      .sorted(Comparator.comparingInt(Helper::rankNumber).thenComparing(Object::toString)).toList());
+      .sorted(Comparator.comparingInt(Helper::rankNumber).thenComparing(Ref::fearPath)).toList());
   }
   static List<String> compile(Coordinator coordinator, Path project, SourceOracle stLib){
     SourceOracle o= coordinator.sourceOracle(project);
@@ -158,9 +158,8 @@ class Helper{
     return new BaseLayer(coordinator,res,baseStamp,stLib);
   }
   static int rankNumber(Ref u){
-    var name= u.toString();
-    if (!u.toString().endsWith(".fear")){ throw Report.projectMalformedRankFileName(u); }
-    var stem= Fs.fileNameWithoutExtension(name);
+    if (!isFear(u)){ throw Report.projectMalformedRankFileName(u); }
+    var stem= Fs.fileNameWithoutExtension(u.fearPath());
     for (int i : Range.of(ranks)){
       var pref= ranks.get(i);
       int base= (i+1)*1000;
@@ -176,7 +175,7 @@ class Helper{
   private static final List<String> ranks= List.of(
     "_rank_base","_rank_core","_rank_driver","_rank_worker","_rank_framework","_rank_accumulator","_rank_tool","_rank_app");
 
-  static boolean hasReservedRankPrefix(Ref u){ return Fs.fileNameWithExtension(u.toString()).startsWith("_rank_"); }
+  static boolean hasReservedRankPrefix(Ref u){ return Fs.fileNameWithExtension(u.fearPath()).startsWith("_rank_"); }
   static Ref okPkgContent(List<Ref> u, Path root){
     var pkg= pkgName(u.getFirst());
     var reserved= u.stream().filter(Helper::hasReservedRankPrefix).toList();
@@ -189,7 +188,7 @@ class Helper{
 
   private static final Set<String> reservedPkgNames= Set.of("base","rank");
   static Optional<String> pkgNameOpt(Ref u){
-    var candidates= Stream.of(u.toString().split("/"))
+    var candidates= Stream.of(u.fearPath().split("/"))
       .filter(s->s.startsWith("_") && !s.contains("."))
       .toList();
     if (candidates.isEmpty()){ return Optional.empty(); }
