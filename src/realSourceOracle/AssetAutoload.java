@@ -11,11 +11,11 @@ final class AssetAutoload{
 
   static String descriptorMethods(SourceOracle.Ref ref){
     return ""
-      +"  .path: base.Str -> `"+ref.fearPath()+"`;\n"
-      +"  .diskPath: base.Str -> `"+diskPath(ref)+"`;\n"
-      +"  .zipSteps: base.Str -> `"+zipSteps(ref)+"`;\n"
-      +"  .zipEntry: base.Str -> `"+zipEntry(ref)+"`;\n"
-      +"  .originalFileName: base.Str -> `"+originalFileName(ref)+"`;\n";
+      +"  .path: base.Str -> \""+ref.fearPath()+"\";\n"
+      +"  .diskPath: base.Str -> \""+diskPath(ref)+"\";\n"
+      +"  .zipSteps: base.Str -> \""+zipSteps(ref)+"\";\n"
+      +"  .zipEntry: base.Str -> \""+zipEntry(ref)+"\";\n"
+      +"  .originalFileName: base.Str -> \""+originalFileName(ref)+"\";\n";
   }
 
   private static String originalFileName(SourceOracle.Ref ref){
