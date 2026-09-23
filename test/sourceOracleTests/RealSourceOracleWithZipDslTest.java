@@ -54,9 +54,7 @@ Root: [###]
 Path: "_pkg/z.zip"
 Entry: "a.fear"
 
-
-This zip contains more than one entry called Entry: "a.fear"
-
+This zip contains more than one entry called "a.fear".
 Different tools disagree on which one should be used.
 Using it may even means that different content is seen in different moments.
 (Schizophrenic ZIP file)
@@ -96,9 +94,7 @@ Root: [###]
 Path: "_pkg/z.zip"
 Entry: "a.fear"
 
-
-This zip contains more than one entry called Entry: "a.fear"
-
+This zip contains more than one entry called "a.fear".
 Different tools disagree on which one should be used.
 Using it may even means that different content is seen in different moments.
 (Schizophrenic ZIP file)
@@ -245,6 +241,7 @@ iii
 ""","""
 Root: [###]
 Path: "_pkg"
+
 This directory is empty.
 Different systems handle empty directories differently,
 and they may not be supported by compression tools (zip)
@@ -260,6 +257,7 @@ iii
 ""","""
 Root: [###]
 Path: "_pkg/e.zip"
+
 This zip file contains no entries.
 This is most likely a mistake.
 
@@ -274,7 +272,6 @@ iii
 Root: [###]
 Path: "_pkg/e.zip"
 Entry: "d"
-
 
 This zip contains a folder entry called "d", but it is empty.
 Different systems handle empty directories differently, and they may not be
@@ -294,7 +291,6 @@ iii
 Root: [###]
 Path: "_pkg/e.zip"
 Entry: "d"
-
 
 This zip contains a folder entry called "d", but it is empty.
 Different systems handle empty directories differently, and they may not be
@@ -686,7 +682,6 @@ Root: [###]
 Path: "_pkg/z.zip"
 Entry: "/a.fear"
 
-
 There is a zip entry named "/a.fear"
 This entry name cannot be handled safely and consistently across systems and tools.
 
@@ -701,7 +696,6 @@ X
 Root: [###]
 Path: "_pkg/z.zip"
 Entry: "./a.fear"
-
 
 There is a zip entry named "./a.fear"
 This entry name cannot be handled safely and consistently across systems and tools.
@@ -718,7 +712,6 @@ Root: [###]
 Path: "_pkg/z.zip"
 Entry: "../a.fear"
 
-
 There is a zip entry named "../a.fear"
 This entry name cannot be handled safely and consistently across systems and tools.
 
@@ -734,7 +727,6 @@ Root: [###]
 Path: "_pkg/z.zip"
 Entry: "a/."
 
-
 There is a zip entry named "a/."
 This entry name cannot be handled safely and consistently across systems and tools.
 
@@ -749,7 +741,6 @@ X
 Root: [###]
 Path: "_pkg/z.zip"
 Entry: "a/.."
-
 
 There is a zip entry named "a/.."
 This entry name cannot be handled safely and consistently across systems and tools.
@@ -796,7 +787,6 @@ Root: [###]
 Path: "_pkg/z.zip"
 Entry: "a"
 
-
 This zip contains an entry called "a",
 and also this other entry nested under it, as if it were a folder:
   "a/b.txt"
@@ -820,7 +810,6 @@ Y
 Root: [###]
 Path: "_pkg/z.zip"
 Entry: "readme"
-
 
 This zip contains an entry called "readme",
 and also this other entry nested under it, as if it were a folder:
@@ -948,7 +937,6 @@ Root: [###]
 Path: "_pkg/o.zip"
 Entry: "z.zip"
 
-
 This zip contains a zip entry called "z.zip",
 and also this other entry, in a folder with the same base name:
   "z/foo.fear"
@@ -972,7 +960,6 @@ B
 Root: [###]
 Path: "_pkg/o.zip"
 Entry: "z.zip"
-
 
 This zip contains a zip entry called "z.zip",
 and also this other entry, in a folder with the same base name:
@@ -998,7 +985,6 @@ Root: [###]
 Path: "_pkg/o.zip"
 Entry: "sub/z.zip"
 
-
 This zip contains a zip entry called "sub/z.zip",
 and also this other entry, in a folder with the same base name:
   "sub/z/deep/foo.fear"
@@ -1023,7 +1009,6 @@ Root: [###]
 Path: "_pkg/o.zip/p.zip"
 Entry: "z.zip"
 
-
 This zip contains a zip entry called "z.zip",
 and also this other entry, in a folder with the same base name:
   "z/foo.fear"
@@ -1047,7 +1032,6 @@ Y
 Root: [###]
 Path: "_pkg/z.zip"
 Entry: "readme"
-
 
 This zip contains an entry called "readme",
 and also this other entry nested under it, as if it were a folder:

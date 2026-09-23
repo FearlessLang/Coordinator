@@ -99,12 +99,12 @@ public final class UserError extends RuntimeException{
     diskZip= root.relativize(diskZip);
     String zipPath= diskZip.toString().replace("\\","/");
     if (!steps.isEmpty()){ zipPath+="/"+String.join("/", steps); }
-    return showRelText(zipPath)+printEntryName(entryName)+"\n\n";
+    return showRelText(zipPath)+printEntryName(entryName)+"\n";
   }
-  static String printEntryName(String entryName){
+  private static String printEntryName(String entryName){
     if (!isSimpleString(entryName)){
       return "Entry contains non-standard characters.\nShown as: "+disp(entryName); }
-    return "Entry: "+disp(entryName)+"\n";
+    return "Entry: "+disp(entryName);
   }
   private static boolean isSimpleString(String s){
     return s.codePoints().allMatch(cp -> cp < 128 && Fs.allowed.indexOf((char)cp) >= 0);
