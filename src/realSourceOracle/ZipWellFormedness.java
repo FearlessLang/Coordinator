@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.stream.Stream;
 
 import userMessages.Report;
+import utils.Pop;
 import utils.Push;
 
 //A segment is the 'folder like' single unit
@@ -22,6 +23,7 @@ public final class ZipWellFormedness{
     var out= new ArrayList<ZipEntry>();
     reqCollect(root.resolve(local),root,local, List.of(), 0, out);
     reqNoFileUsedAsDirectory(out);
+    reqNoFolderForNestedZipName(out);
     return List.copyOf(out);
   }
   private static void reqCollect(Path diskZip, Path root, Path local, List<String> steps, int depth, ArrayList<ZipEntry> out){
@@ -36,6 +38,18 @@ public final class ZipWellFormedness{
       var extra= nested.get().segments().subList(e.segments().size(), nested.get().segments().size());
       var nestedDisplay= e.lastZips()+"/"+String.join("/", extra);
       throw Report.zipFileUsedAsDirectory(e.root().resolve(e.local()), e.zips(), e.lastZips(), nestedDisplay);
+    }
+  }
+  private static void reqNoFolderForNestedZipName(List<ZipEntry> out){
+    for (var e: out){
+      if (!e.lastZips().endsWith(".zip")){ continue; }
+      var folder= Push.of(Pop.right(e.segments()), lastSegmentOf(e.segments().getLast()));
+      var inFolder= out.stream()
+        .filter(o->o.zips().equals(e.zips()))
+        .filter(o->isProperPrefix(folder, o.segments()))
+        .findFirst();
+      if (inFolder.isEmpty()){ continue; }
+      throw Report.zipNameClashesWithFolder(e.root().resolve(e.local()), e.zips(), e.lastZips(), inFolder.get().lastZips());
     }
   }
   private static boolean isProperPrefix(List<String> prefix, List<String> full){

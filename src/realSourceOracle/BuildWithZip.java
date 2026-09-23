@@ -198,21 +198,12 @@ public final class BuildWithZip{
     var visKids= new ArrayList<RefParent>();
     for (var kid: kids){ (Fs.fileNameWithExtension(kid.fearPath()).startsWith(".") ? dotKids : visKids).add(kid); }
     if (!dotKids.isEmpty()){ checkCollectiveInvisible(new LinkedHashSet<>(dotKids)); }
-    checkNoDuplicateFearPath(visKids);
     for (var kid: visKids){
       var name= Fs.fileNameWithExtension(kid.fearPath());
       if (name.indexOf('.') >= 0){ continue; }
       if (!Report.allowedNoExtFiles.contains(name)){ continue; }
       if (!(kid instanceof Ref)){ continue; } // directory
       checkNoExtBaseClash(visKids, kid, name);
-    }
-  }
-  private static void checkNoDuplicateFearPath(List<RefParent> visKids){
-    var seen= new LinkedHashMap<String,RefParent>();
-    for (var kid: visKids){
-      var prev= seen.putIfAbsent(kid.fearPath(), kid);
-      if (prev == null){ continue; }
-      throw Report.zipExpandedPathCollides(kid, (ZipEntry)prev, (ZipEntry)kid);
     }
   }
   private static void checkNoExtBaseClash(List<RefParent> visKids, RefParent noExtKid, String base){
