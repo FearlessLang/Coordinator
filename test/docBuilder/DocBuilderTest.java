@@ -388,6 +388,23 @@ final class DocBuilderTest{
     assertEquals(2, ((DocLink.Ambiguous)link.get()).options().size());
   }
 
+  @Test void twoDifferentAmbiguousReferencesToOneSelectorLandOnTwoDifferentPages(){
+    var aName= new TName("pkg.A",0,Pos.unknown);
+    var bName= new TName("pkg.B",0,Pos.unknown);
+    var a= namedType("pkg.A", List.of(), List.of(namedMethod(".bar",aName), methodTaking(".bar",aName,"x",aName)));
+    var b= namedType("pkg.B", List.of(), List.of(methodTaking(".bar",bName,"x",bName)));
+    SourceOracle oracle= List::of;
+    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(a,b));
+    builder.visitLiteral(a);
+    builder.visitLiteral(b);
+    var renderer= new HtmlDocRenderer("pkg", Map.of(), builder.types, OtherPackages.empty(), Map.of());
+    var oneArg= (DocLink.Ambiguous)renderer.resolver.resolve(new DocRef.MethodName(Optional.empty(),".bar",OptionalInt.of(1)), Scope.of(a)).get();
+    var anyArity= (DocLink.Ambiguous)renderer.resolver.resolve(new DocRef.MethodName(Optional.empty(),".bar",OptionalInt.empty()), Scope.of(a)).get();
+    assertEquals(2, oneArg.options().size());
+    assertEquals(3, anyArity.options().size());
+    assertNotEquals(renderer.href(oneArg), renderer.href(anyArity));
+  }
+
   @Test void aQualifiedMethodOnAForeignTypeResolvesThroughAnInheritedSupertypeMethod(){
     var supName= new TName("other.Sup",0,Pos.unknown);
     var subName= new TName("other.Sub",0,Pos.unknown);
