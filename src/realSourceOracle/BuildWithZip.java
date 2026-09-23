@@ -46,15 +46,16 @@ record Tree(
       ? Report.invisibleOnlyRegularFilesAndDirs(abs)
       : Report.onlyRegularFilesAndDirs(abs);
     }
-    if (zip && !BuildWithZip.isInvisible(pe)){ reqNoSiblingFileForZipName(rel); collectBodyDiskZip(root, rel); return; }
+    if (zip && !BuildWithZip.isInvisible(pe)){ reqNoSiblingForZipName(rel); collectBodyDiskZip(root, rel); return; }
     for (RefParent p= pe; p.parent()!=p; p= p.parent()){ addKid(p); }
     if (isRegularFile(abs) && !BuildWithZip.isInvisible(pe)){ visibleFiles.add(pe); }
   }
-  private void reqNoSiblingFileForZipName(Path rel){
+  private void reqNoSiblingForZipName(Path rel){
     var name= rel.getFileName().toString();
     var siblingRel= rel.resolveSibling(name.substring(0, name.length()-4));
-    if (!isRegularFile(root.resolve(siblingRel))){ return; }
-    throw Report.zipNameClashesWithFile(new PathEntry(root, rel), new PathEntry(root, siblingRel));
+    var sibling= root.resolve(siblingRel);
+    if (!Files.exists(sibling, LinkOption.NOFOLLOW_LINKS)){ return; }
+    throw Report.zipNameClashes(new PathEntry(root, rel), new PathEntry(root, siblingRel), isDirectory(sibling) ? "folder" : "plain file");
   }
   private void reqNoEmptyDirs(){
     var dirs= new LinkedHashSet<Path>();
@@ -211,9 +212,7 @@ public final class BuildWithZip{
     for (var kid: visKids){
       var prev= seen.putIfAbsent(kid.fearPath(), kid);
       if (prev == null){ continue; }
-      var zip= prev instanceof PathEntry ? kid : prev;
-      var real= prev instanceof PathEntry ? prev : kid;
-      throw Report.zipExpandedPathCollides(kid, zip, real);
+      throw Report.zipExpandedPathCollides(kid, (ZipEntry)prev, (ZipEntry)kid);
     }
   }
   private static void checkNoExtBaseClash(List<RefParent> visKids, RefParent noExtKid, String base){

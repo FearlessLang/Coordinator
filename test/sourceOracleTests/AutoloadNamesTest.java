@@ -9,6 +9,9 @@ import core.TName;
 import realSourceOracle.AutoloadHandler;
 
 final class AutoloadNamesTest{
+  @Test void dropExtKeepsTheDotsOfTheBaseName(){
+    assertEquals("readme.v2",AutoloadHandler.dropExt("readme.v2.txt"));
+  }
   @Test void anInnerUnderscoreCapitalisesTheNextLetter(){
     assertEquals("ExampleData",AutoloadHandler.capFirst("example_data"));
     assertEquals("Mydata",AutoloadHandler.capFirst("mydata"));

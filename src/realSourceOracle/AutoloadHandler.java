@@ -26,9 +26,7 @@ public interface AutoloadHandler{
   static String dropExt(String name){
     int dot= name.lastIndexOf('.');
     assert dot > 0;
-    name= name.substring(0,dot);
-    assert name.indexOf('.') == -1;
-    return name;
+    return name.substring(0,dot);
   }
   static String standardTypeName(String pkgName,SourceOracle.Ref ref){
     var cs= componentsAfterPackage(pkgName,ref);

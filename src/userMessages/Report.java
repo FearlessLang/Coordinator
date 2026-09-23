@@ -7,11 +7,9 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import metaParser.Message;
-import realSourceOracle.PathEntry;
 import realSourceOracle.ZipEntry;
 import tools.SourceOracle.Ref;
 import tools.SourceOracle.RefParent;
-import utils.Bug;
 import utils.Join;
 import utils.Pop;
 
@@ -238,15 +236,15 @@ or version control systems (git).
       "- Rename one of them so they are clearly distinct."
     );
   }
-  public static UserError zipNameClashesWithFile(RefParent zipKid, RefParent fileKid){
+  public static UserError zipNameClashes(RefParent zipKid, RefParent otherKid, String other){
     return fail(showRel(zipKid),
-      "- A zip file and a plain file share the same base name.\n"
+      "- A zip file and a "+other+" share the same base name.\n"
     + "  Zip file:\n  "
     + showRel(zipKid).replace("\nPath:", "\n  Path:")+"\n"
-    + "  Plain file:\n  "
-    + showRel(fileKid).replace("\nPath:", "\n  Path:")+"\n"
+    + "  "+Character.toUpperCase(other.charAt(0))+other.substring(1)+":\n  "
+    + showRel(otherKid).replace("\nPath:", "\n  Path:")+"\n"
     + "  Fearless expands each zip file into a folder named after it (without the\n"
-    + "  \".zip\"); that folder would have the exact same name as this file.",
+    + "  \".zip\"); that folder would have the exact same name as this "+other+".",
       "- Rename one of them, or move/rename the zip file, so this name is no longer\n"
     + "  produced twice."
     );
@@ -397,7 +395,7 @@ This is most likely a mistake.
      +"Different systems handle empty directories differently, and they may not be\n"
      +"supported by compression tools (zip) or version control systems (git).");
   }
-  public static UserError zipExpandedPathCollides(RefParent kid, RefParent first, RefParent second){
+  public static UserError zipExpandedPathCollides(RefParent kid, ZipEntry first, ZipEntry second){
     return fail(showRel(kid),
       "- Expanding zip files into folders makes this path exist twice, from two\n"
     + "  different places in the project:\n"
@@ -407,13 +405,9 @@ This is most likely a mistake.
     + "  longer produced twice."
     );
   }
-  private static String originBlock(RefParent r){
-    if (r instanceof PathEntry p){ return "  Real file/folder:\n  "+showRel(p.local()).strip().replace("\nPath:","\n  Path:"); }
-    if (r instanceof ZipEntry z){
-      return "  Entry inside a zip, expanded as a folder:\n  "
-        + showZipRel(z.root().resolve(z.local()), z.zips(), z.lastZips()).strip().replace("\nPath:","\n  Path:").replace("\nEntry:","\n  Entry:");
-    }
-    throw Bug.unreachable();
+  private static String originBlock(ZipEntry z){
+    return "  Entry inside a zip, expanded as a folder:\n  "
+      + showZipRel(z.root().resolve(z.local()), z.zips(), z.lastZips()).strip().replace("\nPath:","\n  Path:").replace("\nEntry:","\n  Entry:");
   }
 
   //-- which project folders the manager keeps track of

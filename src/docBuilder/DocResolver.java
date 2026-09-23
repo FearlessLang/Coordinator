@@ -116,7 +116,7 @@ final class DocResolver{
         .filter(MethodDoc::visible)
         .filter(m->m.main().sig().m().s().equals(selector))
         .filter(m->arity.isEmpty() || m.main().sig().m().arity()==arity.getAsInt())
-        .gather(DistinctBy.<MethodDoc,Integer>of(m->m.main().sig().m().arity()))
+        .gather(DistinctBy.<MethodDoc,String>of(m->HtmlDocRenderer.methodId(owner,m.main())))
         .map(m->Candidate.ofLocalMethod(owner,m))
         .toList();
     }
