@@ -46,7 +46,7 @@ public interface OutputOracle{
   default long commitMap(Map<String,Map<String,String>> map, long minExclusiveMillis){
     var path= rootDir().resolve("_map.json");
     var res= OutputHelper.mapFromJSon(path);
-    if (res.isPresent() && res.get().equals(map)){ return Fs.lastModified(path); }
+    if (res.filter(map::equals).isPresent()){ return Fs.lastModified(path); }
     return Fs.writeUtf8(path, OutputHelper.toJSon(map), res.isEmpty() ? -1 : minExclusiveMillis);
   }
   //commitMap only write if different from the old, and in that case it will bumps mtime strictly above minExclusiveMillis

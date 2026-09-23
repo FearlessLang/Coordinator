@@ -84,8 +84,7 @@ public interface Coordinator {
 class Helper{
   static boolean isFear(Ref u){ return u.toString().endsWith(".fear"); }
   static OutputOracle out(Path path){
-    var pOut= path.resolve(Coordinator.outDir);
-    return ()->pOut;
+    return ()->path.resolve(Coordinator.outDir);
   }
   static Layer layerOf(Coordinator coordinator, SourceOracle o, Path project, OutputOracle out, SourceOracle stLib){
     var map= pkgMap(o,project);
@@ -140,15 +139,10 @@ class Helper{
     int lastNum= rankNumber(ranks.getFirst());
     var pkgs= new LinkedHashMap<String, List<Ref>>();
     for (Ref u:ranks){
-      var pkgName= pkgName(u);
-      int currNum= rankNumber(u);
-      if (currNum == lastNum){ pkgs.put(pkgName,map.get(pkgName)); continue; }
-      lastNum = currNum;
-      l = new MiddleLayer(coordinator,l, pkgs);
-      pkgs = new LinkedHashMap<String, List<Ref>>();
-      pkgs.put(pkgName,map.get(pkgName));
+      if (rankNumber(u) != lastNum){ l= new MiddleLayer(coordinator,l,pkgs); pkgs= new LinkedHashMap<>(); lastNum= rankNumber(u); }
+      pkgs.put(pkgName(u),map.get(pkgName(u)));
     }
-    return pkgs.isEmpty() ? l : new MiddleLayer(coordinator,l, pkgs);    
+    return new MiddleLayer(coordinator,l,pkgs);
   }
   static Layer mapFromRanks(Coordinator coordinator, List<Ref> allRanks, SourceOracle o, OutputOracle out, SourceOracle stLib){
     Map<String,Map<String,String>> res; try {res= new FrontendLogicMain()
@@ -158,9 +152,8 @@ class Helper{
     return new BaseLayer(coordinator,res,baseStamp,stLib);
   }
   static int rankNumber(Ref u){
-    var name= u.toString();
     if (!u.toString().endsWith(".fear")){ throw Report.projectMalformedRankFileName(u); }
-    var stem= Fs.fileNameWithoutExtension(name);
+    var stem= Fs.fileNameWithoutExtension(u.toString());
     for (int i : Range.of(ranks)){
       var pref= ranks.get(i);
       int base= (i+1)*1000;
@@ -211,8 +204,7 @@ record NoCompile(Coordinator inner) implements Coordinator{
 }
 record NoCommit(Path rootDir) implements OutputOracle{
   @Override public long commitMap(Map<String,Map<String,String>> map, long minExclusiveMillis){
-    var res= OutputHelper.mapFromJSon(rootDir.resolve("_map.json"));
-    if (res.isPresent() && res.get().equals(map)){ return mapStamp(); }
-    throw new WouldCompile();
+    if (OutputHelper.mapFromJSon(rootDir.resolve("_map.json")).filter(map::equals).isEmpty()){ throw new WouldCompile(); }
+    return mapStamp();
   }
 }

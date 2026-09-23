@@ -6,6 +6,7 @@ import java.nio.file.Path;
 import java.text.Normalizer;
 import java.text.Normalizer.Form;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -66,9 +67,7 @@ record Tree(
       nonEmpty.add(parentOrEmpty(rel));
       if (BuildWithZip.isInvisible(new PathEntry(root, rel))){ return; }
       if (isDirectory(abs)){ dirs.add(rel); }
-      if (!isDiskZip(abs, rel)){ return; }
-      var es= ZipWellFormedness.allEntryPaths(root, rel);
-      if (es.isEmpty()){ throw Report.emptyExpandedZip(rel); }
+      if (isDiskZip(abs, rel) && ZipWellFormedness.allEntryPaths(root, rel).isEmpty()){ throw Report.emptyExpandedZip(rel); }
     }));
     for (var d: dirs){ if (!nonEmpty.contains(d)){ throw Report.emptyDirectory(d); } }
   }
@@ -140,8 +139,7 @@ public final class BuildWithZip{
   }
   private static void checkExt(RefParent kid, String tail){
     if (tail.isEmpty()){ throw Report.missingExtension(kid); }
-    int d= tail.indexOf('.');
-    if (d < 0){ checkExtSeg(kid, tail); return; }
+    if (tail.indexOf('.') < 0){ checkExtSeg(kid, tail); return; }
     if (!Report.allowedMultiDotExts.contains(tail)){ throw Report.multiDotExtNotAllowed(kid); }
   }
   private static void checkExtSeg(RefParent kid, String seg){
@@ -174,9 +172,9 @@ public final class BuildWithZip{
     }
     int d= name.indexOf('.');
     var base= (d < 0 ? name : name.substring(0, d)).toLowerCase(Locale.ROOT);
-    if (!base.isEmpty() && winReserved.contains(base)){ throw Report.invisibleWindowsReservedDeviceName(kid, base, name); }
+    if (winReserved.contains(base)){ throw Report.invisibleWindowsReservedDeviceName(kid, base, name); }
   }
-  private static void checkCollectiveInvisible(Set<RefParent> kids){
+  private static void checkCollectiveInvisible(Collection<RefParent> kids){
     var seenKeyToName= new HashMap<String,String>();
     for (var kid: kids){ checkCollectiveInvisibleFocusOn(seenKeyToName, kid); }
   }
@@ -197,13 +195,11 @@ public final class BuildWithZip{
     var dotKids= new ArrayList<RefParent>();
     var visKids= new ArrayList<RefParent>();
     for (var kid: kids){ (Fs.fileNameWithExtension(kid.fearPath()).startsWith(".") ? dotKids : visKids).add(kid); }
-    if (!dotKids.isEmpty()){ checkCollectiveInvisible(new LinkedHashSet<>(dotKids)); }
+    checkCollectiveInvisible(dotKids);
     for (var kid: visKids){
       var name= Fs.fileNameWithExtension(kid.fearPath());
-      if (name.indexOf('.') >= 0){ continue; }
-      if (!Report.allowedNoExtFiles.contains(name)){ continue; }
       if (!(kid instanceof Ref)){ continue; } // directory
-      checkNoExtBaseClash(visKids, kid, name);
+      if (Report.allowedNoExtFiles.contains(name)){ checkNoExtBaseClash(visKids, kid, name); }
     }
   }
   private static void checkNoExtBaseClash(List<RefParent> visKids, RefParent noExtKid, String base){
