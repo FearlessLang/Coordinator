@@ -42,7 +42,7 @@ final class HtmlDocRenderer{
   final Optional<Path> baseDocLocation;
   //filled by href() as links are emitted, so every ambiguous link that reaches the
   //page also gets its landing section; rendered after all types, when it is complete.
-  final Map<String,DocLink.Ambiguous> pages= new LinkedHashMap<>();
+  final Map<DocLink.Ambiguous,String> pages= new LinkedHashMap<>();
   final ExportedToStr toStr;
   final DocResolver resolver;
 
@@ -59,7 +59,7 @@ final class HtmlDocRenderer{
     sb.append("<main>\n");
     renderHeader(sb,shown);
     shown.forEach(t->renderType(sb,t,claims));
-    pages.values().forEach(p->renderPage(sb,p));
+    pages.forEach((p,id)->renderPage(sb,p,id));
     sb.append(router());
     return sb.append("</main>\n</div>\n</body>\n</html>\n").toString();
   }
@@ -514,8 +514,8 @@ code{
       .orElse(body);
   }
 
-  void renderPage(StringBuilder sb, DocLink.Ambiguous p){
-    sb.append("<section class=\"type disambig\" id=\"").append(disambigId(p.pageId())).append("\">\n")
+  void renderPage(StringBuilder sb, DocLink.Ambiguous p, String anchor){
+    sb.append("<section class=\"type disambig\" id=\"").append(anchor).append("\">\n")
       .append("<h2>Several match ").append(h(p.title())).append("</h2>\n<ul class=\"options\">\n");
     p.options().forEach(c->sb.append("<li>").append(renderCandidate(c)).append("</li>\n"));
     sb.append("</ul>\n</section>\n");
@@ -536,8 +536,7 @@ code{
 
   String href(DocLink link){
     if (link instanceof DocLink.Ambiguous a){
-      pages.putIfAbsent(a.pageId(),a);
-      return "#"+disambigId(a.pageId());
+      return "#"+pages.computeIfAbsent(a,_->"disambig-"+id(a.title())+"-"+pages.size());
     }
     return candidateHref(((DocLink.Resolved)link).hit());
   }
@@ -546,8 +545,6 @@ code{
     if (c.localMethod().isPresent()){ return "#"+methodId(c.owner(),c.localMethod().get().main()); }
     return linkTo(c.owner());
   }
-
-  static String disambigId(String pageId){ return "disambig-"+id(pageId); }
 
   static String arityParens(int n){
     return IntStream.range(0,n).mapToObj(_ -> "_").collect(Collectors.joining(",","(",")"));

@@ -35,7 +35,7 @@ record Candidate(TName owner, Optional<String> selector, OptionalInt arity, Opti
 
 sealed interface DocLink{
   record Resolved(Candidate hit) implements DocLink{}
-  record Ambiguous(String pageId, String title, List<Candidate> options) implements DocLink{}
+  record Ambiguous(String title, List<Candidate> options) implements DocLink{}
   /// A real reference with nothing to point at: a parameter whose type is a type
   /// variable. Shown as code, never an error.
   record NoLink() implements DocLink{}

@@ -394,10 +394,10 @@ final class DocBuilderTest{
     var a= namedType("pkg.A", List.of(), List.of(namedMethod(".bar",aName), methodTaking(".bar",aName,"x",aName)));
     var b= namedType("pkg.B", List.of(), List.of(methodTaking(".bar",bName,"x",bName)));
     SourceOracle oracle= List::of;
-    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(a,b));
+    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(a,b), Optional.empty());
     builder.visitLiteral(a);
     builder.visitLiteral(b);
-    var renderer= new HtmlDocRenderer("pkg", Map.of(), builder.types, OtherPackages.empty(), Map.of());
+    var renderer= new HtmlDocRenderer("pkg", Map.of(), builder.types, OtherPackages.empty(), Map.of(), Optional.empty());
     var oneArg= (DocLink.Ambiguous)renderer.resolver.resolve(new DocRef.MethodName(Optional.empty(),".bar",OptionalInt.of(1)), Scope.of(a)).get();
     var anyArity= (DocLink.Ambiguous)renderer.resolver.resolve(new DocRef.MethodName(Optional.empty(),".bar",OptionalInt.empty()), Scope.of(a)).get();
     assertEquals(2, oneArg.options().size());

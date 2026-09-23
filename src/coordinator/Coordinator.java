@@ -12,6 +12,7 @@ import java.util.Set;
 import java.util.stream.Stream;
 
 import userMessages.Report;
+import core.AllLs;
 import core.FearlessException;
 import core.LiteralDeclarations;
 import core.OtherPackages;
@@ -119,13 +120,12 @@ class Helper{
   }
   private static final TName baseMain= new TName("base.Main",0,utils.Pos.unknown);
   static String mainsText(List<Literal> core){
-    var lines= core.stream().filter(Helper::isMain).map(l->l.name().s()+" "+l.name().pos().fileName().toString().substring(SourceOracle.root.length())).sorted();
+    var nested= AllLs.of(core).values().stream().filter(l->LiteralDeclarations.has(l.cs(),LiteralDeclarations.captureFree));
+    var lines= Stream.concat(core.stream(),nested).filter(Helper::isMain).map(l->l.name().s()+" "+l.name().pos().fileName().toString().substring(SourceOracle.root.length())).distinct().sorted();
     return Join.of(lines,"","\n","\n","");
   }
   static boolean isMain(Literal l){
-    var hasInstance= l.thisName().equals("this") || LiteralDeclarations.has(l.cs(),LiteralDeclarations.captureFree);
-    return hasInstance
-      && LiteralDeclarations.has(l.cs(),baseMain)
+    return LiteralDeclarations.has(l.cs(),baseMain)
       && l.ms().stream().noneMatch(m->m.sig().abs());
   }
   static LinkedHashMap<String,List<Ref>> pkgMap(SourceOracle o, Path path){

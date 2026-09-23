@@ -1,6 +1,7 @@
 package docBuilder;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.OptionalInt;
@@ -12,6 +13,7 @@ import core.OtherPackages;
 import core.T;
 import core.TName;
 import utils.DistinctBy;
+import utils.Join;
 
 /// Where a doc comment is written: the type it documents, and the method when it
 /// documents one. This is what makes "this" and the parameter names mean something.
@@ -61,7 +63,7 @@ final class DocResolver{
 
   Optional<DocLink> resolveType(DocRef.TypeName ref){
     var cands= typeCandidates(ref).stream().map(Candidate::ofType).toList();
-    return pack("type-"+ref.simpleName(), "Type "+ref.simpleName(), cands);
+    return pack("Type "+ref.pkg().map(p->p+".").orElse("")+ref.simpleName()+shape(ref.arity(),"[","]"), cands);
   }
 
   //a name declared here always wins over a same-named one elsewhere; only when nothing
@@ -106,7 +108,7 @@ final class DocResolver{
 
   private Optional<DocLink> onOwners(String shown, List<TName> owners, String selector, OptionalInt arity){
     var cands= owners.stream().flatMap(o->methodCandidatesOn(o,selector,arity).stream()).toList();
-    return pack("method-"+shown+selector, shown+selector, cands);
+    return pack(shown+selector+shape(arity,"(",")"), cands);
   }
 
   private List<Candidate> methodCandidatesOn(TName owner, String selector, OptionalInt arity){
@@ -154,7 +156,7 @@ final class DocResolver{
         .map(m->Candidate.ofLocalMethod(t.main().name(),m)));
     var foreignCands= other.dom().stream()
       .flatMap(n->foreignCandidates(n,selector,arity));
-    return pack("selector-"+selector, selector, Stream.concat(localCands,foreignCands).toList());
+    return pack(selector+shape(arity,"(",")"), Stream.concat(localCands,foreignCands).toList());
   }
 
   private Stream<Candidate> foreignCandidates(TName owner, String selector, OptionalInt arity){
@@ -170,9 +172,13 @@ final class DocResolver{
       .map(m->Candidate.ofForeignMethod(owner,selector,m.sig().m().arity()));
   }
 
-  private Optional<DocLink> pack(String pageId, String title, List<Candidate> cands){
+  private static String shape(OptionalInt arity, String open, String close){
+    return arity.isEmpty() ? "" : Join.of(Collections.nCopies(arity.getAsInt(),"_"),open,",",close,open+close);
+  }
+
+  private Optional<DocLink> pack(String title, List<Candidate> cands){
     if (cands.isEmpty()){ return Optional.empty(); }
     if (cands.size() == 1){ return Optional.of(new DocLink.Resolved(cands.getFirst())); }
-    return Optional.of(new DocLink.Ambiguous(pageId, title, cands));
+    return Optional.of(new DocLink.Ambiguous(title, cands));
   }
 }
