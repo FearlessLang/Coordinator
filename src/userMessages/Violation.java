@@ -53,16 +53,10 @@ public final class Violation {
     "fearlessw requires GUI capabilities.",
     "Use fearless (without 'w') to work with a console instead."
   );}
-  public static UserError badLaunchArg(String s, boolean hasConsole){
-    if (hasConsole){ return die(
-      "The OS provided a broken path for the input file.",
-      "Value: "+s
-      );}
-    return die(
-      "fearless received a broken path for the input file.",
-      "Value: "+s
-    );
-  }
+  public static UserError badLaunchArg(String s, boolean hasConsole){ return die(
+    (hasConsole ? "The OS provided" : "fearless received")+" a broken path for the input file.",
+    "Value: "+s
+  );}
   public static UserError programFolderNotFound(Path startedFrom, String expectedDirName){
     return new UserError("""
       This copy of Fearless appears to have been moved, renamed, or damaged:

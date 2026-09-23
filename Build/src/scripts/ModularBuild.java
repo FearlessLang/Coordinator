@@ -29,17 +29,13 @@ public class ModularBuild{
   static void coordinatorMain(){
     buildJar("Coordinator", List.of(ResolveResource.coordinatorSrc, ResolveResource.coordinatorSrcModule));
   }
-  static void frontendTest(){
-    var fe= ResolveResource.frontendSrc.getParent();
-    JavacTool.javac(List.of(ResolveResource.frontendSrc, fe.resolve("test"), fe.resolve("testModule")), out.resolve("frontend-test"), mods);
-  }
-  static void coordinatorTest(){
-    var co= ResolveResource.coordinatorSrc.getParent();
-    JavacTool.javac(List.of(ResolveResource.coordinatorSrc, co.resolve("test"), co.resolve("testModule"), resources), out.resolve("coordinator-test"), mods);
-  }
-  static void controllerTest(){
-    var co= ResolveResource.controllerSrc.getParent();
-    JavacTool.javac(List.of(ResolveResource.controllerSrc, co.resolve("test"), co.resolve("testModule")), out.resolve("controller-test"), mods);
+  static void frontendTest(){ test(ResolveResource.frontendSrc, "frontend-test"); }
+  static void coordinatorTest(){ test(ResolveResource.coordinatorSrc, "coordinator-test", resources); }
+  static void controllerTest(){ test(ResolveResource.controllerSrc, "controller-test"); }
+  static void test(Path src, String name, Path... extra){
+    var srcs= new ArrayList<>(List.of(src, src.getParent().resolve("test"), src.getParent().resolve("testModule")));
+    srcs.addAll(List.of(extra));
+    JavacTool.javac(srcs, out.resolve(name), mods);
   }
   static void buildJar(String name, List<Path> srcs){ buildJar(name, srcs, List.of()); }
   static void buildJar(String name, List<Path> srcs, List<String> extraLintDisables){

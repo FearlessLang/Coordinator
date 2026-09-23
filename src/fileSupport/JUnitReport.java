@@ -15,9 +15,7 @@ public final class JUnitReport{
   private static final Pattern disabled= Pattern.compile("(?m)^PLAN\\|DISABLED\\|([^|\\r\\n]*)\\|([^|\\r\\n]*)\\|([^|\\r\\n]*)\\|([^|\\r\\n]*)$");
   public static Path file(Path reports){ return reports.resolve("report.xml"); }
   public static void write(Path reports, Path folder, String name, Instant since){
-    var log= newest(folder).filter(e->e.when().isAfter(since));
-    if (log.isEmpty()){ return; }
-    Fs.writeUtf8(file(reports), document(suiteOf(name, log.get().path())));
+    newest(folder).filter(e->e.when().isAfter(since)).ifPresent(e->Fs.writeUtf8(file(reports), document(suiteOf(name, e.path()))));
   }
   public static String suite(String name, Path folder){
     return newest(folder).map(e->suiteOf(name, e.path())).orElse("");

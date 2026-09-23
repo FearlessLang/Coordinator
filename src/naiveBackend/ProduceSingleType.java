@@ -54,9 +54,7 @@ record ProduceBody(BytecodeLineFix sb, Backend b, String iface, String thisName,
   }
   private String castedReceiverExpr(core.E recv){ return switch(recv){
     case Call c -> optCast(c.expectedRes().inner);
-    case X _ -> "";
-    case Literal _ -> "";
-    case Type _ -> "";
+    case X _, Literal _, Type _ -> "";
   };}
   private void emitLit(Literal lit){
     b.tools.docs().visitLiteral(lit);

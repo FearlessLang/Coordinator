@@ -116,19 +116,11 @@ final class SourceDocs{
         var start= i;
         switch(mode){
           case Normal -> {
-            if (s.startsWith("///",i)){
-              add(l,i+1,s.substring(i+3),s.substring(0,i).isBlank(),false,false);
+            if (s.startsWith("//",i)){
+              var k= s.length() > i+2 ? s.charAt(i+2) : ' ';
+              if (k == '/' || k == '>' || k == '-'){ add(l,i+1,s.substring(i+3),s.substring(0,i).isBlank(),k == '>',k == '-'); }
               i= s.length();
             }
-            else if (s.startsWith("//>",i)){
-              add(l,i+1,s.substring(i+3),s.substring(0,i).isBlank(),true,false);
-              i= s.length();
-            }
-            else if (s.startsWith("//-",i)){
-              add(l,i+1,s.substring(i+3),s.substring(0,i).isBlank(),false,true);
-              i= s.length();
-            }
-            else if (s.startsWith("//",i)){ i= s.length(); }
             else if (s.startsWith("/*",i)){ mode= Mode.Block; i += 2; }
             else if (s.charAt(i) == '"'){ mode= Mode.DoubleString; i += 1; }
             else if (s.charAt(i) == '`'){ mode= Mode.BacktickString; i += 1; }

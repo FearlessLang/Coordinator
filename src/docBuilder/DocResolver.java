@@ -122,12 +122,7 @@ final class DocResolver{
     }
     var lit= other.__of(owner);
     if (lit == null){ return List.of(); }
-    return declaredAndInherited(lit).stream()
-      .filter(m->m.sig().m().s().equals(selector))
-      .filter(m->arity.isEmpty() || m.sig().m().arity()==arity.getAsInt())
-      .gather(DistinctBy.<M,Integer>of(m->m.sig().m().arity()))
-      .map(m->Candidate.ofForeignMethod(owner,selector,m.sig().m().arity()))
-      .toList();
+    return foreignCandidates(owner, declaredAndInherited(lit), selector, arity).toList();
   }
 
   private Optional<TypeDoc> localTypeDoc(TName n){
@@ -165,7 +160,10 @@ final class DocResolver{
   private Stream<Candidate> foreignCandidates(TName owner, String selector, OptionalInt arity){
     var lit= other.__of(owner);
     if (lit == null){ return Stream.empty(); }
-    return lit.ms().stream()
+    return foreignCandidates(owner, lit.ms(), selector, arity);
+  }
+  private Stream<Candidate> foreignCandidates(TName owner, List<M> ms, String selector, OptionalInt arity){
+    return ms.stream()
       .filter(m->m.sig().m().s().equals(selector))
       .filter(m->arity.isEmpty() || m.sig().m().arity()==arity.getAsInt())
       .gather(DistinctBy.<M,Integer>of(m->m.sig().m().arity()))

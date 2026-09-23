@@ -16,14 +16,11 @@ import java.util.stream.Stream;
 
 import core.*;
 import core.E.*;
+import utils.Bug;
 import utils.Pos;
 import utils.Range;
 
 final class HtmlDocRenderer{
-  HtmlDocRenderer(String pkgName, Map<String,String> uses, List<TypeDoc> types, OtherPackages other,
-      Map<DocOcc,List<ResolvedSpan>> spans){
-    this(pkgName,uses,types,other,spans,Optional.empty());
-  }
   HtmlDocRenderer(String pkgName, Map<String,String> uses, List<TypeDoc> types, OtherPackages other,
       Map<DocOcc,List<ResolvedSpan>> spans, Optional<Path> baseDocLocation){
     assert nonNull(pkgName,uses,types,other,spans,baseDocLocation);
@@ -394,7 +391,7 @@ code{
     sb.append("</section>\n");
   }
   void renderMethod(StringBuilder sb, MethodDoc m, Map<DocOcc,Object> claims){
-    sb.append("<details class=\"method\" id=\"").append(methodId(m.owner,m.main())).append("\">\n")
+    sb.append("<details class=\"method\" id=\"").append(methodId(m.owner.main().name(),m.main())).append("\">\n")
       .append("<summary><span class=\"disclosure\">&#9656;</span><span class=\"sig\">")
       .append(renderSig(m)).append("</span></summary>\n");
     if (m.declared){ renderDoc(sb,m,m.docs,claims); }
@@ -405,17 +402,12 @@ code{
   void renderFrom(StringBuilder sb, MethodDoc m){
     var refs= fromRefs(m);
     if (refs.isEmpty()){ return; }
-    sb.append("<p class=\"doc from\">From: ");
-    for (int i : Range.of(refs)){
-      if (i > 0){ sb.append(", "); }
-      var r= refs.get(i);
-      sb.append("<a href=\"")
-        .append(h(linkTo(r.owner(),r.method()))).append("\">")
-        .append(h(refName(r)))
-        .append(h(r.method().sig().m().toString()))
-        .append("</a>");
-    }
-    sb.append(".</p>\n");
+    sb.append("<p class=\"doc from\">From: ")
+      .append(refs.stream().map(this::fromLink).collect(Collectors.joining(", ")))
+      .append(".</p>\n");
+  }
+  String fromLink(MethodRef r){
+    return "<a href=\""+h(linkTo(r.owner(),r.method()))+"\">"+h(refName(r))+h(r.method().sig().m().toString())+"</a>";
   }
 
   List<MethodRef> fromRefs(MethodDoc m){
@@ -569,11 +561,11 @@ code{
     sb.append("</details>\n");
   }
 
-  String variant(Object v){
-    if (v instanceof Literal l){ return toStr.lit(l); }
-    if (v instanceof M m){ return toStr.sig(m.sig()); }
-    return String.valueOf(v);
-  }
+  String variant(Object v){ return switch(v){
+    case Literal l -> toStr.lit(l);
+    case M m -> toStr.sig(m.sig());
+    default -> throw Bug.unreachable();
+  };}
 
   String typeTitle(TypeDoc t){
     if (!t.main().infName()){ return typeDeclName(t.main()); }
@@ -621,8 +613,6 @@ code{
   static String typeId(TName n){
     return "type-"+id(n.s())+"-"+n.arity();
   }
-
-  static String methodId(TypeDoc owner, M m){ return methodId(owner.main().name(),m); }
 
   static String methodId(TName owner, M m){
     return "method-"+id(owner.s())+"-"+id(m.sig().rc().name())+"-"+id(m.sig().m().s())+"-"+m.sig().m().arity();

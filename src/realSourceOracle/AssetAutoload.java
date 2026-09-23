@@ -26,25 +26,20 @@ final class AssetAutoload{
     return new SourceOracleWithAutoload.Triple(diskPath(ref), zipSteps(ref), zipEntry(ref));
   }
 
-  private static String zipSteps(SourceOracle.Ref ref){
-    if (ref instanceof PathEntry){ return ""; }
-    if (ref instanceof ZipEntry z){
-      return z.zips().stream()
-        .map(AssetAutoload::portableZipPath)
-        .collect(Collectors.joining(";"));
-    }
-    throw Bug.unreachable();
-  }
+  private static String zipSteps(SourceOracle.Ref ref){ return switch(ref){
+    case PathEntry _ -> "";
+    case ZipEntry z -> z.zips().stream().map(AssetAutoload::portableZipPath).collect(Collectors.joining(";"));
+    default -> throw Bug.unreachable();
+  };}
 
-  private static String zipEntry(SourceOracle.Ref ref){
-    if (ref instanceof PathEntry){ return ""; }
-    if (ref instanceof ZipEntry z){ return portableZipPath(z.lastZips()); }
-    throw Bug.unreachable();
-  }
+  private static String zipEntry(SourceOracle.Ref ref){ return switch(ref){
+    case PathEntry _ -> "";
+    case ZipEntry z -> portableZipPath(z.lastZips());
+    default -> throw Bug.unreachable();
+  };}
 
   private static String localPath(java.nio.file.Path local){
-    if (local.isAbsolute()){ throw Bug.of(""+local); }
-    if (!local.normalize().equals(local)){ throw Bug.of(""+local); }
+    if (local.isAbsolute() || !local.normalize().equals(local)){ throw Bug.of(""+local); }
     var res= PathEntry.localSegments(local).stream()
       .map(AssetAutoload::portableSegment)
       .collect(Collectors.joining("/"));
@@ -71,9 +66,9 @@ final class AssetAutoload{
     return s;
   }
 
-  private static String diskPath(SourceOracle.Ref ref){
-    if (ref instanceof PathEntry p){ return localPath(p.local()); }
-    if (ref instanceof ZipEntry z){ return localPath(z.local()); }
-    throw Bug.unreachable();
-  }
+  private static String diskPath(SourceOracle.Ref ref){ return localPath(switch(ref){
+    case PathEntry p -> p.local();
+    case ZipEntry z -> z.local();
+    default -> throw Bug.unreachable();
+  });}
 }

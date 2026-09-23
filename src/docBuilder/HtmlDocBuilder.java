@@ -26,9 +26,6 @@ import utils.Bug;
 import utils.Pos;
 
 public final class HtmlDocBuilder{
-  public HtmlDocBuilder(SourceOracle oracle, OtherPackages other, List<Literal> core){
-    this(oracle,other,core,Optional.empty());
-  }
   public HtmlDocBuilder(SourceOracle oracle, OtherPackages other, List<Literal> core, Optional<Path> baseDocLocation){
     assert nonNull(oracle,other,core,baseDocLocation);
     this.oracle= oracle;
@@ -121,9 +118,10 @@ public final class HtmlDocBuilder{
     var owner= types.stream().filter(t->t.main().name().simpleName().equals(name)).findFirst()
       .orElseThrow(Bug::unreachable).main();
     var p= owner.pos();
-    var span= new Span(p.fileName(),p.line(),p.column(),p.line(),p.column()+name.length()-1);
-    var frame= new Frame("the documentation of package "+pkgName, span);
-    return Message.of(oracle::loadString, List.of(frame), "This name is reserved for an auto-generated test suite.");
+    return message(new Span(p.fileName(),p.line(),p.column(),p.line(),p.column()+name.length()-1), "This name is reserved for an auto-generated test suite.");
+  }
+  String message(Span span, String msg){
+    return Message.of(oracle::loadString, List.of(new Frame("the documentation of package "+pkgName, span)), msg);
   }
 
   //one group per declaration, carrying the scope its comment is written in: a fenced
@@ -178,9 +176,8 @@ public final class HtmlDocBuilder{
   String orphan(List<DocOcc> run){
     var first= run.getFirst();
     var last= run.getLast();
-    var span= new Span(first.file(), first.line(), first.column(),
-      last.line(), last.textColumn()+last.text().length());
-    return Message.of(oracle::loadString, List.of(new Frame("the documentation of package "+pkgName, span)), notAttached);
+    return message(new Span(first.file(), first.line(), first.column(),
+      last.line(), last.textColumn()+last.text().length()), notAttached);
   }
 
   void ambiguousInline(List<String> problems){
@@ -190,8 +187,7 @@ public final class HtmlDocBuilder{
   }
 
   String ambiguousInline(DocOcc occ){
-    var span= new Span(occ.file(), occ.line(), occ.textColumn(), occ.line(), occ.textColumn()+occ.text().length());
-    return Message.of(oracle::loadString, List.of(new Frame("the documentation of package "+pkgName, span)), ambiguousTrailingDoc);
+    return message(new Span(occ.file(), occ.line(), occ.textColumn(), occ.line(), occ.textColumn()+occ.text().length()), ambiguousTrailingDoc);
   }
 
   static final String notAttached=
@@ -211,10 +207,8 @@ public final class HtmlDocBuilder{
    +"Use two backticks or more to show it as code instead.";
 
   String problem(DocOcc occ, DocRefScanner.CodeSpan sp, String msg){
-    var span= new Span(occ.file(), occ.line(), occ.textColumn()+sp.start(),
-      occ.line(), occ.textColumn()+sp.end()-1);
-    var frame= new Frame("the documentation of package "+pkgName, span);
-    return Message.of(oracle::loadString, List.of(frame), msg);
+    return message(new Span(occ.file(), occ.line(), occ.textColumn()+sp.start(),
+      occ.line(), occ.textColumn()+sp.end()-1), msg);
   }
 
   TypeDoc type(Literal l){
@@ -252,14 +246,8 @@ public final class HtmlDocBuilder{
   }
 
   List<DocOcc> docsForLiteral(Literal l){
-    if (!l.infName()){ return docAt(l.pos()); }
     if (l.pos().line() == 0){ return List.of(); }
-    return source(l.pos().fileName()).docsAt(l.pos(),false);
-  }
-
-  List<DocOcc> docAt(Pos pos){
-    if (pos.line() == 0){ return List.of(); }
-    return source(pos.fileName()).docsAt(pos,true);
+    return source(l.pos().fileName()).docsAt(l.pos(),!l.infName());
   }
 
   List<DocOcc> methodDocAt(Literal owner, M m){

@@ -80,20 +80,15 @@ public final class StringFiles {
       boolean report,
       Explanation explanation,
       Throwable cause){
-    var outAction= new StringBuilder();
-    if (!report){ outAction.append(explanation.text()); }
-    if (!report && explanation.suppressed().isEmpty()){
-      onError.accept(outAction.toString(),"");
-      throw Bug.unreachable();
-    }
-    var outReport= new StringBuilder();
-    if (report){ outReport.append(explanation.text()); }
-    outReport.append("\nOriginal failure:\n").append(stackTrace(cause));
+    var outAction= report ? "" : explanation.text();
+    if (!report && explanation.suppressed().isEmpty()){ onError.accept(outAction,""); throw Bug.unreachable(); }
+    var outReport= new StringBuilder(report ? explanation.text() : "")
+      .append("\nOriginal failure:\n").append(stackTrace(cause));
     for (var i= 0; i < explanation.suppressed().size(); i++){ outReport
       .append("\nSuppressed error ").append(i).append(":\n")
       .append(stackTrace(explanation.suppressed().get(i)));
     }
-    onError.accept(outAction.toString(),outReport.toString());
+    onError.accept(outAction,outReport.toString());
     throw Bug.unreachable();
   }
   private static Explanation invalidUtf8(Path path, byte[] bytes, int offset, int length, String prefix){
@@ -130,15 +125,10 @@ Nearby bytes:  %s
     var start= 0;
     for (var i= 0; i < prefix.length();){
       var c= prefix.charAt(i++);
-      if (c == '\r'){
-        if (i < prefix.length() && prefix.charAt(i) == '\n'){ i++; }
-        line++;
-        start= i;
-      }
-      else if (c == '\n'){
-        line++;
-        start= i;
-      }
+      if (c != '\r' && c != '\n'){ continue; }
+      if (c == '\r' && i < prefix.length() && prefix.charAt(i) == '\n'){ i++; }
+      line++;
+      start= i;
     }
     return new Location(line,prefix.codePointCount(start,prefix.length())+1,prefix.substring(start));
   }

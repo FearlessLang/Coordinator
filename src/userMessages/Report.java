@@ -545,12 +545,7 @@ Valid alternatives:
               +-- bar.fear
 """.formatted(file, Join.of(candidates.stream().map(c->disp(c)), "",", ","")));
   }
-  public static UserError projectMissingRankFile(String pkg, Path pkgRoot){ return new UserError("""
-Missing rank file for a package.
-
-Package:
-  %s
-
+  private static final String rankFilePattern= """
 Each package folder must contain exactly one file whose name follows this pattern:
   "_rank_<rankName>.fear"
 or
@@ -565,6 +560,14 @@ Examples:
   _rank_core043.fear
   _rank_worker999.fear
 
+""";
+  public static UserError projectMissingRankFile(String pkg, Path pkgRoot){ return new UserError(("""
+Missing rank file for a package.
+
+Package:
+  %s
+
+"""+rankFilePattern+"""
 Example of a valid package folder:
   projectRoot/
   +-- src/
@@ -573,7 +576,7 @@ Example of a valid package folder:
           +-- foo.fear
           +-- sub/
               +-- bar.fear
-""".formatted(disp(pkg), pkg));
+""").formatted(disp(pkg), pkg));
   }
   public static UserError projectMultipleRankFiles(String pkg, List<Ref> rankFiles){ return new UserError("""
 Multiple rank files for the same package.
@@ -591,21 +594,7 @@ Malformed rank file name.
 File:
   %s
 
-Each package folder must contain exactly one file whose name follows this pattern:
-  "_rank_<rankName>.fear"
-or
-  "_rank_<rankName><NNN>.fear"
-
-<rankName> is one of:
-  base, core, driver, worker, framework, accumulator, tool, app
-<NNN> are digits
-
-Examples:
-  _rank_app.fear
-  _rank_core043.fear
-  _rank_worker999.fear
-
-""".formatted(disp(rankFile.toString())));
+""".formatted(disp(rankFile.toString()))+rankFilePattern);
   }
 
   //-- the user's Fearless source. The frontend explains these itself, in the language of
