@@ -7,7 +7,6 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import metaParser.Message;
-import realSourceOracle.ZipEntry;
 import tools.SourceOracle.Ref;
 import tools.SourceOracle.RefParent;
 import utils.Join;
@@ -365,6 +364,16 @@ Invalid entry names (based on the exact text of the entry name):
      +"Different tools disagree on which one should be used: some show the file and\n"
      +"hide what is nested under it, others expand it as a folder and hide the file.");
   }
+  public static UserError zipNameClashesWithFolder(Path diskZip, List<String> steps, String entryName, String folderEntryName){
+    return directFail(showZipRel(diskZip, steps, entryName),
+      "This zip contains a zip entry called "+disp(entryName)+",\n"
+     +"and also this other entry, in a folder with the same base name:\n"
+     +"  "+disp(folderEntryName)+"\n"
+     +"\n"
+     +"Fearless expands each zip file into a folder named after it (without the\n"
+     +"\".zip\"); the content of the zip entry would be mixed with the content of\n"
+     +"that folder.");
+  }
   public static UserError zipNestingTooDeep(Path diskZip, List<String> steps, int depth, int maxDepth){
     assert !steps.isEmpty();
     var all= Pop.right(steps);
@@ -394,20 +403,6 @@ This is most likely a mistake.
       "This zip contains a folder entry called "+disp(entryName)+", but it is empty.\n"
      +"Different systems handle empty directories differently, and they may not be\n"
      +"supported by compression tools (zip) or version control systems (git).");
-  }
-  public static UserError zipExpandedPathCollides(RefParent kid, ZipEntry first, ZipEntry second){
-    return fail(showRel(kid),
-      "- Expanding zip files into folders makes this path exist twice, from two\n"
-    + "  different places in the project:\n"
-    + originBlock(first)+"\n\n"
-    + originBlock(second),
-      "- Rename one of them, or move/rename the zip file involved, so this path is no\n"
-    + "  longer produced twice."
-    );
-  }
-  private static String originBlock(ZipEntry z){
-    return "  Entry inside a zip, expanded as a folder:\n  "
-      + showZipRel(z.root().resolve(z.local()), z.zips(), z.lastZips()).strip().replace("\nPath:","\n  Path:").replace("\nEntry:","\n  Entry:");
   }
 
   //-- which project folders the manager keeps track of

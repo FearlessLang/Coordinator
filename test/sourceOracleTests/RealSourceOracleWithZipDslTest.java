@@ -935,7 +935,7 @@ How to fix
 We check this so that you[###]
 """);}
 
-  @Test void err_nested_zip_expanded_folder_collides_with_zip_folder(@TempDir Path tmp){ runErrIOE(tmp, """
+  @Test void err_nested_zip_clashes_with_folder_same_content(@TempDir Path tmp){ runErrIOE(tmp, """
 _pkg/o.zip/z/foo.fear
 iii
 A
@@ -944,27 +944,93 @@ _pkg/o.zip/z.zip/foo.fear
 iii
 B
 ""","""
-Invalid path in this project folder.
-
 Root: [###]
-Path: "_pkg/o/z/foo.fear"
+Path: "_pkg/o.zip"
+Entry: "z.zip"
 
-What went wrong
-- Expanding zip files into folders makes this path exist twice, from two
-  different places in the project:
-  Entry inside a zip, expanded as a folder:
-  Root: [###]
-  Path: "_pkg/o.zip/z.zip"
-  Entry: "foo.fear"
 
-  Entry inside a zip, expanded as a folder:
-  Root: [###]
-  Path: "_pkg/o.zip"
-  Entry: "z/foo.fear"
+This zip contains a zip entry called "z.zip",
+and also this other entry, in a folder with the same base name:
+  "z/foo.fear"
 
-How to fix
-- Rename one of them, or move/rename the zip file involved, so this path is no
-  longer produced twice.
+Fearless expands each zip file into a folder named after it (without the
+".zip"); the content of the zip entry would be mixed with the content of
+that folder.
+
+We check this so that you[###]
+""");}
+
+  @Test void err_nested_zip_clashes_with_folder_disjoint_content(@TempDir Path tmp){ runErrIOE(tmp, """
+_pkg/o.zip/z/foo.fear
+iii
+A
+jjj
+_pkg/o.zip/z.zip/bar.fear
+iii
+B
+""","""
+Root: [###]
+Path: "_pkg/o.zip"
+Entry: "z.zip"
+
+
+This zip contains a zip entry called "z.zip",
+and also this other entry, in a folder with the same base name:
+  "z/foo.fear"
+
+Fearless expands each zip file into a folder named after it (without the
+".zip"); the content of the zip entry would be mixed with the content of
+that folder.
+
+We check this so that you[###]
+""");}
+
+  @Test void err_nested_zip_clashes_with_folder_in_a_sub_folder(@TempDir Path tmp){ runErrIOE(tmp, """
+_pkg/o.zip/sub/z.zip/bar.fear
+iii
+B
+jjj
+_pkg/o.zip/sub/z/deep/foo.fear
+iii
+A
+""","""
+Root: [###]
+Path: "_pkg/o.zip"
+Entry: "sub/z.zip"
+
+
+This zip contains a zip entry called "sub/z.zip",
+and also this other entry, in a folder with the same base name:
+  "sub/z/deep/foo.fear"
+
+Fearless expands each zip file into a folder named after it (without the
+".zip"); the content of the zip entry would be mixed with the content of
+that folder.
+
+We check this so that you[###]
+""");}
+
+  @Test void err_nested_zip_clashes_with_folder_two_zips_deep(@TempDir Path tmp){ runErrIOE(tmp, """
+_pkg/o.zip/p.zip/z/foo.fear
+iii
+A
+jjj
+_pkg/o.zip/p.zip/z.zip/bar.fear
+iii
+B
+""","""
+Root: [###]
+Path: "_pkg/o.zip/p.zip"
+Entry: "z.zip"
+
+
+This zip contains a zip entry called "z.zip",
+and also this other entry, in a folder with the same base name:
+  "z/foo.fear"
+
+Fearless expands each zip file into a folder named after it (without the
+".zip"); the content of the zip entry would be mixed with the content of
+that folder.
 
 We check this so that you[###]
 """);}
