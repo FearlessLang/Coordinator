@@ -53,9 +53,7 @@ If this keeps happening, report the problem.
     utils.Err.strCmp("""
 Fearless does not know this operating system.
 
-Fearless runs on Windows, macOS and Linux. It needs to know which one it
-is running on to find the folder this system keeps for what one program
-writes for one user.
+Fearless runs on Windows, macOS and Linux.
 
 The operating system reported itself as:
   %s""".formatted(osName), Violation.unsupportedOperatingSystem().getMessage());
@@ -362,6 +360,16 @@ now be wrong, and you can settle it by hand in your system settings.
 
 Where the undoing stopped:
 removed HKCU\\...\\UserChoice, but restoring the previous ProgId failed""", Violation.associationLeftHalfDone(rollback).getMessage());
+  }
+  @Test void associationLauncherNotFearless(){
+    utils.Err.strCmp("""
+This copy of Fearless appears to have been damaged:
+its launcher does not have "fearless" in its name
+  editor.exe
+
+Replace this Fearless folder with a fresh copy.
+If this keeps happening, report the problem.
+""",Violation.associationLauncherNotFearless(java.nio.file.Path.of("editor.exe")).getMessage());
   }
 
   @Test void cacheMissingPkgApiFile(){

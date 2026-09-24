@@ -71,16 +71,11 @@ public final class Violation {
   }
 
   //-- the operating system does not provide a service we need
-  //Reached only where Fearless must name the folder this operating system reserves for
-  //one program's per-user data: there is no honest guess to make for a system whose
-  //conventions Fearless does not know.
   public static UserError unsupportedOperatingSystem(){
     return new UserError("""
       Fearless does not know this operating system.
 
-      Fearless runs on Windows, macOS and Linux. It needs to know which one it
-      is running on to find the folder this system keeps for what one program
-      writes for one user.
+      Fearless runs on Windows, macOS and Linux.
 
       The operating system reported itself as:
       %s""".formatted(path(System.getProperty("os.name","<not reported>"))));
@@ -396,6 +391,17 @@ public final class Violation {
 
       Where the undoing stopped:
       %s""".formatted(reported));
+  }
+  public static UserError associationLauncherNotFearless(Path launcher){
+    return new UserError("""
+      This copy of Fearless appears to have been damaged:
+      its launcher does not have "fearless" in its name
+      %s
+
+      %s""".formatted(
+        path(launcher.toString()),
+        freshCopyThenReport()
+      ));
   }
 
   //-- our own generated files, changed under us
