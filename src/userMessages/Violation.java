@@ -392,13 +392,14 @@ public final class Violation {
       Where the undoing stopped:
       %s""".formatted(reported));
   }
-  public static UserError associationLauncherNotFearless(Path launcher){
+  public static UserError associationLauncherMisnamed(Path launcher, String expected){
     return new UserError("""
       This copy of Fearless appears to have been damaged:
-      its launcher does not have "fearless" in its name
+      its launcher is not named "%s"
       %s
 
       %s""".formatted(
+        expected,
         path(launcher.toString()),
         freshCopyThenReport()
       ));

@@ -361,15 +361,15 @@ now be wrong, and you can settle it by hand in your system settings.
 Where the undoing stopped:
 removed HKCU\\...\\UserChoice, but restoring the previous ProgId failed""", Violation.associationLeftHalfDone(rollback).getMessage());
   }
-  @Test void associationLauncherNotFearless(){
+  @Test void associationLauncherMisnamed(){
     utils.Err.strCmp("""
 This copy of Fearless appears to have been damaged:
-its launcher does not have "fearless" in its name
+its launcher is not named "fearlessManaged0_001w"
   editor.exe
 
 Replace this Fearless folder with a fresh copy.
 If this keeps happening, report the problem.
-""",Violation.associationLauncherNotFearless(java.nio.file.Path.of("editor.exe")).getMessage());
+""",Violation.associationLauncherMisnamed(java.nio.file.Path.of("editor.exe"),"fearlessManaged0_001w").getMessage());
   }
 
   @Test void cacheMissingPkgApiFile(){
