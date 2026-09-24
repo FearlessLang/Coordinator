@@ -450,6 +450,27 @@ you unpacked Eclipse into.
 """.formatted(path(folder.toString())));
   }
 
+  public static UserError projectIconsMany(Path dir, List<Path> found){ return new UserError("""
+More than one .png file was found for this project's icon.
+
+Looked in:
+%s
+
+Found:
+%s
+
+Keep exactly one .png file there.
+""".formatted(path(dir.toString()),Join.of(found.stream().map(p->"  "+p.getFileName()),"","\n","",""))); }
+  public static UserError projectIconUnreadable(Path icon){ return new UserError("""
+The icon of this project is not a PNG image Fearless can read.
+
+File:
+%s
+
+The icon of a project is the only .png file in its ".config/icon" folder:
+replace that file with a PNG image, or remove it.
+""".formatted(path(icon.toString()))); }
+
   //-- project layout: which folder defines a package, and the rank file of each package
   public static UserError projectEmpty(Path root){ return new UserError("""
 The fearless project folder contains no *.fear files
