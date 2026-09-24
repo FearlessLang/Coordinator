@@ -12,6 +12,8 @@ import coordinator.OutputOracle;
 import core.E.Literal;
 import core.OtherPackages;
 import naiveBackend.BackendTools;
+import realSourceOracle.SourceOracleWithAutoload;
+import realSourceOracle.SourceOracleWithAutoload.Triple;
 import resources.ResolveResource;
 import tools.Fs;
 import tools.SourceOracle;
@@ -42,14 +44,18 @@ public final class BaseCacheBuilder{
       OutputOracle out= ()->scratch;
       var other= OtherPackages.empty();
       SourceOracle o= c.sourceOracle(ResolveResource.stLibPath);
-      List<Literal> core= c.frontend(pkgName, o.allFiles(), o, other, Map.of());
-      c.backend(pkgName, core, o, other, new CapabilityEnvironment(List.of()));
+      var rich= SourceOracleWithAutoload.ofBase(o);
+      List<Literal> core= c.frontend(pkgName, rich.sources(o.allFiles()), rich.oracle(), other, Map.of());
+      c.backend(pkgName, core, rich.oracle(), other, new CapabilityEnvironment(rich.autoloadedAssets()));
       out.commitPkgApi(pkgName, core, -1);
       var baseCache= stdLibDir.resolve("baseCache");
       Fs.copyFresh(scratch.resolve("base.json"), baseCache.resolve("base.json"));
       Fs.copyFresh(scratch.resolve("gen_java").resolve("base.jar"), baseCache.resolve("base.jar"));
       Fs.copyFresh(scratch.resolve("gen_java").resolve("base.html"), baseCache.resolve("base.html"));
       Fs.copyFresh(scratch.resolve("gen_java").resolve("base.txt"), baseCache.resolve("base.txt"));
+      Fs.rmTree(baseCache.resolve("assets"));
+      rich.autoloadedAssets().stream().map(Triple::diskPath).distinct()
+        .forEach(p->Fs.copyFresh(ResolveResource.stLibPath.resolve(p), baseCache.resolve("assets").resolve(p)));
     } finally{ Fs.rmTree(scratch); }
   }
 }

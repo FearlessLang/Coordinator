@@ -14,7 +14,6 @@ import tools.Fs;
 import tools.SourceOracle;
 import tools.SourceOracle.Ref;
 import userMessages.Violation;
-import utils.Push;
 
 public interface Layer{
   default LinkedHashMap<String,List<Ref>> pkgs(){ return new LinkedHashMap<>();}
@@ -33,8 +32,7 @@ record MiddleLayer(Coordinator coordinator, Layer next, LinkedHashMap<String,Lis
         var stillCached= out.stillBuilt(pkg, files, maxIn);
         if (stillCached){ nextOther = out.addCachedPkgApi(nextOther, pkg); return; }       
         var rich= SourceOracleWithAutoload.of(src, "_"+pkg);
-        var srcs= Push.of(files.stream().filter(Helper::isFear).toList(),rich.newRefs());
-        List<Literal> core= coordinator.frontend(pkg, srcs, rich.oracle(), other,other.virtualizationMap().getOrDefault(pkg,Map.of()));
+        List<Literal> core= coordinator.frontend(pkg, rich.sources(files), rich.oracle(), other,other.virtualizationMap().getOrDefault(pkg,Map.of()));
         coordinator.backend(pkg, core, rich.oracle(), other, new CapabilityEnvironment(rich.autoloadedAssets()));
         long newStamp= out.commitPkgApi(pkg, core, maxIn); // newStamp will be the old api file mtime if there was no reason to commit.
         out.commitMains(pkg, core);
@@ -55,8 +53,9 @@ record BaseLayer(Coordinator coordinator, Map<String,Map<String,String>> map, lo
     long maxIn= stLib.allFiles().stream().mapToLong(Ref::lastModified).max().getAsLong();
     var stillCached= out.stillBuilt(pkgName, stLib.allFiles(), maxIn);
     if (stillCached){ return out.startCachedPkgApi(pkgName,map,Math.max(baseStamp,out.pkgApiStamp(pkgName))); }
-    List<Literal> core= coordinator.frontend(pkgName,stLib.allFiles(),stLib,other,Map.of());
-    coordinator.backend(pkgName,core,stLib,other,new CapabilityEnvironment(List.of()));
+    var rich= SourceOracleWithAutoload.ofBase(stLib);
+    List<Literal> core= coordinator.frontend(pkgName,rich.sources(stLib.allFiles()),rich.oracle(),other,Map.of());
+    coordinator.backend(pkgName,core,rich.oracle(),other,new CapabilityEnvironment(rich.autoloadedAssets()));
     long newStamp= out.commitPkgApi(pkgName, core, maxIn);
     out.commitBuilt(pkgName, stLib.allFiles(), maxIn);
     return OtherPackages.start(map, AllLs.of(core).values(), Math.max(baseStamp,newStamp));

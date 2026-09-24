@@ -359,6 +359,18 @@ REAL ASSET CONTENT
     Assertions.assertTrue(out.contains("REAL ASSET CONTENT"), out);
   }
 
+  @Test void aBaseAssetIsReadFromTheBaseCache(@TempDir Path tmp) throws InterruptedException{
+    Path root= tmp.resolve("root");
+    UserError.root= root;
+    FsDsl.materialize(root, """
+_col/_rank_app.fear
+iii
+use base.Main as Main;
+Hello:Main{s->base.Debug#(base.IconsConflict.path+" "+(base.IconsConflict.readImage(s.assetRead, 1_000_000).width.getDataType.str))}
+""");
+    utils.Err.strCmp("fear:/_base/icons/conflict.png 256\n", coordinator(root).main(root, stLib));
+  }
+
   @Test void anAssetWhoseNameForgesNoValidTypeIsReportedAgainstTheRealFile(@TempDir Path tmp){
     Path root= tmp.resolve("root");
     UserError.root= root;

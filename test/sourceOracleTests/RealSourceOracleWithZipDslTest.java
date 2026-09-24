@@ -8,6 +8,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.AccessDeniedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.zip.CRC32;
 import java.util.zip.ZipOutputStream;
 
@@ -23,6 +24,7 @@ import realSourceOracle.RealSourceOracleWithZip;
 import realSourceOracle.SourceOracleWithAutoload;
 import testHelperFs.FsDsl;
 import tools.Fs;
+import tools.SourceOracle.Ref;
 import static testHelperFs.FsDsl.*;
 
 final class RealSourceOracleWithZipDslTest{
@@ -1261,6 +1263,36 @@ world
     var generated= res.newRefs().getFirst().loadString();
     assertTrue(generated.contains(".originalFileName: base.Str -> \"foo.txt\";"), generated);
     assertTrue(generated.contains(".originalFileName: base.Str -> \"bar.txt\";"), generated);
+  }
+
+  @Test void ok_base_asset_autoload(@TempDir Path tmp){
+    Path root= tmp.resolve("root");
+    UserError.root= root;
+    FsDsl.materialize(root, """
+_rank_base000.fear
+iii
+
+jjj
+icons/conflict.png
+iii
+1
+jjj
+icons/conflict.ico
+iii
+2
+""");
+    var base= new RealSourceOracleWithZip(root);
+    var res= SourceOracleWithAutoload.ofBase(base);
+    utils.Err.strCmp("""
+IconsConflict: base.ImageFile{
+  .path: base.Str -> "fear:/_base/icons/conflict.png";
+  .diskPath: base.Str -> "icons/conflict.png";
+  .zipSteps: base.Str -> "";
+  .zipEntry: base.Str -> "";
+  .originalFileName: base.Str -> "conflict.png";
+}
+""", res.newRefs().getFirst().loadString());
+    assertEquals(List.of("fear:/_rank_base000.fear","fear:/_base/autoloaded_assets.fear"), res.sources(base.allFiles()).stream().map(Ref::fearPath).toList());
   }
 
   // A .fear file with invalid UTF-8 bytes fails loudly (Files.readString is strict) when
