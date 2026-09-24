@@ -444,6 +444,17 @@ That is inside the manager folder of this Fearless:
 The manager folder holds what Fearless remembers about your projects: it is
 never a project itself.
 """.formatted(path(given.toString()),path(managerDir.toString())));}
+  public static UserError projectFolderUnsafePath(Path folder, int c){ return new UserError("""
+Fearless cannot keep track of this project folder: its path holds the
+character %s, outside the Fearless character set.
+
+You started Fearless on:
+%s
+Fearless records the path of every project folder it keeps track of, and a
+Fearless file holds only letters from a to z and from A to Z, digits, space,
+newline and common punctuation. Move the project into a folder whose path
+uses only those characters.
+""".formatted(Message.displayChar(c),path(folder.toString())));}
   public static UserError notRegistered(String verb, Path folder){ return new UserError("""
 Fearless was asked to "%s" a folder it does not keep track of:
 %s
