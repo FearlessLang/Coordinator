@@ -1,12 +1,38 @@
 package mainCoordinator;
 
-import java.awt.*;
+import java.awt.BorderLayout;
+import java.awt.Component;
+import java.awt.Container;
+import java.awt.Desktop;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.Insets;
+import java.awt.Point;
+import java.awt.Toolkit;
 import java.io.File;
 import java.net.URI;
 import java.util.function.Consumer;
 
-import javax.swing.*;
-import javax.swing.border.*;
+import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.JButton;
+import javax.swing.JComponent;
+import javax.swing.JEditorPane;
+import javax.swing.JFileChooser;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JSplitPane;
+import javax.swing.ScrollPaneConstants;
+import javax.swing.SwingUtilities;
+import javax.swing.UIManager;
+import javax.swing.WindowConstants;
+import javax.swing.border.EmptyBorder;
+import javax.swing.border.TitledBorder;
 import javax.swing.event.HyperlinkEvent;
 import javax.swing.filechooser.FileSystemView;
 import javax.swing.plaf.FontUIResource;
@@ -30,21 +56,17 @@ public final class InitialSupportGuiMain{
     addBtn(actions, "Create project with tests");
     addBtn(actions, "Create project with GUI");
     addBtn(actions, "More...", "More options!", this::toggleMore);
-
     advanced.setVisible(false);
     addBtn(advanced, "Create project with API connection");
     addBtn(advanced, "Create empty project");
     addBtn(advanced, "Import template...");
     actions.add(advanced);
-
     var root= new JPanel(new BorderLayout(12,12));
     root.setBorder(new EmptyBorder(12,12,12,12));
     frame.setContentPane(root);
-
     root.add(header(), BorderLayout.NORTH);
     root.add(center(), BorderLayout.CENTER);
     root.add(footer(), BorderLayout.SOUTH);
-
     frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
     frame.setMinimumSize(new Dimension(300,300));
     frame.setSize(new Dimension(950,700));
@@ -57,7 +79,6 @@ public final class InitialSupportGuiMain{
     var title= new JLabel("Welcome to Fearless");
     title.setFont(uiFont.deriveFont(Font.BOLD, uiFont.getSize2D() + 6f));
     p.add(title, BorderLayout.NORTH);
-
     var sub= new JLabel(startText);
     sub.setBorder(new EmptyBorder(6,0,0,0));
     p.add(sub, BorderLayout.SOUTH);
@@ -114,7 +135,7 @@ public final class InitialSupportGuiMain{
     fc.setDialogTitle("Choose your project location");
     fc.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES);
     fc.setCurrentDirectory(FileSystemView.getFileSystemView().getHomeDirectory()); // often Desktop on Windows
-    fc.setSelectedFile(new File("demo")); 
+    fc.setSelectedFile(new File("demo"));
     if (fc.showSaveDialog(b) != JFileChooser.APPROVE_OPTION){ return; }
     MakeDemo.of(fc.getSelectedFile().toPath());
     showHtml(Fs.isWindows() ? afterCreateWinHtml : Fs.isMac() ? afterCreateMacHtml : afterCreateLinuxHtml, "Next steps");
@@ -186,7 +207,7 @@ public final class InitialSupportGuiMain{
       <a href='https://fearlang.org/'>Website</a><br/>
       <a href='https://github.com/FearlessLang'>Source</a><br/>
       <a href='https://marcoservetto.github.io/ZeroToHero/src/assetsGuide/01_01.html'>Guide to learn Fearless</a><br/>
-      <a href='https://marcoservetto.github.io/ZeroToHero/src/assetsDest/Level101/Level101.html'>Game to learn fearless</a>
+      <a href='https://marcoservetto.github.io/ZeroToHero/src/assetsDest/Level101/Level101.html'>Game to learn Fearless</a>
     </p>
   </body>
 </html>
@@ -215,7 +236,7 @@ public final class InitialSupportGuiMain{
   </body>
 </html>
 """;
-public static final String afterCreateWinHtml= """
+  public static final String afterCreateWinHtml= """
 <html>
   <body>
     <h2 style='margin-top:0;'>Demo created</h2>
@@ -231,9 +252,9 @@ public static final String afterCreateWinHtml= """
       <li>You will see "select an app to open this .fearless file":
         <ol>
           <li>Scroll down</li>
-          <li>Click <b>Chose an app on your pc</b></li>
+          <li>Click <b>Choose an app on your PC</b></li>
           <li>Navigate to the fearless installation and select <b>fearless/fearlessw.exe</b></li>
-          <li>Chose <b>Always</b></li>
+          <li>Choose <b>Always</b></li>
           <li>The first time you run fearless on a new project, it may take a while</li>
         </ol>
       </li>

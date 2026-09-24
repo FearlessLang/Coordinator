@@ -2,7 +2,10 @@ package docBuilder;
 
 import static offensiveUtils.Require.*;
 
-import java.util.*;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import core.E.Literal;
@@ -10,16 +13,16 @@ import core.E.Literal;
 public final class DocNames{
   private DocNames(){}
 
-  static final List<String> baseNames= List.of(  
+  static final List<String> baseNames= List.of(
 "Action",
-"Angle", 
+"Angle",
 "BaseContainer",
 "BaseId",
-"Bool", 
+"Bool",
 "Byte",
-"Count", 
-"DataType",  
-"DataTypeBy",  
+"Count",
+"DataType",
+"DataTypeBy",
 "Degree",
 "EList",
 "F",
@@ -27,12 +30,12 @@ public final class DocNames{
 "Flow",
 "Info",
 "Int",
-"IsoPod",  
-"KeyElem", 
-"LazyInfo", 
+"IsoPod",
+"KeyElem",
+"LazyInfo",
 "List",
 "MF",
-"Main",  
+"Main",
 "Map",
 "Nat",
 "Num",
@@ -50,15 +53,15 @@ public final class DocNames{
 "System",
 "Test",
 "ToImm",
-"ToInfo", 
-"ToInfoBy",  
+"ToInfo",
+"ToInfoBy",
 "ToIso",
 "ToStr",
-"ToStrBy",  
+"ToStrBy",
 "ToUStr",
 "UStr",
 "Var",
-"Void", 
+"Void",
 "WidenTo"
 );
 

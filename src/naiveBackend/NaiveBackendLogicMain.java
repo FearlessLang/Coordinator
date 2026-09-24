@@ -8,11 +8,12 @@ import java.util.Locale;
 import tools.Fs;
 import tools.JavacTool;
 
-public class NaiveBackendLogicMain {
+public final class NaiveBackendLogicMain{
   public void of(BackendTools tools, List<Path> extraClasspathDirs){
-    var outPath= tools.rootDir().resolve("gen_java",tools.pkgName());
+    var genJava= tools.rootDir().resolve("gen_java");
+    var outPath= genJava.resolve(tools.pkgName());
     var fixers= new Backend(outPath, tools).produceJavaCode();
-    var classes= tools.rootDir().resolve("gen_java","_classes");
+    var classes= genJava.resolve("_classes");
     Fs.ensureDir(classes);
     Fs.cleanDirContents(classes);
     var pkgPath= classes.resolve(tools.pkgName());
@@ -22,7 +23,7 @@ public class NaiveBackendLogicMain {
     }
     assert foldDistinct(outPath);
     Runnable post= ()->fixers.forEach(f->f.accept(pkgPath));
-    var javacOut= Fs.of(()->JavacTool.compileTree(outPath, classes,post,tools.rootDir().resolve("gen_java",tools.pkgName()+".jar"),extraClasspathDirs));
+    var javacOut= Fs.of(()->JavacTool.compileTree(outPath, classes,post,genJava.resolve(tools.pkgName()+".jar"),extraClasspathDirs));
     assert javacOut.isEmpty(): javacOut;
     tools.docs().complete();
     Fs.rmTree(outPath); Fs.rmTree(classes);//comment out this line to keep the generated .java and .class files for debugging

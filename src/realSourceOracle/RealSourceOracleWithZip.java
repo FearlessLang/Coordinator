@@ -19,9 +19,5 @@ public final class RealSourceOracleWithZip implements SourceOracle{
     byUri= allFiles.stream().collect(Collectors.toUnmodifiableMap(r->r.fearURI().normalize(), r->r));
   }
   @Override public List<Ref> allFiles(){ return allFiles; }
-  @Override public String loadString(URI uri){
-    var r= byUri.get(uri);
-    assert r != null : "No such file: "+uri;
-    return r.loadString();
-  }
+  @Override public String loadString(URI uri){ return byUri.get(uri).loadString(); }
 }
