@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.LongStream;
 import java.util.stream.Stream;
 
 import userMessages.Report;
@@ -47,10 +48,16 @@ public interface Coordinator {
   static Map<String,Boolean> pkgsBuilt(Path path){
     var o= new RealSourceOracleWithZip(path);
     var map= Helper.pkgMap(o,path);
-    map.values().forEach(u->Helper.okPkgContent(u,path));
+    var ranks= map.values().stream().map(u->Helper.okPkgContent(u,path)).toList();
     var out= Helper.out(path);
     var res= new LinkedHashMap<String,Boolean>();
-    map.forEach((pkg,files)->res.put(pkg,out.stillBuilt(pkg,files,files.stream().mapToLong(Ref::lastModified).max().getAsLong())));
+    for (var r: ranks){
+      var pkg= Helper.pkgName(r);
+      var below= ranks.stream().filter(d->Helper.rankNumber(d) < Helper.rankNumber(r)).mapToLong(d->out.pkgApiStamp(Helper.pkgName(d)));
+      var own= map.get(pkg).stream().mapToLong(Ref::lastModified);
+      var maxIn= LongStream.concat(LongStream.concat(own,below),LongStream.of(out.mapStamp())).max().getAsLong();
+      res.put(pkg,out.stillBuilt(pkg,map.get(pkg),maxIn));
+    }
     return Collections.unmodifiableMap(res);
   }
   default String main(Path project, SourceOracle stLib) throws InterruptedException{ return Helper.main(this, project, stLib); }
