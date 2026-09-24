@@ -35,7 +35,7 @@ import utils.Range;
 
 public interface Coordinator {
   default String runAllMains(String pkgName,OutputOracle out) throws InterruptedException{
-    return JavaTool.runMainFromJars(runData(out.rootDir().getParent(),stdLibBase()), Push.of(out.rootDir().resolve("gen_java"),sharedClasspath()), pkgName+".Main");
+    return JavaTool.runMainFromJars(runData(out.rootDir().getParent(),stdLibBase()), Push.of(out.rootDir().resolve("gen_java"),sharedClasspath()), "_"+pkgName+".Main");
   }
   static List<String> runData(Path project, Path base){
     return List.of(
@@ -55,7 +55,7 @@ public interface Coordinator {
   default Optional<Map<String,String>> mains(Path project, SourceOracle stLib){ return Helper.mains(this, project, stLib); }
   static ChildJvm startMain(Path project, Path base, String main, List<Path> sharedClasspath, java.util.function.Consumer<String> out){
     var pkg= main.substring(0, main.indexOf('.'));
-    return JavaTool.startMainFromJars(runData(project,base),Push.of(genJava(project),sharedClasspath), pkg+".Main", out, main);
+    return JavaTool.startMainFromJars(runData(project,base),Push.of(genJava(project),sharedClasspath), "_"+pkg+".Main", out, main);
   }
   static Path genJava(Path project){ return project.resolve(outDir).resolve("gen_java"); }
   String outDir= ".fearless_out";
