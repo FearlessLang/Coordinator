@@ -301,6 +301,61 @@ supported by compression tools (zip) or version control systems (git).
 We check this so that you[###]
 """);}
 
+  @Test void err_empty_nested_zip(@TempDir Path tmp){ runErrIOE(tmp, """
+_pkg/a.fear
+iii
+A
+jjj
+_pkg/o.zip/e.zip
+iii
+jjj
+_pkg/o.zip/b.fear
+iii
+B
+""","""
+Root: [###]
+Path: "_pkg/o.zip"
+Entry: "e.zip"
+
+This zip file contains no entries.
+This is most likely a mistake.
+
+
+We check this so that you[###]
+""");}
+
+  @Test void err_nested_zip_that_is_not_a_zip(@TempDir Path tmp) throws Exception{
+    Path root= tmp.resolve("root").toAbsolutePath().normalize();
+    UserError.root= root;
+    Files.createDirectories(root.resolve("_pkg"));
+    Files.writeString(root.resolve("_pkg/a.fear"), "A");
+    var bytes= new ByteArrayOutputStream();
+    try(var zos= new ZipOutputStream(bytes, StandardCharsets.UTF_8)){
+      zos.putNextEntry(new java.util.zip.ZipEntry("notes.zip"));
+      zos.write("plain text, not a zip".getBytes(StandardCharsets.UTF_8));
+      zos.closeEntry();
+      zos.putNextEntry(new java.util.zip.ZipEntry("b.fear"));
+      zos.write("B".getBytes(StandardCharsets.UTF_8));
+      zos.closeEntry();
+    }
+    Files.write(root.resolve("_pkg/o.zip"), bytes.toByteArray());
+    var ex= assertThrows(UserError.class, ()->new RealSourceOracleWithZip(root));
+    utils.Err.strCmp("""
+Root: [###]
+Path: "_pkg/o.zip"
+Entry: "notes.zip"
+
+This file is named as a zip file, but its content is not a zip file.
+A zip file starts with its first entry, or with the zip end record if it has no entries.
+Other kinds of files renamed to ".zip", files saved from a web page, and self extracting
+archives with a program in front of the zip are not zip files.
+Fearless expands each zip file into a folder: rename this file if it is not meant to be a zip.
+
+
+We check this so that you[###]
+""", FsDsl.dumpErr(root, ex));
+  }
+
   @Test void err_needs_extension(@TempDir Path tmp){ runErrIOE(tmp, """
 _pkg/a
 iii

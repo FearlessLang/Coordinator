@@ -6,6 +6,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -22,8 +23,15 @@ final class ZipLocator{
     return readZip(diskZip, steps).readAll(()->zipStream(diskZip, bytes));
   }
   public static List<String> entryNames(Path diskZip, List<String> steps){
-    return fetch(diskZip, steps, bytes->List.copyOf(readHere(diskZip, steps, bytes).keySet()));
+    return fetch(diskZip, steps, bytes->reqEntries(diskZip, steps, bytes, List.copyOf(readHere(diskZip, steps, bytes).keySet())));
   }
+  private static List<String> reqEntries(Path diskZip, List<String> steps, byte[] bytes, List<String> names){
+    if (!names.isEmpty()){ return names; }
+    var head= bytes != null ? bytes : Fs.of(()->{ try(var in= Files.newInputStream(diskZip)){ return in.readNBytes(4); } });
+    var empty= head.length >= 4 && Arrays.equals(head, 0, 4, emptyZipSignature, 0, 4);
+    throw empty ? Report.zipNoEntries(diskZip, steps) : Report.zipNotAZip(diskZip, steps);
+  }
+  private static final byte[] emptyZipSignature= {'P','K',5,6};
   public static byte[] entryBytes(Path diskZip, List<String> steps, String entryName){
     var res= fetch(diskZip, steps, bytes->readHere(diskZip, steps, bytes).get(entryName));
     if (res == null){ throw Violation.cacheCouldNotFindZipEntry(diskZip, steps, entryName); }

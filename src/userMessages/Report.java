@@ -393,11 +393,23 @@ A zip entry can be much bigger unpacked than it looks inside the zip,
 sometimes thousands of times bigger, and we can only check content we can hold.
 Remove this entry from the zip, or store its content as normal files instead.
 """);}
-  public static UserError zipNoEntries(Path kid){
-    return directFail(showRel(kid),"""
+  public static UserError zipNoEntries(Path diskZip, List<String> steps){
+    return directFail(showZip(diskZip, steps),"""
 This zip file contains no entries.
 This is most likely a mistake.
 """);}
+  public static UserError zipNotAZip(Path diskZip, List<String> steps){
+    return directFail(showZip(diskZip, steps),"""
+This file is named as a zip file, but its content is not a zip file.
+A zip file starts with its first entry, or with the zip end record if it has no entries.
+Other kinds of files renamed to ".zip", files saved from a web page, and self extracting
+archives with a program in front of the zip are not zip files.
+Fearless expands each zip file into a folder: rename this file if it is not meant to be a zip.
+""");}
+  private static String showZip(Path diskZip, List<String> steps){
+    if (steps.isEmpty()){ return showRel(UserError.root.relativize(diskZip)); }
+    return showZipRel(diskZip, Pop.right(steps), steps.getLast());
+  }
   public static UserError zipEmptyDirectoryEntry(Path diskZip, List<String> steps, String entryName){
     return directFail(showZipRel(diskZip, steps, entryName),
       "This zip contains a folder entry called "+disp(entryName)+", but it is empty.\n"

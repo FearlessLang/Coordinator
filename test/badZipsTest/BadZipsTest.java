@@ -24,20 +24,26 @@ public class BadZipsTest {
   }
 @Test void zip1(){ runErrIOE("zip1","""
 Root: [###]
-Path: "unzip_bad_lzma_1.zip"
+Path: "zip1/unzip_bad_lzma_1.zip"
 
-This zip file contains no entries.
-This is most likely a mistake.
+This file is named as a zip file, but its content is not a zip file.
+A zip file starts with its first entry, or with the zip end record if it has no entries.
+Other kinds of files renamed to ".zip", files saved from a web page, and self extracting
+archives with a program in front of the zip are not zip files.
+Fearless expands each zip file into a folder: rename this file if it is not meant to be a zip.
 
 
 We check this so that you[###]
 """); }
 @Test void zip2(){ runErrIOE("zip2","""
 Root: [###]
-Path: "unzip_bad_lzma_2.zip"
+Path: "zip2/unzip_bad_lzma_2.zip"
 
-This zip file contains no entries.
-This is most likely a mistake.
+This file is named as a zip file, but its content is not a zip file.
+A zip file starts with its first entry, or with the zip end record if it has no entries.
+Other kinds of files renamed to ".zip", files saved from a web page, and self extracting
+archives with a program in front of the zip are not zip files.
+Fearless expands each zip file into a folder: rename this file if it is not meant to be a zip.
 
 
 We check this so that you[###]
