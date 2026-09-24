@@ -53,8 +53,7 @@ If this keeps happening, report the problem.
     utils.Err.strCmp("""
 Fearless does not know this operating system.
 
-Fearless runs on Windows, macOS and Linux. It needs to know which one it
-is running on to ask it for its messages in English.
+Fearless runs on Windows, macOS and Linux.
 
 The operating system reported itself as:
   %s""".formatted(osName), Violation.unsupportedOperatingSystem().getMessage());
@@ -377,16 +376,13 @@ removed HKCU\\...\\UserChoice, but restoring the previous ProgId failed""", Viol
   }
   @Test void associationLauncherNotFearless(){
     utils.Err.strCmp("""
-Fearless cannot become the program that opens Fearless projects.
-
-It was started by the launcher
+This copy of Fearless appears to have been damaged:
+its launcher does not have "fearless" in its name
   editor.exe
-whose name does not say it is a Fearless program: a launcher opening
-Fearless projects has "fearless" in its name, like "fearlessManaged0_001".
-Fearless stopped before touching anything: your system is exactly as it
-was.
 
-Give the launcher back its name.""", Violation.associationLauncherNotFearless(java.nio.file.Path.of("editor.exe")).getMessage());
+Replace this Fearless folder with a fresh copy.
+If this keeps happening, report the problem.
+""",Violation.associationLauncherNotFearless(java.nio.file.Path.of("editor.exe")).getMessage());
   }
 
   @Test void cacheMissingPkgApiFile(){

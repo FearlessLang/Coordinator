@@ -452,17 +452,6 @@ You started Fearless on:
 %s
 Put the project in a folder inside it, and start Fearless on that folder.
 """.formatted(path(root.toString())));}
-  public static UserError projectFolderUnsafePath(Path folder, int c){ return new UserError("""
-Fearless cannot keep track of this project folder: its path holds the
-character %s, outside the Fearless character set.
-
-You started Fearless on:
-%s
-Fearless records the path of every project folder it keeps track of, and a
-Fearless file holds only letters from a to z and from A to Z, digits, space,
-newline and common punctuation. Move the project into a folder whose path
-uses only those characters.
-""".formatted(Message.displayChar(c),path(folder.toString())));}
   public static UserError notRegistered(String verb, Path folder){ return new UserError("""
 Fearless was asked to "%s" a folder it does not keep track of:
 %s

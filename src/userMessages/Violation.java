@@ -75,8 +75,7 @@ public final class Violation {
     return new UserError("""
       Fearless does not know this operating system.
 
-      Fearless runs on Windows, macOS and Linux. It needs to know which one it
-      is running on to ask it for its messages in English.
+      Fearless runs on Windows, macOS and Linux.
 
       The operating system reported itself as:
       %s""".formatted(path(System.getProperty("os.name","<not reported>"))));
@@ -408,16 +407,14 @@ public final class Violation {
   }
   public static UserError associationLauncherNotFearless(Path launcher){
     return new UserError("""
-      Fearless cannot become the program that opens Fearless projects.
-
-      It was started by the launcher
+      This copy of Fearless appears to have been damaged:
+      its launcher does not have "fearless" in its name
       %s
-      whose name does not say it is a Fearless program: a launcher opening
-      Fearless projects has "fearless" in its name, like "fearlessManaged0_001".
-      Fearless stopped before touching anything: your system is exactly as it
-      was.
 
-      Give the launcher back its name.""".formatted(path(launcher.toString())));
+      %s""".formatted(
+        path(launcher.toString()),
+        freshCopyThenReport()
+      ));
   }
 
   //-- our own generated files, changed under us
