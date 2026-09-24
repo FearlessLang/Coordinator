@@ -44,11 +44,14 @@ public interface Coordinator {
       "-DfearlessBase.dir="+base);
   }
   default SourceOracle sourceOracle(Path path){ return new RealSourceOracleWithZip(path); }
-  static List<String> pkgNames(Path path){
+  static Map<String,Boolean> pkgsBuilt(Path path){
     var o= new RealSourceOracleWithZip(path);
     var map= Helper.pkgMap(o,path);
     map.values().forEach(u->Helper.okPkgContent(u,path));
-    return List.copyOf(map.keySet());
+    var out= Helper.out(path);
+    var res= new LinkedHashMap<String,Boolean>();
+    map.forEach((pkg,files)->res.put(pkg,out.stillBuilt(pkg,files,files.stream().mapToLong(Ref::lastModified).max().getAsLong())));
+    return Collections.unmodifiableMap(res);
   }
   default String main(Path project, SourceOracle stLib) throws InterruptedException{ return Helper.main(this, project, stLib); }
   default List<String> compile(Path project, SourceOracle stLib){ return Helper.compile(this, project, stLib); }
