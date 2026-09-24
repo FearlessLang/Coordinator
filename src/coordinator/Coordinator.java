@@ -12,6 +12,7 @@ import java.util.Set;
 import java.util.stream.Stream;
 
 import userMessages.Report;
+import core.AllLs;
 import core.FearlessException;
 import core.LiteralDeclarations;
 import core.OtherPackages;
@@ -84,8 +85,7 @@ public interface Coordinator {
 class Helper{
   static boolean isFear(Ref u){ return u.fearPath().endsWith(".fear"); }
   static OutputOracle out(Path path){
-    var pOut= path.resolve(Coordinator.outDir);
-    return ()->pOut;
+    return ()->path.resolve(Coordinator.outDir);
   }
   static Layer layerOf(Coordinator coordinator, SourceOracle o, Path project, OutputOracle out, SourceOracle stLib){
     var map= pkgMap(o,project);
@@ -120,13 +120,12 @@ class Helper{
   }
   private static final TName baseMain= new TName("base.Main",0,utils.Pos.unknown);
   static String mainsText(List<Literal> core){
-    var lines= core.stream().filter(Helper::isMain).map(l->l.name().s()+" "+l.name().pos().fileName().toString().substring(SourceOracle.root.length())).sorted();
+    var nested= AllLs.of(core).values().stream().filter(l->LiteralDeclarations.has(l.cs(),LiteralDeclarations.captureFree));
+    var lines= Stream.concat(core.stream(),nested).filter(Helper::isMain).map(l->l.name().s()+" "+l.name().pos().fileName().toString().substring(SourceOracle.root.length())).distinct().sorted();
     return Join.of(lines,"","\n","\n","");
   }
   static boolean isMain(Literal l){
-    var hasInstance= l.thisName().equals("this") || LiteralDeclarations.has(l.cs(),LiteralDeclarations.captureFree);
-    return hasInstance
-      && LiteralDeclarations.has(l.cs(),baseMain)
+    return LiteralDeclarations.has(l.cs(),baseMain)
       && l.ms().stream().noneMatch(m->m.sig().abs());
   }
   static LinkedHashMap<String,List<Ref>> pkgMap(SourceOracle o, Path path){
@@ -140,15 +139,10 @@ class Helper{
     int lastNum= rankNumber(ranks.getFirst());
     var pkgs= new LinkedHashMap<String, List<Ref>>();
     for (Ref u:ranks){
-      var pkgName= pkgName(u);
-      int currNum= rankNumber(u);
-      if (currNum == lastNum){ pkgs.put(pkgName,map.get(pkgName)); continue; }
-      lastNum = currNum;
-      l = new MiddleLayer(coordinator,l, pkgs);
-      pkgs = new LinkedHashMap<String, List<Ref>>();
-      pkgs.put(pkgName,map.get(pkgName));
+      if (rankNumber(u) != lastNum){ l= new MiddleLayer(coordinator,l,pkgs); pkgs= new LinkedHashMap<>(); lastNum= rankNumber(u); }
+      pkgs.put(pkgName(u),map.get(pkgName(u)));
     }
-    return pkgs.isEmpty() ? l : new MiddleLayer(coordinator,l, pkgs);    
+    return new MiddleLayer(coordinator,l,pkgs);
   }
   static Layer mapFromRanks(Coordinator coordinator, List<Ref> allRanks, SourceOracle o, OutputOracle out, SourceOracle stLib){
     Map<String,Map<String,String>> res; try {res= new FrontendLogicMain()
@@ -210,8 +204,7 @@ record NoCompile(Coordinator inner) implements Coordinator{
 }
 record NoCommit(Path rootDir) implements OutputOracle{
   @Override public long commitMap(Map<String,Map<String,String>> map, long minExclusiveMillis){
-    var res= OutputHelper.mapFromJSon(rootDir.resolve("_map.json"));
-    if (res.isPresent() && res.get().equals(map)){ return mapStamp(); }
-    throw new WouldCompile();
+    if (OutputHelper.mapFromJSon(rootDir.resolve("_map.json")).filter(map::equals).isEmpty()){ throw new WouldCompile(); }
+    return mapStamp();
   }
 }

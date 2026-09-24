@@ -16,14 +16,11 @@ import java.util.stream.Stream;
 
 import core.*;
 import core.E.*;
+import utils.Bug;
 import utils.Pos;
 import utils.Range;
 
 final class HtmlDocRenderer{
-  HtmlDocRenderer(String pkgName, Map<String,String> uses, List<TypeDoc> types, OtherPackages other,
-      Map<DocOcc,List<ResolvedSpan>> spans){
-    this(pkgName,uses,types,other,spans,Optional.empty());
-  }
   HtmlDocRenderer(String pkgName, Map<String,String> uses, List<TypeDoc> types, OtherPackages other,
       Map<DocOcc,List<ResolvedSpan>> spans, Optional<Path> baseDocLocation){
     assert nonNull(pkgName,uses,types,other,spans,baseDocLocation);
@@ -45,7 +42,7 @@ final class HtmlDocRenderer{
   final Optional<Path> baseDocLocation;
   //filled by href() as links are emitted, so every ambiguous link that reaches the
   //page also gets its landing section; rendered after all types, when it is complete.
-  final Map<String,DocLink.Ambiguous> pages= new LinkedHashMap<>();
+  final Map<DocLink.Ambiguous,String> pages= new LinkedHashMap<>();
   final ExportedToStr toStr;
   final DocResolver resolver;
 
@@ -62,7 +59,7 @@ final class HtmlDocRenderer{
     sb.append("<main>\n");
     renderHeader(sb,shown);
     shown.forEach(t->renderType(sb,t,claims));
-    pages.values().forEach(p->renderPage(sb,p));
+    pages.forEach((p,id)->renderPage(sb,p,id));
     sb.append(router());
     return sb.append("</main>\n</div>\n</body>\n</html>\n").toString();
   }
@@ -394,7 +391,7 @@ code{
     sb.append("</section>\n");
   }
   void renderMethod(StringBuilder sb, MethodDoc m, Map<DocOcc,Object> claims){
-    sb.append("<details class=\"method\" id=\"").append(methodId(m.owner,m.main())).append("\">\n")
+    sb.append("<details class=\"method\" id=\"").append(methodId(m.owner.main().name(),m.main())).append("\">\n")
       .append("<summary><span class=\"disclosure\">&#9656;</span><span class=\"sig\">")
       .append(renderSig(m)).append("</span></summary>\n");
     if (m.declared){ renderDoc(sb,m,m.docs,claims); }
@@ -405,17 +402,12 @@ code{
   void renderFrom(StringBuilder sb, MethodDoc m){
     var refs= fromRefs(m);
     if (refs.isEmpty()){ return; }
-    sb.append("<p class=\"doc from\">From: ");
-    for (int i : Range.of(refs)){
-      if (i > 0){ sb.append(", "); }
-      var r= refs.get(i);
-      sb.append("<a href=\"")
-        .append(h(linkTo(r.owner(),r.method()))).append("\">")
-        .append(h(refName(r)))
-        .append(h(r.method().sig().m().toString()))
-        .append("</a>");
-    }
-    sb.append(".</p>\n");
+    sb.append("<p class=\"doc from\">From: ")
+      .append(refs.stream().map(this::fromLink).collect(Collectors.joining(", ")))
+      .append(".</p>\n");
+  }
+  String fromLink(MethodRef r){
+    return "<a href=\""+h(linkTo(r.owner(),r.method()))+"\">"+h(refName(r))+h(r.method().sig().m().toString())+"</a>";
   }
 
   List<MethodRef> fromRefs(MethodDoc m){
@@ -522,8 +514,8 @@ code{
       .orElse(body);
   }
 
-  void renderPage(StringBuilder sb, DocLink.Ambiguous p){
-    sb.append("<section class=\"type disambig\" id=\"").append(disambigId(p.pageId())).append("\">\n")
+  void renderPage(StringBuilder sb, DocLink.Ambiguous p, String anchor){
+    sb.append("<section class=\"type disambig\" id=\"").append(anchor).append("\">\n")
       .append("<h2>Several match ").append(h(p.title())).append("</h2>\n<ul class=\"options\">\n");
     p.options().forEach(c->sb.append("<li>").append(renderCandidate(c)).append("</li>\n"));
     sb.append("</ul>\n</section>\n");
@@ -544,8 +536,7 @@ code{
 
   String href(DocLink link){
     if (link instanceof DocLink.Ambiguous a){
-      pages.putIfAbsent(a.pageId(),a);
-      return "#"+disambigId(a.pageId());
+      return "#"+pages.computeIfAbsent(a,_->"disambig-"+id(a.title())+"-"+pages.size());
     }
     return candidateHref(((DocLink.Resolved)link).hit());
   }
@@ -554,8 +545,6 @@ code{
     if (c.localMethod().isPresent()){ return "#"+methodId(c.owner(),c.localMethod().get().main()); }
     return linkTo(c.owner());
   }
-
-  static String disambigId(String pageId){ return "disambig-"+id(pageId); }
 
   static String arityParens(int n){
     return IntStream.range(0,n).mapToObj(_ -> "_").collect(Collectors.joining(",","(",")"));
@@ -569,11 +558,11 @@ code{
     sb.append("</details>\n");
   }
 
-  String variant(Object v){
-    if (v instanceof Literal l){ return toStr.lit(l); }
-    if (v instanceof M m){ return toStr.sig(m.sig()); }
-    return String.valueOf(v);
-  }
+  String variant(Object v){ return switch(v){
+    case Literal l -> toStr.lit(l);
+    case M m -> toStr.sig(m.sig());
+    default -> throw Bug.unreachable();
+  };}
 
   String typeTitle(TypeDoc t){
     if (!t.main().infName()){ return typeDeclName(t.main()); }
@@ -621,8 +610,6 @@ code{
   static String typeId(TName n){
     return "type-"+id(n.s())+"-"+n.arity();
   }
-
-  static String methodId(TypeDoc owner, M m){ return methodId(owner.main().name(),m); }
 
   static String methodId(TName owner, M m){
     return "method-"+id(owner.s())+"-"+id(m.sig().rc().name())+"-"+id(m.sig().m().s())+"-"+m.sig().m().arity();

@@ -29,13 +29,9 @@ public final class MagicConsistency{
   void checkTopMethod(M m, String typeName, String jName, boolean hasInstance){
     if (natives.isEmpty()){ return; }
     var nat= natives.get();
-    if (isMagicBody(m)){
-      if (!nat.hasFile(typeName)){ magicPairs.add(typeName+"#"+jName); }
-    }
-    else {
-      assert hasInstance || !nat.has(typeName, jName):
-        typeName+"."+jName+" has a real Fearless body and a hand-written rt/ override of the same method";
-    }
+    if (isMagicBody(m) && !nat.hasFile(typeName)){ magicPairs.add(typeName+"#"+jName); }
+    assert isMagicBody(m) || hasInstance || !nat.has(typeName, jName):
+      typeName+"."+jName+" has a real Fearless body and a hand-written rt/ override of the same method";
   }
   void checkFileReplacement(Literal l, String typeName){
     if (natives.isEmpty() || !natives.get().hasFile(typeName)){ return; }

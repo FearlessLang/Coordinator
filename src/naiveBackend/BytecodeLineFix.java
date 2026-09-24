@@ -15,7 +15,6 @@ import java.util.TreeMap;
 import java.util.function.Consumer;
 import tools.Fs;
 import utils.Pos;
-import utils.Range;
 
 final class BytecodeLineFix implements Consumer<Path>{
   StringBuilder sb= new StringBuilder(8_000);
@@ -32,7 +31,7 @@ final class BytecodeLineFix implements Consumer<Path>{
   @Override public String toString(){ return sb.toString(); }
   BytecodeLineFix a(String s){ //this call == s does not contain any method call
     sb.append(s);
-    advanceLines(s);
+    javaLine += (int)s.chars().filter(c->c == '\n').count();
     return this;
   }
   BytecodeLineFix a(String s, Pos p){//this call == s contains exactly 1 method call located in pos
@@ -40,11 +39,6 @@ final class BytecodeLineFix implements Consumer<Path>{
     assert fl >= 1 && fl <= 65535; // LineNumberTable uses u2
     put(javaLine, fl);
     return a(s);
-  }
-  private void advanceLines(String s){
-    for (int i : Range.of(0,s.length())){
-      if (s.charAt(i) == '\n'){ javaLine++; }
-    }
   }
   private void put(int jl, int fl){
     Integer prev= lineMap.putIfAbsent(jl, fl);
@@ -61,9 +55,7 @@ final class BytecodeLineFix implements Consumer<Path>{
     );
   }
   private boolean matches(String n){
-    if (!n.endsWith(".class")){ return false; }
-    if (n.equals(base+".class")){ return true; }
-    return n.startsWith(base+"$"); // anon/inner: Foo$1.class etc
+    return n.equals(base+".class") || n.endsWith(".class") && n.startsWith(base+"$"); // anon/inner: Foo$1.class etc
   }
   private void patchOne(ClassFile cf, Path classFile){
     byte[] in= Fs.of(()->Files.readAllBytes(classFile));

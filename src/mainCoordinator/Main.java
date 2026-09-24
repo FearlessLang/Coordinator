@@ -57,17 +57,15 @@ public final class Main{
     offerAssociation(appDir);
     Optional<Path> launch= launchPath(args);
     if (Fs.isMac() && !hasConsoleFlag()){ registerMacSpawnHandler(appDir); }
-    if (!launch.isPresent()){
+    if (launch.isEmpty()){
       if (Fs.isMac()){ Thread.sleep(1000); }
-      if ( macSpawnOk.get() != 0){ return; }
-    }          
-    if (launch.isEmpty()){ InitialSupportGuiMain.main(new String[]{}); return; }
+      if (macSpawnOk.get() == 0){ InitialSupportGuiMain.main(new String[]{}); }
+      return;
+    }
     Path l= launch.get();
     if (!Files.exists(l)){ throw Report.launchPathNotFound(l); }
-    var project= Files.isDirectory(l) ? l : l.getParent();
-    var base= appDir.resolve("stdLib").resolve("base");
-    var rt= appDir.resolve("stdLib").resolve("rt");
-    run(project,base,rt);
+    var stdLib= appDir.resolve("stdLib");
+    run(Files.isDirectory(l) ? l : l.getParent(), stdLib.resolve("base"), stdLib.resolve("rt"));
   }
   public static void run(Path project, Path base, Path rt) throws InvocationTargetException, InterruptedException, ExecutionException{
     var c= new Coordinator(){

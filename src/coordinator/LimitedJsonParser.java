@@ -65,7 +65,7 @@ final class LimitedJsonParser{
     var nameS= asStr(a.get(0));
     var rc= RC.valueOf(asStr(a.get(1)));
     var bs= asArr(a.get(2)).stream().map(x->bFrom(asArr(x))).toList();
-    var tn= new TName(nameS, bs.size(), dummyPos());
+    var tn= new TName(nameS, bs.size(), Pos.unknown);
     var cs= asArr(a.get(3)).stream().map(x->cFrom(asArr(x))).toList();
     var ms= asArr(a.get(4)).stream().map(x->mFrom(asArr(x))).toList();
     //Non-public types are kept too: needed for subtyping reasoning.
@@ -82,9 +82,9 @@ final class LimitedJsonParser{
     int originA= nat(a.get(6));
     var tag= asStr(a.get(7));
     boolean abs= tag.equals("abs");
-    if (!tag.equals("abs") && !tag.equals("concrete")){ throw err("Bad abs/concrete tag"); }
+    if (!abs && !tag.equals("concrete")){ throw err("Bad abs/concrete tag"); }
     var sig= new Sig(rc, new MName(nameS, ts.size()), bs, ts, ret,
-      new TName(originS, originA, dummyPos()), abs, dummySpan());
+      new TName(originS, originA, Pos.unknown), abs, dummySpan());
     var xs= IntStream.range(0, ts.size()).mapToObj(j->"x"+j).toList();
     return new M(sig, xs, Optional.empty());
   }
@@ -104,7 +104,7 @@ final class LimitedJsonParser{
     if (a.isEmpty()){ throw err("Bad C"); }
     var nameS= asStr(a.get(0));
     var ts= a.stream().skip(1).map(ai->tFrom(asArr(ai))).toList();
-    return new T.C(new TName(nameS, ts.size(), dummyPos()), ts);
+    return new T.C(new TName(nameS, ts.size(), Pos.unknown), ts);
   }
   private T tFrom(List<Object> a){
     if (a.size() < 2){ throw err("Bad T"); }
@@ -112,10 +112,7 @@ final class LimitedJsonParser{
     var rc= asStr(a.get(1));
     if (k.equals("c")){
       if (a.size() < 3){ throw err("Bad c T"); }
-      var n= asStr(a.get(2));
-      var ts= a.stream().skip(3).map(x->tFrom(asArr(x))).toList();
-      var c= new T.C(new TName(n, ts.size(), dummyPos()), ts);
-      return new T.RCC(RC.valueOf(rc), c, dummySpan());
+      return new T.RCC(RC.valueOf(rc), cFrom(a.subList(2, a.size())), dummySpan());
     }
     if (!k.equals("x")){ throw err("Bad T kind"); }
     if (a.size() == 2){ return new T.X(asStr(a.get(1)), dummySpan()); }
@@ -155,8 +152,7 @@ final class LimitedJsonParser{
     if (o instanceof List<?> xs){ return (List<Object>)xs; }
     throw err("Expected array");
   }
-  private Pos dummyPos(){ return Pos.unknown; }
-  private TSpan dummySpan(){ return TSpan.fromPos(dummyPos(), 1); }
+  private TSpan dummySpan(){ return TSpan.fromPos(Pos.unknown, 1); }
 
   void ws(){ for (; i < s.length() && (s.charAt(i)==' ' || s.charAt(i)=='\n'); i++); }
   private void req(char c){ if (!eat(c)){ throw err("Expected '"+c+"'"); } }

@@ -3,8 +3,7 @@ package scripts;
 
 public class TestAllFrontendCoordinator{
   public static void main(String[] args) throws InterruptedException{
-    ModularBuild.commons();
-    ModularBuild.frontendMain();
+    TestAllFrontend.main(args);
     ModularBuild.coordinatorTest();
     ModularBuild.runJUnit(ModularBuild.out.resolve("coordinator-test"), "--exclude-package=integrationTests");
   }

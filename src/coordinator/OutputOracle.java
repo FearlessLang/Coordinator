@@ -5,7 +5,6 @@ import java.nio.file.Path;
 import java.util.Map;
 import java.util.Optional;
 import utils.Join;
-import utils.Range;
 import java.util.List;
 import java.util.function.Function;
 import apiJson.ApiJson;
@@ -14,6 +13,7 @@ import core.AllLs;
 import core.E.Literal;
 import core.M;
 import core.OtherPackages;
+import core.Sig;
 import core.TName;
 import tools.Fs;
 import tools.SourceOracle.Ref;
@@ -31,30 +31,23 @@ public interface OutputOracle{
   }
   default OtherPackages addCachedPkgApi(OtherPackages other, String pkg){
     var path= rootDir().resolve(pkg+".json");
-    var api= OutputHelper.pgkApiFromJSon(path);
-    if (api.isEmpty()){ throw Violation.cacheMissingPkgApiFile(path); }
-    return other.mergeWith(api.get(), Math.max(other.stamp(), Fs.lastModified(path)));
+    return other.mergeWith(OutputHelper.cachedPkgApi(path), Math.max(other.stamp(), Fs.lastModified(path)));
   }//READS the pkg info and adds to other; Does not update the disk. Just reads info
   default OtherPackages startCachedPkgApi(String pkg,Map<String,Map<String,String>> map,long stamp){
-    var path= rootDir().resolve(pkg+".json");
-    var api= OutputHelper.pgkApiFromJSon(path);
-    if (api.isEmpty()){ throw Violation.cacheMissingPkgApiFile(path); }
-    return OtherPackages.start(map,api.get(),stamp);
+    return OtherPackages.start(map,OutputHelper.cachedPkgApi(rootDir().resolve(pkg+".json")),stamp);
   }
   default long commitPkgApi(String pkg, List<Literal> core, long minExclusiveMillis){
     var path= rootDir().resolve(pkg+".json");
     var res= OutputHelper.pgkApiFromJSon(path);
-    if (res.isEmpty()){ return Fs.writeUtf8(path, ApiJson.toJSon(core),-1); }
-    if (OutputHelper.consistent(res.get(),core)){ return Fs.lastModified(path); }
-    return Fs.writeUtf8(path, ApiJson.toJSon(core),minExclusiveMillis);
-    }
+    if (res.isPresent() && OutputHelper.consistent(res.get(),core)){ return Fs.lastModified(path); }
+    return Fs.writeUtf8(path, ApiJson.toJSon(core), res.isEmpty() ? -1 : minExclusiveMillis);
+  }
   default void commitMains(String pkg, List<Literal> core){ Fs.writeUtf8(rootDir().resolve(pkg+".mains"), Helper.mainsText(core)); }
   default long commitMap(Map<String,Map<String,String>> map, long minExclusiveMillis){
     var path= rootDir().resolve("_map.json");
     var res= OutputHelper.mapFromJSon(path);
-    if (res.isEmpty()){ return Fs.writeUtf8(path, OutputHelper.toJSon(map),-1); }
-    if (res.get().equals(map)){ return Fs.lastModified(path); }
-    return Fs.writeUtf8(path, OutputHelper.toJSon(map),minExclusiveMillis);
+    if (res.filter(map::equals).isPresent()){ return Fs.lastModified(path); }
+    return Fs.writeUtf8(path, OutputHelper.toJSon(map), res.isEmpty() ? -1 : minExclusiveMillis);
   }
   //commitMap only write if different from the old, and in that case it will bumps mtime strictly above minExclusiveMillis
 }
@@ -66,6 +59,7 @@ class OutputHelper{
     return obj(map, m->obj(m, s->"\""+s+"\""));
   }
   static Optional<Map<TName,Literal>> pgkApiFromJSon(Path p){ return readAllowed(p).map(s->new LimitedJsonParser(s, p).apiJsonToMap()); }
+  static Map<TName,Literal> cachedPkgApi(Path p){ return pgkApiFromJSon(p).orElseThrow(()->Violation.cacheMissingPkgApiFile(p)); }
   private static <T> String obj(Map<String,T> m, Function<T,String> v){
     return Join.of(m.entrySet().stream()
       .map(e->"\""+e.getKey()+"\":"+v.apply(e.getValue())),
@@ -80,28 +74,12 @@ class OutputHelper{
   }
   static boolean consistent(Map<TName,Literal> map, List<Literal> core){
     var allCore= AllLs.of(core).values();
-    if (map.size() != allCore.size()){ return false; }
-    for (var l: allCore){
-      //Not filtered to public-only: privates can still be mentioned in meth parameters and ret types.
-      var cached= map.get(l.name());
-      if (cached == null){ return false; }
-      if (!eqApi(l, cached)){ return false; }
-    }
-    return true;
+    //Not filtered to public-only: privates can still be mentioned in meth parameters and ret types.
+    return map.size() == allCore.size() && allCore.stream().allMatch(l->map.containsKey(l.name()) && eqApi(l, map.get(l.name())));
   }
   private static boolean eqApi(Literal a, Literal b){
-    if (a.rc() != b.rc()){ return false; }
-    if (!a.name().equals(b.name())){ return false; }
-    if (!a.thisName().equals(b.thisName())){ return false; }
-    if (!a.bs().equals(b.bs())){ return false; }
-    if (!a.cs().equals(b.cs())){ return false; }
-    return eqMs(a.ms(), b.ms());
+    return a.rc() == b.rc() && a.name().equals(b.name()) && a.thisName().equals(b.thisName())
+      && a.bs().equals(b.bs()) && a.cs().equals(b.cs()) && sigs(a).equals(sigs(b));
   }
-  private static boolean eqMs(List<M> a, List<M> b){
-    if (a.size() != b.size()){ return false; }
-    for (int i : Range.of(a)){
-      if (!a.get(i).sig().equals(b.get(i).sig())){ return false; }
-    }
-    return true;
-  }
+  private static List<Sig> sigs(Literal l){ return l.ms().stream().map(M::sig).toList(); }
 }

@@ -1,6 +1,8 @@
 package fileSupport;
 import static fileSupport.ByteFiles.Kind.*;
 
+import java.util.Arrays;
+
 import fileSupport.ByteFiles.Kind;
 
 enum TextMatch {
@@ -613,12 +615,8 @@ enum TextMatch {
     private final Kind kind;
     private final String[] needles;
     TextMatch(Kind kind, String... needles){ this.kind= kind; this.needles= needles; }
-    boolean has(String text) {
-      for (var needle : needles){ if (text.contains(needle)){ return true; } }
-      return false;
-    }
-    static Kind match(String text) {
-      for (var value : values()){ if (value.has(text)){ return value.kind; } }
-      return UnknownFailureAfterSuccessfulOpen;
+    boolean has(String text){ return Arrays.stream(needles).anyMatch(text::contains); }
+    static Kind match(String text){
+      return Arrays.stream(values()).filter(v->v.has(text)).findFirst().map(v->v.kind).orElse(UnknownFailureAfterSuccessfulOpen);
     }
   }
