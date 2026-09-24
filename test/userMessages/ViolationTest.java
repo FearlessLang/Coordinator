@@ -54,8 +54,7 @@ If this keeps happening, report the problem.
 Fearless does not know this operating system.
 
 Fearless runs on Windows, macOS and Linux. It needs to know which one it
-is running on to find the folder this system keeps for what one program
-writes for one user.
+is running on to ask it for its messages in English.
 
 The operating system reported itself as:
   %s""".formatted(osName), Violation.unsupportedOperatingSystem().getMessage());
