@@ -33,7 +33,7 @@ public record AutoloadHandler(Predicate<String> matches, String baseType){
     assert ref.fearPath().startsWith(SourceOracle.root);
     return Stream.of(ref.fearPath().substring(SourceOracle.root.length()).split("/")).toList();
   }
-  static String dropExt(String name){
+  public static String dropExt(String name){
     int dot= name.lastIndexOf('.');
     assert dot > 0;
     return name.substring(0,dot);

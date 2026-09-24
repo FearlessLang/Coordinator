@@ -487,6 +487,26 @@ imm Foo.foo error line: 7 in file _hello/_rank_app.fear
 imm Hello.main(_) error line: 6 in file _hello/_rank_app.fear
 """, run("helloStackTraces"));
   }
+  @Test void aFailingGetShowsNoActionFrames(@TempDir Path tmp) throws InterruptedException{
+    Path root= tmp.resolve("root");
+    UserError.root= root;
+    FsDsl.materialize(root, """
+_hello/_rank_app.fear
+iii
+use base.Main as Main;
+use base.Nat as Nat;
+use base.Void as Void;
+Hello:Main{s->Foo.foo}
+Foo:{.foo:Void->Bar.bar(7 .getDiv 0)}
+Bar:{.bar(n:Nat):Void->{}}
+""");
+    utils.Err.strCmp("""
+Nat.getDiv: Cannot divide by 0
+imm Nat.getDiv(_) error line: [###]
+imm Foo.foo error line: 5 in file _hello/_rank_app.fear
+imm Hello.main(_) error line: 4 in file _hello/_rank_app.fear
+""", coordinator(root).main(root, stLib));
+  }
 
   @Test void virtualizationMapMentionsAPackageThatDoesNotExist(@TempDir Path tmp) throws InterruptedException{
     Path root= tmp.resolve("root");
