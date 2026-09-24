@@ -8,6 +8,8 @@ import java.lang.reflect.InvocationTargetException;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.function.BiConsumer;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import javax.swing.JDialog;
 import javax.swing.JOptionPane;
@@ -67,10 +69,7 @@ public final class UserError extends RuntimeException{
 
   //-- building
   static UserError die(String first, String... more){
-    var sb= new StringBuilder();
-    sb.append("Error: ").append(first).append('\n');
-    for (var s: more){ sb.append("  ").append(s).append('\n'); }
-    return new UserError(sb.toString());
+    return new UserError("Error: "+first+"\n"+Stream.of(more).map(s->"  "+s+"\n").collect(Collectors.joining()));
   }
   //Handler for StringFiles.read/writeNew. StringFiles hands over (actionTxt, reportTxt);
   //their emptiness encodes the three outcomes below. A file operation we delegated
@@ -102,12 +101,9 @@ public final class UserError extends RuntimeException{
     return showRelText(zipPath)+printEntryName(entryName)+"\n";
   }
   private static String printEntryName(String entryName){
-    if (!isSimpleString(entryName)){
-      return "Entry contains non-standard characters.\nShown as: "+disp(entryName); }
-    return "Entry: "+disp(entryName);
-  }
-  private static boolean isSimpleString(String s){
-    return s.codePoints().allMatch(cp -> cp < 128 && Fs.allowed.indexOf((char)cp) >= 0);
+    var simple= entryName.codePoints().allMatch(cp -> cp < 128 && Fs.allowed.indexOf((char)cp) >= 0);
+    if (simple){ return "Entry: "+disp(entryName); }
+    return "Entry contains non-standard characters.\nShown as: "+disp(entryName);
   }
   static String path(String path){ return "  "+PrettyFileName.sanitizeAscii(path); }
 

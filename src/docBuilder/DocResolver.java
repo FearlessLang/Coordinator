@@ -70,7 +70,7 @@ final class DocResolver{
   private List<TName> typeCandidates(DocRef.TypeName ref){
     var pkg= ref.pkg();
     if (pkg.isEmpty() || pkg.get().equals(pkgName)){
-      var local= matching(localTypeNames().stream(), ref);
+      var local= matching(types.stream().map(TypeDoc::main).filter(l->!l.infName()).map(Literal::name), ref);
       if (!local.isEmpty() || pkg.isPresent()){ return local; }
     }
     return matching(other.dom().stream().filter(n->pkg.isEmpty() || n.pkgName().equals(pkg.get())), ref);
@@ -81,10 +81,6 @@ final class DocResolver{
       .filter(n->n.simpleName().equals(ref.simpleName()))
       .filter(n->ref.arity().isEmpty() || n.arity()==ref.arity().getAsInt())
       .toList();
-  }
-
-  private List<TName> localTypeNames(){
-    return types.stream().map(TypeDoc::main).filter(l->!l.infName()).map(Literal::name).toList();
   }
 
   private Optional<DocLink> resolveMethod(DocRef.MethodName ref, Scope scope){

@@ -13,7 +13,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
-import java.util.stream.Stream;
 import userMessages.Report;
 import tools.Fs;
 import tools.SourceOracle;
@@ -91,9 +90,7 @@ record Tree(
 }
 public final class BuildWithZip{
   public static boolean isInvisible(RefParent r){
-    var fp= r.fearPath();
-    assert fp.startsWith(SourceOracle.root);
-    return Stream.of(fp.substring(SourceOracle.root.length()).split("/")).anyMatch(s->s.startsWith("."));
+    return AutoloadHandler.components(r.fearPath()).stream().anyMatch(s->s.startsWith("."));
   }
   private final Tree t;
   BuildWithZip(Path root){ t= new Tree(root.toAbsolutePath().normalize(), new ArrayList<>(), new LinkedHashMap<>(), new LinkedHashMap<>()); }

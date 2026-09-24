@@ -9,8 +9,7 @@ import utils.Bug;
 final class AssetAutoload{
   private AssetAutoload(){}
 
-  static String descriptorMethods(SourceOracle.Ref ref, String path){
-    var t= triple(ref);
+  static String descriptorMethods(SourceOracleWithAutoload.Triple t, String path){
     return ""
       +"  .path: base.Str -> \""+path+"\";\n"
       +"  .diskPath: base.Str -> \""+t.diskPath()+"\";\n"

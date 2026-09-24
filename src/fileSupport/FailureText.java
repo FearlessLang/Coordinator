@@ -7,6 +7,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import fileSupport.ByteFiles.Op;
 import metaParser.Message;
@@ -165,9 +166,8 @@ class CommonInfo{
   private static final int PortableLinkDepth= 8;  // POSIX guarantees only SYMLOOP_MAX >= 8
   private static final int MaxLinkFollowed= 64;   // backstop so the walk always terminates
 
-  static String of(Op op, Path path, Suppressed suppressed){ return anchor(op, path, suppressed)+chain(path, suppressed); }
-  private static String anchor(Op op, Path path, Suppressed suppressed){
-    return "Fearless could not "+op.verb+" this file:\n\n  "+located(path, suppressed)+"\n\n";
+  static String of(Op op, Path path, Suppressed suppressed){
+    return "Fearless could not "+op.verb+" this file:\n\n  "+located(path, suppressed)+"\n\n"+chain(path, suppressed);
   }
   private static String rootOf(Path path){
     var root= path.toAbsolutePath().getRoot();//getRoot() may be null when the path has no root component (documented normal result)
@@ -229,13 +229,8 @@ class Holders{
     try{ holders= enumerate(path,suppressed); }
     catch(IOException e){ return "\n<reading programs holding this file open failed>"+suppressed.mark(e)+"\n"; }
     if (holders.isEmpty()){ return whenNone; }
-    var out= new StringBuilder(intro)
-      .append(holders.size())
-      .append(holders.size() == 1 ? " program" : " programs")
-      .append(" currently holding this file open:\n\n");
-    for (var h : holders){ out.append("  ").append(h).append("\n"); }
-    out.append(outro);
-    return out.toString();
+    return intro+holders.size()+(holders.size() == 1 ? " program" : " programs")+" currently holding this file open:\n\n"
+      +holders.stream().map(h->"  "+h+"\n").collect(Collectors.joining())+outro;
   }
   private static final String exampleWord= """
 Microsoft Word

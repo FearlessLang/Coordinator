@@ -7,7 +7,6 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -82,7 +81,7 @@ public final class HtmlDocBuilder{
     var problems= new ArrayList<String>();
     sources.values().stream().flatMap(s->s.orphanRuns().stream()).map(this::orphan).forEach(problems::add);
     sources.values().stream().flatMap(s->s.ambiguousInlineDocs().stream()).map(this::ambiguousInline).forEach(problems::add);
-    docGroups().forEach(g->linkGroup(resolver,g,spans,problems));
+    types.forEach(t->linkType(resolver,t,spans,problems));
     if (!problems.isEmpty()){ throw Report.docReferences(problems); }
     var renderer= new HtmlDocRenderer(pkgName,uses,types,other,spans,baseDocLocation);
     Fs.writeUtf8(htmlPath,renderer.render());
@@ -111,28 +110,22 @@ public final class HtmlDocBuilder{
     return Message.of(oracle::loadString, List.of(new Frame("the documentation of package "+pkgName, span)), msg);
   }
 
-  //one group per declaration, carrying the scope its comment is written in: a fenced
-  //``` ... ``` block never spans declarations, so "inside a fence" resets per group.
-  record DocGroup(Scope scope, List<DocOcc> docs){}
-
-  List<DocGroup> docGroups(){
-    var res= new ArrayList<DocGroup>();
-    types.forEach(t->{
-      res.add(new DocGroup(Scope.of(t.main()), t.docs));
-      t.methods.forEach(m->res.add(new DocGroup(Scope.of(t.main(), m.main()), m.docs)));
-    });
-    return res;
+  void linkType(DocResolver resolver, TypeDoc t, Map<DocOcc,List<ResolvedSpan>> spans, List<String> problems){
+    linkGroup(resolver,Scope.of(t.main()),t.docs,spans,problems);
+    t.methods.forEach(m->linkGroup(resolver,Scope.of(t.main(),m.main()),m.docs,spans,problems));
   }
 
-  void linkGroup(DocResolver resolver, DocGroup group, Map<DocOcc,List<ResolvedSpan>> spans,
+  //one group per declaration, carrying the scope its comment is written in: a fenced
+  //``` ... ``` block never spans declarations, so "inside a fence" resets per group.
+  void linkGroup(DocResolver resolver, Scope scope, List<DocOcc> docs, Map<DocOcc,List<ResolvedSpan>> spans,
       List<String> problems){
     var inFence= false;
-    for (var occ: group.docs()){
+    for (var occ: docs){
       if (occ.text().strip().equals("```")){ inFence= !inFence; continue; }
       //a //> line is real Fearless code, not prose: any backtick in it is a genuine
       //raw string literal, never doc-comment markup, so it is never reference-checked.
       if (inFence || occ.example() || occ.testOnly()){ continue; }
-      link(resolver,occ,group.scope(),spans,problems);
+      link(resolver,occ,scope,spans,problems);
     }
   }
 
@@ -195,11 +188,9 @@ public final class HtmlDocBuilder{
   //owner.cs() is fully flattened, so an overridden ancestor still gets its own entry here:
   //by design, "From:" shows every provider along the chain, shadowed ones included.
   List<MethodRef> inheritedMethods(Literal owner, M m){
-    var res= new LinkedHashMap<MethodRefKey,MethodRef>();
-    owner.cs().stream()
+    return owner.cs().stream()
       .flatMap(c->literal(c.name()).stream().flatMap(sup->matchingMethods(c,sup,m)))
-      .forEach(r->res.putIfAbsent(MethodRefKey.of(r),r));
-    return List.copyOf(res.values());
+      .toList();
   }
 
   Stream<MethodRef> matchingMethods(T.C provider, Literal sup, M m){

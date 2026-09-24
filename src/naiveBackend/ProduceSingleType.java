@@ -52,7 +52,7 @@ record ProduceBody(BytecodeLineFix sb, Backend b, String iface, String thisName,
   private String castedReceiverExpr(core.E recv){ return recv instanceof Call c ? optCast(c.expectedRes().inner) : ""; }
   private void emitLit(Literal lit){
     b.tools.docs().visitLiteral(lit);
-    if (b.captureFree(lit)){
+    if (LiteralDeclarations.has(lit.cs(),LiteralDeclarations.captureFree)){
       b.generateInterface(lit, false);
       sb.a(b.decTypeName(lit.name())).a(".instance");
       return;

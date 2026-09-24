@@ -9,7 +9,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -333,12 +332,8 @@ code{
   List<TypeDoc> visibleTypes(){
     return types.stream()
       .filter(TypeDoc::visible)
-      .sorted(Comparator.comparing(this::typeSortKey))
+      .sorted(Comparator.comparing(t->(t.main().infName() ? "1:" : "0:")+typeTitle(t)))
       .toList();
-  }
-
-  String typeSortKey(TypeDoc t){
-    return (t.main().infName() ? "1:" : "0:")+typeTitle(t);
   }
 
   List<MethodDoc> visibleMethods(TypeDoc t){
@@ -424,7 +419,7 @@ code{
   //bound parameters (eg. "R" in ".toOpt[R:*]"), stays plain text and is never an error.
   String renderSig(MethodDoc m){
     var text= toStr.sig(m.main().sig());
-    var bound= boundNames(m.owner.main().bs(), m.main().sig().bs());
+    var bound= Stream.concat(m.owner.main().bs().stream(), m.main().sig().bs().stream()).map(B::x).collect(Collectors.toSet());
     var sb= new StringBuilder();
     int i= 0;
     for (var f: DocRefScanner.signatureTypes(text)){
@@ -439,10 +434,6 @@ code{
     }
     sb.append(h(text.substring(i)));
     return sb.toString();
-  }
-
-  static Set<String> boundNames(List<B> a, List<B> b){
-    return Stream.concat(a.stream(),b.stream()).map(B::x).collect(Collectors.toSet());
   }
 
   void renderDoc(StringBuilder sb, Object owner, List<DocOcc> docs, Map<DocOcc,Object> claims){
@@ -605,13 +596,11 @@ code{
   }
 
   static String id(String s){
-    var sb= new StringBuilder(s.length()*2);
-    for (int i : Range.of(0,s.length())){
-      var c= s.charAt(i);
-      if (c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9'){ sb.append(c); }
-      else{ sb.append('_').append(Integer.toHexString(c)).append('_'); }
-    }
-    return sb.toString();
+    return s.chars().mapToObj(HtmlDocRenderer::idChar).collect(Collectors.joining());
+  }
+  static String idChar(int c){
+    var plain= c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9';
+    return plain ? Character.toString(c) : "_"+Integer.toHexString(c)+"_";
   }
 
   static String h(String s){

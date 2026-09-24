@@ -34,11 +34,11 @@ final class TypeDoc{
   }
 
   void declared(Pos pos, M m, List<DocOcc> docs, List<MethodRef> inheritedFrom){
-    oneOf(declaredByKey, DeclaredMethodKey.of(pos,m), true, docs, inheritedFrom).add(m);
+    oneOf(declaredByKey, new DeclaredMethodKey(pos.fileName(),pos.line(),pos.column(),m.sig().m()), true, docs, inheritedFrom).add(m);
   }
 
   void imported(M m, List<MethodRef> from){
-    oneOf(importedByKey, ImportedKey.of(m), false, List.of(), from).add(m);
+    oneOf(importedByKey, new ImportedKey(m.sig().origin(),m.sig().rc(),m.sig().m()), false, List.of(), from).add(m);
   }
 
   private <K> MethodDoc oneOf(Map<K,MethodDoc> byKey, K k, boolean declared, List<DocOcc> docs, List<MethodRef> inheritedFrom){
@@ -94,36 +94,13 @@ record MethodRef(TName owner, Optional<T.C> provider, M method){
   }
 }
 
-record DeclaredMethodKey(URI file, int line, int column, String name, int arity){
-  static DeclaredMethodKey of(Pos p, M m){
-    return new DeclaredMethodKey(
-      p.fileName(),
-      p.line(),
-      p.column(),
-      m.sig().m().s(),
-      m.sig().m().arity());
-  }
-}
-
-record MethodRefKey(String provider, String rc, String name, int arity){
+record DeclaredMethodKey(URI file, int line, int column, MName m){}
+record MethodRefKey(String provider, RC rc, MName m){
   static MethodRefKey of(MethodRef r){
-    return new MethodRefKey(
-      r.provider().map(Object::toString).orElse(r.owner().toString()),
-      r.method().sig().rc().name(),
-      r.method().sig().m().s(),
-      r.method().sig().m().arity());
+    return new MethodRefKey(r.provider().map(Object::toString).orElse(r.owner().toString()), r.method().sig().rc(), r.method().sig().m());
   }
 }
-
-record ImportedKey(String origin, String rc, String name, int arity){
-  static ImportedKey of(M m){
-    return new ImportedKey(
-      m.sig().origin().toString(),
-      m.sig().rc().name(),
-      m.sig().m().s(),
-      m.sig().m().arity());
-  }
-}
+record ImportedKey(TName origin, RC rc, MName m){}
 
 record DocOcc(URI file, int line, int column, int textColumn, String text, boolean pureLine, boolean example, boolean testOnly){
   boolean inline(){ return !pureLine; }

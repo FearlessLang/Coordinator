@@ -37,14 +37,11 @@ final class BytecodeLineFix implements Consumer<Path>{
   BytecodeLineFix a(String s, Pos p){//this call == s contains exactly 1 method call located in pos
     int fl= p.line();
     assert fl >= 1 && fl <= 65535; // LineNumberTable uses u2
-    put(javaLine, fl);
-    return a(s);
-  }
-  private void put(int jl, int fl){
-    Integer prev= lineMap.putIfAbsent(jl, fl);
+    Integer prev= lineMap.putIfAbsent(javaLine, fl);
     assert prev == null || prev.intValue() == fl:
-      "Two fearless lines on one java line "+jl+": "+prev+" vs "+fl
+      "Two fearless lines on one java line "+javaLine+": "+prev+" vs "+fl
       + sb.toString();
+    return a(s);
   }
   @Override public void accept(Path classesDir){
     assert nonNull(classesDir);
@@ -68,8 +65,7 @@ final class BytecodeLineFix implements Consumer<Path>{
     Fs.ofV(()->Files.write(classFile, out));
   }
   private void patchCode(CodeBuilder cb, CodeElement ce){
-    if (!(ce instanceof LineNumber ln)){ cb.with(ce); return; }
-    cb.with(LineNumber.of(fearlessLine(ln.line())));
+    cb.with(ce instanceof LineNumber ln ? LineNumber.of(fearlessLine(ln.line())) : ce);
   }
   //emitBody()'s this$/parameter-cast preamble lines never call a(String,Pos), so they are
   //never keys of lineMap; such a line can only fail at runtime as a backend bug (the
@@ -77,11 +73,8 @@ final class BytecodeLineFix implements Consumer<Path>{
   //The nearest later mapped line is always this same method's own call, so blaming it there
   //still names the right method; 1000 is a last resort for a file with no mapped line at all.
   private int fearlessLine(int jl){
-    Integer exact= lineMap.get(jl);
-    if (exact != null){ return exact; }
-    var after= lineMap.ceilingEntry(jl);
-    if (after != null){ return after.getValue(); }
-    var before= lineMap.floorEntry(jl);
-    return before != null ? before.getValue() : 1000;
+    var near= lineMap.ceilingEntry(jl);
+    if (near == null){ near= lineMap.floorEntry(jl); }
+    return near != null ? near.getValue() : 1000;
   }
 }

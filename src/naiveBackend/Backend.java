@@ -25,10 +25,6 @@ public class Backend{
   Path out;
   BackendTools tools;
   List<Consumer<Path>> fixers= new ArrayList<>();
-  boolean captureFree(Literal l){ return implementsType(l,new TName("base.CaptureFree",0,Pos.unknown)); }
-  boolean implementsBaseMain(Literal l){ return implementsType(l,new TName("base.Main",0,Pos.unknown)); }
-  boolean implementsInMemoryLog(Literal l){ return implementsType(l,new TName("base.InMemoryLog",1,Pos.unknown)); }
-  boolean implementsFileLog(Literal l){ return implementsType(l,new TName("base.FileLog",0,Pos.unknown)); }
   boolean isRepr(Literal l){ return l.name().equals(new TName("base.Repr",1,Pos.unknown)); }
   public List<Consumer<Path>> produceJavaCode(){
     Fs.ensureDir(out);
@@ -45,11 +41,11 @@ public class Backend{
       .a("public interface "+iface+extendsClause(l)+"{\n");
     for (var m:l.ms()){ emitTopMethod(sb, l, m, abstractOnly); }
     var hasInstance= hasInstance(l, abstractOnly);
-    if (hasInstance && implementsInMemoryLog(l)){
+    if (hasInstance && implementsType(l,"base.InMemoryLog",1)){
       sb.a("  java.util.ArrayList<Object> _logStore= new java.util.ArrayList<>();\n");
       sb.a("  default java.util.ArrayList<Object> _log(){ return _logStore; }\n");
     }
-    if (hasInstance && implementsFileLog(l)){
+    if (hasInstance && implementsType(l,"base.FileLog",0)){
       if (l.name().arity() == 0){
         var name= l.name().simpleName();
         sb.a("  base.AppLog _appLog= base.AppLog.open(java.nio.file.Path.of(\".out\",\"logs\",\""+tools.pkgName()+"\",\""+name+".log\"), false);\n");
@@ -62,26 +58,22 @@ public class Backend{
       sb.a("  Object _reprCacheGet(Object k, java.util.function.Supplier<Object> f, long time);\n");
       sb.a("  void _reprCacheFlush();\n");
     }
-    if (hasInstance){ sb.a("  "+iface+" instance= new "+iface+"(){};"); var shape= cacheShape(l); if (shape >= 0){ emitCacheField(sb, shape); } }
+    if (hasInstance){ sb.a("  "+iface+" instance= new "+iface+"(){};"+cacheField(l)); }
     Fs.writeUtf8(out.resolve(iface+".java"), sb.a("}").toString());
-    if (hasInstance && implementsBaseMain(l)){ mains.put(l.name().s(), iface); }
+    if (hasInstance && implementsType(l,"base.Main",0)){ mains.put(l.name().s(), iface); }
     fixers.add(sb);
   }
-  private boolean implementsType(Literal l, TName n){ return l.cs().stream().anyMatch(c->c.name().equals(n)); }
-  private static TName cacheName(String base, int shape){ return new TName("base."+base, shape+1, Pos.unknown); }
-  private int cacheShape(Literal l){
+  private static boolean implementsType(Literal l, String name, int arity){ return LiteralDeclarations.has(l.cs(), new TName(name,arity,Pos.unknown)); }
+  private static String cacheField(Literal l){
     for (int shape : Range.of(0,3)){
-      if (implementsType(l,cacheName("CacheF",shape)) || implementsType(l,cacheName("CacheMemo",shape))){ return shape; }
+      var t= "base.Cache"+shape;
+      if (implementsType(l,"base.CacheF",shape+1) || implementsType(l,"base.CacheMemo",shape+1)){ return "  "+t+" _cache= new "+t+"(1, instance);\n  default "+t+" _cache"+shape+"(){ return _cache; }\n"; }
     }
-    return -1;
-  }
-  void emitCacheField(BytecodeLineFix sb, int shape){
-    var t= "base.Cache"+shape;
-    sb.a("  "+t+" _cache= new "+t+"(1, instance);\n  default "+t+" _cache"+shape+"(){ return _cache; }\n");
+    return "";
   }
   private boolean hasInstance(Literal l, boolean abstractOnly) {
     if (abstractOnly){ return false; } 
-    assert !l.thisName().isEmpty() || captureFree(l);
+    assert !l.thisName().isEmpty() || LiteralDeclarations.has(l.cs(),LiteralDeclarations.captureFree);
     return l.ms().stream().noneMatch(m->m.sig().abs());
   }
 
