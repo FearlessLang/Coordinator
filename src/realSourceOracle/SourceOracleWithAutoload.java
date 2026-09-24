@@ -5,6 +5,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.function.Function;
 import tools.SourceOracle;
 import userMessages.Report;
 import utils.Push;
@@ -14,16 +15,22 @@ public record SourceOracleWithAutoload(SourceOracle base, Ref autoload, URI auto
   /** A file the compiler recognized as auto-imported: exactly the diskPath/zipSteps/zipEntry
    * triple base.AssetBytesRead.checkAutoloaded validates a runtime asset read against. */
   public record Triple(String diskPath, String zipSteps, String zipEntry){}
-  public record Res(SourceOracle oracle, List<Ref> newRefs, List<Triple> autoloadedAssets){}
+  public record Res(SourceOracle oracle, List<Ref> newRefs, List<Triple> autoloadedAssets){
+    public List<Ref> sources(List<Ref> files){ return Push.of(files.stream().filter(f->f.fearPath().endsWith(".fear")).toList(), newRefs); }
+  }
   public static final String autoloadFileSuffix= "/autoloaded_assets.fear";
   public static final List<AutoloadHandler> handlers= List.of(
     new AutoloadHandler(p->p.endsWith(".txt"), "base.TxtFile"),
     new AutoloadHandler(p->p.endsWith(".png")||p.endsWith(".jpg")||p.endsWith(".jpeg")||p.endsWith(".gif")||p.endsWith(".bmp"), "base.ImageFile")
   );
   private record Generated(String text, List<Triple> autoloadedAssets){}
-  public static Res of(SourceOracle base, String pkgName){
-    if (suppressed(base, pkgName)){ return new Res(base, List.of(), List.of()); }
-    var gen= generate(base, pkgName, handlers);
+  public static Res of(SourceOracle base, String pkgName){ return of(base, pkgName, Ref::fearPath); }
+  public static Res ofBase(SourceOracle stLib){
+    return of(stLib, "_base", r->SourceOracle.root+"_base/"+r.fearPath().substring(SourceOracle.root.length()));
+  }
+  private static Res of(SourceOracle base, String pkgName, Function<Ref,String> path){
+    if (suppressed(base, pkgName, path)){ return new Res(base, List.of(), List.of()); }
+    var gen= generate(base, pkgName, path);
     if (gen.text().isEmpty()){ return new Res(base, List.of(), List.of()); }
     var auto= syntheticRef(pkgName, gen.text());
     var all= Push.of(base.allFiles(), auto);
@@ -37,20 +44,21 @@ public record SourceOracleWithAutoload(SourceOracle base, Ref autoload, URI auto
     if (uri.normalize().equals(autoloadUri)){ return autoload.loadString(); }
     return base.loadString(uri);
   }
-  private static boolean suppressed(SourceOracle base, String pkgName){
-    return base.allFiles().stream().anyMatch(r->suppressFound(r.fearPath(),pkgName));
+  private static boolean suppressed(SourceOracle base, String pkgName, Function<Ref,String> path){
+    return base.allFiles().stream().anyMatch(r->suppressFound(path.apply(r),pkgName));
   }
   private static boolean suppressFound(String rName, String pkgName){
     return rName.endsWith(autoloadFileSuffix) && rName.contains("/"+pkgName+"/");
   }
-  private static Generated generate(SourceOracle base, String pkgName, List<AutoloadHandler> handlers){
+  private static Generated generate(SourceOracle base, String pkgName, Function<Ref,String> path){
     var out= new StringBuilder();
     var declaredBy= new LinkedHashMap<String,Ref>();
     var assets= new ArrayList<Triple>();
     for (var ref: base.allFiles()){
-      if (!ref.fearPath().contains("/"+pkgName+"/")){ continue; }
+      var p= path.apply(ref);
+      if (!p.contains("/"+pkgName+"/")){ continue; }
       for (var h: handlers){
-        var a= h.generate(ref, pkgName);
+        var a= h.generate(ref, p, pkgName);
         if (a.text().isEmpty()){ continue; }
         a.declaredTypes().forEach(type->checkNotDeclared(declaredBy, ref, type));
         out.append(a.text());

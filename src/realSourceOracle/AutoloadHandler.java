@@ -13,33 +13,33 @@ import userMessages.Report;
 import utils.Pop;
 
 public record AutoloadHandler(Predicate<String> matches, String baseType){
-  public AutoloadedRes generate(SourceOracle.Ref ref, String pkgName){
-    if (!matches.test(ref.fearPath())){ return AutoloadedRes.none(); }
-    var type= standardTypeName(pkgName, ref);
+  public AutoloadedRes generate(SourceOracle.Ref ref, String path, String pkgName){
+    if (!matches.test(path)){ return AutoloadedRes.none(); }
+    var type= standardTypeName(pkgName, ref, path);
     return new AutoloadedRes(
       type+": "+baseType+"{\n"
-      +AssetAutoload.descriptorMethods(ref)
+      +AssetAutoload.descriptorMethods(ref, path)
       +"}\n",
       List.of(type)
     );
   }
-  static List<String> componentsAfterPackage(String pkgName,SourceOracle.Ref ref){
-    var cs= components(ref);
+  static List<String> componentsAfterPackage(String pkgName,String path){
+    var cs= components(path);
     int i= cs.indexOf(pkgName);
     assert i >= 0 && i + 1 < cs.size();
     return cs.subList(i + 1, cs.size());
   }
-  static List<String> components(SourceOracle.Ref ref){
-    assert ref.fearPath().startsWith(SourceOracle.root);
-    return Stream.of(ref.fearPath().substring(SourceOracle.root.length()).split("/")).toList();
+  static List<String> components(String path){
+    assert path.startsWith(SourceOracle.root);
+    return Stream.of(path.substring(SourceOracle.root.length()).split("/")).toList();
   }
   public static String dropExt(String name){
     int dot= name.lastIndexOf('.');
     assert dot > 0;
     return name.substring(0,dot);
   }
-  static String standardTypeName(String pkgName,SourceOracle.Ref ref){
-    var cs= componentsAfterPackage(pkgName,ref);
+  static String standardTypeName(String pkgName,SourceOracle.Ref ref,String path){
+    var cs= componentsAfterPackage(pkgName,path);
     var res= Pop.right(cs).stream()
       .map(AutoloadHandler::capFirst)
       .collect(Collectors.joining())

@@ -9,17 +9,13 @@ import utils.Bug;
 final class AssetAutoload{
   private AssetAutoload(){}
 
-  static String descriptorMethods(SourceOracle.Ref ref){
+  static String descriptorMethods(SourceOracle.Ref ref, String path){
     return ""
-      +"  .path: base.Str -> \""+ref.fearPath()+"\";\n"
+      +"  .path: base.Str -> \""+path+"\";\n"
       +"  .diskPath: base.Str -> \""+diskPath(ref)+"\";\n"
       +"  .zipSteps: base.Str -> \""+zipSteps(ref)+"\";\n"
       +"  .zipEntry: base.Str -> \""+zipEntry(ref)+"\";\n"
-      +"  .originalFileName: base.Str -> \""+originalFileName(ref)+"\";\n";
-  }
-
-  private static String originalFileName(SourceOracle.Ref ref){
-    return AutoloadHandler.components(ref).getLast();
+      +"  .originalFileName: base.Str -> \""+AutoloadHandler.components(path).getLast()+"\";\n";
   }
 
   static SourceOracleWithAutoload.Triple triple(SourceOracle.Ref ref){
