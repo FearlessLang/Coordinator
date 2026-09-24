@@ -118,7 +118,7 @@ class Helper{
     try{ l= layerOf(c,o,project,out,stLib); l.compile(o,out); }
     catch(WouldCompile _){ return Optional.empty(); }
     var res= new LinkedHashMap<String,String>();
-    l.pkgs().keySet().stream().flatMap(p->Fs.readUtf8(out.rootDir().resolve(p+".mains")).lines()).forEach(line->res.put(line.substring(0,line.indexOf(' ')),line.substring(line.indexOf(' ')+1)));
+    l.pkgs().keySet().stream().flatMap(p->Fs.readUtf8(out.mainsPath(p)).lines()).forEach(line->res.put(line.substring(0,line.indexOf(' ')),line.substring(line.indexOf(' ')+1)));
     return Optional.of(Collections.unmodifiableMap(res));
   }
   private static final TName baseMain= new TName("base.Main",0,utils.Pos.unknown);
@@ -207,7 +207,7 @@ record NoCompile(Coordinator inner) implements Coordinator{
 }
 record NoCommit(Path rootDir) implements OutputOracle{
   @Override public long commitMap(Map<String,Map<String,String>> map, long minExclusiveMillis){
-    if (OutputHelper.mapFromJSon(rootDir.resolve("_map.json")).filter(map::equals).isEmpty()){ throw new WouldCompile(); }
+    if (OutputHelper.mapFromJSon(mapPath()).filter(map::equals).isEmpty()){ throw new WouldCompile(); }
     return mapStamp();
   }
 }

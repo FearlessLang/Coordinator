@@ -47,10 +47,7 @@ public final class Main{
     JavacTool.reqAppDir(Violation::mustUseLauncher);
     try{ if (!hasConsoleFlag()){ hookStd(); } run(args); }
     catch(UserError e){ System.err.print(e.getMessage()); }
-    catch(Throwable t){ 
-      System.err.println(t.getClass().getCanonicalName());
-      System.err.print(UserError.crash(t));
-    }
+    catch(Throwable t){ System.err.print(UserError.crash(t)); }
   }
   private static void run(String[] args) throws InvocationTargetException, InterruptedException, ExecutionException{
     var appDir= JavacTool.reqAppDir(Violation::mustUseLauncher);
@@ -144,7 +141,7 @@ public final class Main{
       area.append(s);
     });
   }  
-  public static boolean hasConsoleFlag(){ return JavacTool.consoleKey.equals(System.getProperty(JavacTool.launcherKey)); }
+  private static boolean hasConsoleFlag(){ return JavacTool.consoleKey.equals(System.getProperty(JavacTool.launcherKey)); }
   private static Optional<Path> launchPath(String[] args){
     return Stream.of(args)
       .filter(a->!a.startsWith("-psn_"))
