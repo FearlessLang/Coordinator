@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.time.Instant;
 
 import org.junit.jupiter.api.Test;
@@ -58,6 +59,26 @@ Assertion failure.
     assertEquals("", JUnitReport.suite("demo", project));
     JUnitReport.write(project,project,"demo",Instant.parse("2026-09-03T00:00:00Z"));
     assertFalse(Files.exists(JUnitReport.file(project)));
+  }
+  @Test void aLogStillBeingWrittenIsReportedUpToItsLastCompleteRecord(@TempDir Path project){
+    writeLog(project,"20260904_012117_731Z",log);
+    var file= project.resolve(".out").resolve("logs").resolve("_base").resolve("unit_test_log$20260904_012117_731Z.log");
+    var open= "<testcase classname=\"Last\" name=\"Last at line: 11\" file=\"_hello/_rank_app.fear\" line=\"11\">\n<failure>\nAssertion ";
+    Fs.ofV(()->Files.writeString(file,open,StandardOpenOption.APPEND));
+    Fs.ofV(()->Files.write(file,new byte[]{(byte)0xC3},StandardOpenOption.APPEND));
+    utils.Err.strCmp("""
+<testsuite name="demo" tests="3" failures="1" errors="0">
+<testcase classname="Later" name="Later at line: 9" file="_hello/_rank_app.fear" line="9"><skipped/></testcase>
+<testcase classname="MyTests" name="MyTests at line: 5" file="_hello/_rank_app.fear" line="5"></testcase>
+<testcase classname="Other" name="Other at line: 7" file="_hello/_rank_app.fear" line="7">
+<failure>
+<expected>3</expected>
+<actual>1</actual>
+Assertion failure.
+</failure>
+</testcase>
+</testsuite>
+""", JUnitReport.suite("demo", project));
   }
   //A main that runs no unit tests must not republish the log some earlier run left behind
   @Test void aLogOlderThanThisRunIsNotReported(@TempDir Path project){
