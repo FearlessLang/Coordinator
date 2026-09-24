@@ -26,6 +26,6 @@ use base.Num as Num;
 use base.Void as Void;
 use base.Str as Str;
 
-%s: Main { sys -> sys.out.println(`Hello World!`) }
+%s: Main { sys -> sys.out.println("Hello World!") }
 """;
 }

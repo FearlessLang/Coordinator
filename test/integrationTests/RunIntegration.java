@@ -278,11 +278,11 @@ We check this so that you[###]
 _col/_rank_app.fear
 iii
 use base.Main as Main;
-Hello:Main{s->base.Debug#(`hi`)}
+Hello:Main{s->base.Debug#("hi")}
 jjj
 _col/more.fear
 iii
-Again:Main{s->base.Debug#(`again`)}
+Again:Main{s->base.Debug#("again")}
 """);
     coordinator(root).compile(root, stLib);
     Assertions.assertEquals("col.Again _col/more.fear\ncol.Hello _col/_rank_app.fear\n", Fs.readUtf8(root.resolve(Coordinator.outDir).resolve("col.mains")));
@@ -333,14 +333,14 @@ iii
 use base.Main as Main;
 
 Forged: base.TxtFile{
-  .path: base.Str -> `fear:/_col/secret.dat`;
-  .diskPath: base.Str -> `_col/secret.dat`;
-  .zipSteps: base.Str -> ``;
-  .zipEntry: base.Str -> ``;
-  .originalFileName: base.Str -> `secret.dat`;
+  .path: base.Str -> "fear:/_col/secret.dat";
+  .diskPath: base.Str -> "_col/secret.dat";
+  .zipSteps: base.Str -> "";
+  .zipEntry: base.Str -> "";
+  .originalFileName: base.Str -> "secret.dat";
   }
 
-NeverRecovers: base.BadStrUnitRecover { reason, byteOffset, byteLength, rejectedValue -> `should not happen` }
+NeverRecovers: base.BadStrUnitRecover { reason, byteOffset, byteLength, rejectedValue -> "should not happen" }
 
 ReadsForgedAsset: Main{s->base.Debug#(Forged.readStrUtf8(s.assetRead, NeverRecovers))}
 ReadsLegitAsset: Main{s->base.Debug#(Note.readStrUtf8(s.assetRead, NeverRecovers))}
@@ -366,7 +366,7 @@ REAL ASSET CONTENT
 _col/_rank_app.fear
 iii
 use base.Main as Main;
-Hello:Main{s->base.Debug#(`hi`)}
+Hello:Main{s->base.Debug#("hi")}
 jjj
 _col/_1.txt
 iii
@@ -400,7 +400,7 @@ We check this so that you[###]
 _a/_rank_core.fear
 iii
 use base.Str as Str;
-Greeting:{ .hi: Str -> `hi` }
+Greeting:{ .hi: Str -> "hi" }
 jjj
 _b/_rank_app.fear
 iii
@@ -415,7 +415,7 @@ Hello:Main{s->base.Debug#(Greeting.hi)}
     long aJson= Fs.lastModified(out.resolve("a.json"));
     long bBuilt= Fs.lastModified(out.resolve("b.built"));
     var aSrc= root.resolve("_a/_rank_core.fear");
-    Fs.writeUtf8(aSrc, Fs.readUtf8(aSrc).replace("`hi`","`ho`"));
+    Fs.writeUtf8(aSrc, Fs.readUtf8(aSrc).replace("\"hi\"","\"ho\""));
     Files.setLastModifiedTime(aSrc, FileTime.fromMillis(System.currentTimeMillis()+500));
     c.main(root, stLib);
 
@@ -432,12 +432,12 @@ Hello:Main{s->base.Debug#(Greeting.hi)}
 _a/_rank_core.fear
 iii
 use base.Main as Main;
-Hello:Main{s->base.Debug#(`from core`)}
+Hello:Main{s->base.Debug#("from core")}
 jjj
 _z/_rank_app.fear
 iii
 use base.Main as Main;
-Hello:Main{s->base.Debug#(`from app`)}
+Hello:Main{s->base.Debug#("from app")}
 """);
     var out= coordinator(root).main(root, stLib);
     Assertions.assertTrue(out.contains("from app"), out);
@@ -452,12 +452,12 @@ Hello:Main{s->base.Debug#(`from app`)}
 _a/_rank_app.fear
 iii
 use base.Main as Main;
-Hello:Main{s->base.Debug#(`from a`)}
+Hello:Main{s->base.Debug#("from a")}
 jjj
 _z/_rank_app.fear
 iii
 use base.Main as Main;
-Hello:Main{s->base.Debug#(`from z`)}
+Hello:Main{s->base.Debug#("from z")}
 """);
     var out= coordinator(root).main(root, stLib);
     Assertions.assertTrue(out.contains("from a"), out);
@@ -530,7 +530,7 @@ jjj
 _z/_rank_app.fear
 iii
 use base.Str as Str;
-Greeting:{ .hi: Str -> `hi` }
+Greeting:{ .hi: Str -> "hi" }
 """);
     var ex= Assertions.assertThrows(RuntimeException.class, ()->coordinator(root).main(root, stLib));
     utils.Err.strCmp("""
@@ -555,7 +555,7 @@ use base.Main as Main;
 use base.Void as Void;
 Foo:{ .foo:Void->{} }
 FOo:{ .fOo:Void->{} }
-Hello:Main{s->base.Debug#(`hi`)}
+Hello:Main{s->base.Debug#("hi")}
 """);
     var c= coordinator(root);
     c.main(root, stLib);
@@ -599,8 +599,8 @@ Hello:Main{s->base.Debug#(`hi`)}
 _col/_rank_app.fear
 iii
 use base.Main as Main;
-NeverRecovers: base.BadStrUnitRecover { reason, byteOffset, byteLength, rejectedValue -> `should not happen` }
-NeverRecoversU: base.BadUStrUnitRecover { reason, byteOffset, byteLength, rejectedValue -> `should not happen`.u }
+NeverRecovers: base.BadStrUnitRecover { reason, byteOffset, byteLength, rejectedValue -> "should not happen" }
+NeverRecoversU: base.BadUStrUnitRecover { reason, byteOffset, byteLength, rejectedValue -> "should not happen".u }
 Hello:Main{s->base.Debug#("""+call.replace("$URL",url)+")}\n";
   }
 
@@ -610,7 +610,7 @@ Hello:Main{s->base.Debug#("""+call.replace("$URL",url)+")}\n";
       Path root= tmp.resolve("root");
       UserError.root= root;
       FsDsl.materialize(root, downloadProject(url(server,"/ok"),
-        "s.download.downloadStrUtf8(`$URL`, 1000, NeverRecovers)"));
+        "s.download.downloadStrUtf8(\"$URL\", 1000, NeverRecovers)"));
       var out= coordinator(root).main(root, stLib);
       Assertions.assertTrue(out.contains("hello download"), out);
     }
@@ -623,7 +623,7 @@ Hello:Main{s->base.Debug#("""+call.replace("$URL",url)+")}\n";
       Path root= tmp.resolve("root");
       UserError.root= root;
       FsDsl.materialize(root, downloadProject(url(server,"/bytes"),
-        "s.download.downloadBytes(`$URL`, 1000).size"));
+        "s.download.downloadBytes(\"$URL\", 1000).size"));
       var out= coordinator(root).main(root, stLib);
       Assertions.assertTrue(out.contains("3"), out);
     }
@@ -634,7 +634,7 @@ Hello:Main{s->base.Debug#("""+call.replace("$URL",url)+")}\n";
     Path root= tmp.resolve("root");
     UserError.root= root;
     FsDsl.materialize(root, downloadProject("ftp://127.0.0.1/x",
-      "s.download.downloadStrUtf8(`$URL`, 1000, NeverRecovers)"));
+      "s.download.downloadStrUtf8(\"$URL\", 1000, NeverRecovers)"));
     var out= coordinator(root).main(root, stLib);
     Assertions.assertTrue(out.contains("Invalid URL descriptor"), out);
     Assertions.assertTrue(out.contains("unsupported scheme"), out);
@@ -644,7 +644,7 @@ Hello:Main{s->base.Debug#("""+call.replace("$URL",url)+")}\n";
     Path root= tmp.resolve("root");
     UserError.root= root;
     FsDsl.materialize(root, downloadProject("not a url",
-      "s.download.downloadStrUtf8(`$URL`, 1000, NeverRecovers)"));
+      "s.download.downloadStrUtf8(\"$URL\", 1000, NeverRecovers)"));
     var out= coordinator(root).main(root, stLib);
     Assertions.assertTrue(out.contains("Invalid URL descriptor"), out);
   }
@@ -655,7 +655,7 @@ Hello:Main{s->base.Debug#("""+call.replace("$URL",url)+")}\n";
       Path root= tmp.resolve("root");
       UserError.root= root;
       FsDsl.materialize(root, downloadProject(url(server,"/big"),
-        "s.download.downloadBytes(`$URL`, 4).size"));
+        "s.download.downloadBytes(\"$URL\", 4).size"));
       var out= coordinator(root).main(root, stLib);
       Assertions.assertTrue(out.contains("Download exceeds maxBytes"), out);
       Assertions.assertTrue(out.contains("contentLength"), out);
@@ -669,7 +669,7 @@ Hello:Main{s->base.Debug#("""+call.replace("$URL",url)+")}\n";
       Path root= tmp.resolve("root");
       UserError.root= root;
       FsDsl.materialize(root, downloadProject(url(server,"/chunked"),
-        "s.download.downloadBytes(`$URL`, 4).size"));
+        "s.download.downloadBytes(\"$URL\", 4).size"));
       var out= coordinator(root).main(root, stLib);
       Assertions.assertTrue(out.contains("Download exceeds maxBytes"), out);
       Assertions.assertTrue(out.contains("bytesRead"), out);
@@ -690,7 +690,7 @@ Hello:Main{s->base.Debug#("""+call.replace("$URL",url)+")}\n";
       Path root= tmp.resolve("root");
       UserError.root= root;
       FsDsl.materialize(root, downloadProject(url(server,"/start"),
-        "s.download.downloadStrUtf8(`$URL`, 1000, NeverRecovers)"));
+        "s.download.downloadStrUtf8(\"$URL\", 1000, NeverRecovers)"));
       var out= coordinator(root).main(root, stLib);
       Assertions.assertTrue(out.contains("landed"), out);
     }
@@ -703,7 +703,7 @@ Hello:Main{s->base.Debug#("""+call.replace("$URL",url)+")}\n";
       Path root= tmp.resolve("root");
       UserError.root= root;
       FsDsl.materialize(root, downloadProject(url(server,"/loop"),
-        "s.download.downloadStrUtf8(`$URL`, 1000, NeverRecovers)"));
+        "s.download.downloadStrUtf8(\"$URL\", 1000, NeverRecovers)"));
       var out= coordinator(root).main(root, stLib);
       Assertions.assertTrue(out.contains("too many redirects"), out);
     }
@@ -716,7 +716,7 @@ Hello:Main{s->base.Debug#("""+call.replace("$URL",url)+")}\n";
       Path root= tmp.resolve("root");
       UserError.root= root;
       FsDsl.materialize(root, downloadProject(url(server,"/go"),
-        "s.download.downloadStrUtf8(`$URL`, 1000, NeverRecovers)"));
+        "s.download.downloadStrUtf8(\"$URL\", 1000, NeverRecovers)"));
       var out= coordinator(root).main(root, stLib);
       Assertions.assertTrue(out.contains("Invalid URL descriptor"), out);
       Assertions.assertTrue(out.contains("unsupported scheme"), out);
@@ -731,7 +731,7 @@ Hello:Main{s->base.Debug#("""+call.replace("$URL",url)+")}\n";
       Path root= tmp.resolve("root");
       UserError.root= root;
       FsDsl.materialize(root, downloadProject(url(server,"/missing"),
-        "s.download.downloadStrUtf8(`$URL`, 1000, NeverRecovers)"));
+        "s.download.downloadStrUtf8(\"$URL\", 1000, NeverRecovers)"));
       var out= coordinator(root).main(root, stLib);
       Assertions.assertTrue(out.contains("HTTP status: 404"), out);
     }
@@ -754,8 +754,8 @@ Hello:Main{s->base.Debug#("""+call.replace("$URL",url)+")}\n";
 _col/_rank_app.fear
 iii
 use base.Main as Main;
-RecoverToMarker: base.BadStrUnitRecover { reason, byteOffset, byteLength, rejectedValue -> `?` }
-NeverRecoversU: base.BadUStrUnitRecover { reason, byteOffset, byteLength, rejectedValue -> `should not happen`.u }
+RecoverToMarker: base.BadStrUnitRecover { reason, byteOffset, byteLength, rejectedValue -> "?" }
+NeverRecoversU: base.BadUStrUnitRecover { reason, byteOffset, byteLength, rejectedValue -> "should not happen".u }
 Hello:Main{s->base.Debug#(
   s.download.downloadStrUtf8(`"""+u+"""
 `, 1000, RecoverToMarker)+`|`+(s.download.downloadUStrUtf8(`"""+u+"""
@@ -775,7 +775,7 @@ Hello:Main{s->base.Debug#(
       Path root= tmp.resolve("root");
       UserError.root= root;
       FsDsl.materialize(root, downloadProject(url(server,"/img.png"),
-        "s.download.downloadImage(`$URL`, 100_000, 1_000_000).width"));
+        "s.download.downloadImage(\"$URL\", 100_000, 1_000_000).width"));
       var out= coordinator(root).main(root, stLib);
       Assertions.assertTrue(out.contains("3"), out);
     }
@@ -790,7 +790,7 @@ Hello:Main{s->base.Debug#(
       Path root= tmp.resolve("root");
       UserError.root= root;
       FsDsl.materialize(root, downloadProject(url(server,"/stall"),
-        "s.download.downloadStrUtf8(`$URL`, 1000, NeverRecovers)"));
+        "s.download.downloadStrUtf8(\"$URL\", 1000, NeverRecovers)"));
       var out= coordinator(root).main(root, stLib);
       Assertions.assertTrue(out.contains("Download timed out"), out);
     }
