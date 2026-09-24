@@ -134,6 +134,8 @@ If this keeps happening, report the problem.
   @Test void cacheMissingBaseApiFile(){
     var apiJson= Path.of("C:\\Users\\ada\\Downloads\\fearlessManaged0_007\\app\\stdLib\\baseCache\\base.json");
     utils.Err.strCmp("""
+Fearless could not load the API of its own standard library.
+
 This copy of Fearless should already have this file:
   C:\\Users\\ada\\Downloads\\fearlessManaged0_007\\app\\stdLib\\baseCache\\base.json
 
@@ -399,7 +401,7 @@ Parse error:
   Unexpected end of input at offset 4096
 """, Violation.cacheInvalidFile(mapJson, "Unexpected end of input at offset 4096").getMessage());
   }
-  @Test void cacheCanNotFindZipEntry(){
+  @Test void cacheCouldNotFindZipEntry(){
     var diskZip= Path.of("C:\\Users\\ada\\projects\\myproject\\assets.zip");
     utils.Err.strCmp("""
 Cannot find entry in zip (that was found before).
@@ -409,6 +411,6 @@ Steps:
   ["textures.zip"]
 Entry name:
   "sprite_01.png"
-""", Violation.cacheCanNotFindZipEntry(diskZip, List.of("textures.zip"), "sprite_01.png").getMessage());
+""", Violation.cacheCouldNotFindZipEntry(diskZip, List.of("textures.zip"), "sprite_01.png").getMessage());
   }
 }

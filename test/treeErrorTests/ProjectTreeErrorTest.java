@@ -64,7 +64,7 @@ That folder name, without the leading "_", defines the package name.
 
   @Test void ambiguousPackageSegment(){ runErr("""
 This path contains more than one folder whose name starts with "_":
-  fear:/src/_bla/_beer/bar.fear
+  "fear:/src/_bla/_beer/bar.fear"
 
 Candidates: "_bla", "_beer"
 
@@ -200,6 +200,11 @@ Folder:
   "fear:/src/_base"
 
 Package name: "base"
+
+The package names "base" and "rank" are reserved by Fearless and cannot be used
+for a package of a project.
+
+Rename the folder so that the name after the "_" is a different package name.
 """,
     "src/_base/foo.fear",""); }
 
@@ -209,6 +214,7 @@ Folder:
   "fear:/src/_rank"
 
 Package name: "rank"
+[###]
 """,
     "src/_rank/foo.fear",""); }
 

@@ -73,9 +73,7 @@ public interface Coordinator {
     return BackendTools.of(pkgName, oracle, other, core, unused, baseCachePath(), unused, unused, capabilities);
   }
   default Path modsPath(){
-    var appDir= System.getProperty(JavacTool.appDirKey);
-    assert appDir != null;
-    var path =  Path.of(appDir).resolve(JavacTool.deployedModsDirName);
+    var path= JavacTool.reqAppDir(Violation::mustUseLauncher).resolve(JavacTool.deployedModsDirName);
     Fs.ensureDir(path);
     return path;
   }
@@ -92,7 +90,7 @@ class Helper{
   }
   static Layer layerOf(Coordinator coordinator, SourceOracle o, Path project, OutputOracle out, SourceOracle stLib){
     var map= pkgMap(o,project);
-    List<Ref> allRanks= map.values().stream().map(u->Helper.okPkgContent(u,project)).toList();
+    List<Ref> allRanks= map.values().stream().map(u->okPkgContent(u,project)).toList();
     Layer l= mapFromRanks(coordinator,allRanks,o,out,stLib);
     return layers(coordinator,map,l,allRanks.stream()
       .sorted(Comparator.comparingInt(Helper::rankNumber).thenComparing(Ref::fearPath)).toList());

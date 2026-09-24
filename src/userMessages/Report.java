@@ -127,8 +127,8 @@ Start Fearless on an existing project folder, or on a file inside one.
   }
   public static UserError rootNotDirectory(){
     return fail(".",
-      "Problem: root is not a directory.",
-      "Start Fearless on the Fearless project directory.");
+      "- The project root is not a folder.",
+      "- Start Fearless on the Fearless project folder.");
   }
   public static UserError emptyDirectory(Path kid){
     return directFail(showRel(kid),"""
@@ -206,7 +206,7 @@ or version control systems (git).
       "- This file name has more than one dot in the extension part.\n"
     + "  Most files must use exactly one dot: \"name.ext\".",
       "- Rename it to use a single extension, OR\n"
-    + "- Rename it to use a well-known extensionless file (example: \"tar.gz\")."
+    + "- Rename it to use a well-known multi-part extension (example: \"tar.gz\")."
     );
   }
   public static UserError extLenMustBe1To16(RefParent kid){
@@ -295,7 +295,7 @@ or version control systems (git).
     + "  Reserved device name: \"con\", \"prn\", \"aux\", \"nul\", \"com1\"..\"com9\", \"lpt1\"..\"lpt9\"."
     );
   }
-  public static UserError hiddenSiblingNamesCollide(RefParent kid, String prev, String name, boolean caseOnly, boolean nfcOnly){
+  public static UserError invisibleSiblingNamesCollide(RefParent kid, String prev, String name, boolean caseOnly, boolean nfcOnly){
     String reason=
       caseOnly ? "Names differ only by case."
       : nfcOnly  ? "Names differ only by Unicode normalization (NFC)."
@@ -352,7 +352,7 @@ Invalid entry names (based on the exact text of the entry name):
     return directFail(showZipRel(diskZip, steps, entryName),
       "This zip contains more than one entry called "+disp(entryName)+".\n"
      +"Different tools disagree on which one should be used.\n"
-     +"Using it may even means that different content is seen in different moments.\n(Schizophrenic ZIP file)");
+     +"Using it may even mean that different content is seen in different moments.\n(Schizophrenic ZIP file)");
   }
   public static UserError zipFileUsedAsDirectory(Path diskZip, List<String> steps, String entryName, String nestedEntryName){
     return directFail(showZipRel(diskZip, steps, entryName),
@@ -393,7 +393,7 @@ A zip entry can be much bigger unpacked than it looks inside the zip,
 sometimes thousands of times bigger, and we can only check content we can hold.
 Remove this entry from the zip, or store its content as normal files instead.
 """);}
-  public static UserError emptyExpandedZip(Path kid){
+  public static UserError zipNoEntries(Path kid){
     return directFail(showRel(kid),"""
 This zip file contains no entries.
 This is most likely a mistake.
@@ -510,6 +510,11 @@ Folder:
   %s
 
 Package name: %s
+
+The package names "base" and "rank" are reserved by Fearless and cannot be used
+for a package of a project.
+
+Rename the folder so that the name after the "_" is a different package name.
 """.formatted(disp(pkgFolder(file, segment)), disp(segment.substring(1))));
   }
   public static UserError projectAmbiguousPackageSegment(Ref file, List<String> candidates){ return new UserError("""
@@ -543,7 +548,7 @@ Valid alternatives:
       +-- bla/
           +-- _beer/
               +-- bar.fear
-""".formatted(file, Join.of(candidates.stream().map(c->disp(c)), "",", ","")));
+""".formatted(disp(file.fearPath()), Join.of(candidates.stream().map(UserError::disp), "",", ","")));
   }
   private static final String rankFilePattern= """
 Each package folder must contain exactly one file whose name follows this pattern:
@@ -594,7 +599,7 @@ Malformed rank file name.
 File:
   %s
 
-""".formatted(disp(rankFile.toString()))+rankFilePattern);
+""".formatted(disp(rankFile.fearPath()))+rankFilePattern);
   }
 
   //-- the user's Fearless source. The frontend explains these itself, in the language of

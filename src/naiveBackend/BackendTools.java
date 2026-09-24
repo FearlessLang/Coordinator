@@ -17,7 +17,7 @@ public record BackendTools(String pkgName, List<Literal> decs, Path rootDir, Htm
   public BackendTools{
     assert nonNull(pkgName,rootDir,docs,checks,capabilities);
     assert unmodifiable(decs, "decs");
-    assert Files.exists(rtPath): "Missing extra folder: "+rtPath;
+    assert Files.exists(rtPath);
   }
   public static BackendTools of(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, Path rootDir, Optional<Path> baseCachePath, Path rtPath, CapabilityEnvironment capabilities){
     var testFileDest= rootDir.getParent().resolve("auto_tests","_"+pkgName,pkgName+"_test.fear");

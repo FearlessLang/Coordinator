@@ -67,7 +67,7 @@ record Tree(
       nonEmpty.add(parentOrEmpty(rel));
       if (BuildWithZip.isInvisible(new PathEntry(root, rel))){ return; }
       if (isDirectory(abs)){ dirs.add(rel); }
-      if (isDiskZip(abs, rel) && ZipWellFormedness.allEntryPaths(root, rel).isEmpty()){ throw Report.emptyExpandedZip(rel); }
+      if (isDiskZip(abs, rel) && ZipWellFormedness.allEntryPaths(root, rel).isEmpty()){ throw Report.zipNoEntries(rel); }
     }));
     for (var d: dirs){ if (!nonEmpty.contains(d)){ throw Report.emptyDirectory(d); } }
   }
@@ -189,7 +189,7 @@ public final class BuildWithZip{
     var prevNfc= Normalizer.normalize(prev, Form.NFC);
     boolean caseOnly= lowPrev.equals(lowName) && !prevNfc.equals(nfc);
     boolean nfcOnly= prevNfc.equals(nfc) && !lowPrev.equals(lowName);
-    throw Report.hiddenSiblingNamesCollide(kid, prev, name, caseOnly, nfcOnly);
+    throw Report.invisibleSiblingNamesCollide(kid, prev, name, caseOnly, nfcOnly);
   }
   private static void checkCollectiveVisible(Set<RefParent> kids){
     var dotKids= new ArrayList<RefParent>();

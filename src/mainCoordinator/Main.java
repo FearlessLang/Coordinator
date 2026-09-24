@@ -136,11 +136,11 @@ public final class Main{
     var pref= frame.getSize();
     frame.setSize(Math.min(pref.width, screen.width), Math.min(pref.height, screen.height));
     frame.setLocationRelativeTo(null);
-    return s->SwingUtilities.invokeLater(() -> {
+    return s->SwingUtilities.invokeLater(()->{
       if (!frame.isVisible()){ frame.setVisible(true); }
       area.append(s);
     });
-  }  
+  }
   private static boolean hasConsoleFlag(){ return JavacTool.consoleKey.equals(System.getProperty(JavacTool.launcherKey)); }
   private static Optional<Path> launchPath(String[] args){
     return Stream.of(args)

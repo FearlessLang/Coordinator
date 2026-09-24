@@ -58,7 +58,7 @@ Entry: "a.fear"
 
 This zip contains more than one entry called "a.fear".
 Different tools disagree on which one should be used.
-Using it may even means that different content is seen in different moments.
+Using it may even mean that different content is seen in different moments.
 (Schizophrenic ZIP file)
 
 We check this so that you[###]
@@ -98,7 +98,7 @@ Entry: "a.fear"
 
 This zip contains more than one entry called "a.fear".
 Different tools disagree on which one should be used.
-Using it may even means that different content is seen in different moments.
+Using it may even mean that different content is seen in different moments.
 (Schizophrenic ZIP file)
 
 We check this so that you[###]
@@ -484,7 +484,7 @@ What went wrong
 
 How to fix
 - Rename it to use a single extension, OR
-- Rename it to use a well-known extensionless file (example: "tar.gz").
+- Rename it to use a well-known multi-part extension (example: "tar.gz").
 
 We check this so that you[###]
 """);}

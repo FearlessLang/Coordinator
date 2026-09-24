@@ -7,7 +7,9 @@ import java.util.Optional;
 import utils.Join;
 import java.util.List;
 import java.util.function.Function;
+import java.util.stream.IntStream;
 import apiJson.ApiJson;
+import metaParser.Message;
 import userMessages.Violation;
 import core.AllLs;
 import core.E.Literal;
@@ -69,7 +71,8 @@ class OutputHelper{
   private static Optional<String> readAllowed(Path p){
     if (!Files.exists(p)){ return Optional.empty(); }
     var s= Fs.readUtf8(p);
-    if (!s.chars().allMatch(c -> Fs.allowed.indexOf(c) >= 0)){ throw Violation.cacheInvalidFile(p, "Non-whitelisted char"); }
+    var bad= IntStream.range(0,s.length()).filter(i->Fs.allowed.indexOf(s.charAt(i)) < 0).findFirst();
+    if (bad.isPresent()){ throw Violation.cacheInvalidFile(p, "Unexpected character "+Message.displayChar(s.charAt(bad.getAsInt()))+" at "+bad.getAsInt()); }
     return Optional.of(s);
   }
   static boolean consistent(Map<TName,Literal> map, List<Literal> core){
