@@ -13,7 +13,6 @@ import core.E.Literal;
 import core.OtherPackages;
 import naiveBackend.BackendTools;
 import realSourceOracle.SourceOracleWithAutoload;
-import realSourceOracle.SourceOracleWithAutoload.Triple;
 import resources.ResolveResource;
 import tools.Fs;
 import tools.SourceOracle;
@@ -53,9 +52,6 @@ public final class BaseCacheBuilder{
       Fs.copyFresh(scratch.resolve("gen_java").resolve("base.jar"), baseCache.resolve("base.jar"));
       Fs.copyFresh(scratch.resolve("gen_java").resolve("base.html"), baseCache.resolve("base.html"));
       Fs.copyFresh(scratch.resolve("gen_java").resolve("base.txt"), baseCache.resolve("base.txt"));
-      Fs.rmTree(baseCache.resolve("assets"));
-      rich.autoloadedAssets().stream().map(Triple::diskPath).distinct()
-        .forEach(p->Fs.copyFresh(ResolveResource.stLibPath.resolve(p), baseCache.resolve("assets").resolve(p)));
     } finally{ Fs.rmTree(scratch); }
   }
 }

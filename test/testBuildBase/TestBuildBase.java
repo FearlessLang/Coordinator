@@ -37,7 +37,7 @@ class TestBuildBase {
       List<Literal> core= frontend(pkgName,rich.sources(stLib.allFiles()),rich.oracle(),other,Map.of());
       backend(pkgName,core,rich.oracle(),other,new CapabilityEnvironment(rich.autoloadedAssets()));
       var jars= Push.of(out.rootDir().resolve("gen_java"),sharedClasspath());
-      var runOut= JavaTool.runMainFromJars(List.of("-DfearlessUser.dir="+out.rootDir().getParent()),jars,pkgName+".Main");
+      var runOut= JavaTool.runMainFromJars(Coordinator.runData(out.rootDir().getParent(),ResolveResource.stLibPath),jars,pkgName+".Main");
       assertEquals("", runOut);
       return runOut;
     }

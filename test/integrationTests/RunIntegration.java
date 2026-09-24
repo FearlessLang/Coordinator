@@ -62,6 +62,7 @@ public class RunIntegration {
     return new Coordinator(){
       public Path modsPath(){  return ResolveResource.coordinatorJars; }
       public Optional<Path> baseCachePath(){ return Optional.of(baseCache); }
+      public Path stdLibBase(){ return ResolveResource.stLibPath; }
       public BackendTools backendTools(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, CapabilityEnvironment capabilities){
         return BackendTools.of(pkgName, oracle, other, core, project.resolve(Coordinator.outDir), baseCachePath(), ResolveResource.stLibRTPath, capabilities);
       }
@@ -359,7 +360,7 @@ REAL ASSET CONTENT
     Assertions.assertTrue(out.contains("REAL ASSET CONTENT"), out);
   }
 
-  @Test void aBaseAssetIsReadFromTheBaseCache(@TempDir Path tmp) throws InterruptedException{
+  @Test void aBaseAssetIsReadFromTheStdLibBase(@TempDir Path tmp) throws InterruptedException{
     Path root= tmp.resolve("root");
     UserError.root= root;
     FsDsl.materialize(root, """
@@ -484,7 +485,7 @@ Hello:Main{s->base.Debug#("from z")}
     var c= coordinator(project);
     c.compile(project, stLib);
     var out= new StringBuilder();
-    var child= Coordinator.startMain(project, "term.FirstDoesNotWaitForTheRest", c.sharedClasspath(), out::append);
+    var child= Coordinator.startMain(project, ResolveResource.stLibPath, "term.FirstDoesNotWaitForTheRest", c.sharedClasspath(), out::append);
     var waiter= new Thread(()->{ try{ child.await(); } catch(InterruptedException e){ child.kill(); } });
     waiter.start();
     waiter.join(60_000);
