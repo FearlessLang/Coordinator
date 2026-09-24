@@ -32,7 +32,7 @@ record Tree(
     Fs.walkV(root, s->s
       .filter(p->!p.equals(root))
       .filter(p->!Files.isDirectory(p, LinkOption.NOFOLLOW_LINKS))
-      .forEach(abs->collectFile(abs))
+      .forEach(this::collectFile)
     );
   }
   private void collectFile(Path abs){
@@ -96,10 +96,7 @@ public final class BuildWithZip{
     return Stream.of(fp.substring(SourceOracle.root.length()).split("/")).anyMatch(s->s.startsWith("."));
   }
   private final Tree t;
-  BuildWithZip(Path root){
-    var r= root.toAbsolutePath().normalize();
-    t= new Tree(r, new ArrayList<>(), new LinkedHashMap<>(), new LinkedHashMap<>());
-  }
+  BuildWithZip(Path root){ t= new Tree(root.toAbsolutePath().normalize(), new ArrayList<>(), new LinkedHashMap<>(), new LinkedHashMap<>()); }
   List<Ref> build(){
     t.collect();
     t.visKidsByDir().forEach((_,kids)->{

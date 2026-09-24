@@ -7,6 +7,7 @@ import java.util.stream.Stream;
 
 import tools.Fs;
 import tools.SourceOracle;
+import utils.Pop;
 import utils.Push;
 
 public record ZipEntry(Path root, Path local, List<String> segments, List<String> zips, String lastZips) implements SourceOracle.Ref{
@@ -18,9 +19,7 @@ public record ZipEntry(Path root, Path local, List<String> segments, List<String
   @Override public long lastModified(){ return Fs.lastModified(root.resolve(local)); }
   static List<String> localSegments(Path local){
     var res= PathEntry.localSegments(local);
-    var last= res.getLast();
-    assert last.endsWith(".zip");
-    return Push.of(res.subList(0, res.size()-1), last.substring(0, last.length()-4));
+    return Push.of(Pop.right(res), ZipWellFormedness.lastSegmentOf(res.getLast()));
   }
   @Override public String toString(){ return fearPath(); }
 }

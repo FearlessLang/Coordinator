@@ -29,10 +29,11 @@ final class LimitedJsonParser{
   private int i= 0;
   Path forErr;
   LimitedJsonParser(String s, Path forErr){ this.s= s; this.forErr= forErr; }
-  Map<String,Map<String,String>> obj2(){
-    var out= obj(this::obj1); ws();
+  Map<String,Map<String,String>> obj2(){ return end(obj(this::obj1)); }
+  private <R> R end(R res){
+    ws();
     if (i != s.length()){ throw err("Trailing junk"); }
-    return out;
+    return res;
   }
   Map<String,String> obj1(){ return obj(this::name); }
   private <TT> Map<String,TT> obj(Supplier<TT> v){
@@ -51,10 +52,8 @@ final class LimitedJsonParser{
     return res;
   }
   Map<TName,Literal> apiJsonToMap(){
-    var xs= arr(); ws();
-    if (i != s.length()){ throw err("Trailing junk"); }
     var out= new LinkedHashMap<TName,Literal>();
-    for (var x: xs){
+    for (var x: end(arr())){
       var lit= typeLit(asArr(x));
       if (out.put(lit.name(), lit) != null){ throw err("Duplicate type "+lit.name().s()); }
     }

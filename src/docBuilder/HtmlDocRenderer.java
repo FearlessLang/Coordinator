@@ -10,13 +10,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import core.*;
 import core.E.*;
-import utils.Bug;
 import utils.Pos;
 import utils.Range;
 
@@ -381,11 +380,11 @@ code{
     if (!t.main().cs().isEmpty()){
       sb.append("<p class=\"extends\"><b>Extends:</b> ")
         .append(t.main().cs().stream()
-          .map(c->typeLink(c))
+          .map(this::typeLink)
           .collect(Collectors.joining(", ")))
         .append("</p>\n");
     }
-    renderVariants(sb,"Typed literal variants",t.variants);
+    renderVariants(sb,"Typed literal variants",t.variants,toStr::lit);
     sb.append("<h3>Methods</h3>\n");
     visibleMethods(t).forEach(m->renderMethod(sb,m,claims));
     sb.append("</section>\n");
@@ -396,7 +395,7 @@ code{
       .append(renderSig(m)).append("</span></summary>\n");
     if (m.declared){ renderDoc(sb,m,m.docs,claims); }
     renderFrom(sb,m);
-    renderVariants(sb,"Typed method variants",m.variants);
+    renderVariants(sb,"Typed method variants",m.variants,v->toStr.sig(v.sig()));
     sb.append("</details>\n");
   }
   void renderFrom(StringBuilder sb, MethodDoc m){
@@ -525,8 +524,7 @@ code{
     var sb= new StringBuilder("<a href=\"").append(h(candidateHref(c))).append("\">")
       .append(h(toStr.typeNameWithArity(c.owner())));
     if (c.selector().isPresent()){
-      sb.append(h(c.selector().get()));
-      c.arity().ifPresent(n->sb.append(h(arityParens(n))));
+      sb.append(h(c.selector().get())).append(h(DocResolver.shape(c.arity(),"(",")")));
     }
     sb.append("</a>");
     c.localMethod().ifPresent(m->m.docs.stream().filter(d->!d.example() && !d.testOnly()).findFirst()
@@ -546,23 +544,13 @@ code{
     return linkTo(c.owner());
   }
 
-  static String arityParens(int n){
-    return IntStream.range(0,n).mapToObj(_ -> "_").collect(Collectors.joining(",","(",")"));
-  }
-
-  void renderVariants(StringBuilder sb, String title, List<?> variants){
+  <V> void renderVariants(StringBuilder sb, String title, List<V> variants, Function<V,String> show){
     if (variants.size() <= 1){ return; }
     sb.append("<details class=\"variants\"><summary>")
       .append(h(title)).append(": ").append(variants.size()).append("</summary>\n");
-    variants.forEach(v->sb.append("<pre class=\"variant\">").append(h(variant(v))).append("</pre>\n"));
+    variants.forEach(v->sb.append("<pre class=\"variant\">").append(h(show.apply(v))).append("</pre>\n"));
     sb.append("</details>\n");
   }
-
-  String variant(Object v){ return switch(v){
-    case Literal l -> toStr.lit(l);
-    case M m -> toStr.sig(m.sig());
-    default -> throw Bug.unreachable();
-  };}
 
   String typeTitle(TypeDoc t){
     if (!t.main().infName()){ return typeDeclName(t.main()); }
@@ -604,7 +592,8 @@ code{
 
   static String typeId(TypeDoc t){
     if (!t.main().infName()){ return typeId(t.main().name()); }
-    return "literal-"+posId(t.main().pos());
+    var p= t.main().pos();
+    return "literal-"+id(p.fileName().toString())+"-"+p.line()+"-"+p.column();
   }
 
   static String typeId(TName n){
@@ -613,10 +602,6 @@ code{
 
   static String methodId(TName owner, M m){
     return "method-"+id(owner.s())+"-"+id(m.sig().rc().name())+"-"+id(m.sig().m().s())+"-"+m.sig().m().arity();
-  }
-
-  static String posId(Pos p){
-    return id(p.fileName().toString())+"-"+p.line()+"-"+p.column();
   }
 
   static String id(String s){

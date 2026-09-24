@@ -29,8 +29,7 @@ record MiddleLayer(Coordinator coordinator, Layer next, LinkedHashMap<String,Lis
       private void compilePkg(String pkg, List<Ref> files){
         long maxSrc= files.stream().mapToLong(Ref::lastModified).max().getAsLong();
         long maxIn= Math.max(maxSrc, other.stamp());//out.mapStamp() must be <= then other.watermark() since it comes from next
-        var stillCached= out.stillBuilt(pkg, files, maxIn);
-        if (stillCached){ nextOther = out.addCachedPkgApi(nextOther, pkg); return; }       
+        if (out.stillBuilt(pkg, files, maxIn)){ nextOther = out.addCachedPkgApi(nextOther, pkg); return; }
         var rich= SourceOracleWithAutoload.of(src, "_"+pkg);
         List<Literal> core= coordinator.frontend(pkg, rich.sources(files), rich.oracle(), other,other.virtualizationMap().getOrDefault(pkg,Map.of()));
         coordinator.backend(pkg, core, rich.oracle(), other, new CapabilityEnvironment(rich.autoloadedAssets()));
@@ -51,8 +50,7 @@ record BaseLayer(Coordinator coordinator, Map<String,Map<String,String>> map, lo
     if (cacheDir.isPresent()){ return deployedBaseApi(cacheDir.get(), pkgName); }
     var other= OtherPackages.empty();
     long maxIn= stLib.allFiles().stream().mapToLong(Ref::lastModified).max().getAsLong();
-    var stillCached= out.stillBuilt(pkgName, stLib.allFiles(), maxIn);
-    if (stillCached){ return out.startCachedPkgApi(pkgName,map,Math.max(baseStamp,out.pkgApiStamp(pkgName))); }
+    if (out.stillBuilt(pkgName, stLib.allFiles(), maxIn)){ return out.startCachedPkgApi(pkgName,map,Math.max(baseStamp,out.pkgApiStamp(pkgName))); }
     var rich= SourceOracleWithAutoload.ofBase(stLib);
     List<Literal> core= coordinator.frontend(pkgName,rich.sources(stLib.allFiles()),rich.oracle(),other,Map.of());
     coordinator.backend(pkgName,core,rich.oracle(),other,new CapabilityEnvironment(rich.autoloadedAssets()));

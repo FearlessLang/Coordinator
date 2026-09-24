@@ -61,15 +61,15 @@ public final class ZipWellFormedness{
   private static List<String> zipsToSegments(List<String> steps, String name){
     assert steps.stream().allMatch(e->e.endsWith(".zip"));
     return Stream.concat(
-      steps.stream().map(e->segmentsOf(e)).flatMap(List::stream),
+      steps.stream().flatMap(e->segmentsOf(e).stream()),
       Stream.of(name.split("/"))
     ).toList();
   }
   private static List<String> segmentsOf(String step){
     var res= List.of(step.split("/"));
-    return Push.of(res.subList(0, res.size()-1),lastSegmentOf(res.getLast()));
+    return Push.of(Pop.right(res),lastSegmentOf(res.getLast()));
   }
-  private static String lastSegmentOf(String e){
+  static String lastSegmentOf(String e){
     assert e.endsWith(".zip");
     return e.substring(0, e.length()-4);
   }

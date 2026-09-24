@@ -6,6 +6,7 @@ import java.math.BigInteger;
 import java.nio.file.*;
 import java.util.*;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import core.*;
@@ -30,15 +31,12 @@ public class Backend{
   boolean implementsFileLog(Literal l){ return implementsType(l,new TName("base.FileLog",0,Pos.unknown)); }
   boolean isRepr(Literal l){ return l.name().equals(new TName("base.Repr",1,Pos.unknown)); }
   public List<Consumer<Path>> produceJavaCode(){
-    cleanOutFolder();
+    Fs.ensureDir(out);
+    Fs.cleanDirContents(out);
     tools.decs().forEach(d->{tools.docs().visitLiteral(d); generateInterface(d,false); tools.checks().checkFileReplacement(d, decTypeName(d.name()));});
     tools.checks().checkMagicFulfilled();
     writeMainJava();
     return List.copyOf(fixers);
-  }
-  void cleanOutFolder(){
-    Fs.ensureDir(out);
-    Fs.cleanDirContents(out);
   }
   void generateInterface(Literal l, boolean abstractOnly){
     var iface= decTypeName(l.name());
@@ -64,9 +62,8 @@ public class Backend{
       sb.a("  Object _reprCacheGet(Object k, java.util.function.Supplier<Object> f, long time);\n");
       sb.a("  void _reprCacheFlush();\n");
     }
-    if (hasInstance){ sb.a("  "+iface+" instance= new "+iface+"(){};"); }
-    if (hasInstance){ var shape= cacheShape(l); if (shape >= 0){ emitCacheField(sb, shape); } }
-    Fs.writeUtf8(ifaceFile(l, out), sb.a("}").toString());
+    if (hasInstance){ sb.a("  "+iface+" instance= new "+iface+"(){};"); var shape= cacheShape(l); if (shape >= 0){ emitCacheField(sb, shape); } }
+    Fs.writeUtf8(out.resolve(iface+".java"), sb.a("}").toString());
     if (hasInstance && implementsBaseMain(l)){ mains.put(l.name().s(), iface); }
     fixers.add(sb);
   }
@@ -135,7 +132,6 @@ public class Backend{
     }
     return new BigInteger(bits.toString(),2).toString(36);
   }
-  Path ifaceFile(Literal l, Path dest){ return dest.resolve(decTypeName(l.name())+".java"); }
   String mangledMethodName(RC rc, MName m){ return rc.name()+"$"+methodBaseName(m)+"$"+m.arity(); }
   String methodBaseName(MName m){
     var s= m.s();
@@ -167,14 +163,7 @@ public class Backend{
     assert s.indexOf('"') < 0 && s.indexOf('\\') < 0 && s.indexOf('\n') < 0 && s.indexOf('\r') < 0;
     return "\""+s+"\"";
   }
-  String mangleOp(String op){
-    var sb= new StringBuilder(op.length()*6);
-    for (int i : Range.of(0,op.length())){
-      if (i>0){ sb.append('_'); }
-      sb.append(opTok(op.charAt(i)));
-    }
-    return sb.toString();
-  }
+  String mangleOp(String op){ return op.chars().mapToObj(c->opTok((char)c)).collect(Collectors.joining("_")); }
   static String opTok(char c){ return switch(c){
     case '+' -> "plus";
     case '-' -> "dash";

@@ -129,12 +129,9 @@ public final class ByteFiles {
     catch(OutOfMemoryError e){ return classifyMemoryError(e, handler); }
   }
   private static <T, X extends Throwable> T classifyMemoryError(OutOfMemoryError e, Handler<T,X> handler) throws X {
-    if (isArraySizeLimit(e)){ return handler.failure(FileTooLargeForByteArray, e); }
-    throw e;
-  }
-  private static boolean isArraySizeLimit(OutOfMemoryError e){
     var message= e.getMessage();
-    return message != null && TextMatch.MFileTooLargeForByteArray.has(message.toLowerCase(Locale.ROOT));
+    if (message != null && TextMatch.MFileTooLargeForByteArray.has(message.toLowerCase(Locale.ROOT))){ return handler.failure(FileTooLargeForByteArray, e); }
+    throw e;
   }
   private static <T, X extends Throwable> T classifyError(Op op, Path path, Throwable firstFailure, Handler<T,X> handler) throws X {
     var kind= kindFromFailure(firstFailure);
@@ -179,9 +176,9 @@ public final class ByteFiles {
   }
   private static void appendText(StringBuilder out, Throwable e){
     if (e == null){ return; }
-    append(out, e instanceof FileSystemException fs && fs.getReason() != null ? fs.getReason() : e.getMessage());
+    var text= e instanceof FileSystemException fs && fs.getReason() != null ? fs.getReason() : e.getMessage();
+    if (text != null){ out.append(' ').append(text); }
     appendText(out, e.getCause());
     for (var suppressed : e.getSuppressed()){ appendText(out, suppressed); }
   }
-  private static void append(StringBuilder out, String text){ if (text != null){ out.append(' ').append(text); } }
 }

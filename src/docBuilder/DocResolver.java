@@ -56,9 +56,7 @@ final class DocResolver{
   private Optional<TName> localType(String name, Scope scope){
     if (name.equals(scope.owner().thisName())){ return Optional.of(scope.owner().name()); }
     var m= scope.method().get();
-    var t= m.sig().ts().get(m.xs().indexOf(name));
-    if (t instanceof T.RCC rcc){ return Optional.of(rcc.c().name()); }
-    return Optional.empty();
+    return m.sig().ts().get(m.xs().indexOf(name)) instanceof T.RCC rcc ? Optional.of(rcc.c().name()) : Optional.empty();
   }
 
   Optional<DocLink> resolveType(DocRef.TypeName ref){
@@ -92,7 +90,8 @@ final class DocResolver{
   private Optional<DocLink> resolveMethod(DocRef.MethodName ref, Scope scope){
     if (ref.owner().isEmpty()){ return resolveBareSelector(ref.selector(), ref.arity()); }
     if (ref.owner().get() instanceof DocRef.LocalName l){ return onLocal(l, ref, scope); }
-    return onType((DocRef.TypeName)ref.owner().get(), ref.selector(), ref.arity());
+    var t= (DocRef.TypeName)ref.owner().get();
+    return onOwners(t.simpleName(), typeCandidates(t), ref.selector(), ref.arity());
   }
 
   private Optional<DocLink> onLocal(DocRef.LocalName l, DocRef.MethodName ref, Scope scope){
@@ -100,10 +99,6 @@ final class DocResolver{
     var owner= localType(l.name(), scope);
     if (owner.isEmpty()){ return Optional.of(new DocLink.NoLink()); }
     return onOwners(owner.get().simpleName(), List.of(owner.get()), ref.selector(), ref.arity());
-  }
-
-  private Optional<DocLink> onType(DocRef.TypeName ownerRef, String selector, OptionalInt arity){
-    return onOwners(ownerRef.simpleName(), typeCandidates(ownerRef), selector, arity);
   }
 
   private Optional<DocLink> onOwners(String shown, List<TName> owners, String selector, OptionalInt arity){
@@ -138,9 +133,7 @@ final class DocResolver{
   }
 
   private Optional<Literal> literalOf(TName n){
-    var local= localTypeDoc(n);
-    if (local.isPresent()){ return Optional.of(local.get().main()); }
-    return Optional.ofNullable(other.__of(n));
+    return localTypeDoc(n).map(TypeDoc::main).or(()->Optional.ofNullable(other.__of(n)));
   }
 
   //every type that has the method, not only the one declaring it: this page answers
@@ -172,7 +165,7 @@ final class DocResolver{
       .map(m->Candidate.ofForeignMethod(owner,selector,m.sig().m().arity()));
   }
 
-  private static String shape(OptionalInt arity, String open, String close){
+  static String shape(OptionalInt arity, String open, String close){
     return arity.isEmpty() ? "" : Join.of(Collections.nCopies(arity.getAsInt(),"_"),open,",",close,open+close);
   }
 

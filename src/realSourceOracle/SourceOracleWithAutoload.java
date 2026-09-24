@@ -45,10 +45,7 @@ public record SourceOracleWithAutoload(SourceOracle base, Ref autoload, URI auto
     return base.loadString(uri);
   }
   private static boolean suppressed(SourceOracle base, String pkgName, Function<Ref,String> path){
-    return base.allFiles().stream().anyMatch(r->suppressFound(path.apply(r),pkgName));
-  }
-  private static boolean suppressFound(String rName, String pkgName){
-    return rName.endsWith(autoloadFileSuffix) && rName.contains("/"+pkgName+"/");
+    return base.allFiles().stream().map(path).anyMatch(n->n.endsWith(autoloadFileSuffix) && n.contains("/"+pkgName+"/"));
   }
   private static Generated generate(SourceOracle base, String pkgName, Function<Ref,String> path){
     var out= new StringBuilder();
@@ -62,7 +59,6 @@ public record SourceOracleWithAutoload(SourceOracle base, Ref autoload, URI auto
         if (a.text().isEmpty()){ continue; }
         a.declaredTypes().forEach(type->checkNotDeclared(declaredBy, ref, type));
         out.append(a.text());
-        if (!a.text().endsWith("\n")){ out.append('\n'); }
         assets.add(AssetAutoload.triple(ref));
       }
     }
