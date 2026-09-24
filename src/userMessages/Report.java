@@ -33,7 +33,7 @@ public final class Report {
     return new UserError(msg);
   }
   private static UserError directFail(String rel, String msg){
-    return new UserError(rel+msg+"\n\n" + rulesWall());
+    return new UserError(rel+"\n"+msg+"\n\n" + rulesWall());
   }
   public static final Set<String> allowedNoExtFiles= """
 readme
@@ -350,8 +350,8 @@ Invalid entry names (based on the exact text of the entry name):
   }
   public static UserError zipDuplicateEntryName(Path diskZip, List<String> steps, String entryName){
     return directFail(showZipRel(diskZip, steps, entryName),
-      "This zip contains more than one entry called "+UserError.printEntryName(entryName)
-     +"\nDifferent tools disagree on which one should be used.\n"
+      "This zip contains more than one entry called "+disp(entryName)+".\n"
+     +"Different tools disagree on which one should be used.\n"
      +"Using it may even means that different content is seen in different moments.\n(Schizophrenic ZIP file)");
   }
   public static UserError zipFileUsedAsDirectory(Path diskZip, List<String> steps, String entryName, String nestedEntryName){
@@ -587,7 +587,7 @@ Rank files:
   %s
 
 Each package must contain exactly one rank file.
-""".formatted(disp(pkg), Join.of(rankFiles.stream().map(f->disp(f.toString())), "",", ","")));
+""".formatted(disp(pkg), Join.of(rankFiles.stream().map(f->disp(f.fearPath())), "",", ","")));
   }
   public static UserError projectMalformedRankFileName(Ref rankFile){ return new UserError("""
 Malformed rank file name.

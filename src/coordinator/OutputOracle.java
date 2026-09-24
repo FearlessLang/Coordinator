@@ -67,7 +67,7 @@ class OutputHelper{
   }
   static Optional<Map<String,Map<String,String>>> mapFromJSon(Path p){ return readAllowed(p).map(s->new LimitedJsonParser(s,p).obj2()); }
   private static Optional<String> readAllowed(Path p){
-    if (!Fs.of(()->Files.exists(p))){ return Optional.empty(); }
+    if (!Files.exists(p)){ return Optional.empty(); }
     var s= Fs.readUtf8(p);
     if (!s.chars().allMatch(c -> Fs.allowed.indexOf(c) >= 0)){ throw Violation.cacheInvalidFile(p, "Non-whitelisted char"); }
     return Optional.of(s);

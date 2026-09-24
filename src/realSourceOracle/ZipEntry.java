@@ -1,6 +1,5 @@
 package realSourceOracle;
 
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -16,7 +15,7 @@ public record ZipEntry(Path root, Path local, List<String> segments, List<String
       .collect(Collectors.joining("/"));
   }
   @Override public byte[] loadBytes(){ return ZipLocator.entryBytes(root.resolve(local), zips,lastZips); }
-  @Override public long lastModified(){ return Fs.of(()->Files.getLastModifiedTime(root.resolve(local)).toMillis()); }
+  @Override public long lastModified(){ return Fs.lastModified(root.resolve(local)); }
   static List<String> localSegments(Path local){
     var res= PathEntry.localSegments(local);
     var last= res.getLast();

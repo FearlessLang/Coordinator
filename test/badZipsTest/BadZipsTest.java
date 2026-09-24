@@ -25,6 +25,7 @@ public class BadZipsTest {
 @Test void zip1(){ runErrIOE("zip1","""
 Root: [###]
 Path: "unzip_bad_lzma_1.zip"
+
 This zip file contains no entries.
 This is most likely a mistake.
 
@@ -34,6 +35,7 @@ We check this so that you[###]
 @Test void zip2(){ runErrIOE("zip2","""
 Root: [###]
 Path: "unzip_bad_lzma_2.zip"
+
 This zip file contains no entries.
 This is most likely a mistake.
 
@@ -44,7 +46,6 @@ We check this so that you[###]
 Root: [###]
 Path: "zip3/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip"
 Entry: "r/r.zip"
-
 
 Too many layers of nested zips.
 We explored 65 layers and there was still more.
@@ -58,7 +59,6 @@ We check this so that you[###]
 Root: [###]
 Path: "zip4/file_used_as_folder.zip"
 Entry: "readme"
-
 
 This zip contains an entry called "readme",
 and also this other entry nested under it, as if it were a folder:
