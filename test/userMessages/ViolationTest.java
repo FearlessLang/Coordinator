@@ -375,6 +375,19 @@ now be wrong, and you can settle it by hand in your system settings.
 Where the undoing stopped:
 removed HKCU\\...\\UserChoice, but restoring the previous ProgId failed""", Violation.associationLeftHalfDone(rollback).getMessage());
   }
+  @Test void associationLauncherNotFearless(){
+    utils.Err.strCmp("""
+Fearless cannot become the program that opens Fearless projects.
+
+It was started by the launcher
+  editor.exe
+whose name does not say it is a Fearless program: a launcher opening
+Fearless projects has "fearless" in its name, like "fearlessManaged0_001".
+Fearless stopped before touching anything: your system is exactly as it
+was.
+
+Give the launcher back its name.""", Violation.associationLauncherNotFearless(java.nio.file.Path.of("editor.exe")).getMessage());
+  }
 
   @Test void cacheMissingPkgApiFile(){
     var apiJson= Path.of("C:\\Users\\ada\\projects\\myproject\\.fearless_out\\core.json");

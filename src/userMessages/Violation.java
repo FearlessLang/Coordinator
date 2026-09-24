@@ -406,6 +406,19 @@ public final class Violation {
       Where the undoing stopped:
       %s""".formatted(reported));
   }
+  public static UserError associationLauncherNotFearless(Path launcher){
+    return new UserError("""
+      Fearless cannot become the program that opens Fearless projects.
+
+      It was started by the launcher
+      %s
+      whose name does not say it is a Fearless program: a launcher opening
+      Fearless projects has "fearless" in its name, like "fearlessManaged0_001".
+      Fearless stopped before touching anything: your system is exactly as it
+      was.
+
+      Give the launcher back its name.""".formatted(path(launcher.toString())));
+  }
 
   //-- our own generated files, changed under us
   //Either in generated outputs under ".fearless_out", or in the other files of the
