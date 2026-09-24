@@ -66,7 +66,6 @@ record Tree(
       nonEmpty.add(parentOrEmpty(rel));
       if (BuildWithZip.isInvisible(new PathEntry(root, rel))){ return; }
       if (isDirectory(abs)){ dirs.add(rel); }
-      if (isDiskZip(abs, rel) && ZipWellFormedness.allEntryPaths(root, rel).isEmpty()){ throw Report.zipNoEntries(rel); }
     }));
     for (var d: dirs){ if (!nonEmpty.contains(d)){ throw Report.emptyDirectory(d); } }
   }

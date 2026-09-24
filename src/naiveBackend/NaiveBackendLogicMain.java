@@ -16,7 +16,7 @@ public final class NaiveBackendLogicMain{
     var classes= genJava.resolve("_classes");
     Fs.ensureDir(classes);
     Fs.cleanDirContents(classes);
-    var pkgPath= classes.resolve(tools.pkgName());
+    var pkgPath= classes.resolve("_"+tools.pkgName());
     if (tools.pkgName().equals("base")){
       Fs.copyTreeFlat(tools.rtPath(), outPath);
       Fs.copyTreeFlat(tools.rtPath().resolveSibling("fonts"), pkgPath);

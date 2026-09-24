@@ -37,7 +37,7 @@ public class Backend{
   void generateInterface(Literal l, boolean abstractOnly){
     var iface= decTypeName(l.name());
     var sb= new BytecodeLineFix(iface, l.pos().fileName())
-      .a("package "+tools.pkgName()+";\n")
+      .a("package _"+tools.pkgName()+";\n")
       .a("public interface "+iface+extendsClause(l)+"{\n");
     for (var m:l.ms()){ emitTopMethod(sb, l, m, abstractOnly); }
     var hasInstance= hasInstance(l, abstractOnly);
@@ -48,10 +48,10 @@ public class Backend{
     if (hasInstance && implementsType(l,"base.FileLog",0)){
       if (l.name().arity() == 0){
         var name= l.name().simpleName();
-        sb.a("  base.AppLog _appLog= base.AppLog.open(java.nio.file.Path.of(\".out\",\"logs\",\""+tools.pkgName()+"\",\""+name+".log\"), false);\n");
-        sb.a("  default base.AppLog _log(){ return _appLog; }\n");
+        sb.a("  _base.AppLog _appLog= _base.AppLog.open(java.nio.file.Path.of(\".out\",\"logs\",\""+tools.pkgName()+"\",\""+name+".log\"), false);\n");
+        sb.a("  default _base.AppLog _log(){ return _appLog; }\n");
       } else {
-        sb.a("  default base.AppLog _log(){ return null; }\n");
+        sb.a("  default _base.AppLog _log(){ return null; }\n");
       }
     }
     if (isRepr(l)){
@@ -66,7 +66,7 @@ public class Backend{
   private static boolean implementsType(Literal l, String name, int arity){ return LiteralDeclarations.has(l.cs(), new TName(name,arity,Pos.unknown)); }
   private static String cacheField(Literal l){
     for (int shape : Range.of(0,3)){
-      var t= "base.Cache"+shape;
+      var t= "_base.Cache"+shape;
       if (implementsType(l,"base.CacheF",shape+1) || implementsType(l,"base.CacheMemo",shape+1)){ return "  "+t+" _cache= new "+t+"(1, instance);\n  default "+t+" _cache"+shape+"(){ return _cache; }\n"; }
     }
     return "";
@@ -114,7 +114,7 @@ public class Backend{
     return head + "$p" + k;
   }  
   String decTypeName(TName n){ return encodeTrailingPrimes(n.simpleName())+"$"+caseTag(n.simpleName())+"$"+n.arity(); }
-  String typeName(TName n){ return encodeTrailingPrimes(n.s())+"$"+caseTag(n.simpleName())+"$"+n.arity(); }
+  String typeName(TName n){ return "_"+encodeTrailingPrimes(n.s())+"$"+caseTag(n.simpleName())+"$"+n.arity(); }
   static String caseTag(String s){
     var bits= new StringBuilder("1");
     for (int i : Range.of(0,s.length())){
@@ -135,15 +135,15 @@ public class Backend{
     var all= Join.of(mains.keySet().stream().map(n->"\""+n+"\""),"{",",","}","{}");
     var assets= Join.of(tools.capabilities().autoloadedAssets().stream().map(Backend::assetLiteral),"{",",","}","{}");
     var sb= new StringBuilder(8_000)
-      .append("package ").append(tools.pkgName()).append(";\n\n")
+      .append("package _").append(tools.pkgName()).append(";\n\n")
       .append("public final class Main{\n")
-      .append("  static{ base.Util.installParentLifeline(); }\n")
+      .append("  static{ _base.Util.installParentLifeline(); }\n")
       .append("  static final String[] all= ").append(all).append(";\n")
       .append("  public static final String[][] autoloadedAssets= ").append(assets).append(";\n")
       .append("  public static void main(String[] args){ for (String n: args.length == 0 ? all : args){ run(n); } }\n")
       .append("  static void run(String n){\n");
     mains.forEach((n,iface)->sb
-      .append("    if (n.equals(\"").append(n).append("\")){ base.Util.topLevel(()->")
+      .append("    if (n.equals(\"").append(n).append("\")){ _base.Util.topLevel(()->")
       .append(iface).append(".instance.imm$main$1(new ").append(typeName(new TName("base._System",0,Pos.unknown))).append("())); return; }\n"));
     sb.append("    throw new AssertionError(\"No main called \"+n+\" in package ").append(tools.pkgName()).append("\");\n  }\n}\n");
     Fs.writeUtf8(out.resolve("Main.java"), sb.toString());

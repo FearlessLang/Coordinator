@@ -303,6 +303,17 @@ MkFree:{.mk:Main->Free:Main,CaptureFree{s->base.Debug#(`free`)}}
     utils.Err.strCmp("free\ntop\n", coordinator(root).main(root, stLib));
     Assertions.assertEquals(Map.of("col.Free","_col/_rank_app.fear","col.Top","_col/_rank_app.fear"), coordinator(root).mains(root, stLib).orElseThrow());
   }
+  @Test void aPackageNamedAfterAJavaKeywordRuns(@TempDir Path tmp) throws InterruptedException{
+    Path root= tmp.resolve("root");
+    UserError.root= root;
+    FsDsl.materialize(root, """
+_int/_rank_app.fear
+iii
+use base.Main as Main;
+Hello:Main{s->base.Debug#(`hi`)}
+""");
+    utils.Err.strCmp("hi\n", coordinator(root).main(root, stLib));
+  }
   @Test void anAssetWhoseNameStartsWithUnderscoreAutoLoadsAsAPrivateType(@TempDir Path tmp) throws InterruptedException{
     Path root= tmp.resolve("root");
     UserError.root= root;
