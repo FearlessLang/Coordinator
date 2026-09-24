@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.OptionalInt;
+import java.util.regex.Pattern;
 
 import core.MName;
 import core.TName;
@@ -67,18 +68,12 @@ final class DocRefScanner{
   //offered, and nothing here can be an error. Taking maximal words is what keeps
   //"ieeeEq" from being read as ending in the type "Eq".
   static List<Found> signatureTypes(String text){
-    var res= new ArrayList<Found>();
-    int i= 0;
-    while (i < text.length()){
-      if (!isWordChar(text.charAt(i))){ i += 1; continue; }
-      int end= i;
-      while (end < text.length() && isWordChar(text.charAt(end))){ end += 1; }
-      var word= text.substring(i,end);
-      if (TName.isTypeName(word)){ res.add(new Found(i, end, new DocRef.TypeName(Optional.empty(), word, OptionalInt.empty()))); }
-      i= end;
-    }
-    return res;
+    return word.matcher(text).results()
+      .filter(w->TName.isTypeName(w.group()))
+      .map(w->new Found(w.start(), w.end(), new DocRef.TypeName(Optional.empty(), w.group(), OptionalInt.empty())))
+      .toList();
   }
+  private static final Pattern word= Pattern.compile("[\\p{L}\\p{Nd}_']+");
 
   static boolean isWordChar(char c){
     return Character.isLetterOrDigit(c) || c == '_' || c == '\'';

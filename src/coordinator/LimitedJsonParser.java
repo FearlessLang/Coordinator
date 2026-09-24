@@ -22,19 +22,18 @@ import core.T;
 import core.TName;
 import core.TSpan;
 import utils.Pos;
-import utils.Range;
 
 final class LimitedJsonParser{
   private final String s;
   private int i= 0;
   Path forErr;
   LimitedJsonParser(String s, Path forErr){ this.s= s; this.forErr= forErr; }
-  Map<String,Map<String,String>> obj2(){
-    var out= obj(this::obj1); ws();
+  Map<String,Map<String,String>> obj2(){ return end(obj(()->obj(this::name))); }
+  private <R> R end(R res){
+    ws();
     if (i != s.length()){ throw err("Trailing junk"); }
-    return out;
+    return res;
   }
-  Map<String,String> obj1(){ return obj(this::name); }
   private <TT> Map<String,TT> obj(Supplier<TT> v){
     req('{'); if (eat('}')){ return Map.of(); }
     var out= new LinkedHashMap<String,TT>();
@@ -51,10 +50,8 @@ final class LimitedJsonParser{
     return res;
   }
   Map<TName,Literal> apiJsonToMap(){
-    var xs= arr(); ws();
-    if (i != s.length()){ throw err("Trailing junk"); }
     var out= new LinkedHashMap<TName,Literal>();
-    for (var x: xs){
+    for (var x: end(arr())){
       var lit= typeLit(asArr(x));
       if (out.put(lit.name(), lit) != null){ throw err("Duplicate type "+lit.name().s()); }
     }
@@ -94,11 +91,7 @@ final class LimitedJsonParser{
   }
   private B bFrom(List<Object> a){
     if (a.size() < 2){ throw err("Bad B"); }
-    var x= asStr(a.get(0));
-    var rcs= EnumSet.noneOf(RC.class);
-    for (int j : Range.of(1,a.size())){ rcs.add(RC.valueOf(asStr(a.get(j)))); }
-    if (rcs.isEmpty()){ throw err("Empty B.rcs"); }
-    return new B(x, rcs);
+    return new B(asStr(a.get(0)), EnumSet.copyOf(a.stream().skip(1).map(o->RC.valueOf(asStr(o))).toList()));
   }
   private T.C cFrom(List<Object> a){
     if (a.isEmpty()){ throw err("Bad C"); }

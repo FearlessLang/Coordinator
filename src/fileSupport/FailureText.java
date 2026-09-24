@@ -7,6 +7,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import fileSupport.ByteFiles.Op;
 import metaParser.Message;
@@ -72,84 +73,81 @@ final class FailureText {
     // In the code we control, non-default file systems should never reach these explainers.
     if (!path.getFileSystem().equals(FileSystems.getDefault())){ throw Bug.unreachable(); }
     var suppressed= new Suppressed();
-    String text= switch(kind){
-      case UnknownFailureAfterSuccessfulOpen -> UnknownFailureAfterSuccessfulOpen.of(op, path, suppressed);
+    var text= CommonInfo.of(op, path, suppressed)+switch(kind){
+      case UnknownFailureAfterSuccessfulOpen -> UnknownFailureAfterSuccessfulOpen.of(path, suppressed);
 
-      case FileBusy_WindowsSharingViolation -> FileBusyWindowsSharingViolation.of(op, path, suppressed);
-      case FileBusy_WindowsFileRegionLocked -> FileBusyWindowsFileRegionLocked.of(op, path, suppressed);
-      case FileBusy_PosixTextFileBusy -> plain(op, path, suppressed, FileBusyText.posixTextFileBusy);
-      case FileBusy_WindowsFileCheckedOut -> plain(op, path, suppressed, FileBusyText.windowsFileCheckedOut);
+      case FileBusy_WindowsSharingViolation -> FileBusyWindowsSharingViolation.of(path, suppressed);
+      case FileBusy_WindowsFileRegionLocked -> FileBusyWindowsFileRegionLocked.of(path, suppressed);
+      case FileBusy_PosixTextFileBusy -> FileBusyText.posixTextFileBusy;
+      case FileBusy_WindowsFileCheckedOut -> FileBusyText.windowsFileCheckedOut;
 
-      case StorageBusy_DeviceOrResourceBusy -> plain(op, path, suppressed, StorageBusyText.deviceOrResourceBusy);
-      case StorageBusy_DriveLocked -> plain(op, path, suppressed, StorageBusyText.driveLocked);
+      case StorageBusy_DeviceOrResourceBusy -> StorageBusyText.deviceOrResourceBusy;
+      case StorageBusy_DriveLocked -> StorageBusyText.driveLocked;
 
-      case StorageFull_NoSpaceOnVolume -> plain(op, path, suppressed, StorageFullText.noSpaceOnVolume);
-      case StorageFull_QuotaExceeded -> plain(op, path, suppressed, StorageFullText.quotaExceeded);
+      case StorageFull_NoSpaceOnVolume -> StorageFullText.noSpaceOnVolume;
+      case StorageFull_QuotaExceeded -> StorageFullText.quotaExceeded;
 
-      case StorageReadOnly_VolumeMountedReadOnly -> plain(op, path, suppressed, StorageReadOnlyText.volumeMountedReadOnly);
-      case StorageReadOnly_MediaWriteProtected -> plain(op, path, suppressed, StorageReadOnlyText.mediaWriteProtected);
+      case StorageReadOnly_VolumeMountedReadOnly -> StorageReadOnlyText.volumeMountedReadOnly;
+      case StorageReadOnly_MediaWriteProtected -> StorageReadOnlyText.mediaWriteProtected;
 
-      case FileLock_WindowsFileRegionLockFailed -> FileLockWindowsFileRegionLockFailed.of(op, path, suppressed);
+      case FileLock_WindowsFileRegionLockFailed -> FileLockWindowsFileRegionLockFailed.of(path, suppressed);
 
-      case StorageUnavailable_StaleNetworkFile -> plain(op, path, suppressed, StorageUnavailableText.staleNetworkFile);
-      case StorageUnavailable_DeviceNotReady -> plain(op, path, suppressed, StorageUnavailableText.deviceNotReady);
-      case StorageUnavailable_DeviceDisconnected -> plain(op, path, suppressed, StorageUnavailableText.deviceDisconnected);
-      case StorageUnavailable_TransportEndpointDisconnected -> plain(op, path, suppressed, StorageUnavailableText.transportEndpointDisconnected);
-      case StorageUnavailable_ProviderUnavailable -> plain(op, path, suppressed, StorageUnavailableText.providerUnavailable);
-      case StorageUnavailable_NetworkPathUnavailable -> NetworkPathUnavailable.of(op, path, suppressed);
-      case StorageUnavailable_NetworkResourceGone -> plain(op, path, suppressed, StorageUnavailableText.networkResourceGone);
-      case StorageUnavailable_NetworkBusy -> plain(op, path, suppressed, StorageUnavailableText.networkBusy);
+      case StorageUnavailable_StaleNetworkFile -> StorageUnavailableText.staleNetworkFile;
+      case StorageUnavailable_DeviceNotReady -> StorageUnavailableText.deviceNotReady;
+      case StorageUnavailable_DeviceDisconnected -> StorageUnavailableText.deviceDisconnected;
+      case StorageUnavailable_TransportEndpointDisconnected -> StorageUnavailableText.transportEndpointDisconnected;
+      case StorageUnavailable_ProviderUnavailable -> StorageUnavailableText.providerUnavailable;
+      case StorageUnavailable_NetworkPathUnavailable -> NetworkPathUnavailable.of(path, suppressed);
+      case StorageUnavailable_NetworkResourceGone -> StorageUnavailableText.networkResourceGone;
+      case StorageUnavailable_NetworkBusy -> StorageUnavailableText.networkBusy;
 
-      case NetworkFailure_BadResponse -> plain(op, path, suppressed, NetworkFailureText.badResponse);
-      case NetworkFailure_Unexpected -> plain(op, path, suppressed, NetworkFailureText.unexpected);
+      case NetworkFailure_BadResponse -> NetworkFailureText.badResponse;
+      case NetworkFailure_Unexpected -> NetworkFailureText.unexpected;
 
-      case ResourceExhausted_TooManyOpenFiles -> TooManyOpenFiles.of(op, path, suppressed);
-      case ResourceExhausted_Memory -> plain(op, path, suppressed, ResourceExhaustedText.memory);
-      case ResourceExhausted_SystemResources -> plain(op, path, suppressed, ResourceExhaustedText.systemResources);
+      case ResourceExhausted_TooManyOpenFiles -> TooManyOpenFiles.of(path, suppressed);
+      case ResourceExhausted_Memory -> ResourceExhaustedText.memory;
+      case ResourceExhausted_SystemResources -> ResourceExhaustedText.systemResources;
 
-      case FileTooLargeForByteArray -> FileTooLargeForByteArray.of(op, path, suppressed);
+      case FileTooLargeForByteArray -> FileTooLargeForByteArray.of(path, suppressed);
 
       case PathResolutionFailure_FileNotFound -> PathResolutionFileNotFound.of(op, path, suppressed);
-      case PathResolutionFailure_ParentIsNotAFolder -> PathResolutionParentIsNotAFolder.of(op, path, suppressed);
-      case PathResolutionFailure_InvalidName -> PathResolutionInvalidName.of(op, path, suppressed);
-      case PathResolutionFailure_PathTooLong -> PathResolutionPathTooLong.of(op, path, suppressed);
-      case PathResolutionFailure_SymlinkLoop -> plain(op, path, suppressed, PathResolutionText.symlinkLoop);
-      case FileAlreadyExists -> FileAlreadyExists.of(op, path, suppressed);
+      case PathResolutionFailure_ParentIsNotAFolder -> PathResolutionParentIsNotAFolder.msg;
+      case PathResolutionFailure_InvalidName -> PathResolutionInvalidName.msg+PathResolutionInvalidName.example;
+      case PathResolutionFailure_PathTooLong -> PathResolutionPathTooLong.of(path, suppressed);
+      case PathResolutionFailure_SymlinkLoop -> PathResolutionText.symlinkLoop;
+      case FileAlreadyExists -> FileAlreadyExists.msg;
 
       case AccessDenied -> AccessDenied.of(op, path, suppressed);
-      case AccessDenied_Network -> plain(op, path, suppressed, AccessText.accessDeniedNetwork);
-      case PathIsFolder -> PathIsFolder.of(op, path, suppressed);
+      case AccessDenied_Network -> AccessText.accessDeniedNetwork;
+      case PathIsFolder -> PathIsFolder.of(path, suppressed);
 
-      case MediaIoFailure_Generic -> plain(op, path, suppressed, MediaIoText.generic);
-      case MediaIoFailure_CyclicRedundancyCheck -> plain(op, path, suppressed, MediaIoText.cyclicRedundancyCheck);
-      case MediaIoFailure_SeekFailure -> plain(op, path, suppressed, MediaIoText.seekFailure);
-      case MediaIoFailure_SectorNotFound -> plain(op, path, suppressed, MediaIoText.sectorNotFound);
-      case MediaIoFailure_WriteFault -> plain(op, path, suppressed, MediaIoText.writeFault(op));
-      case MediaIoFailure_ReadFault -> plain(op, path, suppressed, MediaIoText.readFault);
-      case MediaIoFailure_DeviceNotFunctioning -> plain(op, path, suppressed, MediaIoText.deviceNotFunctioning);
+      case MediaIoFailure_Generic -> MediaIoText.generic;
+      case MediaIoFailure_CyclicRedundancyCheck -> MediaIoText.cyclicRedundancyCheck;
+      case MediaIoFailure_SeekFailure -> MediaIoText.seekFailure;
+      case MediaIoFailure_SectorNotFound -> MediaIoText.sectorNotFound;
+      case MediaIoFailure_WriteFault -> MediaIoText.writeFault(op);
+      case MediaIoFailure_ReadFault -> MediaIoText.readFault;
+      case MediaIoFailure_DeviceNotFunctioning -> MediaIoText.deviceNotFunctioning;
 
-      case InvalidHandleOrDescriptor -> InvalidHandleOrDescriptor.of(op, path, suppressed);
+      case InvalidHandleOrDescriptor -> InvalidHandleOrDescriptor.of(path, suppressed);
 
-      case InvalidOperationOrParameter_InvalidArgument -> plain(op, path, suppressed, InvalidOperationText.invalidArgument);
-      case InvalidOperationOrParameter_IncorrectFunction -> plain(op, path, suppressed, InvalidOperationText.incorrectFunction);
-      case InvalidOperationOrParameter_InvalidParameter -> plain(op, path, suppressed, InvalidOperationText.invalidParameter);
+      case InvalidOperationOrParameter_InvalidArgument -> InvalidOperationText.invalidArgument;
+      case InvalidOperationOrParameter_IncorrectFunction -> InvalidOperationText.incorrectFunction;
+      case InvalidOperationOrParameter_InvalidParameter -> InvalidOperationText.invalidParameter;
 
-      case UnsupportedFileSystem -> plain(op, path, suppressed, UnsupportedText.unsupportedFileSystem);
-      case UnsupportedFileSystem_DeviceDoesNotRecognizeCommand -> plain(op, path, suppressed, UnsupportedText.deviceDoesNotRecognizeCommand);
+      case UnsupportedFileSystem -> UnsupportedText.unsupportedFileSystem;
+      case UnsupportedFileSystem_DeviceDoesNotRecognizeCommand -> UnsupportedText.deviceDoesNotRecognizeCommand;
 
-      case ChannelClosedByInterrupt -> plain(op, path, suppressed, InterruptionText.channelClosedByInterrupt);
-      case IoInterrupted -> plain(op, path, suppressed, InterruptionText.ioInterrupted);
-      case ChannelClosedExternally -> plain(op, path, suppressed, InterruptionText.channelClosedExternally);
+      case ChannelClosedByInterrupt -> InterruptionText.channelClosedByInterrupt;
+      case IoInterrupted -> InterruptionText.ioInterrupted;
+      case ChannelClosedExternally -> InterruptionText.channelClosedExternally;
 
-      case UnknownOpenFailure -> plain(op, path, suppressed, UnknownText.unknownOpenFailure);
+      case UnknownOpenFailure -> UnknownText.unknownOpenFailure;
     };
     return new Explanation(op.fill(text), suppressed.toList());
     //fill happens here, once, on the final text. A discovered value (a path, a
     //volume name) could in principle contain a literal `..` marker and be filled
     //too; accepted, like the [[..]] markers would be.
-  }
-  private static String plain(Op op, Path path, Suppressed suppressed, String msg){
-    return CommonInfo.of(op, path, suppressed)+msg;
   }
 }
 record Explanation(String text, List<Throwable> suppressed){
@@ -168,9 +166,8 @@ class CommonInfo{
   private static final int PortableLinkDepth= 8;  // POSIX guarantees only SYMLOOP_MAX >= 8
   private static final int MaxLinkFollowed= 64;   // backstop so the walk always terminates
 
-  static String of(Op op, Path path, Suppressed suppressed){ return anchor(op, path, suppressed)+chain(path, suppressed); }
-  private static String anchor(Op op, Path path, Suppressed suppressed){
-    return "Fearless could not "+op.verb+" this file:\n\n  "+located(path, suppressed)+"\n\n";
+  static String of(Op op, Path path, Suppressed suppressed){
+    return "Fearless could not "+op.verb+" this file:\n\n  "+located(path, suppressed)+"\n\n"+chain(path, suppressed);
   }
   private static String rootOf(Path path){
     var root= path.toAbsolutePath().getRoot();//getRoot() may be null when the path has no root component (documented normal result)
@@ -232,13 +229,8 @@ class Holders{
     try{ holders= enumerate(path,suppressed); }
     catch(IOException e){ return "\n<reading programs holding this file open failed>"+suppressed.mark(e)+"\n"; }
     if (holders.isEmpty()){ return whenNone; }
-    var out= new StringBuilder(intro)
-      .append(holders.size())
-      .append(holders.size() == 1 ? " program" : " programs")
-      .append(" currently holding this file open:\n\n");
-    for (var h : holders){ out.append("  ").append(h).append("\n"); }
-    out.append(outro);
-    return out.toString();
+    return intro+holders.size()+(holders.size() == 1 ? " program" : " programs")+" currently holding this file open:\n\n"
+      +holders.stream().map(h->"  "+h+"\n").collect(Collectors.joining())+outro;
   }
   private static final String exampleWord= """
 Microsoft Word
@@ -415,12 +407,11 @@ Software in a position to interfere on this program's open files:
 
 //[any OS]
 class UnknownFailureAfterSuccessfulOpen{
-  static String of(Op op, Path path, Suppressed suppressed){
-    var holders= Holders.section(path, suppressed,
+  static String of(Path path, Suppressed suppressed){
+    return msg+Holders.section(path, suppressed,
       "\nThese programs also have the file open.\n\n",
       "\nNo other program currently has this file open.\n",
-      "");
-    return CommonInfo.of(op, path, suppressed)+msg+holders+Terms.glossary;
+      "")+Terms.glossary;
   }
   private static final String msg= """
 Fearless opened the file, but `reading` its contents failed without a clear reported reason.
@@ -433,8 +424,8 @@ Fearless cannot tell whether the problem is with the file or with the device or 
 // Error 32, ERROR_SHARING_VIOLATION: an open-stage failure. Some existing handle was opened with a share mode that omits read-sharing (or write-sharing, for a write).
 //[Windows-only]
 class FileBusyWindowsSharingViolation{
-  static String of(Op op, Path path, Suppressed suppressed){
-    return CommonInfo.of(op, path, suppressed)+intro+Holders.section(path, suppressed, "", whenNone, outro);
+  static String of(Path path, Suppressed suppressed){
+    return intro+Holders.section(path, suppressed, "", whenNone, outro);
   }
   private static final String intro= """
 Another program has this file open in a mode that does not permit other programs to
@@ -457,8 +448,8 @@ yet this check (some moments after), found no program holding the file open at a
 // Deliberately does NOT probe for the locked range.
 //[Windows-only]
 class FileBusyWindowsFileRegionLocked{
-  static String of(Op op, Path path, Suppressed suppressed){
-    return CommonInfo.of(op, path, suppressed)+intro+Holders.section(path, suppressed, "", whenNone, outro);
+  static String of(Path path, Suppressed suppressed){
+    return intro+Holders.section(path, suppressed, "", whenNone, outro);
   }
   private static final String intro= """
 Another program has locked a portion of this file, and the range Fearless tried to
@@ -488,8 +479,8 @@ program holding the file open is listed.
 //Needs more checking, and could come back for other IO reporting.
 //[Windows-only]
 class FileLockWindowsFileRegionLockFailed{
-  static String of(Op op, Path path, Suppressed suppressed){
-    return CommonInfo.of(op, path, suppressed)+intro+Holders.section(path, suppressed, "", whenNone, "");
+  static String of(Path path, Suppressed suppressed){
+    return intro+Holders.section(path, suppressed, "", whenNone, "");
   }
   private static final String intro= """
 To `read` this file, Fearless needed to lock a portion of it, and Windows refused to place the lock (error 167, ERROR_LOCK_FAILED).
@@ -657,8 +648,8 @@ This is a momentary state of the connection, not a property of the path.
 // turns "could be a, b or c" into one concrete finding, so it carries a probe section.
 //[Windows-only]
 class NetworkPathUnavailable{
-  static String of(Op op, Path path, Suppressed suppressed){
-    return CommonInfo.of(op, path, suppressed)+msg+NetworkProbe.section(path, suppressed)+Terms.glossary;
+  static String of(Path path, Suppressed suppressed){
+    return msg+NetworkProbe.section(path, suppressed)+Terms.glossary;
   }
   private static final String msg= """
 The computer or shared folder named in this path did not answer (error 53, ERROR_BAD_NETPATH).
@@ -687,8 +678,8 @@ Communication with this server failed in a way Windows did not classify (error 5
 }
 //[any OS]
 class TooManyOpenFiles{
-  static String of(Op op, Path path, Suppressed suppressed){
-    return CommonInfo.of(op, path, suppressed)+msg+OpenFilesInfo.section(path, suppressed);
+  static String of(Path path, Suppressed suppressed){
+    return msg+OpenFilesInfo.section(path, suppressed);
   }
   private static final String msg= """
 This process - this one running copy of Fearless - has reached the limit of files it
@@ -724,12 +715,11 @@ This describes a momentary state of the whole computer, not a property of this f
 
 //[JVM]  Read-only kind: writes hand Fearless the bytes, they never build the array.
 class FileTooLargeForByteArray{
-  static String of(Op op, Path path, Suppressed suppressed){
+  static String of(Path path, Suppressed suppressed){
     String size;
     try{ size= String.format("%,d bytes", Files.size(path)); }
     catch(IOException e){ size= "<reading the size failed>"+suppressed.mark(e); }//documented: Files.size throws when the file cannot be read
-    return CommonInfo.of(op, path, suppressed)
-      +"This file is "+size+" long. Fearless reads a file into one block of memory, and\n"
+    return "This file is "+size+" long. Fearless reads a file into one block of memory, and\n"
       +"one block can hold at most 2,147,483,647 bytes (about 2 GB).\n";
   }
 }
@@ -737,9 +727,7 @@ class FileTooLargeForByteArray{
 //[any OS]
 class PathResolutionFileNotFound{
   static String of(Op op, Path path, Suppressed suppressed){
-    return CommonInfo.of(op, path, suppressed)
-      +(op == Op.Read ? msgRead : msgWrite)
-      +FolderInfo.similarNames(path, suppressed);
+    return (op == Op.Read ? msgRead : msgWrite)+FolderInfo.similarNames(path, suppressed);
   }
   //The MEANING forks on the operation, so this branches instead of using `..`:
   //- read: the file itself is missing;
@@ -762,10 +750,7 @@ deepest EXISTING ancestor - the walk the FolderInfo comment already describes)
 
 //[any OS]
 class PathResolutionParentIsNotAFolder{
-  static String of(Op op, Path path, Suppressed suppressed){
-    return CommonInfo.of(op, path, suppressed)+msg;
-  }
-  private static final String msg= """
+  static final String msg= """
 Path
   yy
 is not a folder but is a parent of the requested path
@@ -783,13 +768,10 @@ files inside an archive cannot be reached by path; they are read through the arc
 
 //[Windows-only]
 class PathResolutionInvalidName{
-  static String of(Op op, Path path, Suppressed suppressed){
-    return CommonInfo.of(op, path, suppressed)+msg+example;
-  }
-  private static final String msg= """
+  static final String msg= """
 The path contains a name that is not valid on this system (error 123, ERROR_INVALID_NAME).
 """;
-  private static final String example= """
+  static final String example= """
 
 The first invalid character is marked below:
 
@@ -806,10 +788,9 @@ class PathResolutionPathTooLong{
   // system instead: Windows: 259 unless long-path support is enabled, then about
   // 32,000; POSIX: pathconf PATH_MAX (commonly 4096 bytes) and NAME_MAX (commonly 255
   // bytes) for a single name.
-  static String of(Op op, Path path, Suppressed suppressed){
+  static String of(Path path, Suppressed suppressed){
     var length= path.toString().length();//Java characters; POSIX limits are in bytes, see the comment above for the real per-OS measure
-    return CommonInfo.of(op, path, suppressed)
-      +"The path is "+length+" characters long, more than this system allows (\"file name too long\").\n"
+    return "The path is "+length+" characters long, more than this system allows (\"file name too long\").\n"
       +(Fs.isWindows() ? windowsLimits : posixLimits);
   }
   private static final String windowsLimits= """
@@ -836,10 +817,7 @@ As shown by the chain above,
 //[any OS]  In practice only reached by writeNew (CREATE_NEW); classified typed, from
 //FileAlreadyExistsException, before the text matcher runs.
 class FileAlreadyExists{
-  static String of(Op op, Path path, Suppressed suppressed){
-    return CommonInfo.of(op, path, suppressed)+msg;
-  }
-  private static final String msg= """
+  static final String msg= """
 This `read` was asked to create a new file, with the guarantee of never touching
 anything already at this location. Something is already there:
 [[a file of 12,041 bytes, last changed 2026-07-02 09:14:03/a folder]](one metadata
@@ -850,7 +828,7 @@ is there was not touched.
 //[any OS]
 class AccessDenied{
   static String of(Op op, Path path, Suppressed suppressed){
-    return CommonInfo.of(op, path, suppressed)+msg+PermissionsInfo.section(op, path, suppressed);
+    return msg+PermissionsInfo.section(op, path, suppressed);
   }
   private static final String msg= """
 The operating system did not allow Fearless to `read` this file (access denied).
@@ -866,8 +844,8 @@ Given this refusal we cannot even confirm whether this path points to an actual 
 }
 //[any OS]
 class PathIsFolder{
-  static String of(Op op, Path path, Suppressed suppressed){
-    return CommonInfo.of(op, path, suppressed)+msg+FolderInfo.listing(path, suppressed);
+  static String of(Path path, Suppressed suppressed){
+    return msg+FolderInfo.listing(path, suppressed);
   }
   private static final String msg= """
 This path is a folder, not a file, so it cannot be `written` as a file.
@@ -950,8 +928,8 @@ This failure does not report further detail.
 }
 //[any OS]
 class InvalidHandleOrDescriptor{
-  static String of(Op op, Path path, Suppressed suppressed){
-    return CommonInfo.of(op, path, suppressed)+msg+InterferenceInfo.section(path, suppressed)+ReportText.please;
+  static String of(Path path, Suppressed suppressed){
+    return msg+InterferenceInfo.section(path, suppressed)+ReportText.please;
   }
   private static final String msg= """
 The operating system rejected Fearless's reference to the open file.

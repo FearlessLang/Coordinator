@@ -7,7 +7,6 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -23,7 +22,6 @@ import tools.Fs;
 import tools.SourceOracle;
 import userMessages.Report;
 import utils.Bug;
-import utils.Pos;
 
 public final class HtmlDocBuilder{
   public HtmlDocBuilder(SourceOracle oracle, OtherPackages other, List<Literal> core, Optional<Path> baseDocLocation){
@@ -71,21 +69,9 @@ public final class HtmlDocBuilder{
     }
     else{ t.addVariant(l); }
     for (var m:l.ms()){
-      if (m.sig().origin().equals(l.name())){ visitDeclaredM(l,m); }
-      else{ visitImportedM(l,m); }
+      if (m.sig().origin().equals(l.name())){ t.declared(m.sig().span().pos(),m,methodDocAt(l,m),inheritedMethods(l,m)); }
+      else{ t.imported(m,inheritedMethods(l,m)); }
     }
-  }
-
-  public void visitDeclaredM(Literal owner, M m){
-    assert nonNull(owner,m);
-    assert m.sig().origin().equals(owner.name());
-    type(owner).declared(methodPos(m),m,methodDocAt(owner,m),inheritedMethods(owner,m));
-  }
-
-  public void visitImportedM(Literal owner, M m){
-    assert nonNull(owner,m);
-    assert !m.sig().origin().equals(owner.name());
-    type(owner).imported(m,inheritedMethods(owner,m));
   }
 
   public void complete(){
@@ -93,9 +79,9 @@ public final class HtmlDocBuilder{
     var resolver= new DocResolver(pkgName,types,other);
     var spans= new IdentityHashMap<DocOcc,List<ResolvedSpan>>();
     var problems= new ArrayList<String>();
-    orphans(problems);
-    ambiguousInline(problems);
-    docGroups().forEach(g->linkGroup(resolver,g,spans,problems));
+    sources.values().stream().flatMap(s->s.orphanRuns().stream()).map(this::orphan).forEach(problems::add);
+    sources.values().stream().flatMap(s->s.ambiguousInlineDocs().stream()).map(this::ambiguousInline).forEach(problems::add);
+    types.forEach(t->linkType(resolver,t,spans,problems));
     if (!problems.isEmpty()){ throw Report.docReferences(problems); }
     var renderer= new HtmlDocRenderer(pkgName,uses,types,other,spans,baseDocLocation);
     Fs.writeUtf8(htmlPath,renderer.render());
@@ -124,28 +110,22 @@ public final class HtmlDocBuilder{
     return Message.of(oracle::loadString, List.of(new Frame("the documentation of package "+pkgName, span)), msg);
   }
 
-  //one group per declaration, carrying the scope its comment is written in: a fenced
-  //``` ... ``` block never spans declarations, so "inside a fence" resets per group.
-  record DocGroup(Scope scope, List<DocOcc> docs){}
-
-  List<DocGroup> docGroups(){
-    var res= new ArrayList<DocGroup>();
-    types.forEach(t->{
-      res.add(new DocGroup(Scope.of(t.main()), t.docs));
-      t.methods.forEach(m->res.add(new DocGroup(Scope.of(t.main(), m.main()), m.docs)));
-    });
-    return res;
+  void linkType(DocResolver resolver, TypeDoc t, Map<DocOcc,List<ResolvedSpan>> spans, List<String> problems){
+    linkGroup(resolver,Scope.of(t.main()),t.docs,spans,problems);
+    t.methods.forEach(m->linkGroup(resolver,Scope.of(t.main(),m.main()),m.docs,spans,problems));
   }
 
-  void linkGroup(DocResolver resolver, DocGroup group, Map<DocOcc,List<ResolvedSpan>> spans,
+  //one group per declaration, carrying the scope its comment is written in: a fenced
+  //``` ... ``` block never spans declarations, so "inside a fence" resets per group.
+  void linkGroup(DocResolver resolver, Scope scope, List<DocOcc> docs, Map<DocOcc,List<ResolvedSpan>> spans,
       List<String> problems){
     var inFence= false;
-    for (var occ: group.docs()){
+    for (var occ: docs){
       if (occ.text().strip().equals("```")){ inFence= !inFence; continue; }
       //a //> line is real Fearless code, not prose: any backtick in it is a genuine
       //raw string literal, never doc-comment markup, so it is never reference-checked.
       if (inFence || occ.example() || occ.testOnly()){ continue; }
-      link(resolver,occ,group.scope(),spans,problems);
+      link(resolver,occ,scope,spans,problems);
     }
   }
 
@@ -167,23 +147,11 @@ public final class HtmlDocBuilder{
   //documentation that reached no declaration is documentation nobody will ever read,
   //and the usual cause is a /// or //> written with one mark too few, which ends the
   //block silently. Reported per run of lines, at the run.
-  void orphans(List<String> problems){
-    sources.values().stream()
-      .flatMap(s->s.orphanRuns().stream())
-      .forEach(run->problems.add(orphan(run)));
-  }
-
   String orphan(List<DocOcc> run){
     var first= run.getFirst();
     var last= run.getLast();
     return message(new Span(first.file(), first.line(), first.column(),
       last.line(), last.textColumn()+last.text().length()), notAttached);
-  }
-
-  void ambiguousInline(List<String> problems){
-    sources.values().stream()
-      .flatMap(s->s.ambiguousInlineDocs().stream())
-      .forEach(occ->problems.add(ambiguousInline(occ)));
   }
 
   String ambiguousInline(DocOcc occ){
@@ -217,32 +185,22 @@ public final class HtmlDocBuilder{
     return res;
   }
 
-  Pos methodPos(M m){ return m.sig().span().pos(); }
-
   //owner.cs() is fully flattened, so an overridden ancestor still gets its own entry here:
   //by design, "From:" shows every provider along the chain, shadowed ones included.
   List<MethodRef> inheritedMethods(Literal owner, M m){
-    var res= new LinkedHashMap<MethodRefKey,MethodRef>();
-    owner.cs().stream()
+    return owner.cs().stream()
       .flatMap(c->literal(c.name()).stream().flatMap(sup->matchingMethods(c,sup,m)))
-      .forEach(r->res.putIfAbsent(MethodRefKey.of(r),r));
-    return List.copyOf(res.values());
+      .toList();
   }
 
   Stream<MethodRef> matchingMethods(T.C provider, Literal sup, M m){
     return sup.ms().stream()
-      .filter(sm->sameMethod(sm,m))
+      .filter(sm->sm.sig().rc() == m.sig().rc() && sm.sig().m().equals(m.sig().m()))
       .map(sm->MethodRef.provider(provider,sm));
   }
 
-  boolean sameMethod(M a, M b){
-    return a.sig().rc() == b.sig().rc() && a.sig().m().equals(b.sig().m());
-  }
-
   Optional<Literal> literal(TName n){
-    var local= currentByName.get(n);
-    if (local != null){ return Optional.of(local); }
-    return Optional.ofNullable(other.__of(n));
+    return Optional.ofNullable(currentByName.get(n)).or(()->Optional.ofNullable(other.__of(n)));
   }
 
   List<DocOcc> docsForLiteral(Literal l){
@@ -251,7 +209,7 @@ public final class HtmlDocBuilder{
   }
 
   List<DocOcc> methodDocAt(Literal owner, M m){
-    var p= methodPos(m);
+    var p= m.sig().span().pos();
     if (p.line() == 0){ return List.of(); }
     return source(p.fileName()).docsAt(p,p.line() != owner.pos().line());
   }

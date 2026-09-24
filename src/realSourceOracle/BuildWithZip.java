@@ -13,7 +13,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
-import java.util.stream.Stream;
 import userMessages.Report;
 import tools.Fs;
 import tools.SourceOracle;
@@ -32,7 +31,7 @@ record Tree(
     Fs.walkV(root, s->s
       .filter(p->!p.equals(root))
       .filter(p->!Files.isDirectory(p, LinkOption.NOFOLLOW_LINKS))
-      .forEach(abs->collectFile(abs))
+      .forEach(this::collectFile)
     );
   }
   private void collectFile(Path abs){
@@ -91,15 +90,10 @@ record Tree(
 }
 public final class BuildWithZip{
   public static boolean isInvisible(RefParent r){
-    var fp= r.fearPath();
-    assert fp.startsWith(SourceOracle.root);
-    return Stream.of(fp.substring(SourceOracle.root.length()).split("/")).anyMatch(s->s.startsWith("."));
+    return AutoloadHandler.components(r.fearPath()).stream().anyMatch(s->s.startsWith("."));
   }
   private final Tree t;
-  BuildWithZip(Path root){
-    var r= root.toAbsolutePath().normalize();
-    t= new Tree(r, new ArrayList<>(), new LinkedHashMap<>(), new LinkedHashMap<>());
-  }
+  BuildWithZip(Path root){ t= new Tree(root.toAbsolutePath().normalize(), new ArrayList<>(), new LinkedHashMap<>(), new LinkedHashMap<>()); }
   List<Ref> build(){
     t.collect();
     t.visKidsByDir().forEach((_,kids)->{

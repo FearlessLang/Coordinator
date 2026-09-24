@@ -68,22 +68,15 @@ final class SourceDocs{
       var pure= pureDocs(l);
       if (!pure.isEmpty()){ before.addAll(pure); continue; }
       if (!lines.get(l-1).isBlank()){ break; }
-      before.add(new DocOcc(uri,l,1,1,"",true,contextIsExample(before),contextIsTestOnly(before)));
+      //the line just below the empty one, which is the last one collected walking up
+      var below= !before.isEmpty();
+      before.add(new DocOcc(uri,l,1,1,"",true,below && before.getLast().example(),below && before.getLast().testOnly()));
     }
     Collections.reverse(before);
     //everything collected is attached, including an empty line trimmed off the end:
     //trimming is about what to show, not about what the block reached.
     attached.addAll(before);
     res.addAll(trimBlanks(before));
-  }
-
-  //the line just below the empty one, which is the last one collected walking up
-  static boolean contextIsExample(List<DocOcc> before){
-    return !before.isEmpty() && before.getLast().example();
-  }
-
-  static boolean contextIsTestOnly(List<DocOcc> before){
-    return !before.isEmpty() && before.getLast().testOnly();
   }
 
   static List<DocOcc> trimBlanks(List<DocOcc> ds){
@@ -128,12 +121,8 @@ final class SourceDocs{
             else if (s.charAt(i) == '}'){ depth -= 1; i += 1; }
             else{ i += 1; }
           }
-          case DoubleString -> {
-            if (s.charAt(i) == '"'){ mode= Mode.Normal; }
-            i += 1;
-          }
-          case BacktickString -> {
-            if (s.charAt(i) == '`'){ mode= Mode.Normal; }
+          case DoubleString, BacktickString -> {
+            if (s.charAt(i) == (mode == Mode.DoubleString ? '"' : '`')){ mode= Mode.Normal; }
             i += 1;
           }
           case Block -> {
@@ -150,12 +139,10 @@ final class SourceDocs{
   //textColumn is where the stored text really starts in the line, so an error can put
   //its carets under the offending characters: past the "///" and the space clean drops.
   void add(int line, int column, String text, boolean pureLine, boolean example, boolean testOnly){
-    var clean= clean(text);
+    var clean= text.startsWith(" ") ? text.substring(1) : text;
     docsByLine.computeIfAbsent(line,_ -> new ArrayList<>())
       .add(new DocOcc(uri,line,column,column+3+(text.length()-clean.length()),clean,pureLine,example,testOnly));
   }
-
-  static String clean(String s){ return s.startsWith(" ") ? s.substring(1) : s; }
 
   enum Mode{ Normal, DoubleString, BacktickString, Block }
 }

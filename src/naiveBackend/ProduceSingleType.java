@@ -17,10 +17,7 @@ record ProduceBody(BytecodeLineFix sb, Backend b, String iface, String thisName,
     emitE(m.e().get());
     sb.a(";\n  }\n");
   }
-  private String optCast(core.T t){ return switch (t){
-    case core.T.RCC rcc -> "("+b.typeName(rcc.c().name())+")";
-    default -> "";
-  };}
+  private String optCast(core.T t){ return t instanceof core.T.RCC rcc ? "("+b.typeName(rcc.c().name())+")" : ""; }
   void emitE(core.E e){ switch(e){
     case X x -> emitX(x);
     case Type t -> emitType(t);
@@ -52,13 +49,10 @@ record ProduceBody(BytecodeLineFix sb, Backend b, String iface, String thisName,
     }
     sb.a(")");//CHECK THIS: I think this is enough to make sure that there is never two fearless method calls on the same java line (possibly even overkill?)
   }
-  private String castedReceiverExpr(core.E recv){ return switch(recv){
-    case Call c -> optCast(c.expectedRes().inner);
-    case X _, Literal _, Type _ -> "";
-  };}
+  private String castedReceiverExpr(core.E recv){ return recv instanceof Call c ? optCast(c.expectedRes().inner) : ""; }
   private void emitLit(Literal lit){
     b.tools.docs().visitLiteral(lit);
-    if (b.captureFree(lit)){
+    if (LiteralDeclarations.has(lit.cs(),LiteralDeclarations.captureFree)){
       b.generateInterface(lit, false);
       sb.a(b.decTypeName(lit.name())).a(".instance");
       return;

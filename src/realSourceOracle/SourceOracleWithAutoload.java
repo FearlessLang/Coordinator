@@ -45,10 +45,7 @@ public record SourceOracleWithAutoload(SourceOracle base, Ref autoload, URI auto
     return base.loadString(uri);
   }
   private static boolean suppressed(SourceOracle base, String pkgName, Function<Ref,String> path){
-    return base.allFiles().stream().anyMatch(r->suppressFound(path.apply(r),pkgName));
-  }
-  private static boolean suppressFound(String rName, String pkgName){
-    return rName.endsWith(autoloadFileSuffix) && rName.contains("/"+pkgName+"/");
+    return base.allFiles().stream().map(path).anyMatch(n->n.endsWith(autoloadFileSuffix) && n.contains("/"+pkgName+"/"));
   }
   private static Generated generate(SourceOracle base, String pkgName, Function<Ref,String> path){
     var out= new StringBuilder();
@@ -58,19 +55,16 @@ public record SourceOracleWithAutoload(SourceOracle base, Ref autoload, URI auto
       var p= path.apply(ref);
       if (!p.contains("/"+pkgName+"/")){ continue; }
       for (var h: handlers){
-        var a= h.generate(ref, p, pkgName);
-        if (a.text().isEmpty()){ continue; }
-        a.declaredTypes().forEach(type->checkNotDeclared(declaredBy, ref, type));
-        out.append(a.text());
-        if (!a.text().endsWith("\n")){ out.append('\n'); }
-        assets.add(AssetAutoload.triple(ref));
+        if (!h.matches().test(p)){ continue; }
+        var type= AutoloadHandler.standardTypeName(pkgName, ref, p);
+        var prev= declaredBy.putIfAbsent(type, ref);
+        if (prev != null){ throw Report.autoloadedNamesCollide(ref, prev.fearPath(), ref.fearPath(), type); }
+        var t= AssetAutoload.triple(ref);
+        out.append(h.generate(t, p, type));
+        assets.add(t);
       }
     }
     return new Generated(out.toString(), List.copyOf(assets));
-  }
-  private static void checkNotDeclared(LinkedHashMap<String,Ref> declaredBy, Ref ref, String type){
-    var prev= declaredBy.putIfAbsent(type, ref);
-    if (prev != null){ throw Report.autoloadedNamesCollide(ref, prev.fearPath(), ref.fearPath(), type); }
   }
   public static Ref syntheticRef(String pkgName, String text){
     return new SyntheticRef(SourceOracle.root+pkgName+autoloadFileSuffix, text);

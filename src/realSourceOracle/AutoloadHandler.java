@@ -13,21 +13,8 @@ import userMessages.Report;
 import utils.Pop;
 
 public record AutoloadHandler(Predicate<String> matches, String baseType){
-  public AutoloadedRes generate(SourceOracle.Ref ref, String path, String pkgName){
-    if (!matches.test(path)){ return AutoloadedRes.none(); }
-    var type= standardTypeName(pkgName, ref, path);
-    return new AutoloadedRes(
-      type+": "+baseType+"{\n"
-      +AssetAutoload.descriptorMethods(ref, path)
-      +"}\n",
-      List.of(type)
-    );
-  }
-  static List<String> componentsAfterPackage(String pkgName,String path){
-    var cs= components(path);
-    int i= cs.indexOf(pkgName);
-    assert i >= 0 && i + 1 < cs.size();
-    return cs.subList(i + 1, cs.size());
+  String generate(SourceOracleWithAutoload.Triple t, String path, String type){
+    return type+": "+baseType+"{\n"+AssetAutoload.descriptorMethods(t, path)+"}\n";
   }
   static List<String> components(String path){
     assert path.startsWith(SourceOracle.root);
@@ -39,7 +26,10 @@ public record AutoloadHandler(Predicate<String> matches, String baseType){
     return name.substring(0,dot);
   }
   static String standardTypeName(String pkgName,SourceOracle.Ref ref,String path){
-    var cs= componentsAfterPackage(pkgName,path);
+    var all= components(path);
+    int i= all.indexOf(pkgName);
+    assert i >= 0 && i + 1 < all.size();
+    var cs= all.subList(i + 1, all.size());
     var res= Pop.right(cs).stream()
       .map(AutoloadHandler::capFirst)
       .collect(Collectors.joining())

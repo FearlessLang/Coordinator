@@ -2,25 +2,14 @@ package realSourceOracle;
 
 import java.nio.file.Path;
 import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import tools.Fs;
 import tools.SourceOracle;
 import utils.Push;
 
 public record ZipEntry(Path root, Path local, List<String> segments, List<String> zips, String lastZips) implements SourceOracle.Ref{
-  @Override public String fearPath(){
-    return "fear:/"+Stream.concat(localSegments(local).stream(), segments.stream())
-      .collect(Collectors.joining("/"));
-  }
+  @Override public String fearPath(){ return "fear:/"+String.join("/", Push.of(ZipWellFormedness.dropZipExt(PathEntry.localSegments(local)), segments)); }
   @Override public byte[] loadBytes(){ return ZipLocator.entryBytes(root.resolve(local), zips,lastZips); }
   @Override public long lastModified(){ return Fs.lastModified(root.resolve(local)); }
-  static List<String> localSegments(Path local){
-    var res= PathEntry.localSegments(local);
-    var last= res.getLast();
-    assert last.endsWith(".zip");
-    return Push.of(res.subList(0, res.size()-1), last.substring(0, last.length()-4));
-  }
   @Override public String toString(){ return fearPath(); }
 }

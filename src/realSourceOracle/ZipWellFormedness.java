@@ -28,7 +28,10 @@ public final class ZipWellFormedness{
   }
   private static void reqCollect(Path diskZip, Path root, Path local, List<String> steps, int depth, ArrayList<ZipEntry> out){
     if (depth > maxZipNesting){ throw Report.zipNestingTooDeep(diskZip, steps, depth, maxZipNesting); }
-    for (var name: ZipLocator.entryNames(diskZip, steps)){ singleName(diskZip, root, local, steps, depth, out, name); }
+    for (var name: ZipLocator.entryNames(diskZip, steps)){
+      out.add(new ZipEntry(root, local, zipsToSegments(steps, name), steps, name));
+      if (name.endsWith(".zip")){ reqCollect(diskZip, root, local, Push.of(steps, name), depth+1, out); }
+    }
   }
   private static void reqNoFileUsedAsDirectory(List<ZipEntry> out){
     for (var e: out){
@@ -42,7 +45,7 @@ public final class ZipWellFormedness{
   private static void reqNoFolderForNestedZipName(List<ZipEntry> out){
     for (var e: out){
       if (!e.lastZips().endsWith(".zip")){ continue; }
-      var folder= Push.of(Pop.right(e.segments()), lastSegmentOf(e.segments().getLast()));
+      var folder= dropZipExt(e.segments());
       var inFolder= out.stream()
         .filter(o->o.zips().equals(e.zips()))
         .filter(o->isProperPrefix(folder, o.segments()))
@@ -54,23 +57,16 @@ public final class ZipWellFormedness{
   private static boolean isProperPrefix(List<String> prefix, List<String> full){
     return full.size() > prefix.size() && full.subList(0, prefix.size()).equals(prefix);
   }
-  private static void singleName(Path diskZip, Path root, Path local, List<String> steps, int depth, ArrayList<ZipEntry> out, String name){
-    out.add(new ZipEntry(root, local, zipsToSegments(steps, name),steps,name));
-    if (name.endsWith(".zip")){ reqCollect(diskZip,root,local, Push.of(steps, name), depth+1, out); }
-  }
   private static List<String> zipsToSegments(List<String> steps, String name){
     assert steps.stream().allMatch(e->e.endsWith(".zip"));
     return Stream.concat(
-      steps.stream().map(e->segmentsOf(e)).flatMap(List::stream),
+      steps.stream().flatMap(e->dropZipExt(List.of(e.split("/"))).stream()),
       Stream.of(name.split("/"))
     ).toList();
   }
-  private static List<String> segmentsOf(String step){
-    var res= List.of(step.split("/"));
-    return Push.of(res.subList(0, res.size()-1),lastSegmentOf(res.getLast()));
-  }
-  private static String lastSegmentOf(String e){
-    assert e.endsWith(".zip");
-    return e.substring(0, e.length()-4);
+  static List<String> dropZipExt(List<String> segments){
+    var last= segments.getLast();
+    assert last.endsWith(".zip");
+    return Push.of(Pop.right(segments), last.substring(0, last.length()-4));
   }
 }
