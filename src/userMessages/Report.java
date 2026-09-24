@@ -434,6 +434,22 @@ project Fearless keeps track of.
 
 The marker file "%s%s" in that folder holds the name: rename it to change the name.
 """.formatted(alias,wanted,path(folder.toString()),alias,".fearless"));}
+  public static UserError managerFolderNotAProject(Path given, Path managerDir){ return new UserError("""
+Fearless cannot keep track of this folder as a project.
+
+You started Fearless on:
+%s
+That is inside the manager folder of this Fearless:
+%s
+The manager folder holds what Fearless remembers about your projects: it is
+never a project itself.
+""".formatted(path(given.toString()),path(managerDir.toString())));}
+  public static UserError notRegistered(String verb, Path folder){ return new UserError("""
+Fearless was asked to "%s" a folder it does not keep track of:
+%s
+Only "select" adds a folder to the projects Fearless keeps track of; every
+other request applies to a folder Fearless already keeps track of.
+""".formatted(verb,path(folder.toString())));}
 
   //-- the Eclipse installation the user picks to connect to
   public static UserError notAnEclipseInstall(Path folder){ return new UserError("""
