@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.LongStream;
 import java.util.stream.Stream;
 
 import userMessages.Report;
@@ -44,11 +45,20 @@ public interface Coordinator {
       "-DfearlessBase.dir="+base);
   }
   default SourceOracle sourceOracle(Path path){ return new RealSourceOracleWithZip(path); }
-  static List<String> pkgNames(Path path){
+  static Map<String,Boolean> pkgsBuilt(Path path){
     var o= new RealSourceOracleWithZip(path);
     var map= Helper.pkgMap(o,path);
-    map.values().forEach(u->Helper.okPkgContent(u,path));
-    return List.copyOf(map.keySet());
+    var ranks= map.values().stream().map(u->Helper.okPkgContent(u,path)).toList();
+    var out= Helper.out(path);
+    var res= new LinkedHashMap<String,Boolean>();
+    for (var r: ranks){
+      var pkg= Helper.pkgName(r);
+      var below= ranks.stream().filter(d->Helper.rankNumber(d) < Helper.rankNumber(r)).mapToLong(d->out.pkgApiStamp(Helper.pkgName(d)));
+      var own= map.get(pkg).stream().mapToLong(Ref::lastModified);
+      var maxIn= LongStream.concat(LongStream.concat(own,below),LongStream.of(out.mapStamp())).max().getAsLong();
+      res.put(pkg,out.stillBuilt(pkg,map.get(pkg),maxIn));
+    }
+    return Collections.unmodifiableMap(res);
   }
   default String main(Path project, SourceOracle stLib) throws InterruptedException{ return Helper.main(this, project, stLib); }
   default List<String> compile(Path project, SourceOracle stLib){ return Helper.compile(this, project, stLib); }
