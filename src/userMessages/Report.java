@@ -439,11 +439,19 @@ Fearless cannot keep track of this folder as a project.
 
 You started Fearless on:
 %s
-That is inside the manager folder of this Fearless:
+The manager folder of this Fearless is:
 %s
 The manager folder holds what Fearless remembers about your projects: it is
-never a project itself.
+never part of a project, and no project is inside it.
 """.formatted(path(given.toString()),path(managerDir.toString())));}
+  public static UserError projectFolderIsRoot(Path root){ return new UserError("""
+Fearless cannot keep track of the root of a drive or of the file system as a
+project.
+
+You started Fearless on:
+%s
+Put the project in a folder inside it, and start Fearless on that folder.
+""".formatted(path(root.toString())));}
   public static UserError projectFolderUnsafePath(Path folder, int c){ return new UserError("""
 Fearless cannot keep track of this project folder: its path holds the
 character %s, outside the Fearless character set.
