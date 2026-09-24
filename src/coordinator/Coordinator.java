@@ -12,6 +12,7 @@ import java.util.Set;
 import java.util.stream.Stream;
 
 import userMessages.Report;
+import userMessages.Violation;
 import core.AllLs;
 import core.FearlessException;
 import core.LiteralDeclarations;
@@ -34,12 +35,13 @@ import utils.Range;
 
 public interface Coordinator {
   default String runAllMains(String pkgName,OutputOracle out) throws InterruptedException{
-    return JavaTool.runMainFromJars(runData(out.rootDir().getParent()), Push.of(out.rootDir().resolve("gen_java"),sharedClasspath()), pkgName+".Main");
+    return JavaTool.runMainFromJars(runData(out.rootDir().getParent(),stdLibBase()), Push.of(out.rootDir().resolve("gen_java"),sharedClasspath()), pkgName+".Main");
   }
-  static List<String> runData(Path project){
+  static List<String> runData(Path project, Path base){
     return List.of(
       "--enable-native-access=ALL-UNNAMED",
-      "-DfearlessUser.dir="+project);
+      "-DfearlessUser.dir="+project,
+      "-DfearlessBase.dir="+base);
   }
   default SourceOracle sourceOracle(Path path){ return new RealSourceOracleWithZip(path); }
   static List<String> pkgNames(Path path){
@@ -51,9 +53,9 @@ public interface Coordinator {
   default String main(Path project, SourceOracle stLib) throws InterruptedException{ return Helper.main(this, project, stLib); }
   default List<String> compile(Path project, SourceOracle stLib){ return Helper.compile(this, project, stLib); }
   default Optional<Map<String,String>> mains(Path project, SourceOracle stLib){ return Helper.mains(this, project, stLib); }
-  static ChildJvm startMain(Path project, String main, List<Path> sharedClasspath, java.util.function.Consumer<String> out){
+  static ChildJvm startMain(Path project, Path base, String main, List<Path> sharedClasspath, java.util.function.Consumer<String> out){
     var pkg= main.substring(0, main.indexOf('.'));
-    return JavaTool.startMainFromJars(runData(project), Push.of(genJava(project),sharedClasspath), pkg+".Main", out, main);
+    return JavaTool.startMainFromJars(runData(project,base),Push.of(genJava(project),sharedClasspath), pkg+".Main", out, main);
   }
   static Path genJava(Path project){ return project.resolve(outDir).resolve("gen_java"); }
   String outDir= ".fearless_out";
@@ -77,6 +79,7 @@ public interface Coordinator {
     Fs.ensureDir(path);
     return path;
   }
+  default Path stdLibBase(){ return JavacTool.reqAppDir(Violation::mustUseLauncher).resolve("stdLib").resolve("base"); }
   default Optional<Path> baseCachePath(){ return Optional.empty(); }
   default List<Path> sharedClasspath(){
     return Stream.concat(Stream.of(modsPath()), baseCachePath().stream()).toList();

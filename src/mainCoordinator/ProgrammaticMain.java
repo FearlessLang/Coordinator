@@ -33,6 +33,7 @@ public record ProgrammaticMain(StringBuilder out, StringBuilder err,String fName
     var oracle= SourceOracle.debugBuilder().put(fName,code).build();
     var c= new Coordinator(){
       @Override public SourceOracle sourceOracle(Path path){ return oracle; }
+      @Override public Path stdLibBase(){ return stdLib; }
       @Override public BackendTools backendTools(String pkgName, SourceOracle o, OtherPackages other, List<Literal> core, CapabilityEnvironment capabilities){
         return BackendTools.of(pkgName, o, other, core, dest.resolve(Coordinator.outDir), baseCachePath(), stdRt, capabilities);
       }
