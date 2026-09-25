@@ -151,6 +151,7 @@ top level main
         .free: F[Nat] -> Free: F[Nat], CaptureFree{ 5 };
         .immLocal: F[Nat] -> Block#.let x= {5}.return{ ImmLocal: F[Nat]{ x } };
         .readParam(x: read Var[Nat]): read F[Nat] -> read ReadParam: F[Nat]{ x.get };
+        .isoParam(x: iso Var[Nat]): mut MF[Nat] -> mut IsoParam: MF[Nat]{ x.get };
         .mutLocal: mut MF[Nat] -> Block#.let[mut Var[Nat]] x= {Vars#[Nat]5}.return{ mut MutLocal: MF[Nat]{ x.get } };
         imm .immThis: F[Nat] -> ImmThis: F[Nat]{ this.val };
         mut .mutThis: mut MF[Nat] -> mut MutThis: MF[Nat]{ this.val };
@@ -177,6 +178,7 @@ top level main
       ImmLocal$b4$0.java only imm
       ImmThis$5k$0.java only imm
       ImmX$p$1.java only imm
+      IsoParam$b4$0.java
       Main.java
       MutLocal$b4$0.java
       MutThis$5k$0.java
