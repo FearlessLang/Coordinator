@@ -503,6 +503,38 @@ Hello:Main{s->base.Debug#("from z")}
     if (waiter.isAlive()){ child.kill(); Assertions.fail("first! did not return within 60s while the later elements diverge:\n"+out); }
     utils.Err.strCmp("0\n", out.toString());
   }
+  static boolean recursionCompiled;
+  String runRecursionMain(String main) throws InterruptedException{
+    var root= ResolveResource.integrationTests.resolve("runRecursion");
+    if (!recursionCompiled){ compileOk("runRecursion"); recursionCompiled= true; }
+    var out= new StringBuilder();
+    Coordinator.startMain(root, ResolveResource.stLibPath, main, coordinator(root).sharedClasspath(), out::append).await();
+    return out.toString();
+  }
+  @Test void aDeepRecursionOverflowsTheStackOfMain() throws InterruptedException{
+    utils.Err.strCmp("[###]java.lang.StackOverflowError[###]", runRecursionMain("rec.NaiveSum"));
+  }
+  @Test void runRecursionOnEveryStepIsDeepAndFast() throws InterruptedException{
+    long start= System.nanoTime();
+    utils.Err.strCmp("500000500000", runRecursionMain("rec.DeepSum"));
+    long millis= (System.nanoTime()-start)/1_000_000;
+    Assertions.assertTrue(millis < 20_000, "one million steps took "+millis+"ms");
+  }
+  @Test void aFamilyNestingTooManyCallsOnOneThreadOverflows() throws InterruptedException{
+    utils.Err.strCmp("[###]java.lang.StackOverflowError[###]", runRecursionMain("rec.CrowdedSum"));
+  }
+  @Test void aFamilyWithTheSameStackAndALowerDepthFits() throws InterruptedException{
+    utils.Err.strCmp("500000500000", runRecursionMain("rec.SpreadSum"));
+  }
+  @Test void aFamilyNestedInAnotherRunsOnItsOwnThreads() throws InterruptedException{
+    utils.Err.strCmp("2100000", runRecursionMain("rec.MixedSum"));
+  }
+  @Test void aDeeplyNestedStructureIsBuiltAndWalked() throws InterruptedException{
+    utils.Err.strCmp("1000000", runRecursionMain("rec.NestSize"));
+  }
+  @Test void errorsReachTheCallerAcrossThreads() throws InterruptedException{
+    utils.Err.strCmp("deep boom", runRecursionMain("rec.ErrorsPropagate"));
+  }
   @Test void aStackTraceNamesTheFearlessTypesMethodsAndLines(){
     utils.Err.strCmp("""
 AAAAh
