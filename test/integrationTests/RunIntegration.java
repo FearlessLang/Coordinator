@@ -556,7 +556,7 @@ In file: fear:/_pkb/_rank_app200.fear
 
 While inspecting a type name
 Package "nonexistentpkg" does not exist.
-Visible packages: "base".
+Visible packages: "base", "pkb".
 Error 7 WellFormedness
 """, ex.getMessage());
   }
