@@ -595,6 +595,39 @@ Hello:Main{s->base.Debug#("from z")}
   @Test void errorsReachTheCallerAcrossThreads() throws InterruptedException{
     utils.Err.strCmp("deep boom", runRecursionMain("rec.ErrorsPropagate"));
   }
+  @Test void anErrorAcrossThreadsShowsOneContinuousStackTrace() throws InterruptedException{
+    utils.Err.strCmp("""
+deep boom
+mut Fail.then error line: 18 in file _rec/_rank_app.fear
+imm True.if(_) error line: 56 in file datatypes/bools.fear
+imm Fail#(_) error line: 18 in file _rec/_rank_app.fear
+mut Fail# error line: 18 in file _rec/_rank_app.fear
+imm _RunRecursion#(_,_) error line: 24 in file run_recursion.fear
+imm RunRecursion#(_) error line: 15 in file run_recursion.fear
+mut Fail.else error line: 18 in file _rec/_rank_app.fear
+imm False.if(_) error line: 67 in file datatypes/bools.fear
+imm Fail#(_) error line: 18 in file _rec/_rank_app.fear
+mut Fail# error line: 18 in file _rec/_rank_app.fear
+imm _RunRecursion#(_,_) error line: 24 in file run_recursion.fear
+imm RunRecursion#(_) error line: 15 in file run_recursion.fear
+mut Fail.else error line: 18 in file _rec/_rank_app.fear
+imm False.if(_) error line: 67 in file datatypes/bools.fear
+imm Fail#(_) error line: 18 in file _rec/_rank_app.fear
+mut Fail# error line: 18 in file _rec/_rank_app.fear
+imm _RunRecursion#(_,_) error line: 24 in file run_recursion.fear
+imm RunRecursion#(_) error line: 15 in file run_recursion.fear
+mut Fail.else error line: 18 in file _rec/_rank_app.fear
+imm False.if(_) error line: 67 in file datatypes/bools.fear
+imm Fail#(_) error line: 18 in file _rec/_rank_app.fear
+mut Fail# error line: 18 in file _rec/_rank_app.fear
+imm _RunRecursion#(_,_) error line: 24 in file run_recursion.fear
+imm RunRecursion#(_) error line: 15 in file run_recursion.fear
+mut Fail.else error line: 18 in file _rec/_rank_app.fear
+imm False.if(_) error line: 67 in file datatypes/bools.fear
+imm Fail#(_) error line: 18 in file _rec/_rank_app.fear
+imm GluedTrace.main(_) error line: 27 in file _rec/_rank_app.fear
+""", runRecursionMain("rec.GluedTrace"));
+  }
   @Test void aStackTraceNamesTheFearlessTypesMethodsAndLines(){
     utils.Err.strCmp("""
 AAAAh
