@@ -417,96 +417,6 @@ Fearless expands each zip file into a folder: rename this file if it is not mean
      +"supported by compression tools (zip) or version control systems (git).");
   }
 
-  //-- which project folders the manager keeps track of
-  public static UserError folderNestedWithRegistered(Path folder, Path registered){ return new UserError("""
-Fearless cannot keep track of this project folder.
-
-You started Fearless on:
-%s
-Fearless is already keeping track of:
-%s
-One of the two is inside the other. Fearless keeps track of project folders
-that do not overlap, so that every file belongs to exactly one project.
-
-Use the folder Fearless already keeps track of, or make Fearless forget that
-folder first, and then start Fearless on this one.
-""".formatted(
-    path(folder.toString()),
-    path(registered.toString())
-  ));}
-
-  public static UserError projectNamed(Path folder, String wanted, String alias){ return new UserError("""
-Fearless keeps track of this project folder as "%s", not as "%s".
-
-You started Fearless on:
-%s
-A project name uses only lowercase letters, digits and underscores,
-starts with a letter or an underscore, and is not the name of another
-project Fearless keeps track of.
-
-The marker file "%s%s" in that folder holds the name: rename it to change the name.
-""".formatted(alias,wanted,path(folder.toString()),alias,".fearless"));}
-  public static UserError managerFolderNotAProject(Path given, Path managerDir){ return new UserError("""
-Fearless cannot keep track of this folder as a project.
-
-You started Fearless on:
-%s
-The manager folder of this Fearless is:
-%s
-The manager folder holds what Fearless remembers about your projects: it is
-never part of a project, and no project is inside it.
-""".formatted(path(given.toString()),path(managerDir.toString())));}
-  public static UserError projectFolderIsRoot(Path root){ return new UserError("""
-Fearless cannot keep track of the root of a drive or of the file system as a
-project.
-
-You started Fearless on:
-%s
-Put the project in a folder inside it, and start Fearless on that folder.
-""".formatted(path(root.toString())));}
-  public static UserError notRegistered(String verb, Path folder){ return new UserError("""
-Fearless was asked to "%s" a folder it does not keep track of:
-%s
-Only "select" adds a folder to the projects Fearless keeps track of; every
-other request applies to a folder Fearless already keeps track of.
-""".formatted(verb,path(folder.toString())));}
-
-  //-- the Eclipse installation the user picks to connect to
-  public static UserError notAnEclipseInstall(Path folder){ return new UserError("""
-That is not an Eclipse installation.
-
-Folder:
-%s
-
-Fearless expects the file you pick to sit next to Eclipse's own ".eclipseproduct"
-file, as it does in an unpacked Eclipse download.
-
-Pick the Eclipse executable itself, for example "eclipse.exe" inside the folder
-you unpacked Eclipse into.
-""".formatted(path(folder.toString())));
-  }
-
-  public static UserError projectIconsMany(Path dir, List<Path> found){ return new UserError("""
-More than one .png file was found for this project's icon.
-
-Looked in:
-%s
-
-Found:
-%s
-
-Keep exactly one .png file there.
-""".formatted(path(dir.toString()),Join.of(found.stream().map(p->"  "+p.getFileName()),"","\n","",""))); }
-  public static UserError projectIconUnreadable(Path icon){ return new UserError("""
-The icon of this project is not a PNG image Fearless can read.
-
-File:
-%s
-
-The icon of a project is the only .png file in its ".config/icon" folder:
-replace that file with a PNG image, or remove it.
-""".formatted(path(icon.toString()))); }
-
   //-- project layout: which folder defines a package, and the rank file of each package
   public static UserError projectEmpty(Path root){ return new UserError("""
 The fearless project folder contains no *.fear files
@@ -663,7 +573,6 @@ File:
   //the language: parse errors, well formedness, types. Here they only become terminal.
   public static UserError sourceError(String rendered){ return new UserError(rendered); }
 
-  public static UserError infoError(String rendered){ return new UserError(rendered); }
 
   public static UserError docReferences(List<String> problems){ return new UserError("""
 Broken reference in a doc comment.
