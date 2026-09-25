@@ -30,6 +30,7 @@ import core.E.Literal;
 import core.OtherPackages;
 import resources.ResolveResource;
 import testBuildBase.BaseCacheBuilder;
+import naiveBackend.Backend;
 import naiveBackend.BackendTools;
 import realSourceOracle.RealSourceOracleWithZip;
 import realSourceOracle.SourceOracleWithAutoload;
@@ -132,6 +133,65 @@ top level main
     Assertions.assertTrue(fails.isEmpty(), ()->"Fearless unit tests failed in base's generated examples:\n"+String.join("\n",fails));
   }
   @Test void testDocs(){ testOk("testDocs");}
+  @Test void onlyImmCapture(@TempDir Path tmp){
+    var root= tmp.resolve("root");
+    UserError.root= root;
+    Fs.ensureDir(root.resolve("_oic"));
+    Fs.writeUtf8(root.resolve("_oic").resolve("_rank_app.fear"), """
+      use base.Nat as Nat;
+      use base.F as F;
+      use base.MF as MF;
+      use base.Var as Var;
+      use base.Vars as Vars;
+      use base.Block as Block;
+      use base.CaptureFree as CaptureFree;
+      Cases:{
+        read .val: Nat -> 5;
+        .none: F[Nat] -> NoCapture: F[Nat]{ 5 };
+        .free: F[Nat] -> Free: F[Nat], CaptureFree{ 5 };
+        .immLocal: F[Nat] -> Block#.let x= {5}.return{ ImmLocal: F[Nat]{ x } };
+        .readParam(x: read Var[Nat]): read F[Nat] -> read ReadParam: F[Nat]{ x.get };
+        .isoParam(x: iso Var[Nat]): mut MF[Nat] -> mut IsoParam: MF[Nat]{ x.get };
+        .mutLocal: mut MF[Nat] -> Block#.let[mut Var[Nat]] x= {Vars#[Nat]5}.return{ mut MutLocal: MF[Nat]{ x.get } };
+        imm .immThis: F[Nat] -> ImmThis: F[Nat]{ this.val };
+        mut .mutThis: mut MF[Nat] -> mut MutThis: MF[Nat]{ this.val };
+        .immX[X:imm](x: X): F[X] -> ImmX[X:imm]: F[X]{ x };
+        .anyX[X:*](x: X): mut MF[X] -> mut AnyX[X:*]: MF[X]{ x };
+        .lambda(x: Nat): F[Nat] -> { x };
+      }
+      """);
+    var genJava= tmp.resolve("genJava");
+    var base= coordinator(root);
+    new Coordinator(){
+      public Path modsPath(){ return base.modsPath(); }
+      public Optional<Path> baseCachePath(){ return base.baseCachePath(); }
+      public Path stdLibBase(){ return base.stdLibBase(); }
+      public void backend(String pkgName, List<Literal> core, SourceOracle oracle, OtherPackages other, CapabilityEnvironment capabilities){
+        new Backend(genJava, base.backendTools(pkgName, oracle, other, core, capabilities)).produceJavaCode();
+      }
+    }.compile(root, stLib);
+    var got= Fs.walk(genJava, s->s.filter(Files::isRegularFile).sorted().map(p->p.getFileName()+(Fs.readUtf8(p).contains("_base.OnlyImmCapture") ? " only imm" : "")).toList());
+    utils.Err.strCmp("""
+      AnyX$p$1.java
+      Cases$1c$0.java
+      Free$o$0.java only imm
+      ImmLocal$b4$0.java only imm
+      ImmThis$5k$0.java only imm
+      ImmX$p$1.java only imm
+      IsoParam$b4$0.java
+      Main.java
+      MutLocal$b4$0.java
+      MutThis$5k$0.java
+      NoCapture$n4$0.java only imm
+      ReadParam$ls$0.java
+      _ACase$1k$0.java only imm
+      _BCase$1k$0.java only imm
+      _CCase$1k$0.java only imm
+      _DCase$1k$0.java only imm
+      _FCase$1k$0.java only imm
+      _GCase$1k$0.java only imm
+      """, String.join("\n", got)+"\n");
+  }
   @Test void testAssets(){ testOk("testAssets");}
   private Path theOneLogFile(Path dir, String prefix) throws IOException{
     try (var files= Files.list(dir)){

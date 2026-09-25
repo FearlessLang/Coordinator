@@ -8,6 +8,7 @@ import java.util.*;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import core.*;
 import core.E.*;
@@ -78,7 +79,7 @@ public class Backend{
   }
 
   String extendsClause(Literal lit){ return Join.of(
-    lit.cs().stream().map(c->typeName(c.name())).distinct(),
+    Stream.concat(lit.cs().stream().map(c->typeName(c.name())).distinct(), lit.onlyImmCapture().inner ? Stream.of("_base.OnlyImmCapture") : Stream.of()),
     " extends ",", ","",""
   );}
   String paramsSig(M m){ return Join.of(
@@ -101,7 +102,7 @@ public class Backend{
     new ProduceBody(sb,this, iface, l.thisName(), m).emitBody();
   }
   String ifaceNameFor(Literal l){
-    if (!l.infName()){ return decTypeName(l.name()); }
+    if (!l.infName() || l.onlyImmCapture().inner){ return decTypeName(l.name()); }
     if (l.cs().isEmpty()){ return "Object"; }
     return typeName(l.cs().getFirst().name());
   }
