@@ -20,26 +20,13 @@ public final class Violation {
   private Violation(){}
 
   //-- the pieces of text that more than one message needs, written once
-  static String reported(Throwable cause){ return "Reported reason:\n"+cause.getMessage(); }
+  public static String reported(Throwable cause){ return "Reported reason:\n"+cause.getMessage(); }
   private static Supplier<List<String>> running= List::of;
   public static void running(Supplier<List<String>> live){ running= live; }
   static String associatedPrograms(){ return Join.of(running.get().stream().map(s->"  "+s),"","\n","",""); }
-  static String freshCopyThenReport(){ return """
+  public static String freshCopyThenReport(){ return """
     Replace this Fearless folder with a fresh copy.
     If this keeps happening, report the problem.
-    """;
-  }
-  static String managerFolderIntro(){ return """
-    Fearless uses one process (called the manager process)
-    to keep track of other Fearless processes (the user processes).
-    The manager folder is the folder used by the manager process to store
-    coordination information into files.
-    """;
-  }
-  static String blockingPrograms(){ return """
-    Programs that may use or block this folder include security software
-    (antivirus, ransomware protection, endpoint protection), backup tools,
-    sync tools, and file preview tools.
     """;
   }
 
@@ -57,18 +44,6 @@ public final class Violation {
     (hasConsole ? "The OS provided" : "fearless received")+" a broken path for the input file.",
     "Value: "+s
   );}
-  public static UserError programFolderNotFound(Path startedFrom, String expectedDirName){
-    return new UserError("""
-      This copy of Fearless appears to have been moved, renamed, or damaged:
-      no folder named "%s" exists above
-      %s
-
-      %s""".formatted(
-        expectedDirName,
-        path(startedFrom.toString()),
-        freshCopyThenReport()
-      ));
-  }
 
   //-- the operating system does not provide a service we need
   public static UserError unsupportedOperatingSystem(){
@@ -79,52 +54,6 @@ public final class Violation {
 
       The operating system reported itself as:
       %s""".formatted(path(System.getProperty("os.name","<not reported>"))));
-  }
-  public static UserError couldNotStartGui(Throwable cause){
-    return new UserError("""
-      Fearless could not open its window.
-
-      Fearless needs to show a window, but opening the window failed.
-
-      %s""".formatted(reported(cause)), cause);
-  }
-  public static UserError desktopHidesWindow(){
-    return new UserError("""
-      The desktop did not show the Fearless manager window.
-
-      Fearless asked the desktop to show its window, and the desktop keeps
-      reporting the window as minimized. When this happens every program with
-      decorated windows is affected, not only Fearless: on GNOME it means the
-      process that decorates windows (mutter-x11-frames) has died.
-      Log out and log in again, then start Fearless again.
-      """).bare();
-  }
-  public static UserError noSystemTray(){
-    return new UserError("""
-      Fearless could not add its icon to the system tray.
-
-      This desktop offers no system tray, and the tray icon is how a closed
-      manager window is brought back.
-      Enable the system tray of this desktop, then start Fearless again.
-      """);
-  }
-  public static UserError trayIconRemoved(){
-    return new UserError("""
-      The desktop removed the Fearless icon from the system tray.
-
-      The tray icon is how a closed manager window is brought back, and the
-      desktop took it away: its system tray went away or rejected the icon.
-      Restore the system tray of this desktop, then start Fearless again.
-      """);
-  }
-  public static UserError couldNotAddTrayIcon(Throwable cause){
-    return new UserError("""
-      Fearless could not add its icon to the system tray.
-
-      This desktop offers a system tray, and the tray icon is how a closed
-      manager window is brought back, but adding the icon failed.
-
-      %s""".formatted(reported(cause)), cause);
   }
   //Fearless asks the operating system for English so that the failures it reports back
   //to us are text we can recognise. Without it we cannot tell one failure from another.
@@ -141,47 +70,6 @@ public final class Violation {
   public static UserError couldNotForceEnglish(String what){ return couldNotForceEnglish(what, null); }
 
   //-- the packaged runtime, or this copy of Fearless, is damaged
-  public static UserError vmOrLinkageFailure(Throwable cause){
-    return new UserError("""
-      Fearless crashed because of a low-level JVM failure.
-
-      Fearless includes its own packaged JVM. The packaged JVM failed, or the
-      packaged Fearless code could not be linked correctly.
-
-      %s""".formatted(freshCopyThenReport()), cause);
-  }
-  //The icon travels inside the program folder: Fearless put it there when it was built.
-  //Failing to load it is not a fact about the user's files, it is a fact about this copy
-  //of Fearless, so it is reported like the other damaged-copy failures.
-  public static UserError couldNotLoadIcon(Path icon, Throwable cause){
-    return new UserError("""
-      Fearless could not load its own icon.
-
-      This copy of Fearless should already have this file:
-      %s
-
-      %s
-
-      %s""".formatted(
-        path(icon.toString()),
-        reported(cause),
-        freshCopyThenReport()
-      ), cause);
-  }
-  public static UserError couldNotDecodeIcon(Path icon){
-    return new UserError("""
-      Fearless could not load its own icon.
-
-      This copy of Fearless should already have this file:
-      %s
-      The file is there and could be read, but it does not hold an image this
-      Java runtime can decode.
-
-      %s""".formatted(
-        path(icon.toString()),
-        freshCopyThenReport()
-      ));
-  }
   public static UserError cacheMissingBaseApiFile(Path apiJson){
     return new UserError("""
       Fearless could not load the API of its own standard library.
@@ -195,145 +83,6 @@ public final class Violation {
       ));
   }
 
-  //-- the manager folder: the files Fearless processes use to find each other
-  public static UserError couldNotCreateManagerFolder(Path dir, Throwable cause){
-    return new UserError("""
-      Fearless could not create its manager folder.
-
-      Fearless tried to create this folder:
-      %s
-
-      %s
-      The manager folder needs write permission.
-
-      %s
-
-      Move or unpack Fearless into a folder with write permission, then start
-      Fearless again.""".formatted(
-        path(dir.toString()),
-        managerFolderIntro(),
-        reported(cause)
-      ), cause);
-  }
-  public static UserError couldNotUseInstanceLock(Path lockFile, Throwable cause){
-    return new UserError("""
-      Fearless could not use the file that marks the manager process.
-
-      %s
-      While a manager process runs, it keeps this file reserved, so that any
-      new Fearless process can tell that a manager already exists. This
-      feature is called file locking. Fearless tried to open and reserve:
-      %s
-
-      %s
-
-      Common fixes are to use a manager folder with write permission, or to
-      close another program that is using or blocking this folder.
-      %s
-      """.formatted(
-        managerFolderIntro(),
-        path(lockFile.toString()),
-        reported(cause),
-        blockingPrograms()
-      ), cause);
-  }
-  //Written by EVERY starting process, before we know whether a manager
-  //already exists; the text must not claim that one does.
-  //Only the final atomic rename is reported here: writing the message file
-  //itself is delegated to fileSupport, which explains its own failures.
-  public static UserError couldNotLeaveStartMessage(Path msgDir, Throwable cause){
-    return new UserError("""
-      Fearless could not leave its start message.
-
-      %s
-      Every starting Fearless process writes one small message file into this
-      folder:
-      %s
-      The manager process (an already running one, or the process that is
-      starting right now) then reads and removes those files. The message
-      file was written, but renaming it to its final name failed.
-
-      %s
-
-      A manager process may still be running: do not delete the manager
-      folder. If the problem repeats, close programs that may be using or
-      blocking the folder.
-      %s""".formatted(
-        managerFolderIntro(),
-        path(msgDir.toString()),
-        reported(cause),
-        blockingPrograms()
-      ), cause);
-  }
-  public static UserError couldNotWatchMessageFolder(Path msgDir, Throwable cause){
-    return new UserError("""
-      Fearless could not watch its manager folder.
-
-      %s
-      Fearless asked the operating system to tell it when files appear in this
-      folder:
-      %s
-      This feature is called file-change notifications, and the request failed.
-
-      %s""".formatted(
-        managerFolderIntro(),
-        path(msgDir.toString()),
-        reported(cause)
-      ), cause);
-  }
-  public static UserError messageFolderNotWatchable(Path msgDir){
-    return new UserError("""
-      Fearless can no longer watch its manager folder.
-
-      %s
-      Fearless was watching this folder:
-      %s
-      Fearless could watch it when the manager process started, but cannot
-      anymore. Watching a folder means asking the operating system to tell
-      Fearless when files appear in it (file-change notifications).
-
-      The folder may have been removed, replaced, or disconnected, or the
-      operating system may have stopped sending file-change notifications
-      for it.""".formatted(
-        managerFolderIntro(),
-        path(msgDir.toString())
-      ));
-  }
-  //Reading a message file is delegated to fileSupport; this covers the
-  //remaining folder operations of a drain: listing, and removing files.
-  public static UserError couldNotDrainMessageFolder(Path msgDir, Throwable cause){
-    return new UserError("""
-      Fearless could not list its manager folder, or could not remove a
-      message file from it.
-
-      The manager folder is:
-      %s
-      A file may have been deleted, locked, or changed while Fearless was
-      using it, or the folder itself may be blocked.
-
-      %s""".formatted(
-        path(msgDir.toString()),
-        reported(cause)
-      ), cause);
-  }
-
-  public static UserError couldNotSaveRegisteredFolders(Path managerDir, Throwable cause){
-    return new UserError("""
-      Fearless could not save what it remembers about your project folders.
-
-      %s
-      The manager folder is:
-      %s
-      The change was not recorded, so Fearless will not remember it.
-
-      %s
-      %s""".formatted(
-        managerFolderIntro(),
-        path(managerDir.toString()),
-        reported(cause),
-        blockingPrograms()
-      ), cause);
-  }
   public static UserError associationsAmbiguous(String reported){
     return new UserError("""
       Fearless cannot tell which of your Fearless installs should open Fearless
@@ -391,18 +140,6 @@ public final class Violation {
 
       Where the undoing stopped:
       %s""".formatted(reported));
-  }
-  public static UserError associationLauncherMisnamed(Path launcher, String expected){
-    return new UserError("""
-      This copy of Fearless appears to have been damaged:
-      its launcher is not named "%s"
-      %s
-
-      %s""".formatted(
-        expected,
-        path(launcher.toString()),
-        freshCopyThenReport()
-      ));
   }
 
   //-- our own generated files, changed under us

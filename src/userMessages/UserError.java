@@ -36,13 +36,15 @@ import tools.SourceOracle.RefParent;
 /// - Violation: we can no longer do our safe job. Not necessarily a bad actor: an
 ///   operating system that does not provide what we need, a folder we cannot own, or
 ///   our own generated files changed under us all land here.
+/// A program built on Coordinator, like the manager in Controllers, keeps the texts
+/// only it can raise in a message file of its own, with the same two kinds.
 ///
-/// This file holds only what both of them need: the exception, the paths this run
+/// This file holds only what every message file needs: the exception, the paths this run
 /// really used, the path rendering helpers, and how the text reaches a human.
 @SuppressWarnings("serial")
 public final class UserError extends RuntimeException{
-  UserError(String msg){ super(msg); }
-  UserError(String msg, Throwable cause){ super(msg, cause); }
+  public UserError(String msg){ super(msg); }
+  public UserError(String msg, Throwable cause){ super(msg, cause); }
 
   private String recoveryLabel;
   private Runnable recovery;
@@ -51,7 +53,7 @@ public final class UserError extends RuntimeException{
     recoveryLabel= label; recovery= action;
     return this;
   }
-  UserError bare(){ bare= true; return this; }
+  public UserError bare(){ bare= true; return this; }
 
   //The project root this run actually used, so that a message always shows the folder
   //that was really involved. Tests set it to whatever fake root they use; a real run
@@ -105,7 +107,7 @@ public final class UserError extends RuntimeException{
     if (simple){ return "Entry: "+disp(entryName); }
     return "Entry contains non-standard characters.\nShown as: "+disp(entryName);
   }
-  static String path(String path){ return "  "+PrettyFileName.sanitizeAscii(path); }
+  public static String path(String path){ return "  "+PrettyFileName.sanitizeAscii(path); }
 
   //-- reaching a human
   public static String crash(Throwable t){
