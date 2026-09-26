@@ -3,6 +3,7 @@ package scripts;
 
 public class TestAgentTools{
   public static void main(String[] args) throws InterruptedException{
+    DeployPortableFearless.main(args);
     ModularBuild.commons();
     ModularBuild.frontendMain();
     ModularBuild.coordinatorMain();
