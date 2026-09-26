@@ -31,7 +31,7 @@ public class ModularBuild{
   }
   static void frontendTest(){ test(ResolveResource.frontendSrc, "frontend-test"); }
   static void coordinatorTest(){ test(ResolveResource.coordinatorSrc, "coordinator-test", resources); }
-  static void controllerTest(){ test(ResolveResource.controllerSrc, "controller-test"); }
+  static void controllerTest(){ test(ResolveResource.controllerSrc, "controller-test", resources); }
   static void test(Path src, String name, Path... extra){
     var srcs= new ArrayList<>(List.of(src, src.getParent().resolve("test"), src.getParent().resolve("testModule")));
     srcs.addAll(List.of(extra));
