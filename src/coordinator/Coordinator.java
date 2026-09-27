@@ -71,7 +71,7 @@ public interface Coordinator {
   String outDir= ".fearless_out";
   
   default List<Literal> frontend(String pkgName, List<Ref> files, SourceOracle oracle, OtherPackages other,Map<String,String> vres){
-    try{ return new FrontendLogicMain().of(pkgName,vres, files, oracle, other); }
+    try{ return new FrontendLogicMain().of(pkgName,vres, files, other); }
     catch(FearlessException fe){ throw Report.sourceError(fe.render(oracle)); }
   }
   default void backend(String pkgName, List<Literal> core, SourceOracle oracle, OtherPackages other, CapabilityEnvironment capabilities){
@@ -157,7 +157,7 @@ class Helper{
   }
   static Layer mapFromRanks(Coordinator coordinator, List<Ref> allRanks, SourceOracle o, OutputOracle out, SourceOracle stLib){
     Map<String,Map<String,String>> res; try {res= new FrontendLogicMain()
-      .parseRankFiles(allRanks,o, Comparator.comparingInt(Helper::rankNumber));}
+      .parseRankFiles(allRanks, Comparator.comparingInt(Helper::rankNumber));}
     catch(FearlessException fe){ throw Report.sourceError(fe.render(o)); }
     long baseStamp= out.commitMap(res, allRanks.stream().mapToLong(Ref::lastModified).max().getAsLong());
     return new BaseLayer(coordinator,res,baseStamp,stLib);
