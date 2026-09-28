@@ -11,7 +11,7 @@ import metaParser.Frame;
 import metaParser.Message;
 import metaParser.Span;
 
-public class MessageCodePointColumnTest{
+public class MessageCoordinatesTest{
   static final URI file= URI.create("fear:/a.fear");
   static String render(String src, Span s){
     return Message.of(_->src, List.of(new Frame("", s)), "M");
@@ -34,6 +34,28 @@ public class MessageCodePointColumnTest{
 
       001| ?   x
          |     ^
+
+      While inspecting the file
+      M""", render(src, new Span(file,1,3,1,3)));
+  }
+  @Test void byteOrderMarkIsNotAColumn(){
+    var src= "\uFEFFab c";
+    assertEquals("""
+      In file: fear:/a.fear
+
+      001| ab c
+         | ^^
+
+      While inspecting the file
+      M""", render(src, new Span(file,1,1,1,2)));
+  }
+  @Test void formFeedIsNotALineBreak(){
+    var src= "ab\fcd";
+    assertEquals("""
+      In file: fear:/a.fear
+
+      001| ab?cd
+         |   ^
 
       While inspecting the file
       M""", render(src, new Span(file,1,3,1,3)));
