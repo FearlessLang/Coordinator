@@ -1,6 +1,7 @@
 package commonsTests;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.net.URI;
@@ -30,6 +31,11 @@ public class SpanPositionOrderTest{
     var outer= new Span(f,1,1,3,5);
     var inner= new Span(f,2,1,2,20);
     assertTrue(outer.contained(inner));
+  }
+  @Test void containedColumnsStillMatterOnSharedBoundaryLines(){
+    var outer= new Span(f,1,5,3,5);
+    assertFalse(outer.contained(new Span(f,1,3,2,1)));
+    assertFalse(outer.contained(new Span(f,2,1,3,6)));
   }
   @Test void makeSpanEndColOnLaterLineIsNotFirstColumn(){
     var first= new T(K.Word,"a",1,10,List.of());
