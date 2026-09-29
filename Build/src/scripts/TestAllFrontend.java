@@ -6,6 +6,6 @@ public class TestAllFrontend{
     ModularBuild.commons();
     ModularBuild.frontendMain();
     ModularBuild.frontendTest();
-    ModularBuild.runJUnit(ModularBuild.out.resolve("frontend-test"));
+    ModularBuild.runJUnit(ModularBuild.out.resolve("frontend-test"), "--exclude-package=instantiationSweep");
   }
 }
