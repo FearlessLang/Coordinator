@@ -5,7 +5,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 public final class MakeDemo{
-  public static final String markerContent= "Fearless project: open this file to work on the folder it is in.\n";
+  public static final String markerContent= "\n";
   public static void of(Path projectDir){
     hello(projectDir,"demo","Hello");
     if (!Files.exists(projectDir.resolve("start.fearless"))){ Fs.writeUtf8(projectDir.resolve("start.fearless"), markerContent); }
