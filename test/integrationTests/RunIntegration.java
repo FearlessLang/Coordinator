@@ -5,11 +5,13 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.math.BigInteger;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
+import java.security.SecureRandom;
 import java.util.Optional;
 
 import javax.imageio.ImageIO;
@@ -26,6 +28,7 @@ import com.sun.net.httpserver.HttpServer;
 
 import coordinator.CapabilityEnvironment;
 import coordinator.Coordinator;
+import coordinator.OutputOracle;
 import core.E.Literal;
 import core.OtherPackages;
 import resources.ResolveResource;
@@ -40,8 +43,10 @@ import java.util.List;
 import java.util.Map;
 import fileSupport.JUnitReport;
 import tools.Fs;
+import tools.JavaTool;
 import tools.JavacTool;
 import tools.SourceOracle;
+import utils.Push;
 import userMessages.UserError;
 
 public class RunIntegration {
@@ -57,7 +62,8 @@ public class RunIntegration {
     BaseCacheBuilder.buildInto(ResolveResource.coordinatorJars, ResolveResource.stLibDebugOut, Optional.of(baseTestFile));
     Fs.rmTree(reportsDir);
   }
-  Coordinator coordinator(Path project){
+  Coordinator coordinator(Path project){ return coordinator(project, List.of()); }
+  Coordinator coordinator(Path project, List<String> jvmArgs){
     System.setProperty(JavacTool.appDirKey,ResolveResource.stLibPath.getParent()
       .resolve("fearlessArtefact","fearless","app").toString());
     return new Coordinator(){
@@ -67,6 +73,9 @@ public class RunIntegration {
       public BackendTools backendTools(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, CapabilityEnvironment capabilities){
         return BackendTools.of(pkgName, oracle, other, core, project.resolve(Coordinator.outDir), baseCachePath(), ResolveResource.stLibRTPath, capabilities);
       }
+      public String runAllMains(String pkgName, OutputOracle out) throws InterruptedException{
+        return JavaTool.runMainFromJars(Push.of(Coordinator.runData(out.rootDir().getParent(),stdLibBase()),jvmArgs), Push.of(out.rootDir().resolve("gen_java"),sharedClasspath()), "_"+pkgName+".Main");
+      }
     };
   }
   static Path freshIntegrationRoot(String name){
@@ -74,16 +83,22 @@ public class RunIntegration {
     Fs.rmTree(root.resolve(".fearless_out"));
     return root;
   }
-  String run(String name){
-    var project= freshIntegrationRoot(name);
-    try { return coordinator(project).main(project, stLib);}
+  String run(String name){ return main(freshIntegrationRoot(name), List.of()); }
+  String main(Path project, List<String> jvmArgs){
+    try { return coordinator(project, jvmArgs).main(project, stLib);}
     catch (InterruptedException e){ return Assertions.fail(e);}
   }
-  void testOk(String name){
-    var out= run(name);
-    writeJUnitReport(name);
+  void testOk(String name){ unitTestsOk(name, freshIntegrationRoot(name)); }
+  void unitTestsOk(String name, Path root){
+    var marker= "EndOfMain"+new BigInteger(128, new SecureRandom()).toString(36);
+    var out= main(root, List.of("-Dfearless.endMarker="+marker));
+    writeJUnitReport(name, root);
     var fails= out.lines().filter(l->l.startsWith("Test failure ")).toList();
     Assertions.assertTrue(fails.isEmpty(), ()->"Fearless unit tests failed in "+name+":\n"+String.join("\n",fails));
+    var lines= out.lines().toList();
+    var mains= coordinator(root).mains(root, stLib).orElseThrow().size();
+    var allCompleted= lines.stream().filter(marker::equals).count() == mains && lines.getLast().equals(marker);
+    Assertions.assertTrue(allCompleted, ()->"Not all the "+mains+" mains of "+name+" completed: a main that completes prints the line \""+marker+"\", and the output must end with that line. Output:\n"+out);
   }
   static void writeJUnitReport(String name){ writeJUnitReport(name, ResolveResource.integrationTests.resolve(name)); }
   static void writeJUnitReport(String name, Path root){
@@ -92,7 +107,18 @@ public class RunIntegration {
     suites.add(one);
     Fs.writeUtf8(reportsFile, JUnitReport.document(String.join("",suites)));
   }
-  @Test void helloWorld(){ testOk("helloWorld");}
+  @Test void helloWorld(){
+    utils.Err.strCmp("""
+hello world 3
+[Hi]
+[1, 2, 3, 4]
+[11, 12, 13, 14]
+AAAAh
+imm Bar.bar error line: 16 in file _hello/_rank_app.fear
+imm Foo.foo error line: 15 in file _hello/_rank_app.fear
+imm Hello6.main(_) error line: 14 in file _hello/_rank_app.fear
+""", run("helloWorld"));
+  }
   //testUnitTests is the project that checks the failure report itself, so it must fail
   @Test void testUnitTests(){
     var out= run("testUnitTests");
@@ -106,7 +132,7 @@ imm Assert._fail(_) error line: [###]
 imm MyTests# error line: 5 in file _hello/_rank_app.fear
 """, out);
   }
-  @Test void map_a_to_pkc(){ testOk("map_a_to_pkc");}
+  @Test void map_a_to_pkc(){ utils.Err.strCmp("CTEXT\n", run("map_a_to_pkc"));}
   // What counts as a main of a package: a top level type implementing base.Main, and
   // also one declared inside a method when it implements base.CaptureFree, since that
   // is the promise that it captures nothing and so the backend gives it an instance.
@@ -119,20 +145,21 @@ capture free main in a method
 top level main
 """, run("mainInMethod"));
   }
-  @Test void helloStackTraces(){ testOk("helloStackTraces");}
   @Test void testingStandardLibrary(){ testOk("testingStandardLibrary");}
-  @Test void baseGeneratedExamples(@TempDir Path tmp) throws InterruptedException{
+  @Test void baseGeneratedExamples(@TempDir Path tmp){
     Path root= tmp.resolve("root");
     UserError.root= root;
     var genDir= root.resolve("_gen");
     Fs.ensureDir(genDir);
     Fs.writeUtf8(genDir.resolve("_rank_app.fear"), Fs.readUtf8(baseTestFile));
-    var out= coordinator(root).main(root, stLib);
-    writeJUnitReport("baseGeneratedExamples", root);
-    var fails= out.lines().filter(l->l.startsWith("Test failure ")).toList();
-    Assertions.assertTrue(fails.isEmpty(), ()->"Fearless unit tests failed in base's generated examples:\n"+String.join("\n",fails));
+    unitTestsOk("baseGeneratedExamples", root);
   }
-  @Test void testDocs(){ testOk("testDocs");}
+  @Test void testDocs(){
+    utils.Err.strCmp("""
+Hello world
+/// this string must not become documentation
+""", run("testDocs"));
+  }
   @Test void onlyImmCapture(@TempDir Path tmp){
     var root= tmp.resolve("root");
     UserError.root= root;
