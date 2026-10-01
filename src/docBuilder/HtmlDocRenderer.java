@@ -74,7 +74,7 @@ final class HtmlDocRenderer{
 
   List<TypeDoc> testableTypes(){
     return visibleTypes().stream()
-      .filter(t->!t.main().infName() && t.main().name().isPublic())
+      .filter(t->!t.main().infName())
       .filter(t->visibleMethods(t).stream().anyMatch(this::hasTestContent))
       .toList();
   }
