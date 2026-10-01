@@ -54,6 +54,7 @@ public final class UserError extends RuntimeException{
     return this;
   }
   public UserError bare(){ bare= true; return this; }
+  public UserError followedBy(String more){ var res= new UserError(getMessage()+more,this); res.bare= bare; return res; }
 
   //The project root this run actually used, so that a message always shows the folder
   //that was really involved. Tests set it to whatever fake root they use; a real run
