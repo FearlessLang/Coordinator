@@ -629,7 +629,7 @@ AllAutoTests_pkg: UnitTests {::
 """, test);
   }
 
-  @Test void renderTestSkipsPrivateTypesAndMethodsWithoutExamples(){
+  @Test void renderTestIncludesPrivateTypesAndSkipsMethodsWithoutExamples(){
     var visibleName= new TName("pkg.Visible",0,Pos.unknown);
     var bar= namedMethod(".bar", visibleName);
     var baz= namedMethod(".baz", visibleName);
@@ -663,8 +663,15 @@ _Visible_Examples: Test {::
   }
   }
 
+__Hidden_Examples: Test {::
+  .test Test{::
+.check{qux.assertOk}
+  }
+  }
+
 AllAutoTests_pkg: UnitTests {::
   .test _Visible_Examples
+  .test __Hidden_Examples
   }
 """, test);
   }
