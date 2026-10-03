@@ -19,9 +19,11 @@ public interface Layer{
   default LinkedHashMap<String,List<Ref>> pkgs(){ return new LinkedHashMap<>();}
   OtherPackages compile(SourceOracle src, OutputOracle out);
   Coordinator coordinator();
+  SourceOracle stLib();
 }
 record MiddleLayer(Coordinator coordinator, Layer next, LinkedHashMap<String,List<Ref>> pkgs) implements Layer{
   MiddleLayer{ assert !pkgs.isEmpty(); }
+  @Override public SourceOracle stLib(){ return next.stLib(); }
   @Override public OtherPackages compile(SourceOracle src, OutputOracle out){
     OtherPackages other= next.compile(src, out);
     var res= new Object(){
