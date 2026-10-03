@@ -185,6 +185,22 @@ Shortcut[I], and Fearless chooses one.
 What stood in the way:
 .txt -> text/plain, also the type of *.asc *,v""", Violation.associationSharedType(Map.of(".txt",Map.entry("text/plain",List.of("*.asc","*,v"))), e->"").getMessage());
   }
+  @Test void associationSharedTypeWithoutGlobs(){
+    utils.Err.strCmp("""
+Fearless cannot become the program that opens the kinds of file listed
+below.
+
+On this system a program opens a type of file, not an extension, and the
+type of each of these extensions is also the type of other file names:
+opening it would open those files too. Fearless stopped before touching
+anything: your system is exactly as it was.
+
+Use another extension, or leave the extension out, as in OpenWith[I] or
+Shortcut[I], and Fearless chooses one.
+
+What stood in the way:
+.executable -> application/x-executable, also the type of files recognised by their content""", Violation.associationSharedType(Map.of(".executable",Map.entry("application/x-executable",List.of())), e->"").getMessage());
+  }
   @Test void associationSharedTypeSeveralClaimed(){
     var shared= new LinkedHashMap<String,Map.Entry<String,List<String>>>();
     shared.put(".foo", Map.entry("text/x-foo",List.of("*.a","*.b","*.c","*.d","*.e","*.f","*.g")));

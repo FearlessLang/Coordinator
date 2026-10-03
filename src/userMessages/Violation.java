@@ -144,6 +144,7 @@ public final class Violation {
       %s""".formatted(String.join("\n", lines)));
   }
   private static String someGlobs(List<String> globs){
+    if (globs.isEmpty()){ return "files recognised by their content"; }
     var shown= String.join(" ", globs.stream().limit(5).toList());
     return globs.size() > 5 ? shown+" and "+(globs.size()-5)+" more" : shown;
   }
