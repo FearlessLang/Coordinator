@@ -105,8 +105,7 @@ public final class BuildWithZip{
     });
     return List.copyOf(t.visibleFiles());
   }
-  public static final int maxPath= 200;
-  static void checkTooLong(RefParent kid){     if (kid.fearPath().length() > maxPath + SourceOracle.root.length()){ throw Report.pathTooLong(kid); } }
+  static void checkTooLong(RefParent kid){     if (kid.fearPath().length() > 200 + SourceOracle.root.length()){ throw Report.pathTooLong(kid); } }
   public static void checkIndividualVisibleSegment(RefParent kid){
     checkTooLong(kid);
     var name= Fs.fileNameWithExtension(kid.fearPath());
@@ -142,7 +141,7 @@ public final class BuildWithZip{
       if (!Fs.isExtSegChar(c)){ throw Report.extInvalidChar(kid, c); }
     }
   }
-  public static final Set<String> winReserved= Set.of(
+  private static final Set<String> winReserved= Set.of(
     "con","prn","aux","nul",
     "com1","com2","com3","com4","com5","com6","com7","com8","com9",
     "lpt1","lpt2","lpt3","lpt4","lpt5","lpt6","lpt7","lpt8","lpt9"

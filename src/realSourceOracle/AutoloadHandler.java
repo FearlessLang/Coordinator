@@ -45,13 +45,10 @@ public record AutoloadHandler(Predicate<String> matches, String baseType){
     var head= m.find() ? m.end() : 0;
     return s.substring(0,head).toUpperCase(Locale.ROOT)+inner.matcher(s.substring(head)).replaceAll(r->r.group(1).toUpperCase(Locale.ROOT));
   }
-  static final Pattern leadingType= Pattern.compile("^_*[A-Z]");
   static final Pattern upper= Pattern.compile("[A-Z]");
   static final Pattern visibleAtom= Pattern.compile("[a-z_][a-z0-9_]*");
   public static Optional<String> fileName(String type){
-    var m= leadingType.matcher(type);
-    var head= m.find() ? m.end() : 0;
-    var res= type.substring(0,head).toLowerCase(Locale.ROOT)+upper.matcher(type.substring(head)).replaceAll(r->"_"+r.group().toLowerCase(Locale.ROOT));
+    var res= upper.matcher(type).replaceAll(r->"_"+r.group().toLowerCase(Locale.ROOT)).substring(1);
     return Optional.of(res).filter(r->visibleAtom.matcher(r).matches() && capFirst(r).equals(type));
   }
 }
