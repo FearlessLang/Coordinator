@@ -39,7 +39,7 @@ record MiddleLayer(Coordinator coordinator, Layer next, LinkedHashMap<String,Lis
         var mains= MainsInfo.of(core, src, stLib());
         coordinator.backend(pkg, core, rich.oracle(), other, new CapabilityEnvironment(rich.autoloadedAssets()));
         long newStamp= out.commitPkgApi(pkg, core, maxIn); // newStamp will be the old api file mtime if there was no reason to commit.
-        if (top){ out.commitMains(p->!p.equals(pkg), mains); }
+        if (top){ out.commitMains(pkg, mains); }
         out.commitBuilt(pkg, files, top, maxIn);
         var map= AllLs.of(core).values().stream().collect(Collectors.toUnmodifiableMap (Literal::name, d->d));
         nextOther = nextOther.mergeWith(map,Math.max(nextOther.stamp(),newStamp));

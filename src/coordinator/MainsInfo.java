@@ -2,7 +2,6 @@ package coordinator;
 
 import java.nio.file.Path;
 import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -25,21 +24,22 @@ import userMessages.UserError;
 import utils.Pos;
 
 public record MainsInfo(Map<String,Main> mains){
+  public MainsInfo{ mains= Collections.unmodifiableMap(new TreeMap<>(mains)); }
   public record Main(String file, List<Claim> shortcuts, List<Claim> openWiths){}
   public record Claim(String icon, String diskPath, String zipSteps, String zipEntry, String extension){}
   public static Optional<MainsInfo> read(Path project){ return Helper.out(project).mainsInfo(); }
   public String print(){
-    var fields= new TreeMap<>(mains).entrySet().stream().map(e->new Info.Obj.Field(e.getKey(),Info.noSpan,info(e.getValue()))).toList();
+    var fields= mains.entrySet().stream().map(e->new Info.Obj.Field(e.getKey(),Info.noSpan,info(e.getValue()))).toList();
     return Info.print(new Info.Obj(fields,Info.noSpan));
   }
   MainsInfo only(Predicate<String> pkg){
     return new MainsInfo(mains.entrySet().stream()
       .filter(e->pkg.test(e.getKey().substring(0,e.getKey().indexOf('.'))))
-      .collect(Collectors.toUnmodifiableMap(Map.Entry::getKey,Map.Entry::getValue)));
+      .collect(Collectors.toMap(Map.Entry::getKey,Map.Entry::getValue)));
   }
   MainsInfo located(SourceOracle src, SourceOracle stLib){
     var of= new Of(src,stLib);
-    return new MainsInfo(mains.entrySet().stream().collect(Collectors.toUnmodifiableMap(Map.Entry::getKey,e->of.located(e.getValue()))));
+    return new MainsInfo(mains.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey,e->of.located(e.getValue()))));
   }
   private static Info info(Main m){ return lst(List.of(str(m.file()),claims(m.shortcuts()),claims(m.openWiths()))); }
   private static Info claims(List<Claim> cs){ return lst(cs.stream().map(MainsInfo::info).toList()); }
@@ -53,9 +53,7 @@ public record MainsInfo(Map<String,Main> mains){
   private record Shape(String text){
     MainsInfo all(Info i){
       if (!(i instanceof Info.Obj o)){ throw err(i,"an object {...} mapping each main to [file, [shortcut claims], [openWith claims]]"); }
-      var res= new LinkedHashMap<String,Main>();
-      o.fields().forEach(f->res.put(f.key(),main(f.value())));
-      return new MainsInfo(Collections.unmodifiableMap(res));
+      return new MainsInfo(o.fields().stream().collect(Collectors.toMap(Info.Obj.Field::key,f->main(f.value()))));
     }
     Main main(Info i){
       var l= lst(i,3,"a main as [file, [shortcut claims], [openWith claims]]");
@@ -84,8 +82,12 @@ public record MainsInfo(Map<String,Main> mains){
   static Map<String,Main> of(List<Literal> core, SourceOracle src, SourceOracle stLib){
     var nested= AllLs.of(core).values().stream().filter(l->LiteralDeclarations.has(l.cs(),LiteralDeclarations.captureFree));
     var of= new Of(src,stLib);
-    return Stream.concat(core.stream(),nested).filter(Helper::isMain).distinct()
+    return Stream.concat(core.stream(),nested).filter(MainsInfo::isMain).distinct()
       .collect(Collectors.toUnmodifiableMap(l->l.name().s(),of::main));
+  }
+  private static boolean isMain(Literal l){
+    return LiteralDeclarations.has(l.cs(),LiteralDeclarations.main)
+      && l.ms().stream().noneMatch(m->m.sig().abs());
   }
   private record Of(SourceOracle src, SourceOracle stLib){
     Main main(Literal l){

@@ -16,7 +16,6 @@ import java.util.stream.Stream;
 import userMessages.Report;
 import userMessages.Violation;
 import core.FearlessException;
-import core.LiteralDeclarations;
 import core.OtherPackages;
 import core.TName;
 import core.E.Literal;
@@ -129,10 +128,6 @@ class Helper{
     var res= new TreeMap<String,String>();
     out.mainsInfo().orElseThrow().only(l.pkgs()::containsKey).mains().forEach((k,v)->res.put(k,v.file()));
     return Optional.of(Collections.unmodifiableMap(res));
-  }
-  static boolean isMain(Literal l){
-    return LiteralDeclarations.has(l.cs(),LiteralDeclarations.main)
-      && l.ms().stream().noneMatch(m->m.sig().abs());
   }
   static LinkedHashMap<String,List<Ref>> pkgMap(SourceOracle o, Path path){
     if (o.allFiles().stream().noneMatch(Helper::isFear)){ throw Report.projectEmpty(path); }

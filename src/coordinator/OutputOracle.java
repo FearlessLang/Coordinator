@@ -2,13 +2,12 @@ package coordinator;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.LinkedHashMap;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import utils.Join;
 import java.util.List;
 import java.util.function.Function;
-import java.util.function.Predicate;
 import java.util.stream.IntStream;
 import apiJson.ApiJson;
 import metaParser.Message;
@@ -48,9 +47,9 @@ public interface OutputOracle{
     return Fs.writeUtf8(pkgApiPath(pkg), ApiJson.toJSon(core), res.isEmpty() ? -1 : minExclusiveMillis);
   }
   default Optional<MainsInfo> mainsInfo(){ return Optional.of(mainsPath()).filter(Files::exists).map(MainsInfo::parse); }
-  default void commitMains(Predicate<String> keepPkg, Map<String,MainsInfo.Main> add){
-    var all= new LinkedHashMap<>(mainsInfo().map(m->m.only(keepPkg).mains()).orElse(Map.of()));
-    all.putAll(add);
+  default void commitMains(String pkg, Map<String,MainsInfo.Main> mains){
+    var all= new HashMap<>(mainsInfo().map(m->m.only(p->!p.equals(pkg)).mains()).orElse(Map.of()));
+    all.putAll(mains);
     Fs.writeUtf8(mainsPath(), new MainsInfo(all).print());
   }
   default long commitMap(Map<String,Map<String,String>> map, long minExclusiveMillis){
