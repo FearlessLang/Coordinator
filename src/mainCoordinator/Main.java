@@ -85,8 +85,8 @@ public final class Main{
     FileAssociations.reconcile(identity, belongsToFamily, l, List.of(new Icon(".fearless", l, icon)), l, icon,
       reported->Violation.associationsAmbiguous(reported).withRecovery(
         "Remove all Fearless registrations", ()->FileAssociations.eradicateAll(belongsToFamily, Violation::associationLeftHalfDone)),
-      Violation::associationUserLocked,
-      Violation::associationNotOurs,
+      locked->Violation.associationUserLocked(locked, e->""),
+      held->Violation.associationNotOurs(held, e->""),
       Violation::associationNotWritable,
       Violation::associationLeftHalfDone);
   }

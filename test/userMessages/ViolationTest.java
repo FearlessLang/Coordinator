@@ -2,7 +2,9 @@ package userMessages;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -92,7 +94,6 @@ C:\\Program Files\\FearlessManaged0_006\\fearlessManaged0_006w.exe
 C:\\Users\\ada\\Downloads\\fearlessManaged0_007\\fearlessManaged0_007w.exe""", Violation.associationsAmbiguous(registered).getMessage());
   }
   @Test void associationUserLocked(){
-    var registered= "ProgId: OtherApp.fearless, set via UserChoice, hash-protected";
     utils.Err.strCmp("""
 Fearless cannot become the program that opens Fearless projects.
 
@@ -105,10 +106,25 @@ The only way to clear it is Settings, Apps, Default apps, Reset - which
 resets every app default on your machine, not only this one.
 
 What is locked:
-ProgId: OtherApp.fearless, set via UserChoice, hash-protected""", Violation.associationUserLocked(registered).getMessage());
+.fearless""", Violation.associationUserLocked(List.of(".fearless"), e->"").getMessage());
+  }
+  @Test void associationUserLockedSeveralClaimed(){
+    utils.Err.strCmp("""
+Fearless cannot become the program that opens Fearless projects.
+
+Your system remembers a choice you made by hand for this kind of file,
+and no program can change or remove that choice, including this one.
+Fearless stopped before touching anything: your system is exactly as it
+was.
+
+The only way to clear it is Settings, Apps, Default apps, Reset - which
+resets every app default on your machine, not only this one.
+
+What is locked:
+.foo claimed by "hello.Foo" of project "demo"
+.fapp042 claimed by "hello.Bar" of project "demo\"""", Violation.associationUserLocked(List.of(".foo",".fapp042"), ViolationTest::claimedBy).getMessage());
   }
   @Test void associationNotOurs(){
-    var registered= "registered owner: fearlessBin0_003.exe (an older Fearless install)";
     utils.Err.strCmp("""
 Fearless cannot become the program that opens Fearless projects.
 
@@ -116,8 +132,39 @@ Another program already answers for this kind of file. Fearless stopped
 before touching anything: your system is exactly as it was.
 
 What stood in the way:
-registered owner: fearlessBin0_003.exe (an older Fearless install)""", Violation.associationNotOurs(registered).getMessage());
+.fearless -> fearlessBin0_003""", Violation.associationNotOurs(Map.of(".fearless",List.of("fearlessBin0_003")), e->"").getMessage());
   }
+  @Test void associationNotOursSeveral(){
+    var held= new LinkedHashMap<String,List<String>>();
+    held.put(".txt", List.of("org.gnome.TextEditor","vim"));
+    held.put(".fearless", List.of("OtherApp.fearless"));
+    utils.Err.strCmp("""
+Fearless cannot become the program that opens Fearless projects.
+
+Another program already answers for this kind of file. Fearless stopped
+before touching anything: your system is exactly as it was.
+
+What stood in the way:
+.txt -> org.gnome.TextEditor
+.txt -> vim
+.fearless -> OtherApp.fearless""", Violation.associationNotOurs(held, e->"").getMessage());
+  }
+  @Test void associationNotOursSeveralClaimed(){
+    var held= new LinkedHashMap<String,List<String>>();
+    held.put(".foo", List.of("org.gnome.TextEditor","vim"));
+    held.put(".fapp042", List.of("OtherApp.fapp042"));
+    utils.Err.strCmp("""
+Fearless cannot become the program that opens Fearless projects.
+
+Another program already answers for this kind of file. Fearless stopped
+before touching anything: your system is exactly as it was.
+
+What stood in the way:
+.foo claimed by "hello.Foo" of project "demo" -> org.gnome.TextEditor
+.foo claimed by "hello.Foo" of project "demo" -> vim
+.fapp042 claimed by "hello.Bar" of project "demo" -> OtherApp.fapp042""", Violation.associationNotOurs(held, ViolationTest::claimedBy).getMessage());
+  }
+  private static String claimedBy(String ext){ return " claimed by \"hello."+(ext.equals(".foo") ? "Foo" : "Bar")+"\" of project \"demo\""; }
   @Test void associationNotWritable(){
     var registered= "HKEY_CLASSES_ROOT\\.fearless (write denied: not running as the owning user)";
     utils.Err.strCmp("""

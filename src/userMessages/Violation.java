@@ -1,7 +1,10 @@
 package userMessages;
 
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 import metaParser.Message;
@@ -94,7 +97,7 @@ public final class Violation {
       What is registered:
       %s""".formatted(reported));
   }
-  public static UserError associationUserLocked(String reported){
+  public static UserError associationUserLocked(List<String> locked, Function<String,String> claimedBy){
     return new UserError("""
       Fearless cannot become the program that opens Fearless projects.
 
@@ -107,9 +110,11 @@ public final class Violation {
       resets every app default on your machine, not only this one.
 
       What is locked:
-      %s""".formatted(reported));
+      %s""".formatted(String.join("\n", locked.stream().map(e->e+claimedBy.apply(e)).toList())));
   }
-  public static UserError associationNotOurs(String reported){
+  public static UserError associationNotOurs(Map<String,List<String>> held, Function<String,String> claimedBy){
+    var lines= new ArrayList<String>();
+    held.forEach((e,cs)->cs.forEach(c->lines.add(e+claimedBy.apply(e)+" -> "+c)));
     return new UserError("""
       Fearless cannot become the program that opens Fearless projects.
 
@@ -117,7 +122,7 @@ public final class Violation {
       before touching anything: your system is exactly as it was.
 
       What stood in the way:
-      %s""".formatted(reported));
+      %s""".formatted(String.join("\n", lines)));
   }
   public static UserError associationNotWritable(String reported){
     return new UserError("""
