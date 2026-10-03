@@ -86,6 +86,7 @@ public final class Main{
       reported->Violation.associationsAmbiguous(reported).withRecovery(
         "Remove all Fearless registrations", ()->FileAssociations.eradicateAll(belongsToFamily, Violation::associationLeftHalfDone)),
       locked->Violation.associationUserLocked(locked, e->""),
+      shared->Violation.associationSharedType(shared, e->""),
       held->Violation.associationNotOurs(held, e->""),
       Violation::associationNotWritable,
       Violation::associationLeftHalfDone);

@@ -126,6 +126,27 @@ public final class Violation {
       What stood in the way:
       %s""".formatted(String.join("\n", lines)));
   }
+  public static UserError associationSharedType(Map<String,Map.Entry<String,List<String>>> shared, Function<String,String> claimedBy){
+    var lines= shared.entrySet().stream().map(e->e.getKey()+claimedBy.apply(e.getKey())+" -> "+e.getValue().getKey()+", also the type of "+someGlobs(e.getValue().getValue())).toList();
+    return new UserError("""
+      Fearless cannot become the program that opens the kinds of file listed
+      below.
+
+      On this system a program opens a type of file, not an extension, and the
+      type of each of these extensions is also the type of other file names:
+      opening it would open those files too. Fearless stopped before touching
+      anything: your system is exactly as it was.
+
+      Use another extension, or leave the extension out, as in OpenWith[I] or
+      Shortcut[I], and Fearless chooses one.
+
+      What stood in the way:
+      %s""".formatted(String.join("\n", lines)));
+  }
+  private static String someGlobs(List<String> globs){
+    var shown= String.join(" ", globs.stream().limit(5).toList());
+    return globs.size() > 5 ? shown+" and "+(globs.size()-5)+" more" : shown;
+  }
   public static UserError associationNotWritable(String reported){
     return new UserError("""
       Fearless cannot become the program that opens Fearless projects and the

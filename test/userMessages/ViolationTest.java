@@ -169,6 +169,42 @@ What stood in the way:
 .foo claimed by "hello.Foo" of project "demo" -> vim
 .fapp042 claimed by "hello.Bar" of project "demo" -> OtherApp.fapp042""", Violation.associationNotOurs(held, ViolationTest::claimedBy).getMessage());
   }
+  @Test void associationSharedType(){
+    utils.Err.strCmp("""
+Fearless cannot become the program that opens the kinds of file listed
+below.
+
+On this system a program opens a type of file, not an extension, and the
+type of each of these extensions is also the type of other file names:
+opening it would open those files too. Fearless stopped before touching
+anything: your system is exactly as it was.
+
+Use another extension, or leave the extension out, as in OpenWith[I] or
+Shortcut[I], and Fearless chooses one.
+
+What stood in the way:
+.txt -> text/plain, also the type of *.asc *,v""", Violation.associationSharedType(Map.of(".txt",Map.entry("text/plain",List.of("*.asc","*,v"))), e->"").getMessage());
+  }
+  @Test void associationSharedTypeSeveralClaimed(){
+    var shared= new LinkedHashMap<String,Map.Entry<String,List<String>>>();
+    shared.put(".foo", Map.entry("text/x-foo",List.of("*.a","*.b","*.c","*.d","*.e","*.f","*.g")));
+    shared.put(".fapp042", Map.entry("application/x-other",List.of("*.a","*.b","*.c","*.d","*.e")));
+    utils.Err.strCmp("""
+Fearless cannot become the program that opens the kinds of file listed
+below.
+
+On this system a program opens a type of file, not an extension, and the
+type of each of these extensions is also the type of other file names:
+opening it would open those files too. Fearless stopped before touching
+anything: your system is exactly as it was.
+
+Use another extension, or leave the extension out, as in OpenWith[I] or
+Shortcut[I], and Fearless chooses one.
+
+What stood in the way:
+.foo claimed by "hello.Foo" of project "demo" -> text/x-foo, also the type of *.a *.b *.c *.d *.e and 2 more
+.fapp042 claimed by "hello.Bar" of project "demo" -> application/x-other, also the type of *.a *.b *.c *.d *.e""", Violation.associationSharedType(shared, ViolationTest::claimedBy).getMessage());
+  }
   private static String claimedBy(String ext){ return " claimed by \"hello."+(ext.equals(".foo") ? "Foo" : "Bar")+"\" of project \"demo\""; }
   @Test void associationNotWritable(){
     var registered= "HKEY_CLASSES_ROOT\\.fearless (write denied: not running as the owning user)";
