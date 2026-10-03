@@ -529,6 +529,52 @@ An icon is the type generated for an image file, like "IconsFoo" for "_pkg/icons
 Error 7 WellFormedness
 """, ex.getMessage());
   }
+  static void editAndTouch(Path file, String from, String to) throws IOException{
+    Fs.writeUtf8(file, Fs.readUtf8(file).replace(from, to));
+    Files.setLastModifiedTime(file, FileTime.fromMillis(System.currentTimeMillis()+500));
+  }
+  @Test void aClaimReadBackFromTheApiJsonOfALowerRankPackageIsChecked(@TempDir Path tmp) throws Exception{
+    var root= claimsProject(tmp, """
+Conflict:lib.Lib, Shortcut[base.IconsConflict]{s->base.Debug#(`conflict`)}
+jjj
+_lib/_rank_core.fear
+iii
+Lib:base.Main, base.OpenWith[base.IconsConflict,"fear"]{s->base.Debug#(`lib`)}
+""");
+    utils.Err.strCmp("conflict\n", coordinator(root).main(root, stLib));
+    editAndTouch(root.resolve("_col","_rank_app.fear"), "{s->base.Debug#(`conflict`)}", """
+{s->base.Debug#(`conflict`)}
+Clash:lib.Lib, OpenWith[IconsFoo,"fear"]{s->base.Debug#(`clash`)}""");
+    var ex= Assertions.assertThrows(UserError.class, ()->coordinator(root).main(root, stLib));
+    utils.Err.strCmp("""
+In file: fear:/_col/_rank_app.fear
+
+005| Clash:lib.Lib, OpenWith[IconsFoo,"fear"]{s->base.Debug#(`clash`)}
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+While inspecting type declaration "Clash"
+Type declaration "Clash" claims the extension "fear" more than once:
+both `base.OpenWith[IconsFoo,"fear"]` and `base.OpenWith[base.IconsConflict,"fear"]` claim it.
+A main can claim each extension at most once, across all its "base.OpenWith[_,_]" and "base.Shortcut[_,_]", since one extension has one icon.
+Error 7 WellFormedness
+""", ex.getMessage());
+  }
+  @Test void literalTypesInSignaturesCompileRunAndAreReadBackFromTheApiJson(@TempDir Path tmp) throws Exception{
+    Path root= tmp.resolve("root");
+    UserError.root= root;
+    FsDsl.materialize(root, """
+_lib/_rank_core.fear
+iii
+Lit:{ .m(x: "a\\"): base.Str -> x; .n(x: `b"c`): base.Str -> x; .k: 5 -> 5; }
+jjj
+_col/_rank_app.fear
+iii
+Hello:base.Main{s->base.Debug#((lib.Lit.m("a\\"))+(lib.Lit.n(`b"c`))+(lib.Lit.k.str))}
+""");
+    utils.Err.strCmp("a\\b\"c5\n", coordinator(root).main(root, stLib));
+    editAndTouch(root.resolve("_col","_rank_app.fear"), "(lib.Lit.k.str)", "(lib.Lit.k.str)+`!`");
+    utils.Err.strCmp("a\\b\"c5!\n", coordinator(root).main(root, stLib));
+  }
 
   @Test void anAssetWhoseNameForgesNoValidTypeIsReportedAgainstTheRealFile(@TempDir Path tmp){
     Path root= tmp.resolve("root");
