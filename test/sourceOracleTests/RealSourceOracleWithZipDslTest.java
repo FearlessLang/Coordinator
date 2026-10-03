@@ -9,7 +9,6 @@ import java.nio.file.AccessDeniedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Stream;
 import java.util.zip.CRC32;
@@ -25,7 +24,6 @@ import userMessages.UserError;
 import userMessages.Report;
 import realSourceOracle.RealSourceOracleWithZip;
 import realSourceOracle.SourceOracleWithAutoload;
-import realSourceOracle.SourceOracleWithAutoload.Triple;
 import core.TName;
 import utils.Join;
 import utils.Pos;
@@ -1357,9 +1355,6 @@ IconsConflict: base.ImageFile{
     assertEquals(List.of("fear:/_rank_base000.fear","fear:/_base/autoloaded_assets.fear"), res.sources(base.allFiles()).stream().map(Ref::fearPath).toList());
   }
 
-  private static String assets(Map<String,Triple> assets){
-    return Join.of(assets.entrySet().stream().map(e->e.getKey()+" "+e.getValue()),"","\n","\n","");
-  }
   @Test void ok_asset_autoload_keyed_by_type_name(@TempDir Path tmp){
     Path root= tmp.resolve("root");
     UserError.root= root;
@@ -1385,8 +1380,7 @@ iii
 ZInBar Triple[diskPath=_pkg/z.zip, zipSteps=, zipEntry=in/bar.png]
 Notes Triple[diskPath=_pkg/notes.txt, zipSteps=, zipEntry=]
 IconsFoo Triple[diskPath=_pkg/icons/foo.png, zipSteps=, zipEntry=]
-""", assets(res.assets()));
-    assertEquals(List.copyOf(res.assets().values()), res.autoloadedAssets());
+""", Join.of(res.autoloadedAssets().entrySet().stream().map(e->e.getKey()+" "+e.getValue()),"","\n","\n",""));
   }
   @Test void ok_asset_by_type_name(@TempDir Path tmp){
     Path root= tmp.resolve("root");
