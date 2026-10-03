@@ -41,6 +41,7 @@ final class RecompilationCacheTest{
     return new Layer(){
       @Override public OtherPackages compile(SourceOracle src, OutputOracle out){ return OtherPackages.start(Map.of(), List.<Literal>of(), stamp); }
       @Override public Coordinator coordinator(){ return null; }
+      @Override public SourceOracle stLib(){ return emptySrc; }
     };
   }
   private static final class ScriptedCoordinator implements Coordinator{
@@ -69,7 +70,7 @@ final class RecompilationCacheTest{
     var pkgs= new LinkedHashMap<String,List<Ref>>();
     pkgs.put("a", refs("a", start-MARGIN));
     pkgs.put("b", refs("b", start-MARGIN));
-    var layer= new MiddleLayer(stub, fixedBase(start-MARGIN), pkgs);
+    var layer= new MiddleLayer(stub, fixedBase(start-MARGIN), pkgs, false);
 
     layer.compile(emptySrc, out);
     assertEquals(1, stub.calls("a"));
@@ -93,7 +94,7 @@ final class RecompilationCacheTest{
     var pkgs= new LinkedHashMap<String,List<Ref>>();
     pkgs.put("a", refs("a", start-MARGIN));
     pkgs.put("b", refs("b", start-MARGIN));
-    var layer= new MiddleLayer(stub, fixedBase(start-MARGIN), pkgs);
+    var layer= new MiddleLayer(stub, fixedBase(start-MARGIN), pkgs, false);
 
     layer.compile(emptySrc, out);
     long stampA= out.pkgApiStamp("a");
@@ -120,10 +121,10 @@ final class RecompilationCacheTest{
     var pkgs1= new LinkedHashMap<String,List<Ref>>();
     pkgs1.put("a", refs("a", start-MARGIN));
     pkgs1.put("b", refs("b", start-MARGIN));
-    var layer1= new MiddleLayer(stub, fixedBase(start-MARGIN), pkgs1);
+    var layer1= new MiddleLayer(stub, fixedBase(start-MARGIN), pkgs1, false);
     var pkgs2= new LinkedHashMap<String,List<Ref>>();
     pkgs2.put("c", refs("c", start-MARGIN));
-    var layer2= new MiddleLayer(stub, layer1, pkgs2);
+    var layer2= new MiddleLayer(stub, layer1, pkgs2, false);
 
     layer2.compile(emptySrc, out);
     assertEquals(1, stub.calls("a"));
@@ -153,10 +154,10 @@ final class RecompilationCacheTest{
     stub.fixedOutput("c", List.of(literal("C1", RC.imm)));
     var pkgs1= new LinkedHashMap<String,List<Ref>>();
     pkgs1.put("a", refs("a", start-MARGIN));
-    var layer1= new MiddleLayer(stub, fixedBase(start-MARGIN), pkgs1);
+    var layer1= new MiddleLayer(stub, fixedBase(start-MARGIN), pkgs1, false);
     var pkgs2= new LinkedHashMap<String,List<Ref>>();
     pkgs2.put("c", refs("c", start-MARGIN));
-    var layer2= new MiddleLayer(stub, layer1, pkgs2);
+    var layer2= new MiddleLayer(stub, layer1, pkgs2, false);
 
     layer2.compile(emptySrc, out);
     assertEquals(1, stub.calls("a"));
@@ -177,7 +178,7 @@ final class RecompilationCacheTest{
     stub.fixedOutput("a", List.of(literal("A1", RC.imm)));
     var pkgs= new LinkedHashMap<String,List<Ref>>();
     pkgs.put("a", refs("a", start-MARGIN));
-    var layer= new MiddleLayer(stub, fixedBase(start-MARGIN), pkgs);
+    var layer= new MiddleLayer(stub, fixedBase(start-MARGIN), pkgs, false);
 
     layer.compile(emptySrc, out);
     assertEquals(1, stub.calls("a"));
@@ -200,7 +201,7 @@ final class RecompilationCacheTest{
     var pkgs= new LinkedHashMap<String,List<Ref>>();
     pkgs.put("a", refs("a", start-MARGIN));
     pkgs.put("b", refs("b", start-MARGIN));
-    var layer= new MiddleLayer(stub, fixedBase(start-MARGIN), pkgs);
+    var layer= new MiddleLayer(stub, fixedBase(start-MARGIN), pkgs, false);
     layer.compile(emptySrc, out);
     long stampB= out.pkgApiStamp("b");
 
@@ -230,7 +231,7 @@ final class RecompilationCacheTest{
     stub.fixedOutput("a", List.of(literal("A1", RC.imm)));
     var pkgs= new LinkedHashMap<String,List<Ref>>();
     pkgs.put("a", twoRefs(start-MARGIN));
-    var layer= new MiddleLayer(stub, fixedBase(start-MARGIN), pkgs);
+    var layer= new MiddleLayer(stub, fixedBase(start-MARGIN), pkgs, false);
 
     layer.compile(emptySrc, out);
     assertEquals(1, stub.calls("a"));
@@ -249,7 +250,7 @@ final class RecompilationCacheTest{
     stub.fixedOutput("a", List.of(literal("A1", RC.imm)));
     var pkgs= new LinkedHashMap<String,List<Ref>>();
     pkgs.put("a", refs("a", start-MARGIN));
-    var layer= new MiddleLayer(stub, fixedBase(start-MARGIN), pkgs);
+    var layer= new MiddleLayer(stub, fixedBase(start-MARGIN), pkgs, false);
 
     layer.compile(emptySrc, out);
     assertEquals(1, stub.calls("a"));
@@ -272,9 +273,9 @@ final class RecompilationCacheTest{
     pkgsB.put("b", refs("b", start-MARGIN));
     var pkgsC= new LinkedHashMap<String,List<Ref>>();
     pkgsC.put("c", refs("c", start-MARGIN));
-    var l1= new MiddleLayer(stub, fixedBase(start-MARGIN), pkgsA);
-    var l2= new MiddleLayer(stub, l1, pkgsB);
-    return new Stack(stub, pkgsA, new MiddleLayer(stub, l2, pkgsC));
+    var l1= new MiddleLayer(stub, fixedBase(start-MARGIN), pkgsA, false);
+    var l2= new MiddleLayer(stub, l1, pkgsB, false);
+    return new Stack(stub, pkgsA, new MiddleLayer(stub, l2, pkgsC, false));
   }
 
   @Test void apiChangeInTheBottomLayerCascadesThroughEveryLayerAbove(@TempDir Path tmp){
@@ -358,9 +359,9 @@ final class RecompilationCacheTest{
     pkgsB.put("b", refs("b", start-MARGIN));
     var pkgsC= new LinkedHashMap<String,List<Ref>>();
     pkgsC.put("c", refs("c", start-MARGIN));
-    var l1= new MiddleLayer(stub, fixedBase(start-MARGIN), pkgsA);
-    var l2= new MiddleLayer(stub, l1, pkgsB);
-    var top= new MiddleLayer(stub, l2, pkgsC);
+    var l1= new MiddleLayer(stub, fixedBase(start-MARGIN), pkgsA, false);
+    var l2= new MiddleLayer(stub, l1, pkgsB, false);
+    var top= new MiddleLayer(stub, l2, pkgsC, false);
 
     top.compile(emptySrc, out);
     long stampA= out.pkgApiStamp("a");

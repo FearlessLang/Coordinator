@@ -373,7 +373,12 @@ iii
 Again:Main{s->base.Debug#("again")}
 """);
     coordinator(root).compile(root, stLib);
-    Assertions.assertEquals("col.Again _col/more.fear\ncol.Hello _col/_rank_app.fear\n", Fs.readUtf8(root.resolve(Coordinator.outDir).resolve("col.mains")));
+    utils.Err.strCmp("""
+{
+  "col.Again": ["_col/more.fear", [], []],
+  "col.Hello": ["_col/_rank_app.fear", [], []]
+}
+""", Fs.readUtf8(mainsInfo(root)));
     Assertions.assertEquals(Map.of("col.Again","_col/more.fear","col.Hello","_col/_rank_app.fear"), coordinator(root).mains(root, stLib).orElseThrow());
   }
   @Test void aCaptureFreeMainDeclaredInAMethodIsListedLikeTheOnesItRuns(@TempDir Path tmp) throws InterruptedException{
@@ -469,6 +474,271 @@ Hello:Main{s->base.Debug#(base.IconsConflict.path+" "+(base.IconsConflict.readIm
 """);
     utils.Err.strCmp("fear:/_base/icons/conflict.png 256\n", coordinator(root).main(root, stLib));
   }
+  static Path claimsProject(Path tmp, String code) throws IOException{
+    Path root= tmp.resolve("root");
+    UserError.root= root;
+    FsDsl.materialize(root, """
+_col/_rank_app.fear
+iii
+use base.Main as Main;
+use base.OpenWith as OpenWith;
+use base.Shortcut as Shortcut;
+"""+code);
+    Fs.ensureDir(root.resolve("_col","icons"));
+    Files.write(root.resolve("_col","icons","foo.png"), onePixelPng());
+    return root;
+  }
+  @Test void mainsClaimingExtensionsRunOnThePortablePath(@TempDir Path tmp) throws Exception{
+    var root= claimsProject(tmp, """
+Foo:Main, OpenWith[IconsFoo,"foo"], OpenWith[IconsFoo], Shortcut[IconsFoo,`bar`], Shortcut[IconsFoo]{s->base.Debug#(`foo`)}
+Conflict:lib.Lib, Shortcut[base.IconsConflict]{s->base.Debug#(`conflict`)}
+jjj
+_lib/_rank_core.fear
+iii
+Lib:base.Main, base.OpenWith[base.IconsConflict,"fear"]{s->base.Debug#(`lib`)}
+""");
+    utils.Err.strCmp("conflict\nfoo\n", coordinator(root).main(root, stLib));
+  }
+  @Test void aClaimWithoutMainIsRefused(@TempDir Path tmp) throws Exception{
+    var root= claimsProject(tmp, """
+Assoc:OpenWith[IconsFoo,"foo"]{}
+""");
+    var ex= Assertions.assertThrows(UserError.class, ()->coordinator(root).main(root, stLib));
+    utils.Err.strCmp("""
+In file: fear:/_col/_rank_app.fear
+
+004| Assoc:OpenWith[IconsFoo,"foo"]{}
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+While inspecting type declaration "Assoc"
+Type declaration "Assoc" implements "base.OpenWith[_,_]".
+Only a main can open files: type declaration "Assoc" must also implement "base.Main", directly or through one of its supertypes.
+Error 7 WellFormedness
+""", ex.getMessage());
+  }
+  @Test void aClaimWhoseIconIsNotAnImageFileIsRefused(@TempDir Path tmp) throws Exception{
+    var root= claimsProject(tmp, """
+Foo:Main, OpenWith[base.Str,"foo"]{s->base.Debug#(`foo`)}
+""");
+    var ex= Assertions.assertThrows(UserError.class, ()->coordinator(root).main(root, stLib));
+    utils.Err.strCmp("""
+In file: fear:/_col/_rank_app.fear
+
+004| Foo:Main, OpenWith[base.Str,"foo"]{s->base.Debug#(`foo`)}
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+While inspecting type declaration "Foo"
+Type declaration "Foo" implements `base.OpenWith[base.Str,"foo"]`.
+The icon "base.Str" is not an image file.
+An icon is the type generated for an image file, like "IconsFoo" for "_pkg/icons/foo.png", or "base.IconsConflict".
+Error 7 WellFormedness
+""", ex.getMessage());
+  }
+  static void editAndTouch(Path file, String from, String to) throws IOException{
+    Fs.writeUtf8(file, Fs.readUtf8(file).replace(from, to));
+    Files.setLastModifiedTime(file, FileTime.fromMillis(System.currentTimeMillis()+500));
+  }
+  @Test void aClaimReadBackFromTheApiJsonOfALowerRankPackageIsChecked(@TempDir Path tmp) throws Exception{
+    var root= claimsProject(tmp, """
+Conflict:lib.Lib, Shortcut[base.IconsConflict]{s->base.Debug#(`conflict`)}
+jjj
+_lib/_rank_core.fear
+iii
+Lib:base.Main, base.OpenWith[base.IconsConflict,"fear"]{s->base.Debug#(`lib`)}
+""");
+    utils.Err.strCmp("conflict\n", coordinator(root).main(root, stLib));
+    editAndTouch(root.resolve("_col","_rank_app.fear"), "{s->base.Debug#(`conflict`)}", """
+{s->base.Debug#(`conflict`)}
+Clash:lib.Lib, OpenWith[IconsFoo,"fear"]{s->base.Debug#(`clash`)}""");
+    var ex= Assertions.assertThrows(UserError.class, ()->coordinator(root).main(root, stLib));
+    utils.Err.strCmp("""
+In file: fear:/_col/_rank_app.fear
+
+005| Clash:lib.Lib, OpenWith[IconsFoo,"fear"]{s->base.Debug#(`clash`)}
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+While inspecting type declaration "Clash"
+Type declaration "Clash" claims the extension "fear" more than once:
+both `base.OpenWith[IconsFoo,"fear"]` and `base.OpenWith[base.IconsConflict,"fear"]` claim it.
+A main can claim each extension at most once, across all its "base.OpenWith[_,_]" and "base.Shortcut[_,_]", since one extension has one icon.
+Error 7 WellFormedness
+""", ex.getMessage());
+  }
+  static Path mainsInfo(Path root){ return root.resolve(Coordinator.outDir).resolve("mains.info"); }
+  @Test void mainsInfoRecordsTheClaimsOfTheTopRankMainsWithTheirIcons(@TempDir Path tmp) throws Exception{
+    var root= claimsProject(tmp, """
+Foo:Main, OpenWith[IconsFoo,"foo"], OpenWith[lib.IconsLib], Shortcut[base.IconsConflict,`bar`], Shortcut[ZInBar]{s->base.Debug#(`foo`)}
+jjj
+_col/z.zip/in/bar.png
+iii
+not read by the compiler
+jjj
+_lib/_rank_core.fear
+iii
+Lib:base.Main, base.OpenWith[base.IconsConflict,"fear"]{s->base.Debug#(`lib`)}
+jjj
+_lib/icons/lib.png
+iii
+not read by the compiler
+""");
+    coordinator(root).compile(root, stLib);
+    utils.Err.strCmp("""
+{
+  "col.Foo": ["_col/_rank_app.fear", [["base.IconsConflict", "icons/conflict.png", "", "", "bar"], ["col.ZInBar", "_col/z.zip", "", "in/bar.png", ""]], [["col.IconsFoo", "_col/icons/foo.png", "", "", "foo"], ["lib.IconsLib", "_lib/icons/lib.png", "", "", ""]]]
+}
+""", Fs.readUtf8(mainsInfo(root)));
+  }
+  @Test void aSecondCompileKeepsTheMainsInfoEntriesOfAnUnchangedPackage(@TempDir Path tmp) throws Exception{
+    Path root= tmp.resolve("root");
+    UserError.root= root;
+    FsDsl.materialize(root, """
+_a/_rank_app.fear
+iii
+use base.Main as Main;
+use base.OpenWith as OpenWith;
+A:Main, OpenWith[IconsA]{s->base.Debug#(`a`)}
+jjj
+_a/icons/a.png
+iii
+not read by the compiler
+jjj
+_b/_rank_app.fear
+iii
+use base.Main as Main;
+B:Main{s->base.Debug#(`b`)}
+""");
+    coordinator(root).compile(root, stLib);
+    editAndTouch(mainsInfo(root), "\"_a/icons/a.png\", \"\", \"\", \"\"", "\"_a/icons/a.png\", \"\", \"\", \"ffile042\"");
+    editAndTouch(root.resolve("_b","_rank_app.fear"), "B:Main", "C:Main{s->base.Debug#(`c`)}\nB:Main");
+    coordinator(root).compile(root, stLib);
+    utils.Err.strCmp("""
+{
+  "a.A": ["_a/_rank_app.fear", [], [["a.IconsA", "_a/icons/a.png", "", "", "ffile042"]]],
+  "b.B": ["_b/_rank_app.fear", [], []],
+  "b.C": ["_b/_rank_app.fear", [], []]
+}
+""", Fs.readUtf8(mainsInfo(root)));
+  }
+  @Test void aHandWrittenImageFileIsNotAnIcon(@TempDir Path tmp) throws Exception{
+    var root= claimsProject(tmp, """
+Fake:base.ImageFile{
+  .path: base.Str -> "fear:/_col/icons/foo.png";
+  .diskPath: base.Str -> "_col/icons/foo.png";
+  .zipSteps: base.Str -> "";
+  .zipEntry: base.Str -> "";
+  .originalFileName: base.Str -> "foo.png";
+  }
+Foo:Main, OpenWith[Fake,"foo"]{s->base.Debug#(`foo`)}
+""");
+    var ex= Assertions.assertThrows(UserError.class, ()->coordinator(root).compile(root, stLib));
+    utils.Err.strCmp("""
+In file: fear:/_col/_rank_app.fear
+
+011| Foo:Main, OpenWith[Fake,"foo"]{s->base.Debug#(`foo`)}
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+While inspecting main "col.Foo"
+Main "col.Foo" implements `base.OpenWith[col.Fake,"foo"]`.
+The icon "col.Fake" implements "base.ImageFile" by hand: it is not the type generated for an image file.
+An icon is the type generated for an image file, like "IconsFoo" for "_pkg/icons/foo.png", or "base.IconsConflict".""", ex.getMessage());
+  }
+  @Test void aDeletedMainsInfoForcesARecompile(@TempDir Path tmp) throws Exception{
+    var root= claimsProject(tmp, """
+Foo:Main, OpenWith[IconsFoo,"foo"]{s->base.Debug#(`foo`)}
+""");
+    coordinator(root).compile(root, stLib);
+    var text= Fs.readUtf8(mainsInfo(root));
+    Assertions.assertEquals(Map.of("col",true), Coordinator.pkgsBuilt(root));
+    Files.delete(mainsInfo(root));
+    Assertions.assertEquals(Map.of("col",false), Coordinator.pkgsBuilt(root));
+    Assertions.assertEquals(Optional.empty(), coordinator(root).mains(root, stLib));
+    coordinator(root).compile(root, stLib);
+    utils.Err.strCmp(text, Fs.readUtf8(mainsInfo(root)));
+    Assertions.assertEquals(Map.of("col.Foo","_col/_rank_app.fear"), coordinator(root).mains(root, stLib).orElseThrow());
+  }
+  @Test void aPackageReachingTheTopRankListsItsMains(@TempDir Path tmp) throws Exception{
+    var root= claimsProject(tmp, """
+Foo:Main{s->base.Debug#(`foo`)}
+jjj
+_lib/_rank_core.fear
+iii
+Lib:base.Main, base.OpenWith[base.IconsConflict,"fear"]{s->base.Debug#(`lib`)}
+""");
+    coordinator(root).compile(root, stLib);
+    Assertions.assertEquals(Map.of("col.Foo","_col/_rank_app.fear"), coordinator(root).mains(root, stLib).orElseThrow());
+    Fs.rmTree(root.resolve("_col"));
+    Assertions.assertEquals(Map.of("lib",false), Coordinator.pkgsBuilt(root));
+    utils.Err.strCmp("lib\n", coordinator(root).main(root, stLib));
+    utils.Err.strCmp("""
+{
+  "lib.Lib": ["_lib/_rank_core.fear", [], [["base.IconsConflict", "icons/conflict.png", "", "", "fear"]]]
+}
+""", Fs.readUtf8(mainsInfo(root)));
+  }
+  @Test void aDeletedMainsInfoListsTheMainsOfEveryTopRankPackage(@TempDir Path tmp) throws Exception{
+    var root= claimsProject(tmp, """
+Foo:Main{s->base.Debug#(`foo`)}
+jjj
+_more/_rank_app.fear
+iii
+More:base.Main{s->base.Debug#(`more`)}
+""");
+    coordinator(root).compile(root, stLib);
+    var text= Fs.readUtf8(mainsInfo(root));
+    Files.delete(mainsInfo(root));
+    coordinator(root).compile(root, stLib);
+    utils.Err.strCmp(text, Fs.readUtf8(mainsInfo(root)));
+  }
+  @Test void aMovedIconOfALowerRankPackageIsFollowed(@TempDir Path tmp) throws Exception{
+    var root= claimsProject(tmp, """
+Foo:Main, OpenWith[lib.IconsLib]{s->base.Debug#(`foo`)}
+jjj
+_lib/_rank_core.fear
+iii
+Lib:{}
+jjj
+_lib/icons/lib.png
+iii
+not read by the compiler
+""");
+    coordinator(root).compile(root, stLib);
+    Files.move(root.resolve("_lib","icons","lib.png"), root.resolve("_lib","icons","lib.gif"));
+    coordinator(root).compile(root, stLib);
+    utils.Err.strCmp("""
+{
+  "col.Foo": ["_col/_rank_app.fear", [], [["lib.IconsLib", "_lib/icons/lib.gif", "", "", ""]]]
+}
+""", Fs.readUtf8(mainsInfo(root)));
+  }
+  @Test void inheritedClaimsAreListedOnce(@TempDir Path tmp) throws Exception{
+    var root= claimsProject(tmp, """
+Opener:Main, OpenWith[IconsFoo,"foo"], Shortcut[IconsFoo]{}
+Other:Main, Shortcut[IconsFoo], OpenWith[IconsFoo]{}
+Foo:Opener, Other, Shortcut[base.IconsConflict,"bar"], OpenWith[IconsFoo]{s->base.Debug#(`foo`)}
+""");
+    coordinator(root).compile(root, stLib);
+    utils.Err.strCmp("""
+{
+  "col.Foo": ["_col/_rank_app.fear", [["base.IconsConflict", "icons/conflict.png", "", "", "bar"], ["col.IconsFoo", "_col/icons/foo.png", "", "", ""]], [["col.IconsFoo", "_col/icons/foo.png", "", "", ""], ["col.IconsFoo", "_col/icons/foo.png", "", "", "foo"]]]
+}
+""", Fs.readUtf8(mainsInfo(root)));
+  }
+  @Test void literalTypesInSignaturesCompileRunAndAreReadBackFromTheApiJson(@TempDir Path tmp) throws Exception{
+    Path root= tmp.resolve("root");
+    UserError.root= root;
+    FsDsl.materialize(root, """
+_lib/_rank_core.fear
+iii
+Lit:{ .m(x: "a\\"): base.Str -> x; .n(x: `b"c`): base.Str -> x; .k: 5 -> 5; }
+jjj
+_col/_rank_app.fear
+iii
+Hello:base.Main{s->base.Debug#((lib.Lit.m("a\\"))+(lib.Lit.n(`b"c`))+(lib.Lit.k.str))}
+""");
+    utils.Err.strCmp("a\\b\"c5\n", coordinator(root).main(root, stLib));
+    editAndTouch(root.resolve("_col","_rank_app.fear"), "(lib.Lit.k.str)", "(lib.Lit.k.str)+`!`");
+    utils.Err.strCmp("a\\b\"c5!\n", coordinator(root).main(root, stLib));
+  }
 
   @Test void anAssetWhoseNameForgesNoValidTypeIsReportedAgainstTheRealFile(@TempDir Path tmp){
     Path root= tmp.resolve("root");
@@ -525,9 +795,7 @@ Hello:Main{s->base.Debug#(Greeting.hi)}
     long aBuilt= Fs.lastModified(out.resolve("a.built"));
     long aJson= Fs.lastModified(out.resolve("a.json"));
     long bBuilt= Fs.lastModified(out.resolve("b.built"));
-    var aSrc= root.resolve("_a/_rank_core.fear");
-    Fs.writeUtf8(aSrc, Fs.readUtf8(aSrc).replace("\"hi\"","\"ho\""));
-    Files.setLastModifiedTime(aSrc, FileTime.fromMillis(System.currentTimeMillis()+500));
+    editAndTouch(root.resolve("_a/_rank_core.fear"), "\"hi\"", "\"ho\"");
     c.main(root, stLib);
 
     Assertions.assertNotEquals(aBuilt, Fs.lastModified(out.resolve("a.built")));

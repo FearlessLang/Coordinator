@@ -18,7 +18,7 @@ import tools.Fs;
 import tools.ReadZip;
 import utils.Range;
 
-final class ZipLocator{
+public final class ZipLocator{
   private static Map<String, byte[]> readHere(Path diskZip, List<String> steps, byte[] bytes){
     return readZip(diskZip, steps).readAll(()->zipStream(diskZip, bytes));
   }

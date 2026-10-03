@@ -3,6 +3,8 @@ package sourceOracleTests;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.Optional;
+
 import org.junit.jupiter.api.Test;
 
 import core.TName;
@@ -34,5 +36,19 @@ final class AutoloadNamesTest{
     assertTrue(TName.isTypeName(AutoloadHandler.capFirst("example_data")));
     assertTrue(TName.isTypeName(AutoloadHandler.capFirst("_foo")));
     assertTrue(TName.isTypeName(AutoloadHandler.capFirst("___a")));
+  }
+  @Test void aTypeNameTurnsIntoTheFileNameCapFirstMapsBackToIt(){
+    assertEquals(Optional.of("foo_bar"),AutoloadHandler.fileName("FooBar"));
+    assertEquals(Optional.of("_foo"),AutoloadHandler.fileName("_Foo"));
+    assertEquals(Optional.of("__foo_bar"),AutoloadHandler.fileName("__FooBar"));
+    assertEquals(Optional.of("foo_1"),AutoloadHandler.fileName("Foo_1"));
+    assertEquals(Optional.of("foo_b_a_r"),AutoloadHandler.fileName("FooBAR"));
+    assertEquals(Optional.of("example__data"),AutoloadHandler.fileName("Example_Data"));
+    assertEquals(Optional.of("con"),AutoloadHandler.fileName("Con"));
+  }
+  @Test void aTypeNameCapFirstNeverProducesHasNoFileName(){
+    assertEquals(Optional.empty(),AutoloadHandler.fileName("Foo'"));
+    assertEquals(Optional.empty(),AutoloadHandler.fileName("Foo_bar"));
+    assertEquals(Optional.empty(),AutoloadHandler.fileName("Foo$1"));
   }
 }

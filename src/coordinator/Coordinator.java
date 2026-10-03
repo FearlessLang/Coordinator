@@ -9,14 +9,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.stream.LongStream;
 import java.util.stream.Stream;
 
 import userMessages.Report;
 import userMessages.Violation;
-import core.AllLs;
 import core.FearlessException;
-import core.LiteralDeclarations;
 import core.OtherPackages;
 import core.TName;
 import core.E.Literal;
@@ -30,7 +29,6 @@ import tools.JavaTool;
 import tools.JavacTool;
 import tools.SourceOracle;
 import tools.SourceOracle.Ref;
-import utils.Join;
 import utils.Push;
 import utils.Range;
 
@@ -50,13 +48,14 @@ public interface Coordinator {
     var map= Helper.pkgMap(o,path);
     var ranks= map.values().stream().map(u->Helper.okPkgContent(u,path)).toList();
     var out= Helper.out(path);
+    var top= ranks.stream().mapToInt(Helper::rankNumber).max().getAsInt();
     var res= new LinkedHashMap<String,Boolean>();
     for (var r: ranks){
       var pkg= Helper.pkgName(r);
       var below= ranks.stream().filter(d->Helper.rankNumber(d) < Helper.rankNumber(r)).mapToLong(d->out.pkgApiStamp(Helper.pkgName(d)));
       var own= map.get(pkg).stream().mapToLong(Ref::lastModified);
       var maxIn= LongStream.concat(LongStream.concat(own,below),LongStream.of(out.mapStamp())).max().getAsLong();
-      res.put(pkg,out.stillBuilt(pkg,map.get(pkg),maxIn));
+      res.put(pkg,out.stillBuilt(pkg,map.get(pkg),Helper.rankNumber(r) == top,maxIn));
     }
     return Collections.unmodifiableMap(res);
   }
@@ -110,6 +109,7 @@ class Helper{
     var out= out(project);
     Layer l= layerOf(coordinator,o,project,out,stLib);
     l.compile(o, out);
+    Fs.writeUtf8(out.mainsPath(), out.mainsInfo().orElseThrow().only(l.pkgs()::containsKey).located(o,stLib).print());
     return List.copyOf(l.pkgs().keySet());//by design: only the highest rank number's packages have their Main run
   }
   static String main(Coordinator coordinator, Path project, SourceOracle stLib) throws InterruptedException{
@@ -125,19 +125,9 @@ class Helper{
     Layer l;
     try{ l= layerOf(c,o,project,out,stLib); l.compile(o,out); }
     catch(WouldCompile _){ return Optional.empty(); }
-    var res= new LinkedHashMap<String,String>();
-    l.pkgs().keySet().stream().flatMap(p->Fs.readUtf8(out.mainsPath(p)).lines()).forEach(line->res.put(line.substring(0,line.indexOf(' ')),line.substring(line.indexOf(' ')+1)));
+    var res= new TreeMap<String,String>();
+    out.mainsInfo().orElseThrow().only(l.pkgs()::containsKey).mains().forEach((k,v)->res.put(k,v.file()));
     return Optional.of(Collections.unmodifiableMap(res));
-  }
-  private static final TName baseMain= new TName("base.Main",0,utils.Pos.unknown);
-  static String mainsText(List<Literal> core){
-    var nested= AllLs.of(core).values().stream().filter(l->LiteralDeclarations.has(l.cs(),LiteralDeclarations.captureFree));
-    var lines= Stream.concat(core.stream(),nested).filter(Helper::isMain).map(l->l.name().s()+" "+l.name().pos().fileName().toString().substring(SourceOracle.root.length())).distinct().sorted();
-    return Join.of(lines,"","\n","\n","");
-  }
-  static boolean isMain(Literal l){
-    return LiteralDeclarations.has(l.cs(),baseMain)
-      && l.ms().stream().noneMatch(m->m.sig().abs());
   }
   static LinkedHashMap<String,List<Ref>> pkgMap(SourceOracle o, Path path){
     if (o.allFiles().stream().noneMatch(Helper::isFear)){ throw Report.projectEmpty(path); }
@@ -150,10 +140,10 @@ class Helper{
     int lastNum= rankNumber(ranks.getFirst());
     var pkgs= new LinkedHashMap<String, List<Ref>>();
     for (Ref u:ranks){
-      if (rankNumber(u) != lastNum){ l= new MiddleLayer(coordinator,l,pkgs); pkgs= new LinkedHashMap<>(); lastNum= rankNumber(u); }
+      if (rankNumber(u) != lastNum){ l= new MiddleLayer(coordinator,l,pkgs,false); pkgs= new LinkedHashMap<>(); lastNum= rankNumber(u); }
       pkgs.put(pkgName(u),map.get(pkgName(u)));
     }
-    return new MiddleLayer(coordinator,l,pkgs);
+    return new MiddleLayer(coordinator,l,pkgs,true);
   }
   static Layer mapFromRanks(Coordinator coordinator, List<Ref> allRanks, SourceOracle o, OutputOracle out, SourceOracle stLib){
     Map<String,Map<String,String>> res; try {res= new FrontendLogicMain()

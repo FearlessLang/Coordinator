@@ -1,7 +1,7 @@
 package coordinator;
 
-import java.util.List;
+import java.util.Map;
 
 import realSourceOracle.SourceOracleWithAutoload;
 
-public record CapabilityEnvironment(List<SourceOracleWithAutoload.Triple> autoloadedAssets){}
+public record CapabilityEnvironment(Map<String,SourceOracleWithAutoload.Triple> autoloadedAssets){}

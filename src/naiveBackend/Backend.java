@@ -134,7 +134,7 @@ public class Backend{
   final Map<String,String> mains= new TreeMap<>();
   void writeMainJava(){
     var all= Join.of(mains.keySet().stream().map(n->"\""+n+"\""),"{",",","}","{}");
-    var assets= Join.of(tools.capabilities().autoloadedAssets().stream().map(Backend::assetLiteral),"{",",","}","{}");
+    var assets= Join.of(tools.capabilities().autoloadedAssets().values().stream().map(Backend::assetLiteral),"{",",","}","{}");
     var sb= new StringBuilder(8_000)
       .append("package _").append(tools.pkgName()).append(";\n\n")
       .append("public final class Main{\n")
