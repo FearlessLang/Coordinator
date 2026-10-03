@@ -22,6 +22,7 @@ import tools.Fs;
 import tools.SourceOracle;
 import userMessages.Report;
 import userMessages.UserError;
+import utils.Pos;
 
 public record MainsInfo(Map<String,Main> mains){
   public record Main(String file, List<Claim> shortcuts, List<Claim> openWiths){}
@@ -35,6 +36,10 @@ public record MainsInfo(Map<String,Main> mains){
     return new MainsInfo(mains.entrySet().stream()
       .filter(e->pkg.test(e.getKey().substring(0,e.getKey().indexOf('.'))))
       .collect(Collectors.toUnmodifiableMap(Map.Entry::getKey,Map.Entry::getValue)));
+  }
+  MainsInfo located(SourceOracle src, SourceOracle stLib){
+    var of= new Of(src,stLib);
+    return new MainsInfo(mains.entrySet().stream().collect(Collectors.toUnmodifiableMap(Map.Entry::getKey,e->of.located(e.getValue()))));
   }
   private static Info info(Main m){ return lst(List.of(str(m.file()),claims(m.shortcuts()),claims(m.openWiths()))); }
   private static Info claims(List<Claim> cs){ return lst(cs.stream().map(MainsInfo::info).toList()); }
@@ -96,10 +101,14 @@ public record MainsInfo(Map<String,Main> mains){
       var icon= name(c.ts().getFirst());
       var lit= c.ts().size() == 1 ? "" : name(c.ts().get(1)).simpleName();
       var repr= c.name().s()+"["+icon.s()+(lit.isEmpty() ? "" : ","+lit)+"]";
-      var t= SourceOracleWithAutoload.asset(src,stLib,icon)
+      return claim(icon,lit.isEmpty() ? "" : lit.substring(1,lit.length()-1))
         .orElseThrow(()->Report.claimIconNotAsset(src::loadString,l.span().inner,l.name().s(),repr,icon.s()));
-      return new Claim(icon.s(),t.diskPath(),t.zipSteps(),t.zipEntry(),lit.isEmpty() ? "" : lit.substring(1,lit.length()-1));
     }
+    Optional<Claim> claim(TName icon, String ext){
+      return SourceOracleWithAutoload.asset(src,stLib,icon).map(t->new Claim(icon.s(),t.diskPath(),t.zipSteps(),t.zipEntry(),ext));
+    }
+    Main located(Main m){ return new Main(m.file(),located(m.shortcuts()),located(m.openWiths())); }
+    List<Claim> located(List<Claim> cs){ return cs.stream().map(c->claim(new TName(c.icon(),0,Pos.unknown),c.extension()).orElseThrow()).toList(); }
     static TName name(T t){ return ((T.RCC)t).c().name(); }
   }
 }

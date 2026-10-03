@@ -110,7 +110,7 @@ class Helper{
     var out= out(project);
     Layer l= layerOf(coordinator,o,project,out,stLib);
     l.compile(o, out);
-    out.commitMains(l.pkgs()::containsKey, Map.of());
+    Fs.writeUtf8(out.mainsPath(), out.mainsInfo().orElseThrow().only(l.pkgs()::containsKey).located(o,stLib).print());
     return List.copyOf(l.pkgs().keySet());//by design: only the highest rank number's packages have their Main run
   }
   static String main(Coordinator coordinator, Path project, SourceOracle stLib) throws InterruptedException{

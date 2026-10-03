@@ -1,5 +1,6 @@
 package coordinator;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -26,12 +27,13 @@ record MiddleLayer(Coordinator coordinator, Layer next, LinkedHashMap<String,Lis
   @Override public SourceOracle stLib(){ return next.stLib(); }
   @Override public OtherPackages compile(SourceOracle src, OutputOracle out){
     OtherPackages other= next.compile(src, out);
+    var lost= top && !Files.exists(out.mainsPath());
     var res= new Object(){
       OtherPackages nextOther= other;
       private void compilePkg(String pkg, List<Ref> files){
         long maxSrc= files.stream().mapToLong(Ref::lastModified).max().getAsLong();
         long maxIn= Math.max(maxSrc, other.stamp());//out.mapStamp() must be <= then other.watermark() since it comes from next
-        if (out.stillBuilt(pkg, files, top, maxIn)){ nextOther = out.addCachedPkgApi(nextOther, pkg); return; }
+        if (!lost && out.stillBuilt(pkg, files, top, maxIn)){ nextOther = out.addCachedPkgApi(nextOther, pkg); return; }
         var rich= SourceOracleWithAutoload.of(src, "_"+pkg);
         List<Literal> core= coordinator.frontend(pkg, rich.sources(files), rich.oracle(), other,other.virtualizationMap().getOrDefault(pkg,Map.of()));
         var mains= MainsInfo.of(core, src, stLib());

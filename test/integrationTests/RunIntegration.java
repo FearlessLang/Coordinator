@@ -675,6 +675,54 @@ Lib:base.Main, base.OpenWith[base.IconsConflict,"fear"]{s->base.Debug#(`lib`)}
 }
 """, Fs.readUtf8(mainsInfo(root)));
   }
+  @Test void aDeletedMainsInfoListsTheMainsOfEveryTopRankPackage(@TempDir Path tmp) throws Exception{
+    var root= claimsProject(tmp, """
+Foo:Main{s->base.Debug#(`foo`)}
+jjj
+_more/_rank_app.fear
+iii
+More:base.Main{s->base.Debug#(`more`)}
+""");
+    coordinator(root).compile(root, stLib);
+    var text= Fs.readUtf8(mainsInfo(root));
+    Files.delete(mainsInfo(root));
+    coordinator(root).compile(root, stLib);
+    utils.Err.strCmp(text, Fs.readUtf8(mainsInfo(root)));
+  }
+  @Test void aMovedIconOfALowerRankPackageIsFollowed(@TempDir Path tmp) throws Exception{
+    var root= claimsProject(tmp, """
+Foo:Main, OpenWith[lib.IconsLib]{s->base.Debug#(`foo`)}
+jjj
+_lib/_rank_core.fear
+iii
+Lib:{}
+jjj
+_lib/icons/lib.png
+iii
+not read by the compiler
+""");
+    coordinator(root).compile(root, stLib);
+    Files.move(root.resolve("_lib","icons","lib.png"), root.resolve("_lib","icons","lib.gif"));
+    coordinator(root).compile(root, stLib);
+    utils.Err.strCmp("""
+{
+  "col.Foo": ["_col/_rank_app.fear", [], [["lib.IconsLib", "_lib/icons/lib.gif", "", "", ""]]]
+}
+""", Fs.readUtf8(mainsInfo(root)));
+  }
+  @Test void inheritedClaimsAreListedOnce(@TempDir Path tmp) throws Exception{
+    var root= claimsProject(tmp, """
+Opener:Main, OpenWith[IconsFoo,"foo"], Shortcut[IconsFoo]{}
+Other:Main, Shortcut[IconsFoo], OpenWith[IconsFoo]{}
+Foo:Opener, Other, Shortcut[base.IconsConflict,"bar"], OpenWith[IconsFoo]{s->base.Debug#(`foo`)}
+""");
+    coordinator(root).compile(root, stLib);
+    utils.Err.strCmp("""
+{
+  "col.Foo": ["_col/_rank_app.fear", [["base.IconsConflict", "icons/conflict.png", "", "", "bar"], ["col.IconsFoo", "_col/icons/foo.png", "", "", ""]], [["col.IconsFoo", "_col/icons/foo.png", "", "", ""], ["col.IconsFoo", "_col/icons/foo.png", "", "", "foo"]]]
+}
+""", Fs.readUtf8(mainsInfo(root)));
+  }
   @Test void literalTypesInSignaturesCompileRunAndAreReadBackFromTheApiJson(@TempDir Path tmp) throws Exception{
     Path root= tmp.resolve("root");
     UserError.root= root;
