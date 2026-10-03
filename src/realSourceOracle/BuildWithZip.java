@@ -137,11 +137,10 @@ public final class BuildWithZip{
   }
   private static void checkExtSeg(RefParent kid, String seg){
     int n= seg.length();
-    if (n < 1 || n > 16){ throw Report.extLenMustBe1To16(kid); }
+    if (n < 1 || n > Fs.maxExtSeg){ throw Report.extLenMustBe1To16(kid); }
     for (int i : Range.of(0,n)){
       char c= seg.charAt(i);
-      boolean ok= ('a' <= c && c <= 'z') || ( '0' <= c && c <= '9' );
-      if (!ok){ throw Report.extInvalidChar(kid, c); }
+      if (!Fs.isExtSegChar(c)){ throw Report.extInvalidChar(kid, c); }
     }
   }
   private static final Set<String> winReserved= Set.of(
