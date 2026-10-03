@@ -20,9 +20,8 @@ record ProduceBody(BytecodeLineFix sb, Backend b, String iface, String thisName,
   private String optCast(core.T t){
     if (!(t instanceof core.T.RCC rcc)){ return ""; }
     var n= rcc.c().name();
-    return "("+b.typeName(isLit(n) ? LiteralDeclarations.superLiteral(n) : n)+")";
+    return "("+b.typeName(LiteralDeclarations.isPrimitiveLiteral(n) ? LiteralDeclarations.superLiteral(n) : n)+")";
   }
-  private static boolean isLit(TName n){ return n.pkgName().equals("base") && LiteralDeclarations.isPrimitiveLiteral(n.simpleName()); }
   void emitE(core.E e){ switch(e){
     case X x -> emitX(x);
     case Type t -> emitType(t);
@@ -35,7 +34,7 @@ record ProduceBody(BytecodeLineFix sb, Backend b, String iface, String thisName,
   }
   private void emitType(Type t){
     var n= t.type().c().name();
-    if (!isLit(n)){ sb.a(b.typeName(n)+".instance"); return; }
+    if (!LiteralDeclarations.isPrimitiveLiteral(n)){ sb.a(b.typeName(n)+".instance"); return; }
     var sl= b.typeName(LiteralDeclarations.superLiteral(n));
     sb.a(sl+"Instance.instance("+LiteralDeclarations.toJavaLiteral(n.simpleName())+")");
   }

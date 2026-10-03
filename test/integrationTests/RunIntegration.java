@@ -631,9 +631,7 @@ Hello:Main{s->base.Debug#(Greeting.hi)}
     long aBuilt= Fs.lastModified(out.resolve("a.built"));
     long aJson= Fs.lastModified(out.resolve("a.json"));
     long bBuilt= Fs.lastModified(out.resolve("b.built"));
-    var aSrc= root.resolve("_a/_rank_core.fear");
-    Fs.writeUtf8(aSrc, Fs.readUtf8(aSrc).replace("\"hi\"","\"ho\""));
-    Files.setLastModifiedTime(aSrc, FileTime.fromMillis(System.currentTimeMillis()+500));
+    editAndTouch(root.resolve("_a/_rank_core.fear"), "\"hi\"", "\"ho\"");
     c.main(root, stLib);
 
     Assertions.assertNotEquals(aBuilt, Fs.lastModified(out.resolve("a.built")));
