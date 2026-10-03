@@ -469,6 +469,66 @@ Hello:Main{s->base.Debug#(base.IconsConflict.path+" "+(base.IconsConflict.readIm
 """);
     utils.Err.strCmp("fear:/_base/icons/conflict.png 256\n", coordinator(root).main(root, stLib));
   }
+  static Path claimsProject(Path tmp, String code) throws IOException{
+    Path root= tmp.resolve("root");
+    UserError.root= root;
+    FsDsl.materialize(root, """
+_col/_rank_app.fear
+iii
+use base.Main as Main;
+use base.OpenWith as OpenWith;
+use base.Shortcut as Shortcut;
+"""+code);
+    Fs.ensureDir(root.resolve("_col","icons"));
+    Files.write(root.resolve("_col","icons","foo.png"), onePixelPng());
+    return root;
+  }
+  @Test void mainsClaimingExtensionsRunOnThePortablePath(@TempDir Path tmp) throws Exception{
+    var root= claimsProject(tmp, """
+Foo:Main, OpenWith[IconsFoo,"foo"], OpenWith[IconsFoo], Shortcut[IconsFoo,`bar`], Shortcut[IconsFoo]{s->base.Debug#(`foo`)}
+Conflict:lib.Lib, Shortcut[base.IconsConflict]{s->base.Debug#(`conflict`)}
+jjj
+_lib/_rank_core.fear
+iii
+Lib:base.Main, base.OpenWith[base.IconsConflict,"fear"]{s->base.Debug#(`lib`)}
+""");
+    utils.Err.strCmp("conflict\nfoo\n", coordinator(root).main(root, stLib));
+  }
+  @Test void aClaimWithoutMainIsRefused(@TempDir Path tmp) throws Exception{
+    var root= claimsProject(tmp, """
+Assoc:OpenWith[IconsFoo,"foo"]{}
+""");
+    var ex= Assertions.assertThrows(UserError.class, ()->coordinator(root).main(root, stLib));
+    utils.Err.strCmp("""
+In file: fear:/_col/_rank_app.fear
+
+004| Assoc:OpenWith[IconsFoo,"foo"]{}
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+While inspecting type declaration "Assoc"
+Type declaration "Assoc" implements "base.OpenWith[_,_]".
+Only a main can open files: type declaration "Assoc" must also implement "base.Main", directly or through one of its supertypes.
+Error 7 WellFormedness
+""", ex.getMessage());
+  }
+  @Test void aClaimWhoseIconIsNotAnImageFileIsRefused(@TempDir Path tmp) throws Exception{
+    var root= claimsProject(tmp, """
+Foo:Main, OpenWith[base.Str,"foo"]{s->base.Debug#(`foo`)}
+""");
+    var ex= Assertions.assertThrows(UserError.class, ()->coordinator(root).main(root, stLib));
+    utils.Err.strCmp("""
+In file: fear:/_col/_rank_app.fear
+
+004| Foo:Main, OpenWith[base.Str,"foo"]{s->base.Debug#(`foo`)}
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+While inspecting type declaration "Foo"
+Type declaration "Foo" implements `base.OpenWith[base.Str,"foo"]`.
+The icon "base.Str" is not an image file.
+An icon is the type generated for an image file, like "IconsFoo" for "_pkg/icons/foo.png", or "base.IconsConflict".
+Error 7 WellFormedness
+""", ex.getMessage());
+  }
 
   @Test void anAssetWhoseNameForgesNoValidTypeIsReportedAgainstTheRealFile(@TempDir Path tmp){
     Path root= tmp.resolve("root");
