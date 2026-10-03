@@ -99,9 +99,10 @@ public final class Violation {
   }
   public static UserError associationUserLocked(List<String> locked, Function<String,String> claimedBy){
     return new UserError("""
-      Fearless cannot become the program that opens Fearless projects.
+      Fearless cannot become the program that opens the kinds of file listed
+      below.
 
-      Your system remembers a choice you made by hand for this kind of file,
+      Your system remembers a choice you made by hand for these kinds of file,
       and no program can change or remove that choice, including this one.
       Fearless stopped before touching anything: your system is exactly as it
       was.
@@ -116,10 +117,11 @@ public final class Violation {
     var lines= new ArrayList<String>();
     held.forEach((e,cs)->cs.forEach(c->lines.add(e+claimedBy.apply(e)+" -> "+c)));
     return new UserError("""
-      Fearless cannot become the program that opens Fearless projects.
+      Fearless cannot become the program that opens the kinds of file listed
+      below.
 
-      Another program already answers for this kind of file. Fearless stopped
-      before touching anything: your system is exactly as it was.
+      Another program already answers for these kinds of file. Fearless
+      stopped before touching anything: your system is exactly as it was.
 
       What stood in the way:
       %s""".formatted(String.join("\n", lines)));

@@ -95,9 +95,10 @@ C:\\Users\\ada\\Downloads\\fearlessManaged0_007\\fearlessManaged0_007w.exe""", V
   }
   @Test void associationUserLocked(){
     utils.Err.strCmp("""
-Fearless cannot become the program that opens Fearless projects.
+Fearless cannot become the program that opens the kinds of file listed
+below.
 
-Your system remembers a choice you made by hand for this kind of file,
+Your system remembers a choice you made by hand for these kinds of file,
 and no program can change or remove that choice, including this one.
 Fearless stopped before touching anything: your system is exactly as it
 was.
@@ -110,9 +111,10 @@ What is locked:
   }
   @Test void associationUserLockedSeveralClaimed(){
     utils.Err.strCmp("""
-Fearless cannot become the program that opens Fearless projects.
+Fearless cannot become the program that opens the kinds of file listed
+below.
 
-Your system remembers a choice you made by hand for this kind of file,
+Your system remembers a choice you made by hand for these kinds of file,
 and no program can change or remove that choice, including this one.
 Fearless stopped before touching anything: your system is exactly as it
 was.
@@ -126,10 +128,11 @@ What is locked:
   }
   @Test void associationNotOurs(){
     utils.Err.strCmp("""
-Fearless cannot become the program that opens Fearless projects.
+Fearless cannot become the program that opens the kinds of file listed
+below.
 
-Another program already answers for this kind of file. Fearless stopped
-before touching anything: your system is exactly as it was.
+Another program already answers for these kinds of file. Fearless
+stopped before touching anything: your system is exactly as it was.
 
 What stood in the way:
 .fearless -> fearlessBin0_003""", Violation.associationNotOurs(Map.of(".fearless",List.of("fearlessBin0_003")), e->"").getMessage());
@@ -139,10 +142,11 @@ What stood in the way:
     held.put(".txt", List.of("org.gnome.TextEditor","vim"));
     held.put(".fearless", List.of("OtherApp.fearless"));
     utils.Err.strCmp("""
-Fearless cannot become the program that opens Fearless projects.
+Fearless cannot become the program that opens the kinds of file listed
+below.
 
-Another program already answers for this kind of file. Fearless stopped
-before touching anything: your system is exactly as it was.
+Another program already answers for these kinds of file. Fearless
+stopped before touching anything: your system is exactly as it was.
 
 What stood in the way:
 .txt -> org.gnome.TextEditor
@@ -154,10 +158,11 @@ What stood in the way:
     held.put(".foo", List.of("org.gnome.TextEditor","vim"));
     held.put(".fapp042", List.of("OtherApp.fapp042"));
     utils.Err.strCmp("""
-Fearless cannot become the program that opens Fearless projects.
+Fearless cannot become the program that opens the kinds of file listed
+below.
 
-Another program already answers for this kind of file. Fearless stopped
-before touching anything: your system is exactly as it was.
+Another program already answers for these kinds of file. Fearless
+stopped before touching anything: your system is exactly as it was.
 
 What stood in the way:
 .foo claimed by "hello.Foo" of project "demo" -> org.gnome.TextEditor
