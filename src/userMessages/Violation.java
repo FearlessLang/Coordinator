@@ -128,7 +128,8 @@ public final class Violation {
   }
   public static UserError associationNotWritable(String reported){
     return new UserError("""
-      Fearless cannot become the program that opens Fearless projects.
+      Fearless cannot become the program that opens Fearless projects and the
+      other kinds of file it registers.
 
       What Fearless would need to write, or remove, is not yours to change.
       Fearless stopped before touching anything: your system is exactly as it
@@ -142,8 +143,9 @@ public final class Violation {
       Fearless could not put your system back as it was.
 
       A step failed, and undoing what had already been written failed too, so
-      your system is left part way. Which program opens Fearless projects may
-      now be wrong, and you can settle it by hand in your system settings.
+      your system is left part way. Which program opens Fearless projects, and
+      the other kinds of file Fearless registers, may now be wrong, and you can
+      settle it by hand in your system settings.
 
       Where the undoing stopped:
       %s""".formatted(reported));
