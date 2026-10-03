@@ -1,12 +1,16 @@
 package userMessages;
 
+import java.net.URI;
 import java.nio.file.Path;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import metaParser.Frame;
 import metaParser.Message;
+import metaParser.Span;
 import tools.SourceOracle.Ref;
 import tools.SourceOracle.RefParent;
 import utils.Join;
@@ -572,6 +576,12 @@ File:
   //-- the user's Fearless source. The frontend explains these itself, in the language of
   //the language: parse errors, well formedness, types. Here they only become terminal.
   public static UserError sourceError(String rendered){ return new UserError(rendered); }
+  public static UserError claimIconNotAsset(Function<URI,String> loader, Span main, String mainName, String claim, String icon){
+    return new UserError(Message.of(loader,List.of(new Frame("main "+disp(mainName),main)),
+      "Main "+disp(mainName)+" implements "+disp(claim)+".\n"
+    + "The icon "+disp(icon)+" implements \"base.ImageFile\" by hand: it is not the type generated for an image file.\n"
+    + "An icon is the type generated for an image file, like \"IconsFoo\" for \"_pkg/icons/foo.png\", or \"base.IconsConflict\"."));
+  }
 
 
   public static UserError docReferences(List<String> problems){ return new UserError("""
