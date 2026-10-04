@@ -1,5 +1,6 @@
 package coordinator;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -49,13 +50,14 @@ public interface Coordinator {
     var ranks= map.values().stream().map(u->Helper.okPkgContent(u,path)).toList();
     var out= Helper.out(path);
     var top= ranks.stream().mapToInt(Helper::rankNumber).max().getAsInt();
+    var listed= Files.exists(out.mainsPath());
     var res= new LinkedHashMap<String,Boolean>();
     for (var r: ranks){
       var pkg= Helper.pkgName(r);
       var below= ranks.stream().filter(d->Helper.rankNumber(d) < Helper.rankNumber(r)).mapToLong(d->out.pkgApiStamp(Helper.pkgName(d)));
       var own= map.get(pkg).stream().mapToLong(Ref::lastModified);
       var maxIn= LongStream.concat(LongStream.concat(own,below),LongStream.of(out.mapStamp())).max().getAsLong();
-      res.put(pkg,out.stillBuilt(pkg,map.get(pkg),Helper.rankNumber(r) == top,maxIn));
+      res.put(pkg,out.stillBuilt(pkg,map.get(pkg),maxIn) && (listed || Helper.rankNumber(r) != top));
     }
     return Collections.unmodifiableMap(res);
   }
@@ -109,7 +111,7 @@ class Helper{
     var out= out(project);
     Layer l= layerOf(coordinator,o,project,out,stLib);
     l.compile(o, out);
-    Fs.writeUtf8(out.mainsPath(), out.mainsInfo().orElseThrow().only(l.pkgs()::containsKey).located(o,stLib).print());
+    Fs.writeUtf8(out.mainsPath(), out.mains(l.pkgs().keySet()).located(o,stLib).print());
     return List.copyOf(l.pkgs().keySet());//by design: only the highest rank number's packages have their Main run
   }
   static String main(Coordinator coordinator, Path project, SourceOracle stLib) throws InterruptedException{
@@ -126,7 +128,7 @@ class Helper{
     try{ l= layerOf(c,o,project,out,stLib); l.compile(o,out); }
     catch(WouldCompile _){ return Optional.empty(); }
     var res= new TreeMap<String,String>();
-    out.mainsInfo().orElseThrow().only(l.pkgs()::containsKey).mains().forEach((k,v)->res.put(k,v.file()));
+    out.mains(l.pkgs().keySet()).mains().forEach((k,v)->res.put(k,v.file()));
     return Optional.of(Collections.unmodifiableMap(res));
   }
   static LinkedHashMap<String,List<Ref>> pkgMap(SourceOracle o, Path path){
@@ -140,10 +142,10 @@ class Helper{
     int lastNum= rankNumber(ranks.getFirst());
     var pkgs= new LinkedHashMap<String, List<Ref>>();
     for (Ref u:ranks){
-      if (rankNumber(u) != lastNum){ l= new MiddleLayer(coordinator,l,pkgs,false); pkgs= new LinkedHashMap<>(); lastNum= rankNumber(u); }
+      if (rankNumber(u) != lastNum){ l= new MiddleLayer(coordinator,l,pkgs); pkgs= new LinkedHashMap<>(); lastNum= rankNumber(u); }
       pkgs.put(pkgName(u),map.get(pkgName(u)));
     }
-    return new MiddleLayer(coordinator,l,pkgs,true);
+    return new MiddleLayer(coordinator,l,pkgs);
   }
   static Layer mapFromRanks(Coordinator coordinator, List<Ref> allRanks, SourceOracle o, OutputOracle out, SourceOracle stLib){
     Map<String,Map<String,String>> res; try {res= new FrontendLogicMain()

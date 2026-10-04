@@ -981,25 +981,24 @@ use base.Main as Main;
 B:Main{s->base.Debug#(`b`)}
 """);
     coordinator(root).compile(root, stLib);
-    editAndTouch(mainsInfo(root), "\"_a/icons/a.png\", \"\", \"\", \"\"", "\"_a/icons/a.png\", \"\", \"\", \"ffile042\"");
     editAndTouch(root.resolve("_b","_rank_app.fear"), "B:Main", "C:Main{s->base.Debug#(`c`)}\nB:Main");
     coordinator(root).compile(root, stLib);
     utils.Err.strCmp("""
 {
-  "a.A": ["_a/_rank_app.fear", [], [["a.IconsA", "_a/icons/a.png", "", "", "ffile042"]]],
+  "a.A": ["_a/_rank_app.fear", [], [["a.IconsA", "_a/icons/a.png", "", "", ""]]],
   "b.B": ["_b/_rank_app.fear", [], []],
   "b.C": ["_b/_rank_app.fear", [], []]
 }
 """, Fs.readUtf8(mainsInfo(root)));
   }
-  @Test void aDeletedMainsInfoForcesARecompile(@TempDir Path tmp) throws Exception{
+  @Test void aDeletedPackageMainsInfoForcesARecompile(@TempDir Path tmp) throws Exception{
     var root= claimsProject(tmp, """
 Foo:Main, OpenWith[IconsFoo,"foo"]{s->base.Debug#(`foo`)}
 """);
     coordinator(root).compile(root, stLib);
     var text= Fs.readUtf8(mainsInfo(root));
     Assertions.assertEquals(Map.of("col",true), Coordinator.pkgsBuilt(root));
-    Files.delete(mainsInfo(root));
+    Files.delete(root.resolve(Coordinator.outDir).resolve("col.mains.info"));
     Assertions.assertEquals(Map.of("col",false), Coordinator.pkgsBuilt(root));
     Assertions.assertEquals(Optional.empty(), coordinator(root).mains(root, stLib));
     coordinator(root).compile(root, stLib);
@@ -1017,7 +1016,7 @@ Lib:base.Main, base.OpenWith[base.IconsConflict,"fear"]{s->base.Debug#(`lib`)}
     coordinator(root).compile(root, stLib);
     Assertions.assertEquals(Map.of("col.Foo","_col/_rank_app.fear"), coordinator(root).mains(root, stLib).orElseThrow());
     Fs.rmTree(root.resolve("_col"));
-    Assertions.assertEquals(Map.of("lib",false), Coordinator.pkgsBuilt(root));
+    Assertions.assertEquals(Map.of("lib",true), Coordinator.pkgsBuilt(root));
     utils.Err.strCmp("lib\n", coordinator(root).main(root, stLib));
     utils.Err.strCmp("""
 {
@@ -1036,8 +1035,10 @@ More:base.Main{s->base.Debug#(`more`)}
     coordinator(root).compile(root, stLib);
     var text= Fs.readUtf8(mainsInfo(root));
     Files.delete(mainsInfo(root));
+    Assertions.assertEquals(Map.of("col",false,"more",false), Coordinator.pkgsBuilt(root));
     coordinator(root).compile(root, stLib);
     utils.Err.strCmp(text, Fs.readUtf8(mainsInfo(root)));
+    Assertions.assertEquals(Map.of("col",true,"more",true), Coordinator.pkgsBuilt(root));
   }
   @Test void aMovedIconOfALowerRankPackageIsFollowed(@TempDir Path tmp) throws Exception{
     var root= claimsProject(tmp, """

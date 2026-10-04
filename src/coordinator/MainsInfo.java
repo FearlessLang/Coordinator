@@ -8,7 +8,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.TreeMap;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -33,11 +32,6 @@ public record MainsInfo(Map<String,Main> mains){
   public String print(){
     var fields= mains.entrySet().stream().map(e->new Info.Obj.Field(e.getKey(),Info.noSpan,info(e.getValue()))).toList();
     return Info.print(new Info.Obj(fields,Info.noSpan));
-  }
-  MainsInfo only(Predicate<String> pkg){
-    return new MainsInfo(mains.entrySet().stream()
-      .filter(e->pkg.test(e.getKey().substring(0,e.getKey().indexOf('.'))))
-      .collect(Collectors.toMap(Map.Entry::getKey,Map.Entry::getValue)));
   }
   MainsInfo located(SourceOracle src, SourceOracle stLib){
     var of= new Of(src,stLib);
