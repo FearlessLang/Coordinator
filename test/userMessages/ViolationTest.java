@@ -169,57 +169,38 @@ What stood in the way:
 .foo claimed by "hello.Foo" of project "demo" -> vim
 .fapp042 claimed by "hello.Bar" of project "demo" -> OtherApp.fapp042""", Violation.associationNotOurs(held, ViolationTest::claimedBy).getMessage());
   }
-  @Test void associationSharedType(){
+  @Test void associationChosenDefault(){
     utils.Err.strCmp("""
 Fearless cannot become the program that opens the kinds of file listed
 below.
 
-On this system a program opens a type of file, not an extension, and the
-type of each of these extensions also covers other file names:
-opening it would open those files too. Fearless stopped before touching
-anything: your system is exactly as it was.
+Your system remembers a choice you made by hand for these kinds of file:
+the [Default Applications] section of a mimeapps.list file names another
+program for their type. Fearless does not undo a choice of yours, and
+stopped before touching anything: your system is exactly as it was.
 
-Use another extension, or leave the extension out, as in OpenWith[I] or
-Shortcut[I], and Fearless chooses one.
+Removing the line of that type from the section, or choosing Fearless
+for these files, clears the choice.
 
-What stood in the way:
-.txt -> text/plain, also covering *.asc *,v""", Violation.associationSharedType(Map.of(".txt",Map.entry("text/plain",List.of("*.asc","*,v"))), e->"").getMessage());
+What is locked:
+.htm -> application/x-fearless-htm""", Violation.associationChosenDefault(List.of(".htm"), e->"").getMessage());
   }
-  @Test void associationSharedTypeWithoutGlobs(){
+  @Test void associationChosenDefaultSeveralClaimed(){
     utils.Err.strCmp("""
 Fearless cannot become the program that opens the kinds of file listed
 below.
 
-On this system a program opens a type of file, not an extension, and the
-type of each of these extensions also covers other file names:
-opening it would open those files too. Fearless stopped before touching
-anything: your system is exactly as it was.
+Your system remembers a choice you made by hand for these kinds of file:
+the [Default Applications] section of a mimeapps.list file names another
+program for their type. Fearless does not undo a choice of yours, and
+stopped before touching anything: your system is exactly as it was.
 
-Use another extension, or leave the extension out, as in OpenWith[I] or
-Shortcut[I], and Fearless chooses one.
+Removing the line of that type from the section, or choosing Fearless
+for these files, clears the choice.
 
-What stood in the way:
-.executable -> application/x-executable, also covering files recognised by their content""", Violation.associationSharedType(Map.of(".executable",Map.entry("application/x-executable",List.of())), e->"").getMessage());
-  }
-  @Test void associationSharedTypeSeveralClaimed(){
-    var shared= new LinkedHashMap<String,Map.Entry<String,List<String>>>();
-    shared.put(".foo", Map.entry("text/x-foo",List.of("*.a","*.b","*.c","*.d","*.e","*.f","*.g")));
-    shared.put(".fapp042", Map.entry("application/x-other",List.of("*.a","*.b","*.c","*.d","*.e")));
-    utils.Err.strCmp("""
-Fearless cannot become the program that opens the kinds of file listed
-below.
-
-On this system a program opens a type of file, not an extension, and the
-type of each of these extensions also covers other file names:
-opening it would open those files too. Fearless stopped before touching
-anything: your system is exactly as it was.
-
-Use another extension, or leave the extension out, as in OpenWith[I] or
-Shortcut[I], and Fearless chooses one.
-
-What stood in the way:
-.foo claimed by "hello.Foo" of project "demo" -> text/x-foo, also covering *.a *.b *.c *.d *.e and 2 more
-.fapp042 claimed by "hello.Bar" of project "demo" -> application/x-other, also covering *.a *.b *.c *.d *.e""", Violation.associationSharedType(shared, ViolationTest::claimedBy).getMessage());
+What is locked:
+.foo claimed by "hello.Foo" of project "demo" -> application/x-fearless-foo
+.pdf claimed by "hello.Bar" of project "demo" -> application/x-fearless-pdf""", Violation.associationChosenDefault(List.of(".foo",".pdf"), ViolationTest::claimedBy).getMessage());
   }
   private static String claimedBy(String ext){ return " claimed by \"hello."+(ext.equals(".foo") ? "Foo" : "Bar")+"\" of project \"demo\""; }
   @Test void associationNotWritable(){

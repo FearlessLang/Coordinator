@@ -126,27 +126,21 @@ public final class Violation {
       What stood in the way:
       %s""".formatted(String.join("\n", lines)));
   }
-  public static UserError associationSharedType(Map<String,Map.Entry<String,List<String>>> shared, Function<String,String> claimedBy){
-    var lines= shared.entrySet().stream().map(e->e.getKey()+claimedBy.apply(e.getKey())+" -> "+e.getValue().getKey()+", also covering "+someGlobs(e.getValue().getValue())).toList();
+  public static UserError associationChosenDefault(List<String> locked, Function<String,String> claimedBy){
     return new UserError("""
       Fearless cannot become the program that opens the kinds of file listed
       below.
 
-      On this system a program opens a type of file, not an extension, and the
-      type of each of these extensions also covers other file names:
-      opening it would open those files too. Fearless stopped before touching
-      anything: your system is exactly as it was.
+      Your system remembers a choice you made by hand for these kinds of file:
+      the [Default Applications] section of a mimeapps.list file names another
+      program for their type. Fearless does not undo a choice of yours, and
+      stopped before touching anything: your system is exactly as it was.
 
-      Use another extension, or leave the extension out, as in OpenWith[I] or
-      Shortcut[I], and Fearless chooses one.
+      Removing the line of that type from the section, or choosing Fearless
+      for these files, clears the choice.
 
-      What stood in the way:
-      %s""".formatted(String.join("\n", lines)));
-  }
-  private static String someGlobs(List<String> globs){
-    if (globs.isEmpty()){ return "files recognised by their content"; }
-    var shown= String.join(" ", globs.stream().limit(5).toList());
-    return globs.size() > 5 ? shown+" and "+(globs.size()-5)+" more" : shown;
+      What is locked:
+      %s""".formatted(String.join("\n", locked.stream().map(e->e+claimedBy.apply(e)+" -> application/x-fearless-"+e.substring(1)).toList())));
   }
   public static UserError associationNotWritable(String reported){
     return new UserError("""
