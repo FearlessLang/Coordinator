@@ -1,4 +1,4 @@
-// java --module-path ../../../Commons/Commons.jar --add-modules Commons scripts/TestAgentTools.java [TestClassName [agent]]
+// java --module-path ../../../Commons/Commons.jar --add-modules Commons scripts/TestAgentTools.java desk [TestClassName [agent]]
 package scripts;
 
 import java.nio.file.Path;
@@ -10,7 +10,8 @@ import tools.JavaTool;
 
 public class TestAgentTools{
   public static void main(String[] args) throws InterruptedException{
-    assert args.length<2 || args.length==2 && args[1].equals("agent");
+    var form= args.length==1 || args.length==2 || args.length==3 && args[2].equals("agent");
+    if (!form){ System.err.println("Usage: TestAgentTools.java <desk> [<TestClassName> [agent]]\nThe desk names the recordings to use, for example ubuntu-gnome or windows."); System.exit(1); }
     var channel= ModularBuild.out.resolve("pilot");
     Fs.rmTree(channel);
     if (stale(ResolveResource.portableFolderOut.resolve("fearlessBin"+ResolveResource.versionId))){ DeployPortableFearless.main(args); }
@@ -20,9 +21,10 @@ public class TestAgentTools{
     ModularBuild.coordinatorMain();
     ModularBuild.controllerTest();
     var classes= ModularBuild.out.resolve("controller-test");
-    if (args.length==0){ ModularBuild.runJUnit(classes, "--include-package=agentTools"); return; }
-    JavaTool.runMain(args.length==1 ? List.of("-ea") : List.of("-ea","-Dpilot="+channel), classes, ModularBuild.mods, "org.junit.platform.console.ConsoleLauncher",
-      "execute", "--class-path", classes.toString(), "--select-class=agentTools."+args[0], "--details=summary", "--disable-ansi-colors");
+    var jvm= args.length==3 ? List.of("-ea","-Ddesk="+args[0],"-Dpilot="+channel) : List.of("-ea","-Ddesk="+args[0]);
+    var tests= args.length==1 ? ".*" : "agentTools\\."+args[1];
+    JavaTool.runMain(jvm, classes, ModularBuild.mods, "org.junit.platform.console.ConsoleLauncher", "execute", "--class-path", classes.toString(),
+      "--scan-class-path="+classes, "--include-package=agentTools", "--include-classname="+tests, "--fail-if-no-tests", "--details=summary", "--disable-ansi-colors");
   }
   static boolean stale(Path app){
     var name= app.getFileName().toString();
