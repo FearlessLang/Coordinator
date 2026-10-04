@@ -147,7 +147,7 @@ class Helper{
   }
   static Layer mapFromRanks(Coordinator coordinator, List<Ref> allRanks, SourceOracle o, OutputOracle out, SourceOracle stLib){
     Map<String,Map<String,String>> res; try {res= new FrontendLogicMain()
-      .parseRankFiles(allRanks, Comparator.comparingInt(Helper::rankNumber));}
+      .parseRankFiles(allRanks, Comparator.comparingInt(Helper::rankNumber), Push.of(allRanks.stream().map(Helper::pkgName).toList(), "base"));}
     catch(FearlessException fe){ throw Report.sourceError(fe.render(o)); }
     long baseStamp= out.commitMap(res, allRanks.stream().mapToLong(Ref::lastModified).max().getAsLong());
     return new BaseLayer(coordinator,res,baseStamp,stLib);

@@ -1319,14 +1319,11 @@ B:{.text:Str->a.C.text;}
 """);
     var ex= Assertions.assertThrows(RuntimeException.class, ()->coordinator(root).main(root, stLib));
     utils.Err.strCmp("""
-In file: fear:/_pkb/_rank_app200.fear
-
-002| B:{.text:Str->a.C.text;}
-   |               ^^^^^^^^^^
-
-While inspecting a type name
-Package "nonexistentpkg" does not exist.
-Visible packages: "base", "pkb".
+For package "pkb", the virtual package name "a" is mapped to "nonexistentpkg",
+but package "nonexistentpkg" does not exist:
+ - fear:/_pka/_rank_app999.fear
+   "map  a  as  nonexistentpkg  in  pkb;"
+Existing packages: "base", "pka", "pkb".
 Error 7 WellFormedness
 """, ex.getMessage());
   }
