@@ -139,7 +139,7 @@ What stood in the way:
   }
   @Test void associationNotOursSeveral(){
     var held= new LinkedHashMap<String,List<String>>();
-    held.put(".txt", List.of("org.gnome.TextEditor","vim"));
+    held.put(".ffile042", List.of("org.gnome.TextEditor","text/plain"));
     held.put(".fearless", List.of("OtherApp.fearless"));
     utils.Err.strCmp("""
 Fearless cannot become the program that opens the kinds of file listed
@@ -149,13 +149,13 @@ Another program already answers for these kinds of file. Fearless
 stopped before touching anything: your system is exactly as it was.
 
 What stood in the way:
-.txt -> org.gnome.TextEditor
-.txt -> vim
+.ffile042 -> org.gnome.TextEditor
+.ffile042 -> text/plain
 .fearless -> OtherApp.fearless""", Violation.associationNotOurs(held, e->"").getMessage());
   }
   @Test void associationNotOursSeveralClaimed(){
     var held= new LinkedHashMap<String,List<String>>();
-    held.put(".foo", List.of("org.gnome.TextEditor","vim"));
+    held.put(".ffile001", List.of("org.gnome.TextEditor","vim"));
     held.put(".fapp042", List.of("OtherApp.fapp042"));
     utils.Err.strCmp("""
 Fearless cannot become the program that opens the kinds of file listed
@@ -165,8 +165,8 @@ Another program already answers for these kinds of file. Fearless
 stopped before touching anything: your system is exactly as it was.
 
 What stood in the way:
-.foo claimed by "hello.Foo" of project "demo" -> org.gnome.TextEditor
-.foo claimed by "hello.Foo" of project "demo" -> vim
+.ffile001 claimed by "hello.Foo" of project "demo" -> org.gnome.TextEditor
+.ffile001 claimed by "hello.Foo" of project "demo" -> vim
 .fapp042 claimed by "hello.Bar" of project "demo" -> OtherApp.fapp042""", Violation.associationNotOurs(held, ViolationTest::claimedBy).getMessage());
   }
   @Test void associationChosenDefault(){
@@ -202,7 +202,7 @@ What is locked:
 .foo claimed by "hello.Foo" of project "demo" -> application/x-fearless-foo
 .pdf claimed by "hello.Bar" of project "demo" -> application/x-fearless-pdf""", Violation.associationChosenDefault(List.of(".foo",".pdf"), ViolationTest::claimedBy).getMessage());
   }
-  private static String claimedBy(String ext){ return " claimed by \"hello."+(ext.equals(".foo") ? "Foo" : "Bar")+"\" of project \"demo\""; }
+  private static String claimedBy(String ext){ return " claimed by \"hello."+(List.of(".foo",".ffile001").contains(ext) ? "Foo" : "Bar")+"\" of project \"demo\""; }
   @Test void associationNotWritable(){
     var registered= "HKEY_CLASSES_ROOT\\.fearless (write denied: not running as the owning user)";
     utils.Err.strCmp("""
