@@ -16,6 +16,7 @@ import java.util.Locale;
 import tools.Fs;
 import userMessages.UserError;
 import userMessages.Violation;
+import utils.Bug;
 
 import static java.lang.foreign.ValueLayout.ADDRESS;
 import static java.lang.foreign.ValueLayout.JAVA_CHAR;
@@ -56,6 +57,17 @@ public class NativeLocaleForcer {
     }
     catch (UserError e){ throw e; }
     catch (Throwable t){ throw Violation.couldNotForceEnglish("The call into the operating system failed.", t); }
+  }
+  @SuppressWarnings("restricted")
+  public static void setEnv(String key, String value){
+    MethodHandle setenv= linker.downcallHandle(
+      linker.defaultLookup().findOrThrow("setenv"),
+      FunctionDescriptor.of(JAVA_INT, ADDRESS, ADDRESS, JAVA_INT));
+    try (var arena= Arena.ofConfined()){
+      int res= (int) setenv.invokeExact(arena.allocateFrom(key), arena.allocateFrom(value), 1);
+      assert res == 0;
+    }
+    catch (Throwable t){ throw Bug.of(t); }
   }
   // char* setlocale(int category, const char* locale);
   // Returns NULL when the request is rejected; per the fail-loudly policy (and unlike
