@@ -490,7 +490,7 @@ use base.Shortcut as Shortcut;
   }
   @Test void mainsClaimingExtensionsRunOnThePortablePath(@TempDir Path tmp) throws Exception{
     var root= claimsProject(tmp, """
-Foo:Main, OpenWith[IconsFoo,"foo"], OpenWith[IconsFoo], Shortcut[IconsFoo,`bar`], Shortcut[IconsFoo]{s->base.Debug#(`foo`)}
+Foo:Main, OpenWith[IconsFoo,"foo"], OpenWith[IconsFoo], Shortcut[IconsFoo,`fapp042`], Shortcut[IconsFoo]{s->base.Debug#(`foo`)}
 Conflict:lib.Lib, Shortcut[base.IconsConflict]{s->base.Debug#(`conflict`)}
 jjj
 _lib/_rank_core.fear
@@ -567,7 +567,7 @@ Error 7 WellFormedness
   static Path mainsInfo(Path root){ return root.resolve(Coordinator.outDir).resolve("mains.info"); }
   @Test void mainsInfoRecordsTheClaimsOfTheTopRankMainsWithTheirIcons(@TempDir Path tmp) throws Exception{
     var root= claimsProject(tmp, """
-Foo:Main, OpenWith[IconsFoo,"foo"], OpenWith[lib.IconsLib], Shortcut[base.IconsConflict,`bar`], Shortcut[ZInBar]{s->base.Debug#(`foo`)}
+Foo:Main, OpenWith[IconsFoo,"foo"], OpenWith[lib.IconsLib], Shortcut[base.IconsConflict,`fapp042`], Shortcut[ZInBar]{s->base.Debug#(`foo`)}
 jjj
 _col/z.zip/in/bar.png
 iii
@@ -584,7 +584,7 @@ not read by the compiler
     coordinator(root).compile(root, stLib);
     utils.Err.strCmp("""
 {
-  "col.Foo": ["_col/_rank_app.fear", [["base.IconsConflict", "icons/conflict.png", "", "", "bar"], ["col.ZInBar", "_col/z.zip", "", "in/bar.png", ""]], [["col.IconsFoo", "_col/icons/foo.png", "", "", "foo"], ["lib.IconsLib", "_lib/icons/lib.png", "", "", ""]]]
+  "col.Foo": ["_col/_rank_app.fear", [["base.IconsConflict", "icons/conflict.png", "", "", "fapp042"], ["col.ZInBar", "_col/z.zip", "", "in/bar.png", ""]], [["col.IconsFoo", "_col/icons/foo.png", "", "", "foo"], ["lib.IconsLib", "_lib/icons/lib.png", "", "", ""]]]
 }
 """, Fs.readUtf8(mainsInfo(root)));
   }
@@ -714,12 +714,12 @@ not read by the compiler
     var root= claimsProject(tmp, """
 Opener:Main, OpenWith[IconsFoo,"foo"], Shortcut[IconsFoo]{}
 Other:Main, Shortcut[IconsFoo], OpenWith[IconsFoo]{}
-Foo:Opener, Other, Shortcut[base.IconsConflict,"bar"], OpenWith[IconsFoo]{s->base.Debug#(`foo`)}
+Foo:Opener, Other, Shortcut[base.IconsConflict,"fapp042"], OpenWith[IconsFoo]{s->base.Debug#(`foo`)}
 """);
     coordinator(root).compile(root, stLib);
     utils.Err.strCmp("""
 {
-  "col.Foo": ["_col/_rank_app.fear", [["base.IconsConflict", "icons/conflict.png", "", "", "bar"], ["col.IconsFoo", "_col/icons/foo.png", "", "", ""]], [["col.IconsFoo", "_col/icons/foo.png", "", "", ""], ["col.IconsFoo", "_col/icons/foo.png", "", "", "foo"]]]
+  "col.Foo": ["_col/_rank_app.fear", [["base.IconsConflict", "icons/conflict.png", "", "", "fapp042"], ["col.IconsFoo", "_col/icons/foo.png", "", "", ""]], [["col.IconsFoo", "_col/icons/foo.png", "", "", ""], ["col.IconsFoo", "_col/icons/foo.png", "", "", "foo"]]]
 }
 """, Fs.readUtf8(mainsInfo(root)));
   }
