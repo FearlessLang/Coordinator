@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+import fileAssociations.LinuxAssociations;
 import metaParser.Message;
 import utils.Join;
 
@@ -140,7 +141,7 @@ public final class Violation {
       for these files, clears the choice.
 
       What is locked:
-      %s""".formatted(String.join("\n", locked.stream().map(e->e+claimedBy.apply(e)+" -> application/x-fearless-"+e.substring(1)).toList())));
+      %s""".formatted(String.join("\n", locked.stream().map(e->e+claimedBy.apply(e)+" -> "+LinuxAssociations.typeOf(e)).toList())));
   }
   public static UserError associationNotWritable(String reported){
     return new UserError("""
