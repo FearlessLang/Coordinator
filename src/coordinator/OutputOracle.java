@@ -2,11 +2,13 @@ package coordinator;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Collection;
 import java.util.Map;
 import java.util.Optional;
 import utils.Join;
 import java.util.List;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import apiJson.ApiJson;
 import metaParser.Message;
@@ -23,13 +25,14 @@ import tools.SourceOracle.Ref;
 public interface OutputOracle{
   Path rootDir();
   default Path mapPath(){ return rootDir().resolve("_map.json"); }
-  default Path mainsPath(String pkg){ return rootDir().resolve(pkg+".mains"); }
+  default Path mainsPath(){ return rootDir().resolve("mains.info"); }
+  private Path mainsPath(String pkg){ return rootDir().resolve(pkg+".mains.info"); }
   private Path pkgApiPath(String pkg){ return rootDir().resolve(pkg+".json"); }
   private Path builtPath(String pkg){ return rootDir().resolve(pkg+".built"); }
   default long mapStamp(){ return Fs.lastModified(mapPath()); }
   default long pkgApiStamp(String pkg){ return Fs.lastModified(pkgApiPath(pkg)); }
   default boolean stillBuilt(String pkg, List<Ref> files, long minMillis){
-    return Fs.lastModified(builtPath(pkg)) >= minMillis && Fs.readUtf8(builtPath(pkg)).equals(OutputHelper.fileList(files));
+    return Fs.lastModified(builtPath(pkg)) >= minMillis && Fs.readUtf8(builtPath(pkg)).equals(OutputHelper.fileList(files)) && Files.exists(mainsPath(pkg));
   }
   default void commitBuilt(String pkg, List<Ref> files, long minExclusiveMillis){
     Fs.writeUtf8(builtPath(pkg), OutputHelper.fileList(files), minExclusiveMillis);
@@ -45,7 +48,11 @@ public interface OutputOracle{
     if (res.isPresent() && OutputHelper.consistent(res.get(),core)){ return pkgApiStamp(pkg); }
     return Fs.writeUtf8(pkgApiPath(pkg), ApiJson.toJSon(core), res.isEmpty() ? -1 : minExclusiveMillis);
   }
-  default void commitMains(String pkg, List<Literal> core){ Fs.writeUtf8(mainsPath(pkg), Helper.mainsText(core)); }
+  default Optional<MainsInfo> mainsInfo(){ return Optional.of(mainsPath()).filter(Files::exists).map(MainsInfo::parse); }
+  default void commitMains(String pkg, Map<String,MainsInfo.Main> mains){ Fs.writeUtf8(mainsPath(pkg), new MainsInfo(mains).print()); }
+  default MainsInfo mains(Collection<String> pkgs){
+    return new MainsInfo(pkgs.stream().flatMap(p->MainsInfo.parse(mainsPath(p)).mains().entrySet().stream()).collect(Collectors.toMap(Map.Entry::getKey,Map.Entry::getValue)));
+  }
   default long commitMap(Map<String,Map<String,String>> map, long minExclusiveMillis){
     var res= OutputHelper.mapFromJSon(mapPath());
     if (res.filter(map::equals).isPresent()){ return mapStamp(); }

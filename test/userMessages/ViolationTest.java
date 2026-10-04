@@ -2,7 +2,9 @@ package userMessages;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -92,11 +94,11 @@ C:\\Program Files\\FearlessManaged0_006\\fearlessManaged0_006w.exe
 C:\\Users\\ada\\Downloads\\fearlessManaged0_007\\fearlessManaged0_007w.exe""", Violation.associationsAmbiguous(registered).getMessage());
   }
   @Test void associationUserLocked(){
-    var registered= "ProgId: OtherApp.fearless, set via UserChoice, hash-protected";
     utils.Err.strCmp("""
-Fearless cannot become the program that opens Fearless projects.
+Fearless cannot become the program that opens the kinds of file listed
+below.
 
-Your system remembers a choice you made by hand for this kind of file,
+Your system remembers a choice you made by hand for these kinds of file,
 and no program can change or remove that choice, including this one.
 Fearless stopped before touching anything: your system is exactly as it
 was.
@@ -105,23 +107,107 @@ The only way to clear it is Settings, Apps, Default apps, Reset - which
 resets every app default on your machine, not only this one.
 
 What is locked:
-ProgId: OtherApp.fearless, set via UserChoice, hash-protected""", Violation.associationUserLocked(registered).getMessage());
+.fearless""", Violation.associationUserLocked(List.of(".fearless"), e->"").getMessage());
+  }
+  @Test void associationUserLockedSeveralClaimed(){
+    utils.Err.strCmp("""
+Fearless cannot become the program that opens the kinds of file listed
+below.
+
+Your system remembers a choice you made by hand for these kinds of file,
+and no program can change or remove that choice, including this one.
+Fearless stopped before touching anything: your system is exactly as it
+was.
+
+The only way to clear it is Settings, Apps, Default apps, Reset - which
+resets every app default on your machine, not only this one.
+
+What is locked:
+.foo claimed by "hello.Foo" of project "demo"
+.fapp042 claimed by "hello.Bar" of project "demo\"""", Violation.associationUserLocked(List.of(".foo",".fapp042"), ViolationTest::claimedBy).getMessage());
   }
   @Test void associationNotOurs(){
-    var registered= "registered owner: fearlessBin0_003.exe (an older Fearless install)";
     utils.Err.strCmp("""
-Fearless cannot become the program that opens Fearless projects.
+Fearless cannot become the program that opens the kinds of file listed
+below.
 
-Another program already answers for this kind of file. Fearless stopped
-before touching anything: your system is exactly as it was.
+Another program already answers for these kinds of file. Fearless
+stopped before touching anything: your system is exactly as it was.
 
 What stood in the way:
-registered owner: fearlessBin0_003.exe (an older Fearless install)""", Violation.associationNotOurs(registered).getMessage());
+.fearless -> fearlessBin0_003""", Violation.associationNotOurs(Map.of(".fearless",List.of("fearlessBin0_003")), e->"").getMessage());
   }
+  @Test void associationNotOursSeveral(){
+    var held= new LinkedHashMap<String,List<String>>();
+    held.put(".ffile042", List.of("org.gnome.TextEditor","text/plain"));
+    held.put(".fearless", List.of("OtherApp.fearless"));
+    utils.Err.strCmp("""
+Fearless cannot become the program that opens the kinds of file listed
+below.
+
+Another program already answers for these kinds of file. Fearless
+stopped before touching anything: your system is exactly as it was.
+
+What stood in the way:
+.ffile042 -> org.gnome.TextEditor
+.ffile042 -> text/plain
+.fearless -> OtherApp.fearless""", Violation.associationNotOurs(held, e->"").getMessage());
+  }
+  @Test void associationNotOursSeveralClaimed(){
+    var held= new LinkedHashMap<String,List<String>>();
+    held.put(".ffile001", List.of("org.gnome.TextEditor","vim"));
+    held.put(".fapp042", List.of("OtherApp.fapp042"));
+    utils.Err.strCmp("""
+Fearless cannot become the program that opens the kinds of file listed
+below.
+
+Another program already answers for these kinds of file. Fearless
+stopped before touching anything: your system is exactly as it was.
+
+What stood in the way:
+.ffile001 claimed by "hello.Foo" of project "demo" -> org.gnome.TextEditor
+.ffile001 claimed by "hello.Foo" of project "demo" -> vim
+.fapp042 claimed by "hello.Bar" of project "demo" -> OtherApp.fapp042""", Violation.associationNotOurs(held, ViolationTest::claimedBy).getMessage());
+  }
+  @Test void associationChosenDefault(){
+    utils.Err.strCmp("""
+Fearless cannot become the program that opens the kinds of file listed
+below.
+
+Your system remembers a choice you made by hand for these kinds of file:
+the [Default Applications] section of a mimeapps.list file names another
+program for their type. Fearless does not undo a choice of yours, and
+stopped before touching anything: your system is exactly as it was.
+
+Removing the line of that type from the section, or choosing Fearless
+for these files, clears the choice.
+
+What is locked:
+.htm -> application/x-fearless-htm""", Violation.associationChosenDefault(List.of(".htm"), e->"").getMessage());
+  }
+  @Test void associationChosenDefaultSeveralClaimed(){
+    utils.Err.strCmp("""
+Fearless cannot become the program that opens the kinds of file listed
+below.
+
+Your system remembers a choice you made by hand for these kinds of file:
+the [Default Applications] section of a mimeapps.list file names another
+program for their type. Fearless does not undo a choice of yours, and
+stopped before touching anything: your system is exactly as it was.
+
+Removing the line of that type from the section, or choosing Fearless
+for these files, clears the choice.
+
+What is locked:
+.foo claimed by "hello.Foo" of project "demo" -> application/x-fearless-foo
+.pdf claimed by "hello.Bar" of project "demo" -> application/x-fearless-pdf""", Violation.associationChosenDefault(List.of(".foo",".pdf"), ViolationTest::claimedBy).getMessage());
+  }
+  private static String claimedBy(String ext){ return " claimed by \"hello."+(List.of(".foo",".ffile001").contains(ext) ? "Foo" : "Bar")+"\" of project \"demo\""; }
   @Test void associationNotWritable(){
     var registered= "HKEY_CLASSES_ROOT\\.fearless (write denied: not running as the owning user)";
     utils.Err.strCmp("""
-Fearless cannot become the program that opens Fearless projects.
+Fearless cannot become the program that opens Fearless projects and the
+other kinds of file it registers.
 
 What Fearless would need to write, or remove, is not yours to change.
 Fearless stopped before touching anything: your system is exactly as it
@@ -136,8 +222,9 @@ HKEY_CLASSES_ROOT\\.fearless (write denied: not running as the owning user)""", 
 Fearless could not put your system back as it was.
 
 A step failed, and undoing what had already been written failed too, so
-your system is left part way. Which program opens Fearless projects may
-now be wrong, and you can settle it by hand in your system settings.
+your system is left part way. Which program opens Fearless projects, and
+the other kinds of file Fearless registers, may now be wrong, and you can
+settle it by hand in your system settings.
 
 Where the undoing stopped:
 removed HKCU\\...\\UserChoice, but restoring the previous ProgId failed""", Violation.associationLeftHalfDone(rollback).getMessage());

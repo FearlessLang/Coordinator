@@ -130,9 +130,9 @@ final class LimitedJsonParser{
   private String str(){
     ws(); req('"');
     int j= i;
-    for (; i < s.length() && s.charAt(i) != '"'; i += 1){}
+    for (; i < s.length() && s.charAt(i) != '"'; i += s.charAt(i) == '\\' ? 2 : 1){}
     if (i >= s.length()){ throw err("Unterminated string"); }
-    var out= s.substring(j, i);
+    var out= s.substring(j, i).replaceAll("\\\\(.)", "$1");
     i += 1;
     return out;
   }

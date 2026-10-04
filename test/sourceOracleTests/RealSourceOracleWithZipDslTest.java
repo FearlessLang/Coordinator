@@ -9,6 +9,8 @@ import java.nio.file.AccessDeniedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.function.Function;
+import java.util.stream.Stream;
 import java.util.zip.CRC32;
 import java.util.zip.ZipOutputStream;
 
@@ -22,6 +24,9 @@ import userMessages.UserError;
 import userMessages.Report;
 import realSourceOracle.RealSourceOracleWithZip;
 import realSourceOracle.SourceOracleWithAutoload;
+import core.TName;
+import utils.Join;
+import utils.Pos;
 import testHelperFs.FsDsl;
 import tools.Fs;
 import tools.SourceOracle.Ref;
@@ -1348,6 +1353,77 @@ IconsConflict: base.ImageFile{
 }
 """, res.newRefs().getFirst().loadString());
     assertEquals(List.of("fear:/_rank_base000.fear","fear:/_base/autoloaded_assets.fear"), res.sources(base.allFiles()).stream().map(Ref::fearPath).toList());
+  }
+
+  @Test void ok_asset_autoload_keyed_by_type_name(@TempDir Path tmp){
+    Path root= tmp.resolve("root");
+    UserError.root= root;
+    FsDsl.materialize(root, """
+_pkg/a.fear
+iii
+A
+jjj
+_pkg/icons/foo.png
+iii
+1
+jjj
+_pkg/z.zip/in/bar.png
+iii
+2
+jjj
+_pkg/notes.txt
+iii
+3
+""");
+    var res= SourceOracleWithAutoload.of(new RealSourceOracleWithZip(root), "_pkg");
+    utils.Err.strCmp("""
+ZInBar Triple[diskPath=_pkg/z.zip, zipSteps=, zipEntry=in/bar.png]
+Notes Triple[diskPath=_pkg/notes.txt, zipSteps=, zipEntry=]
+IconsFoo Triple[diskPath=_pkg/icons/foo.png, zipSteps=, zipEntry=]
+""", Join.of(res.autoloadedAssets().entrySet().stream().map(e->e.getKey()+" "+e.getValue()),"","\n","\n",""));
+  }
+  @Test void ok_image_asset_by_type_name(@TempDir Path tmp){
+    Path root= tmp.resolve("root");
+    Path std= tmp.resolve("std");
+    UserError.root= root;
+    FsDsl.materialize(root, """
+_a/a.fear
+iii
+A
+jjj
+_a/icons/foo.png
+iii
+1
+jjj
+_b/x.zip/y.zip/bar.png
+iii
+2
+jjj
+_b/icons/notes.txt
+iii
+4
+""");
+    FsDsl.materialize(std, """
+_rank_base000.fear
+iii
+
+jjj
+icons/conflict.png
+iii
+3
+""");
+    var src= new RealSourceOracleWithZip(root);
+    var stLib= new RealSourceOracleWithZip(std);
+    Function<String,String> asset= n->""+SourceOracleWithAutoload.imageAsset(src, stLib, new TName(n, 0, Pos.unknown));
+    utils.Err.strCmp("""
+Optional[Triple[diskPath=_a/icons/foo.png, zipSteps=, zipEntry=]]
+Optional[Triple[diskPath=_b/x.zip, zipSteps=y.zip, zipEntry=bar.png]]
+Optional[Triple[diskPath=icons/conflict.png, zipSteps=, zipEntry=]]
+Optional.empty
+Optional.empty
+Optional.empty
+Optional.empty
+""", Join.of(Stream.of("a.IconsFoo","b.XYBar","base.IconsConflict","a.Foo","a.A","base.Str","b.IconsNotes").map(asset),"","\n","\n",""));
   }
 
   // A .fear file with invalid UTF-8 bytes fails loudly (Files.readString is strict) when

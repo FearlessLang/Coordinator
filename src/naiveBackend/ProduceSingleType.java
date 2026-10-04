@@ -17,7 +17,12 @@ record ProduceBody(BytecodeLineFix sb, Backend b, String iface, String thisName,
     emitE(m.e().get());
     sb.a(";\n  }\n");
   }
-  private String optCast(core.T t){ return t instanceof core.T.RCC rcc ? "("+b.typeName(rcc.c().name())+")" : ""; }
+  private String optCast(core.T t){
+    if (!(t instanceof core.T.RCC rcc)){ return ""; }
+    var n= rcc.c().name();
+    var lit= n.pkgName().equals("base") && LiteralDeclarations.isPrimitiveLiteral(n.simpleName());
+    return "("+b.typeName(lit ? LiteralDeclarations.superLiteral(n) : n)+")";
+  }
   void emitE(core.E e){ switch(e){
     case X x -> emitX(x);
     case Type t -> emitType(t);

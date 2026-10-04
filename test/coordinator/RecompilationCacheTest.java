@@ -41,6 +41,7 @@ final class RecompilationCacheTest{
     return new Layer(){
       @Override public OtherPackages compile(SourceOracle src, OutputOracle out){ return OtherPackages.start(Map.of(), List.<Literal>of(), stamp); }
       @Override public Coordinator coordinator(){ return null; }
+      @Override public SourceOracle stLib(){ return emptySrc; }
     };
   }
   private static final class ScriptedCoordinator implements Coordinator{

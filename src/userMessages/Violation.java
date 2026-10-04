@@ -1,9 +1,13 @@
 package userMessages;
 
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
+import fileAssociations.LinuxAssociations;
 import metaParser.Message;
 import utils.Join;
 
@@ -94,11 +98,12 @@ public final class Violation {
       What is registered:
       %s""".formatted(reported));
   }
-  public static UserError associationUserLocked(String reported){
+  public static UserError associationUserLocked(List<String> locked, Function<String,String> claimedBy){
     return new UserError("""
-      Fearless cannot become the program that opens Fearless projects.
+      Fearless cannot become the program that opens the kinds of file listed
+      below.
 
-      Your system remembers a choice you made by hand for this kind of file,
+      Your system remembers a choice you made by hand for these kinds of file,
       and no program can change or remove that choice, including this one.
       Fearless stopped before touching anything: your system is exactly as it
       was.
@@ -107,21 +112,41 @@ public final class Violation {
       resets every app default on your machine, not only this one.
 
       What is locked:
-      %s""".formatted(reported));
+      %s""".formatted(String.join("\n", locked.stream().map(e->e+claimedBy.apply(e)).toList())));
   }
-  public static UserError associationNotOurs(String reported){
+  public static UserError associationNotOurs(Map<String,List<String>> held, Function<String,String> claimedBy){
+    var lines= new ArrayList<String>();
+    held.forEach((e,cs)->cs.forEach(c->lines.add(e+claimedBy.apply(e)+" -> "+c)));
     return new UserError("""
-      Fearless cannot become the program that opens Fearless projects.
+      Fearless cannot become the program that opens the kinds of file listed
+      below.
 
-      Another program already answers for this kind of file. Fearless stopped
-      before touching anything: your system is exactly as it was.
+      Another program already answers for these kinds of file. Fearless
+      stopped before touching anything: your system is exactly as it was.
 
       What stood in the way:
-      %s""".formatted(reported));
+      %s""".formatted(String.join("\n", lines)));
+  }
+  public static UserError associationChosenDefault(List<String> locked, Function<String,String> claimedBy){
+    return new UserError("""
+      Fearless cannot become the program that opens the kinds of file listed
+      below.
+
+      Your system remembers a choice you made by hand for these kinds of file:
+      the [Default Applications] section of a mimeapps.list file names another
+      program for their type. Fearless does not undo a choice of yours, and
+      stopped before touching anything: your system is exactly as it was.
+
+      Removing the line of that type from the section, or choosing Fearless
+      for these files, clears the choice.
+
+      What is locked:
+      %s""".formatted(String.join("\n", locked.stream().map(e->e+claimedBy.apply(e)+" -> "+LinuxAssociations.typeOf(e)).toList())));
   }
   public static UserError associationNotWritable(String reported){
     return new UserError("""
-      Fearless cannot become the program that opens Fearless projects.
+      Fearless cannot become the program that opens Fearless projects and the
+      other kinds of file it registers.
 
       What Fearless would need to write, or remove, is not yours to change.
       Fearless stopped before touching anything: your system is exactly as it
@@ -135,8 +160,9 @@ public final class Violation {
       Fearless could not put your system back as it was.
 
       A step failed, and undoing what had already been written failed too, so
-      your system is left part way. Which program opens Fearless projects may
-      now be wrong, and you can settle it by hand in your system settings.
+      your system is left part way. Which program opens Fearless projects, and
+      the other kinds of file Fearless registers, may now be wrong, and you can
+      settle it by hand in your system settings.
 
       Where the undoing stopped:
       %s""".formatted(reported));

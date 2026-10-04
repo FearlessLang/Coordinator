@@ -136,12 +136,9 @@ public final class BuildWithZip{
     if (!Report.allowedMultiDotExts.contains(tail)){ throw Report.multiDotExtNotAllowed(kid); }
   }
   private static void checkExtSeg(RefParent kid, String seg){
-    int n= seg.length();
-    if (n < 1 || n > 16){ throw Report.extLenMustBe1To16(kid); }
-    for (int i : Range.of(0,n)){
-      char c= seg.charAt(i);
-      boolean ok= ('a' <= c && c <= 'z') || ( '0' <= c && c <= '9' );
-      if (!ok){ throw Report.extInvalidChar(kid, c); }
+    if (seg.length() > Fs.maxExtSeg){ throw Report.extLenMustBe1To16(kid); }
+    for (char c : seg.toCharArray()){
+      if (!Fs.isExtSegChar(c)){ throw Report.extInvalidChar(kid, c); }
     }
   }
   private static final Set<String> winReserved= Set.of(

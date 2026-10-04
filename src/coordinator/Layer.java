@@ -19,9 +19,11 @@ public interface Layer{
   default LinkedHashMap<String,List<Ref>> pkgs(){ return new LinkedHashMap<>();}
   OtherPackages compile(SourceOracle src, OutputOracle out);
   Coordinator coordinator();
+  SourceOracle stLib();
 }
 record MiddleLayer(Coordinator coordinator, Layer next, LinkedHashMap<String,List<Ref>> pkgs) implements Layer{
   MiddleLayer{ assert !pkgs.isEmpty(); }
+  @Override public SourceOracle stLib(){ return next.stLib(); }
   @Override public OtherPackages compile(SourceOracle src, OutputOracle out){
     OtherPackages other= next.compile(src, out);
     var res= new Object(){
@@ -32,9 +34,10 @@ record MiddleLayer(Coordinator coordinator, Layer next, LinkedHashMap<String,Lis
         if (out.stillBuilt(pkg, files, maxIn)){ nextOther = out.addCachedPkgApi(nextOther, pkg); return; }
         var rich= SourceOracleWithAutoload.of(src, "_"+pkg);
         List<Literal> core= coordinator.frontend(pkg, rich.sources(files), rich.oracle(), other,other.virtualizationMap().getOrDefault(pkg,Map.of()));
+        var mains= MainsInfo.of(core, src, stLib());
         coordinator.backend(pkg, core, rich.oracle(), other, new CapabilityEnvironment(rich.autoloadedAssets()));
         long newStamp= out.commitPkgApi(pkg, core, maxIn); // newStamp will be the old api file mtime if there was no reason to commit.
-        out.commitMains(pkg, core);
+        out.commitMains(pkg, mains);
         out.commitBuilt(pkg, files, maxIn);
         var map= AllLs.of(core).values().stream().collect(Collectors.toUnmodifiableMap (Literal::name, d->d));
         nextOther = nextOther.mergeWith(map,Math.max(nextOther.stamp(),newStamp));
@@ -55,6 +58,7 @@ record BaseLayer(Coordinator coordinator, Map<String,Map<String,String>> map, lo
     List<Literal> core= coordinator.frontend(pkgName,rich.sources(stLib.allFiles()),rich.oracle(),other,Map.of());
     coordinator.backend(pkgName,core,rich.oracle(),other,new CapabilityEnvironment(rich.autoloadedAssets()));
     long newStamp= out.commitPkgApi(pkgName, core, maxIn);
+    out.commitMains(pkgName, Map.of());
     out.commitBuilt(pkgName, stLib.allFiles(), maxIn);
     return OtherPackages.start(map, AllLs.of(core).values(), Math.max(baseStamp,newStamp));
   }

@@ -32,5 +32,5 @@ public final class ApiJson{
     };
     return arr(es);
   }
-  static String q(String s){ assert s.indexOf('"') == -1; return "\""+s+"\""; }
+  static String q(String s){ return "\""+s.replace("\\","\\\\").replace("\"","\\\"")+"\""; }
 }
