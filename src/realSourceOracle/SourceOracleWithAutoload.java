@@ -23,20 +23,19 @@ public record SourceOracleWithAutoload(SourceOracle base, Ref autoload, URI auto
     public List<Ref> sources(List<Ref> files){ return Push.of(files.stream().filter(f->f.fearPath().endsWith(".fear")).toList(), newRefs); }
   }
   public static final String autoloadFileSuffix= "/autoloaded_assets.fear";
-  public static final List<AutoloadHandler> handlers= List.of(
-    new AutoloadHandler(p->p.endsWith(".txt"), "base.TxtFile"),
-    new AutoloadHandler(p->p.endsWith(".png")||p.endsWith(".jpg")||p.endsWith(".jpeg")||p.endsWith(".gif")||p.endsWith(".bmp"), "base.ImageFile")
-  );
+  static final AutoloadHandler image= new AutoloadHandler(p->p.endsWith(".png")||p.endsWith(".jpg")||p.endsWith(".jpeg")||p.endsWith(".gif")||p.endsWith(".bmp"), "base.ImageFile");
+  public static final List<AutoloadHandler> handlers= List.of(new AutoloadHandler(p->p.endsWith(".txt"), "base.TxtFile"), image);
   private record Generated(String text, Map<String,Triple> autoloadedAssets){}
   public static Res of(SourceOracle base, String pkgName){ return of(base, pkgName, Ref::fearPath); }
   public static Res ofBase(SourceOracle stLib){
     return of(stLib, "_base", r->SourceOracle.root+"_base/"+r.fearPath().substring(SourceOracle.root.length()));
   }
-  public static Optional<Triple> asset(SourceOracle src, SourceOracle stLib, TName type){
+  public static Optional<Triple> imageAsset(SourceOracle src, SourceOracle stLib, TName type){
     assert type.arity() == 0;
     var pkg= type.pkgName();
     var res= pkg.equals("base") ? ofBase(stLib) : of(src, "_"+pkg);
-    return Optional.ofNullable(res.autoloadedAssets().get(type.simpleName()));
+    return Optional.ofNullable(res.autoloadedAssets().get(type.simpleName()))
+      .filter(t->image.matches().test(t.zipEntry().isEmpty() ? t.diskPath() : t.zipEntry()));
   }
   private static Res of(SourceOracle base, String pkgName, Function<Ref,String> path){
     if (suppressed(base, pkgName, path)){ return new Res(base, List.of(), Map.of()); }

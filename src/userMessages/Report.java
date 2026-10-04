@@ -1,16 +1,20 @@
 package userMessages;
 
-import java.net.URI;
 import java.nio.file.Path;
+import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import core.LiteralDeclarations;
+import core.T;
+import core.TName;
+import core.E.Literal;
 import metaParser.Frame;
 import metaParser.Message;
-import metaParser.Span;
+import tools.Fs;
+import tools.SourceOracle;
 import tools.SourceOracle.Ref;
 import tools.SourceOracle.RefParent;
 import utils.Join;
@@ -576,13 +580,56 @@ File:
   //-- the user's Fearless source. The frontend explains these itself, in the language of
   //the language: parse errors, well formedness, types. Here they only become terminal.
   public static UserError sourceError(String rendered){ return new UserError(rendered); }
-  public static UserError claimIconNotAsset(Function<URI,String> loader, Span main, String mainName, String claim, String icon){
-    return new UserError(Message.of(loader,List.of(new Frame("main "+disp(mainName),main)),
-      "Main "+disp(mainName)+" implements "+disp(claim)+".\n"
-    + "The icon "+disp(icon)+" implements \"base.ImageFile\" by hand: it is not the type generated for an image file.\n"
-    + "An icon is the type generated for an image file, like \"IconsFoo\" for \"_pkg/icons/foo.png\", or \"base.IconsConflict\"."));
+  private static String owner(Literal l){
+    if (l.infName()){ return "object literal instance of "+disp(withArity(l.cs().getFirst().name())); }
+    return (l.thisName().equals("this") ? "type declaration " : "object literal ")+disp(withArity(l.name()));
   }
-
+  private static UserError claim(SourceOracle src, Literal l, String msg){
+    var owner= owner(l);
+    return new UserError(Message.of(src::loadString,List.of(new Frame(owner,l.span().inner)),owner.substring(0,1).toUpperCase()+owner.substring(1)+msg));
+  }
+  private static UserError claim(SourceOracle src, Literal l, T.C c, String msg){ return claim(src,l," implements "+disp(repr(c))+".\n"+msg); }
+  private static String withArity(TName n){ return n.s()+Join.of(Collections.nCopies(n.arity(),"_"),"[",",","]",""); }
+  private static String repr(T.C c){ return c.name().s()+Join.of(c.ts().stream().map(Report::repr),"[",",","]",""); }
+  private static String repr(T t){
+    if (!(t instanceof T.RCC r)){ return t.toString(); }
+    var n= r.c().name();
+    var lit= n.pkgName().equals("base") && LiteralDeclarations.isPrimitiveLiteral(n.simpleName());
+    return r.rc().toStrSpace()+(lit ? n.simpleName() : repr(r.c()));
+  }
+  public static UserError claimNotMain(SourceOracle src, Literal l, TName claim){
+    return claim(src,l," implements "+disp(withArity(claim))+".\n"
+    + "Only a main can open files: "+owner(l)+" must also implement \"base.Main\", directly or through one of its supertypes.");
+  }
+  public static UserError claimIconNotConcrete(SourceOracle src, Literal l, T.C c){
+    return claim(src,l,c,"The icon "+disp(repr(c.ts().getFirst()))+" is not a concrete type name.\n"
+    + "An icon is a type name with no type variables and no generic arguments, like \"IconsFoo\".");
+  }
+  public static UserError claimIconNotAsset(SourceOracle src, Literal l, T.C c){
+    return claim(src,l,c,"The icon "+disp(repr(c.ts().getFirst()))+" is not the type generated for an image file.\n"
+    + "An icon is the type generated for an image file, like \"IconsFoo\" for \"_pkg/icons/foo.png\", or \"base.IconsConflict\".");
+  }
+  public static UserError claimExtNotStr(SourceOracle src, Literal l, T.C c){
+    return claim(src,l,c,"The extension "+disp(repr(c.ts().get(1)))+" is not a string literal type.\n"
+    + "An extension is written as a string literal type, like "+disp("\"foo\"")+" or "+disp("`foo`")+".");
+  }
+  public static UserError claimExtInvalid(SourceOracle src, Literal l, T.C c, String ext){
+    return claim(src,l,c,disp(ext)+" is not a valid extension.\n"
+    + "An extension is 1 to "+Fs.maxExtSeg+" characters, each a lowercase letter \"a\"-\"z\" or a digit \"0\"-\"9\", with no dot; \"fearless\" is reserved.");
+  }
+  public static UserError claimShortcutNotFapp(SourceOracle src, Literal l, T.C c, String ext){
+    return claim(src,l,c,disp(ext)+" is not a shortcut extension: a shortcut file only starts its main, so it must not look like a document of another program or a file of the project.\n"
+    + "A shortcut extension is \"fapp\" followed by three digits, like \"fapp042\"; or implement \"base.Shortcut[_]\" to let the Fearless manager choose one.");
+  }
+  public static UserError claimOpenWithFapp(SourceOracle src, Literal l, T.C c, String ext){
+    return claim(src,l,c,disp(ext)+" is a shortcut extension: \"fapp\" followed by three digits names the shortcut files of the Fearless manager.\n"
+    + "Use an extension of the form \"ffile\" followed by three digits, like \"ffile042\", or a system extension, like \"htm\"; or implement \"base.OpenWith[_]\" to let the Fearless manager choose one.");
+  }
+  public static UserError claimExtTwice(SourceOracle src, Literal l, T.C first, T.C second, String ext){
+    return claim(src,l," claims the extension "+disp(ext)+" more than once:\n"
+    + "both "+disp(repr(first))+" and "+disp(repr(second))+" claim it.\n"
+    + "A main can claim each extension at most once, across all its \"base.OpenWith[_,_]\" and \"base.Shortcut[_,_]\", since one extension has one icon.");
+  }
 
   public static UserError docReferences(List<String> problems){ return new UserError("""
 Broken reference in a doc comment.

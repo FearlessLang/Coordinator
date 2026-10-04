@@ -1382,7 +1382,7 @@ Notes Triple[diskPath=_pkg/notes.txt, zipSteps=, zipEntry=]
 IconsFoo Triple[diskPath=_pkg/icons/foo.png, zipSteps=, zipEntry=]
 """, Join.of(res.autoloadedAssets().entrySet().stream().map(e->e.getKey()+" "+e.getValue()),"","\n","\n",""));
   }
-  @Test void ok_asset_by_type_name(@TempDir Path tmp){
+  @Test void ok_image_asset_by_type_name(@TempDir Path tmp){
     Path root= tmp.resolve("root");
     Path std= tmp.resolve("std");
     UserError.root= root;
@@ -1398,6 +1398,10 @@ jjj
 _b/x.zip/y.zip/bar.png
 iii
 2
+jjj
+_b/icons/notes.txt
+iii
+4
 """);
     FsDsl.materialize(std, """
 _rank_base000.fear
@@ -1410,7 +1414,7 @@ iii
 """);
     var src= new RealSourceOracleWithZip(root);
     var stLib= new RealSourceOracleWithZip(std);
-    Function<String,String> asset= n->""+SourceOracleWithAutoload.asset(src, stLib, new TName(n, 0, Pos.unknown));
+    Function<String,String> asset= n->""+SourceOracleWithAutoload.imageAsset(src, stLib, new TName(n, 0, Pos.unknown));
     utils.Err.strCmp("""
 Optional[Triple[diskPath=_a/icons/foo.png, zipSteps=, zipEntry=]]
 Optional[Triple[diskPath=_b/x.zip, zipSteps=y.zip, zipEntry=bar.png]]
@@ -1418,7 +1422,8 @@ Optional[Triple[diskPath=icons/conflict.png, zipSteps=, zipEntry=]]
 Optional.empty
 Optional.empty
 Optional.empty
-""", Join.of(Stream.of("a.IconsFoo","b.XYBar","base.IconsConflict","a.Foo","a.A","base.Str").map(asset),"","\n","\n",""));
+Optional.empty
+""", Join.of(Stream.of("a.IconsFoo","b.XYBar","base.IconsConflict","a.Foo","a.A","base.Str","b.IconsNotes").map(asset),"","\n","\n",""));
   }
 
   // A .fear file with invalid UTF-8 bytes fails loudly (Files.readString is strict) when
