@@ -181,6 +181,18 @@ How to fix it:
     "_pka/_rank_app999.fear","map a as pkc in pkb;",
     "_pkd/_rank_app999.fear","map a as pkb in pkb;"); }
 
+  @Test void mapToMissingPackage(){ runErr("""
+For package "pkb", the virtual package name "a" is mapped to "bas",
+but package "bas" does not exist:
+ - fear:/_pka/_rank_app999.fear
+   "map  a  as  bas  in  pkb;"
+Did you mean "base" ?
+Existing packages: "base", "pka", "pkb".
+Error 7 WellFormedness
+""",
+    "_pka/_rank_app999.fear","map a as bas in pkb;",
+    "_pkb/_rank_app200.fear",""); }
+
   @Test void aPlainResourceFileNamedLikeARankFileIsAlsoAMalformedRankFileName(){
     runErr("""
 Malformed rank file name.
