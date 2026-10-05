@@ -98,6 +98,8 @@ public class Backend{
       return;
     }
     tools.checks().checkTopMethod(m, decTypeName(l.name()), jName, hasInstance(l, abstractOnly));
+    //TODO: an imm method with no parameters and an imm result, of a type with an instance (a singleton, like Directions.map),
+    //always returns the same value: cache it, so that the body runs only one time.
     sb.a("  default Object "+jName+paramsSig(m)+"{\n");
     new ProduceBody(sb,this, iface, l.thisName(), m).emitBody();
   }
