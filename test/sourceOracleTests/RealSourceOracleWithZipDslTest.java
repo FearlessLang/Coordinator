@@ -1355,6 +1355,24 @@ IconsConflict: base.ImageFile{
     assertEquals(List.of("fear:/_rank_base000.fear","fear:/_base/autoloaded_assets.fear"), res.sources(base.allFiles()).stream().map(Ref::fearPath).toList());
   }
 
+  @Test void ok_all_files_sorted_by_fear_path(@TempDir Path tmp){
+    Path root= tmp.resolve("root");
+    UserError.root= root;
+    FsDsl.materialize(root, """
+_pkg/a/b.fear
+iii
+B
+jjj
+_pkg/a_b.fear
+iii
+C
+jjj
+_pkg/a.fear
+iii
+A
+""");
+    assertEquals(List.of("fear:/_pkg/a.fear","fear:/_pkg/a/b.fear","fear:/_pkg/a_b.fear"), new RealSourceOracleWithZip(root).allFiles().stream().map(Ref::fearPath).toList());
+  }
   @Test void ok_asset_autoload_keyed_by_type_name(@TempDir Path tmp){
     Path root= tmp.resolve("root");
     UserError.root= root;
@@ -1377,9 +1395,9 @@ iii
 """);
     var res= SourceOracleWithAutoload.of(new RealSourceOracleWithZip(root), "_pkg");
     utils.Err.strCmp("""
-ZInBar Triple[diskPath=_pkg/z.zip, zipSteps=, zipEntry=in/bar.png]
-Notes Triple[diskPath=_pkg/notes.txt, zipSteps=, zipEntry=]
 IconsFoo Triple[diskPath=_pkg/icons/foo.png, zipSteps=, zipEntry=]
+Notes Triple[diskPath=_pkg/notes.txt, zipSteps=, zipEntry=]
+ZInBar Triple[diskPath=_pkg/z.zip, zipSteps=, zipEntry=in/bar.png]
 """, Join.of(res.autoloadedAssets().entrySet().stream().map(e->e.getKey()+" "+e.getValue()),"","\n","\n",""));
   }
   @Test void ok_image_asset_by_type_name(@TempDir Path tmp){

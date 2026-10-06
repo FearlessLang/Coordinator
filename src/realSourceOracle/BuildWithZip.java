@@ -7,6 +7,7 @@ import java.text.Normalizer;
 import java.text.Normalizer.Form;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -103,7 +104,7 @@ public final class BuildWithZip{
       kids.forEach(BuildWithZip::checkIndividualInvisibleSegment);
       checkCollectiveInvisible(kids);
     });
-    return List.copyOf(t.visibleFiles());
+    return t.visibleFiles().stream().sorted(Comparator.comparing(Ref::fearPath)).toList();
   }
   static void checkTooLong(RefParent kid){     if (kid.fearPath().length() > 200 + SourceOracle.root.length()){ throw Report.pathTooLong(kid); } }
   public static void checkIndividualVisibleSegment(RefParent kid){
