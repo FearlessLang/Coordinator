@@ -74,7 +74,7 @@ public class RunIntegration {
         return BackendTools.of(pkgName, oracle, other, core, project.resolve(Coordinator.outDir), baseCachePath(), ResolveResource.stLibRTPath, capabilities);
       }
       public String runAllMains(String pkgName, OutputOracle out) throws InterruptedException{
-        return JavaTool.runMainFromJars(Push.of(Coordinator.runData(out.rootDir().getParent(),stdLibBase()),jvmArgs), Push.of(out.rootDir().resolve("gen_java"),sharedClasspath()), "_"+pkgName+".Main");
+        return Coordinator.runMains(Push.of(Coordinator.runData(out.rootDir().getParent(),stdLibBase()),jvmArgs), Push.of(out.rootDir().resolve("gen_java"),sharedClasspath()), "_"+pkgName+".Main");
       }
     };
   }
@@ -1301,6 +1301,35 @@ imm Nat.getDiv(_) error line: [###]
 imm Foo.foo error line: 5 in file _hello/_rank_app.fear
 imm Hello.main(_) error line: 4 in file _hello/_rank_app.fear
 """, coordinator(root).main(root, stLib));
+  }
+  @Test void aMainEndingWithAnErrorExitsWith1AndTheOtherMainsStillRun(@TempDir Path tmp) throws InterruptedException{
+    Path root= tmp.resolve("root");
+    UserError.root= root;
+    FsDsl.materialize(root, """
+_col/_rank_app.fear
+iii
+use base.Main as Main;
+A:Main{s->base.Error.msg`boom`}
+B:Main{s->base.Debug#(`b`)}
+""");
+    var c= coordinator(root);
+    utils.Err.strCmp("""
+boom
+imm A.main(_) error line: 2 in file _col/_rank_app.fear
+b
+""", c.main(root, stLib));
+    var cp= Push.of(Coordinator.genJava(root),c.sharedClasspath());
+    var out= new StringBuilder();
+    Assertions.assertEquals(1, JavaTool.startMainFromJars(Coordinator.runData(root,c.stdLibBase()), cp, "_col.Main", out::append).await(), out::toString);
+    Assertions.assertEquals(1, Coordinator.startMain(root, c.stdLibBase(), "col.A", c.sharedClasspath(), out::append).await(), out::toString);
+    Assertions.assertEquals(0, Coordinator.startMain(root, c.stdLibBase(), "col.B", c.sharedClasspath(), out::append).await(), out::toString);
+  }
+  @Test void aMainEndingWithAJavaErrorExitsWith1() throws InterruptedException{
+    var root= ResolveResource.integrationTests.resolve("runRecursion");
+    if (!recursionCompiled){ compileOk("runRecursion"); recursionCompiled= true; }
+    var out= new StringBuilder();
+    Assertions.assertEquals(1, Coordinator.startMain(root, ResolveResource.stLibPath, "rec.NaiveSum", coordinator(root).sharedClasspath(), out::append).await(), out::toString);
+    utils.Err.strCmp("[###]java.lang.StackOverflowError[###]", out.toString());
   }
 
   @Test void virtualizationMapMentionsAPackageThatDoesNotExist(@TempDir Path tmp) throws InterruptedException{

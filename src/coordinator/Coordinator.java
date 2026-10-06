@@ -14,6 +14,7 @@ import java.util.TreeMap;
 import java.util.stream.LongStream;
 import java.util.stream.Stream;
 
+import offensiveUtils.Require;
 import userMessages.Report;
 import userMessages.Violation;
 import core.FearlessException;
@@ -35,7 +36,14 @@ import utils.Range;
 
 public interface Coordinator {
   default String runAllMains(String pkgName,OutputOracle out) throws InterruptedException{
-    return JavaTool.runMainFromJars(runData(out.rootDir().getParent(),stdLibBase()), Push.of(out.rootDir().resolve("gen_java"),sharedClasspath()), "_"+pkgName+".Main");
+    return runMains(runData(out.rootDir().getParent(),stdLibBase()), Push.of(out.rootDir().resolve("gen_java"),sharedClasspath()), "_"+pkgName+".Main");
+  }
+  static String runMains(List<String> jvmArgs, List<Path> jarDirs, String mainClass) throws InterruptedException{
+    var sb= new StringBuilder();
+    var jvm= JavaTool.startMainFromJars(jvmArgs, jarDirs, mainClass, s->{ sb.append(s); System.out.print(s); });
+    var ec= jvm.await();
+    Require.check(ec == 0 || ec == 1, "Exit code "+ec+" from\n"+String.join("\n",jvm.cmd())+"\nOutput:\n"+sb);
+    return sb.toString();
   }
   static List<String> runData(Path project, Path base){
     return List.of(

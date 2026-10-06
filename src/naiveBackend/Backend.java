@@ -143,11 +143,11 @@ public class Backend{
       .append("  static{ _base.Util.installParentLifeline(); }\n")
       .append("  static final String[] all= ").append(all).append(";\n")
       .append("  public static final String[][] autoloadedAssets= ").append(assets).append(";\n")
-      .append("  public static void main(String[] args){ for (String n: args.length == 0 ? all : args){ run(n); } }\n")
-      .append("  static void run(String n){\n");
+      .append("  public static void main(String[] args){ var ok= true; for (String n: args.length == 0 ? all : args){ ok&= run(n); } if (!ok){ System.exit(1); } }\n")
+      .append("  static boolean run(String n){\n");
     mains.forEach((n,iface)->sb
-      .append("    if (n.equals(\"").append(n).append("\")){ _base.Util.topLevel(()->")
-      .append(iface).append(".instance.imm$main$1(new ").append(typeName(new TName("base._System",0,Pos.unknown))).append("())); return; }\n"));
+      .append("    if (n.equals(\"").append(n).append("\")){ return _base.Util.topLevel(()->")
+      .append(iface).append(".instance.imm$main$1(new ").append(typeName(new TName("base._System",0,Pos.unknown))).append("())); }\n"));
     sb.append("    throw new AssertionError(\"No main called \"+n+\" in package ").append(tools.pkgName()).append("\");\n  }\n}\n");
     Fs.writeUtf8(out.resolve("Main.java"), sb.toString());
   }
