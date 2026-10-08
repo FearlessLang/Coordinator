@@ -1,4 +1,4 @@
-// java --module-path ../../../Commons/Commons.jar --add-modules Commons scripts/TestAgentTools.java [TestClassName [agent]]
+// java --module-path ../../../Commons/Commons.jar --add-modules Commons scripts/TestAgentTools.java <desk> <agent> [TestClassName] <channelFolder> <filesIOFolder>
 package scripts;
 
 import java.nio.file.Path;
@@ -10,19 +10,21 @@ import tools.JavaTool;
 
 public class TestAgentTools{
   public static void main(String[] args) throws InterruptedException{
-    assert args.length<2 || args.length==2 && args[1].equals("agent");
-    var channel= ModularBuild.out.resolve("pilot");
-    Fs.rmTree(channel);
-    if (stale(ResolveResource.portableFolderOut.resolve("fearlessBin"+ResolveResource.versionId))){ DeployPortableFearless.main(args); }
-    if (stale(ResolveResource.managedFolderOut.resolve("fearlessManaged"+ResolveResource.versionId))){ DeployManagedFearless.main(args); }
+    assert (args.length==4 || args.length==5) && List.of("true","false").contains(args[1]);
+    var channel= Path.of(args[args.length-2]);
+    var app= ResolveResource.managedFolderOut.resolve("fearlessManaged"+ResolveResource.versionId);
+    if (stale(app)){ DeployManagedFearless.main(args); }
+    Fs.copyFresh(app,Path.of(args[args.length-1]).resolve(app.getFileName()));
     ModularBuild.commons();
     ModularBuild.frontendMain();
     ModularBuild.coordinatorMain();
     ModularBuild.controllerTest();
     var classes= ModularBuild.out.resolve("controller-test");
-    if (args.length==0){ ModularBuild.runJUnit(classes, "--include-package=agentTools"); return; }
-    JavaTool.runMain(args.length==1 ? List.of("-ea") : List.of("-ea","-Dpilot="+channel), classes, ModularBuild.mods, "org.junit.platform.console.ConsoleLauncher",
-      "execute", "--class-path", classes.toString(), "--select-class=agentTools."+args[0], "--details=summary", "--disable-ansi-colors");
+    var select= args.length==5 ? "--select-class=agentTools."+args[2] : "--select-package=agentTools";
+    var properties= List.of("-ea","-Ddesk="+args[0],"-Dagent="+args[1],"-DchannelFolder="+channel,"-DfilesIOFolder="+args[args.length-1]);
+    Fs.cleanDir(channel);
+    try{ JavaTool.runMain(properties, classes, ModularBuild.mods, "org.junit.platform.console.ConsoleLauncher", "execute", "--class-path", classes.toString(), select, "--details=summary", "--disable-ansi-colors"); }
+    finally{ Fs.cleanDir(channel); }
   }
   static boolean stale(Path app){
     var name= app.getFileName().toString();
