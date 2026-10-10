@@ -21,7 +21,7 @@ import tools.JavaTool;
 import tools.SourceOracle;
 import utils.Push;
 
-class TestBuildBase {
+class TestBuildBase{
   Coordinator c= new Coordinator(){
     @Override public Path modsPath(){  return ResolveResource.coordinatorJars; }
     @Override public BackendTools backendTools(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, CapabilityEnvironment capabilities){

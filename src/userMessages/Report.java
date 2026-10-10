@@ -29,7 +29,7 @@ import static userMessages.UserError.path;
 /// what they gave us. Their file and folder names, their zips, their project layout,
 /// their Fearless source.
 /// The counterpart is Violation, for when we can no longer do our safe job.
-public final class Report {
+public final class Report{
   private Report(){}
 
   //-- the shape of a project-scan message: what is wrong, how to fix it, then the rules

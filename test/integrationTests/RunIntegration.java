@@ -49,7 +49,7 @@ import tools.SourceOracle;
 import utils.Push;
 import userMessages.UserError;
 
-public class RunIntegration {
+public class RunIntegration{
   static{ utils.Err.setUp(AssertionFailedError.class, Assertions::assertEquals, Assertions::assertTrue); }
 
   static final Path baseCache= ResolveResource.stLibDebugOut.resolve("baseCache");

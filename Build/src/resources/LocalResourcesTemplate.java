@@ -2,7 +2,7 @@ package resources;
 
 import java.nio.file.Path;
 
-public class LocalResourcesTemplate { //public class LocalResources {
+public class LocalResourcesTemplate{ //public class LocalResources {
   //example for windows
   private static Path prefix=Path.of("C:\\").resolve("Users","...","OneDrive","Documents","GitHub");
   //example for linux

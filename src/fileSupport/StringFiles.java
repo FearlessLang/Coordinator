@@ -16,7 +16,7 @@ import fileSupport.ByteFiles.Op;
 import metaParser.Message;
 import utils.Bug;
 
-public final class StringFiles {
+public final class StringFiles{
   public static String read(Path path, BiConsumer<String,String> onError){
     byte[] bytes= ByteFiles.read(path,(k,c)->
       fail(onError,requiresReport(k),FailureText.explain(Op.Read,k,path),c));

@@ -34,7 +34,7 @@ import tools.SourceOracle.Ref;
 import utils.Push;
 import utils.Range;
 
-public interface Coordinator {
+public interface Coordinator{
   default String runAllMains(String pkgName,OutputOracle out) throws InterruptedException{
     return runMains(runData(out.rootDir().getParent(),stdLibBase()), Push.of(out.rootDir().resolve("gen_java"),sharedClasspath()), "_"+pkgName+".Main");
   }

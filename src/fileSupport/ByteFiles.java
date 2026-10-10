@@ -20,8 +20,8 @@ import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Locale;
 
-public final class ByteFiles {
-  public enum Op {
+public final class ByteFiles{
+  public enum Op{
     Read("read","reading","read", StandardOpenOption.READ),
     // The write probe deliberately omits CREATE and TRUNCATE_EXISTING: a probe that
     // diagnoses a failed write must not create or empty the very file it inspects.
@@ -39,7 +39,7 @@ public final class ByteFiles {
     // individual text can forget it.
     String fill(String text){ return text.replace("`read`",verb).replace("`reading`",gerund).replace("`written`",participle); }
   }
-  public enum Kind {
+  public enum Kind{
     FileBusy_WindowsSharingViolation,
     FileBusy_WindowsFileRegionLocked,
     FileBusy_PosixTextFileBusy,
@@ -112,8 +112,8 @@ public final class ByteFiles {
   // T is the operation's result type: byte[] for read, Void for the writes. In
   // practice every handler throws; the type parameter only makes the throwing
   // handler typecheck against each entry point.
-  public interface Handler<T, X extends Throwable> { T failure(Kind kind, Throwable cause) throws X; }
-  private interface IoOperation<T> { T run() throws IOException; }
+  public interface Handler<T, X extends Throwable>{ T failure(Kind kind, Throwable cause) throws X; }
+  private interface IoOperation<T>{ T run() throws IOException; }
 
   public static <X extends Throwable> byte[] read(Path path, Handler<byte[],X> handler) throws X {
     return attempt(Op.Read, path, () -> Files.readAllBytes(path), handler);

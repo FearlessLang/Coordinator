@@ -5,7 +5,7 @@ import java.util.Arrays;
 
 import fileSupport.ByteFiles.Kind;
 
-enum TextMatch {
+enum TextMatch{
     MFileTooLargeForByteArray(FileTooLargeForByteArray,
       // OpenJDK jdk-26+26 FileInputStream.java
       // String.format("Required array size too large for %s: %d = %d - %d", ...)

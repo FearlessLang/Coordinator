@@ -68,7 +68,7 @@ import utils.Bug;
 // Tally over the 52 kinds: 25 Windows-only, 8 POSIX-only, 15 possible on any OS, 4
 // raised by the JVM side rather than the OS. The Windows bias in the texts mirrors that
 // tally - Windows reports storage failures in much finer grain - it is not a documentation preference.
-final class FailureText {
+final class FailureText{
   static Explanation explain(Op op, ByteFiles.Kind kind, Path path){
     // In the code we control, non-default file systems should never reach these explainers.
     if (!path.getFileSystem().equals(FileSystems.getDefault())){ throw Bug.unreachable(); }
