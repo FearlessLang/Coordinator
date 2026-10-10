@@ -121,27 +121,21 @@ public final class BuildWithZip{
     var name= Fs.fileNameWithExtension(kid.fearPath());
     int d0= name.indexOf('.');
     if (d0 == 0){ checkIndividualInvisibleSegment(kid); return; }
-    if (d0 < 0 || !(kid instanceof Ref)){
-      checkVisibleAtom(kid, name);
-      if (kid instanceof Ref && !Report.allowedNoExtFiles.contains(name)){ throw Report.needsExtension(kid); }
-      return;
-    }
-    checkVisibleAtom(kid, name.substring(0, d0));
-    checkExt(kid, name.substring(d0 + 1));
+    var split= d0 > 0 && kid instanceof Ref;
+    checkVisibleAtom(kid, split ? name.substring(0, d0) : name);
+    if (split){ checkExt(kid, name.substring(d0 + 1)); return; }
+    if (kid instanceof Ref && !Report.allowedNoExtFiles.contains(name)){ throw Report.needsExtension(kid); }
   }
   private static void checkVisibleAtom(RefParent kid, String atom){
     char c0= atom.charAt(0);
-    var letterOr_= c0 == '_' || ('a' <= c0 && c0 <= 'z');
-    if (!letterOr_){ throw Report.visibleMustStartWithLetterOrUnderscore(kid); }
+    if (c0 != '_' && !('a' <= c0 && c0 <= 'z')){ throw Report.visibleMustStartWithLetterOrUnderscore(kid); }
     atom.chars().skip(1).filter(c -> c != '_' && !Fs.isExtSegChar((char)c)).findFirst().ifPresent(c -> { throw Report.visibleInvalidChar(kid, (char)c); });
     if (winReserved.contains(atom)){ throw Report.windowsReservedName(kid); }
   }
   private static void checkExt(RefParent kid, String tail){
     if (tail.isEmpty()){ throw Report.missingExtension(kid); }
-    if (tail.indexOf('.') >= 0){
-      if (!Report.allowedMultiDotExts.contains(tail)){ throw Report.multiDotExtNotAllowed(kid); }
-      return;
-    }
+    if (Report.allowedMultiDotExts.contains(tail)){ return; }
+    if (tail.indexOf('.') >= 0){ throw Report.multiDotExtNotAllowed(kid); }
     if (tail.length() > Fs.maxExtSeg){ throw Report.extLenMustBe1To16(kid); }
     tail.chars().filter(c -> !Fs.isExtSegChar((char)c)).findFirst().ifPresent(c -> { throw Report.extInvalidChar(kid, (char)c); });
   }
