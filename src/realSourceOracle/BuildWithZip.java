@@ -31,25 +31,25 @@ record Tree(
     reqNoEmptyDirs();
     Fs.walkV(root, s->s
       .filter(p->!p.equals(root))
-      .filter(p->!Files.isDirectory(p, LinkOption.NOFOLLOW_LINKS))
+      .filter(p->!isDirectory(p))
       .forEach(this::collectFile)
     );
   }
   private void collectFile(Path abs){
     var rel= root.relativize(abs);
     var pe= new PathEntry(root, rel);
+    var invisible= BuildWithZip.isInvisible(pe);
     if (Files.isSymbolicLink(abs)){
-      if (BuildWithZip.isInvisible(pe)){ return; }
+      if (invisible){ return; }
       throw Report.symlinkForbidden(abs);
     }
-    var zip= isDiskZip(abs, rel);
-    if (!isRegularFile(abs) && !zip){ throw BuildWithZip.isInvisible(pe)
+    if (!isRegularFile(abs)){ throw invisible
       ? Report.invisibleOnlyRegularFilesAndDirs(abs)
       : Report.onlyRegularFilesAndDirs(abs);
     }
-    if (zip && !BuildWithZip.isInvisible(pe)){ reqNoSiblingForZipName(rel); collectBodyDiskZip(root, rel); return; }
-    for (RefParent p= pe; p.parent()!=p; p= p.parent()){ addKid(p); }
-    if (isRegularFile(abs) && !BuildWithZip.isInvisible(pe)){ visibleFiles.add(pe); }
+    if (!invisible && rel.getFileName().toString().endsWith(".zip")){ reqNoSiblingForZipName(rel); collectBodyDiskZip(rel); return; }
+    addKids(pe);
+    if (!invisible){ visibleFiles.add(pe); }
   }
   private void reqNoSiblingForZipName(Path rel){
     var name= rel.getFileName().toString();
@@ -64,29 +64,27 @@ record Tree(
     dirs.add(Path.of(""));
     Fs.walkV(root, s->s.filter(p->!p.equals(root)).forEach(abs->{
       var rel= root.relativize(abs);
-      nonEmpty.add(parentOrEmpty(rel));
+      nonEmpty.add(rel.resolveSibling(""));
       if (BuildWithZip.isInvisible(new PathEntry(root, rel))){ return; }
       if (isDirectory(abs)){ dirs.add(rel); }
     }));
     for (var d: dirs){ if (!nonEmpty.contains(d)){ throw Report.emptyDirectory(d); } }
   }
-  private boolean isDirectory(Path abs){ return Files.isDirectory(abs, LinkOption.NOFOLLOW_LINKS); }
+  private static boolean isDirectory(Path abs){ return Files.isDirectory(abs, LinkOption.NOFOLLOW_LINKS); }
   private static boolean isRegularFile(Path abs){ return Files.isRegularFile(abs, LinkOption.NOFOLLOW_LINKS); }
-  private void collectBodyDiskZip(Path root, Path rel){
+  private void collectBodyDiskZip(Path rel){
     for (var e: ZipWellFormedness.allEntryPaths(root, rel)){
       if (e.segments().getLast().endsWith(".zip")){ continue; }//expanded
-      for (RefParent p= e; p.parent()!=p; p= p.parent()){ addKid(p); }
+      addKids(e);
       if (!BuildWithZip.isInvisible(e)){ visibleFiles.add(e); }
     }
   }
-  private void addKid(RefParent kid){
-    var dir= kid.parent();
-    if (dir == kid){ return; } // root
-    var m= BuildWithZip.isInvisible(dir) ? dotKidsByDir : visKidsByDir;
-    m.computeIfAbsent(dir, _->new LinkedHashSet<>()).add(kid);
+  private void addKids(RefParent leaf){
+    for (RefParent p= leaf; p.parent()!=p; p= p.parent()){
+      var m= BuildWithZip.isInvisible(p.parent()) ? dotKidsByDir : visKidsByDir;
+      m.computeIfAbsent(p.parent(), _->new LinkedHashSet<>()).add(p);
+    }
   }
-  private static boolean isDiskZip(Path abs, Path rel){ return isRegularFile(abs) && rel.getFileName().toString().endsWith(".zip"); }
-  private static Path parentOrEmpty(Path p){ return p.getParent()==null ? Path.of("") : p.getParent(); }
 }
 public final class BuildWithZip{
   public static boolean isInvisible(RefParent r){
