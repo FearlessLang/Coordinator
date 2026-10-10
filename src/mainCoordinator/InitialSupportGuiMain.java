@@ -236,7 +236,7 @@ public final class InitialSupportGuiMain{
   </body>
 </html>
 """;
-  public static final String afterCreateWinHtml= """
+  private static String afterCreate(String steps){ return """
 <html>
   <body>
     <h2 style='margin-top:0;'>Demo created</h2>
@@ -245,6 +245,11 @@ public final class InitialSupportGuiMain{
       Your demo folder should now be open.
       Inside it, you will find <b>start.fearless</b>.
     </p>
+"""+steps+"""
+  </body>
+</html>
+"""; }
+  public static final String afterCreateWinHtml= afterCreate("""
 
     <h3>Run it</h3>
     <ol>
@@ -262,18 +267,8 @@ public final class InitialSupportGuiMain{
     <p>
       Tip: if you don't see ".fearless", enable "File name extensions" in Explorer's View menu.
     </p>
-  </body>
-</html>
-""";
-  public static final String afterCreateMacHtml= """
-<html>
-  <body>
-    <h2 style='margin-top:0;'>Demo created</h2>
-
-    <p>
-      Your demo folder should now be open.
-      Inside it, you will find <b>start.fearless</b>.
-    </p>
+""");
+  public static final String afterCreateMacHtml= afterCreate("""
 
     <h3>Run it</h3>
     <ol>
@@ -293,19 +288,6 @@ public final class InitialSupportGuiMain{
       Tip: if you don't see ".fearless", Finder -> Settings (Preferences) -> Advanced -> enable
       <b>Show all filename extensions</b>.
     </p>
-  </body>
-</html>
-""";
-  public static final String afterCreateLinuxHtml= """
-<html>
-  <body>
-    <h2 style='margin-top:0;'>Demo created</h2>
-
-    <p>
-      Your demo folder should now be open.
-      Inside it, you will find <b>start.fearless</b>.
-    </p>
-  </body>
-</html>
-""";
+""");
+  public static final String afterCreateLinuxHtml= afterCreate("");
 }
