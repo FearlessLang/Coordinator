@@ -95,8 +95,7 @@ public final class HtmlDocBuilder{
     if (names.perType().isEmpty() || declared.contains(names.top())){ Fs.rmTree(testPath.getParent()); return; }
     var collided= names.perType().stream().filter(declared::contains).findFirst();
     if (collided.isPresent()){ throw Report.generatedTestNameReserved(reservedNameProblem(collided.get()),names.top()); }
-    Fs.ensureDir(testPath.getParent());
-    Fs.cleanDirContents(testPath.getParent());
+    Fs.cleanDir(testPath.getParent());
     Fs.writeUtf8(testPath,renderer.renderTest());
   }
 

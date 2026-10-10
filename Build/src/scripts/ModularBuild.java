@@ -18,7 +18,7 @@ public class ModularBuild{
   static final Path resources= ResolveResource.coordinatorSrc.getParent().resolve("Build","src","resources");
 
   static void commons(){
-    Fs.cleanDir(mods); Fs.ensureDir(mods);
+    Fs.cleanDir(mods);
     Fs.copyTreeFlat(ResolveResource.coordinatorJars, mods);
     Fs.copyTreeFlat(ResolveResource.coordinatorTestJars, mods);
     buildJar("Commons", List.of(ResolveResource.commonsSrc));
@@ -79,7 +79,7 @@ public class ModularBuild{
   static Path buildEclipsePlugin(){
     var plugin= ResolveResource.controllerPluginSrc;
     var classes= out.resolve("eclipsePluginClasses");
-    Fs.cleanDir(classes); Fs.ensureDir(classes);
+    Fs.cleanDir(classes);
     var plugins= ResolveResource.eclipsePlugins;
     var bundles= Fs.walk(plugins, s->s.filter(p->p.getParent().equals(plugins) && p.toString().endsWith(".jar")).map(Path::toString).sorted().toList());
     var args= new ArrayList<>(JavacTool.javacArgs);
@@ -90,7 +90,7 @@ public class ModularBuild{
       Fs.walkV(src, s->s.filter(p->p.toString().endsWith(".java")).forEach(p->args.add(p.toString()))));
     Fs.runTool("javac", args);
     var res= out.resolve("eclipsePlugin");
-    Fs.cleanDir(res); Fs.ensureDir(res);
+    Fs.cleanDir(res);
     Fs.runTool("jar", List.of("--create",
       "--file", res.resolve(bundleFileName(plugin)).toString(),
       "--manifest", plugin.resolve("META-INF","MANIFEST.MF").toString(),
