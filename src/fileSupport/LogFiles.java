@@ -20,9 +20,8 @@ public final class LogFiles{
     @Override public String toString(){ return path.getFileName()+"   "+shown.format(when); }
     @Override public int compareTo(Entry o){ return o.when.compareTo(when); }
   }
-  private static Path dir(Path folder){ return folder.resolve(runDir).resolve("logs"); }
   public static List<Entry> list(Path folder){
-    var dir= dir(folder);
+    var dir= folder.resolve(runDir).resolve("logs");
     if (!Files.isDirectory(dir)){ return List.of(); }
     return Fs.walk(dir,s->s
       .filter(Files::isRegularFile)
