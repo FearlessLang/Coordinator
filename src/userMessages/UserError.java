@@ -98,9 +98,7 @@ public final class UserError extends RuntimeException{
   private static String showRelText(String p){ return "Root: "+PrettyFileName.displayFileName(root.toUri())+"\nPath: "+disp(p)+"\n"; }
   public static String showZipRel(Path diskZip, List<String> steps, String entryName){
     assert diskZip.isAbsolute();
-    diskZip= root.relativize(diskZip);
-    String zipPath= diskZip.toString().replace("\\","/");
-    if (!steps.isEmpty()){ zipPath+="/"+String.join("/", steps); }
+    var zipPath= root.relativize(diskZip).toString().replace("\\","/")+steps.stream().map(s->"/"+s).collect(Collectors.joining());
     var simple= entryName.codePoints().allMatch(cp -> cp < 128 && Fs.allowed.indexOf((char)cp) >= 0);
     return showRelText(zipPath)+(simple ? "Entry: " : "Entry contains non-standard characters.\nShown as: ")+disp(entryName)+"\n";
   }
@@ -126,9 +124,7 @@ Details:
   private static String termination(){
     if (!managerOwner){ return "\n\nThis Fearless process will now exit."; }
     var programs= Violation.associatedPrograms();
-    var res= "\n\nThe Fearless manager process will now terminate.";
-    if (programs.isBlank()){ return res; }
-    return res+"\nIt will also terminate these Fearless user processes:\n"+programs;
+    return "\n\nThe Fearless manager process will now terminate."+(programs.isBlank() ? "" : "\nIt will also terminate these Fearless user processes:\n"+programs);
   }
   public void display() throws InterruptedException{
     try { displayGui(); }
