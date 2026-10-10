@@ -439,21 +439,10 @@ code{
   //of them are one paragraph, kept on their own lines so that a list stays a list and
   //an indented line stays indented (the doc block is rendered with pre-wrap).
   void renderProse(StringBuilder sb, List<DocOcc> prose){
-    var para= new java.util.ArrayList<DocOcc>();
-    for (var occ: prose){
-      if (occ.text().isBlank()){ endParagraph(sb,para); continue; }
-      para.add(occ);
-    }
-    endParagraph(sb,para);
+    var lines= prose.stream().map(o->o.text().isBlank() ? "" : renderText(o)).collect(Collectors.joining("\n"));
+    paragraph.matcher(lines).results().forEach(p->sb.append("<p>").append(p.group()).append("</p>\n"));
   }
-
-  void endParagraph(StringBuilder sb, List<DocOcc> para){
-    if (para.isEmpty()){ return; }
-    sb.append("<p>")
-      .append(para.stream().map(this::renderText).collect(Collectors.joining("\n")))
-      .append("</p>\n");
-    para.clear();
-  }
+  private static final Pattern paragraph= Pattern.compile("(?dm)^.+(\n.+)*");
 
   String renderText(DocOcc occ){
     var text= occ.text();
