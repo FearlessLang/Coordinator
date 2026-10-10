@@ -466,6 +466,18 @@ How to fix
 We check this so that you[###]
 """);}
 
+  @Test void err_visible_folder_name_with_a_dot(@TempDir Path tmp){ runErrIOE(tmp, """
+_pkg/my.dir/a.fear
+iii
+X
+""","""
+Invalid path in this project folder.
+
+Root: [###]
+Path: "_pkg/my.dir"
+[###]
+""");}
+
   @Test void err_missing_extension_after_dot_in_zip(@TempDir Path tmp){ runErrIOE(tmp, """
 _pkg/z.zip/a.
 iii
