@@ -45,13 +45,9 @@ public class Backend{
       sb.a("  default java.util.ArrayList<Object> _log(){ return _logStore; }\n");
     }
     if (hasInstance && implementsType(l,"base.FileLog",0)){
-      if (l.name().arity() == 0){
-        var name= l.name().simpleName();
-        sb.a("  _base.AppLog _appLog= _base.AppLog.open(java.nio.file.Path.of(\".out\",\"logs\",\""+tools.pkgName()+"\",\""+name+".log\"), false);\n");
-        sb.a("  default _base.AppLog _log(){ return _appLog; }\n");
-      } else {
-        sb.a("  default _base.AppLog _log(){ return null; }\n");
-      }
+      sb.a(l.name().arity() == 0
+        ? "  _base.AppLog _appLog= _base.AppLog.open(java.nio.file.Path.of(\".out\",\"logs\",\""+tools.pkgName()+"\",\""+l.name().simpleName()+".log\"), false);\n  default _base.AppLog _log(){ return _appLog; }\n"
+        : "  default _base.AppLog _log(){ return null; }\n");
     }
     if (isRepr(l)){
       sb.a("  Object _reprCacheGet(Object k, java.util.function.Supplier<Object> f, long time);\n");
@@ -85,19 +81,15 @@ public class Backend{
   );}
   void emitTopMethod(BytecodeLineFix sb, Literal l, M m, boolean abstractOnly){
     if (!m.sig().origin().equals(l.name())){ return ; }
-    String iface=ifaceNameFor(l);
     var jName= mangledMethodName(m.sig().rc(), m.sig().m());
+    sb.a("  default Object "+jName+paramsSig(m)+"{\n");
     if (abstractOnly || m.sig().abs()){
-      sb.a("  default Object ").a(jName).a(paramsSig(m)).a("{\n")
-        .a("    throw new AssertionError(\"Uncallable method: ")
-        .a(iface).a(".").a(jName).a("\"+this.getClass().getName());\n")
-        .a("  }\n");
+      sb.a("    throw new AssertionError(\"Uncallable method: "+ifaceNameFor(l)+"."+jName+"\"+this.getClass().getName());\n  }\n");
       return;
     }
     tools.checks().checkTopMethod(m, decTypeName(l.name()), jName, hasInstance(l));
     //TODO: an imm method with no parameters and an imm result, of a type with an instance (a singleton, like Directions.map),
     //always returns the same value: cache it, so that the body runs only one time.
-    sb.a("  default Object "+jName+paramsSig(m)+"{\n");
     new ProduceBody(sb,this, l.thisName(), m).emitBody();
   }
   String ifaceNameFor(Literal l){
@@ -119,11 +111,9 @@ public class Backend{
     var bits= s.chars().filter(c->'A' <= c && c <= 'Z' || 'a' <= c && c <= 'z').mapToObj(c->c < 'a' ? "1" : "0").collect(Collectors.joining());
     return new BigInteger("1"+bits,2).toString(36);
   }
-  String mangledMethodName(RC rc, MName m){ return rc.name()+"$"+methodBaseName(m)+"$"+m.arity(); }
-  String methodBaseName(MName m){
+  String mangledMethodName(RC rc, MName m){
     var s= m.s();
-    if (s.startsWith(".")){ return encodeTrailingPrimes(s.substring(1)); }
-    return "$" + mangleOp(s);
+    return rc.name()+"$"+(s.startsWith(".") ? encodeTrailingPrimes(s.substring(1)) : "$"+mangleOp(s))+"$"+m.arity();
   }
   final Map<String,String> mains= new TreeMap<>();
   void writeMainJava(){
