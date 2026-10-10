@@ -171,10 +171,9 @@ class Helper{
     "_rank_base","_rank_core","_rank_driver","_rank_worker","_rank_framework","_rank_accumulator","_rank_tool","_rank_app");
   private static final Pattern rankName= Pattern.compile("("+String.join("|",ranks)+")(\\d{3})?");
 
-  static boolean hasReservedRankPrefix(Ref u){ return Fs.fileNameWithExtension(u.fearPath()).startsWith("_rank_"); }
   static Ref okPkgContent(List<Ref> u){
     var pkg= pkgName(u.getFirst());
-    var reserved= u.stream().filter(Helper::hasReservedRankPrefix).toList();
+    var reserved= u.stream().filter(r->Fs.fileNameWithExtension(r.fearPath()).startsWith("_rank_")).toList();
     reserved.forEach(Helper::rankNumber);//err malformed rank file name is malformed
     if (reserved.isEmpty()){ throw Report.projectMissingRankFile(pkg); }
     if (reserved.size() > 1){ throw Report.projectMultipleRankFiles(pkg, reserved); }
@@ -194,9 +193,8 @@ class Helper{
     if (reservedPkgNames.contains(pkg)){ throw Report.projectReservedPackageName(u, candidates.getFirst()); }
     return Optional.of(pkg);
   }
-}class WouldCompile extends RuntimeException{
-  private static final long serialVersionUID= 1L;
 }
+@SuppressWarnings("serial") class WouldCompile extends RuntimeException{}
 record NoCompile(Coordinator inner) implements Coordinator{
   @Override public Path modsPath(){ return inner.modsPath(); }
   @Override public Optional<Path> baseCachePath(){ return inner.baseCachePath(); }
