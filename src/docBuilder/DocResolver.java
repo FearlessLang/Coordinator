@@ -23,15 +23,7 @@ record Scope(Literal owner, Optional<M> method){
 }
 
 /// Resolves a scanned DocRef to the declarations it could name.
-final class DocResolver{
-  DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other){
-    this.pkgName= pkgName;
-    this.types= types;
-    this.other= other;
-  }
-  final String pkgName;
-  final List<TypeDoc> types;
-  final OtherPackages other;
+record DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other){
 
   Optional<DocLink> resolve(DocRef ref, Scope scope){
     if (ref instanceof DocRef.TypeName t){ return resolveType(t); }
