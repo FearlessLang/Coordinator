@@ -207,9 +207,8 @@ final class Helper{
     if (reservedPkgNames.contains(pkg)){ throw Report.projectReservedPackageName(u, candidates.getFirst()); }
     return Optional.of(pkg);
   }
-}final class WouldCompile extends RuntimeException{
-  private static final long serialVersionUID= 1L;
 }
+@SuppressWarnings("serial") final class WouldCompile extends RuntimeException{}
 record NoCompile(Coordinator inner) implements Coordinator{
   @Override public Path modsPath(){ return inner.modsPath(); }
   @Override public Optional<Path> baseCachePath(){ return inner.baseCachePath(); }
