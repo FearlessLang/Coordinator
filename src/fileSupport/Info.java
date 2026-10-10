@@ -94,7 +94,7 @@ public sealed interface Info{
       var start= here();
       advance();
       var sb= new StringBuilder();
-      while(true){
+      while (true){
         if (!more()){ throw err(from(start),"This string is never closed with a matching \"."); }
         var c= peek();
         if (c == '"'){ var end= here(); advance(); return new Str(sb.toString(),between(start,end)); }
@@ -142,7 +142,7 @@ public sealed interface Info{
     }
     private <T> List<T> seq(Span start, char close, String what, Supplier<T> item){
       var items= new ArrayList<T>();
-      while(true){
+      while (true){
         ws();
         if (!more()){ throw err(from(start),"This "+what+" is never closed with a matching "+close+"."); }
         if (peek() == close && items.isEmpty()){ return items; }
@@ -155,12 +155,12 @@ public sealed interface Info{
       }
     }
     private void ws(){
-      while(more()){
+      while (more()){
         var c= peek();
         if (c == ' ' || c == '\n'){ advance(); continue; }
         var comment= c == '/' && i+1 < text.length() && text.charAt(i+1) == '/';
         if (!comment){ return; }
-        while(more() && peek() != '\n'){ advance(); }
+        while (more() && peek() != '\n'){ advance(); }
       }
     }
     private boolean more(){ return i < text.length(); }

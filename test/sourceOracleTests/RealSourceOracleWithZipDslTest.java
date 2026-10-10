@@ -87,7 +87,7 @@ We check this so that you[###]
     out.writeBytes(data);
   }
   private static void writeShort(ByteArrayOutputStream out, int v){ out.write(v & 0xff); out.write((v>>8) & 0xff); }
-  private static void writeInt(ByteArrayOutputStream out, long v){ for(int i= 0; i < 4; i++){ out.write((int)((v>>(8*i)) & 0xff)); } }
+  private static void writeInt(ByteArrayOutputStream out, long v){ for (int i= 0; i < 4; i++){ out.write((int)((v>>(8*i)) & 0xff)); } }
 
 @Test void err_zip_duplicate_entry_name2(@TempDir Path tmp){ runErrIOE(tmp, """
 _pkg/z.zip/a.fear

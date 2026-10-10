@@ -28,7 +28,7 @@ public class ProjectTreeErrorTest{
   static String errMsg(String... pathThenContent){
     assert pathThenContent.length % 2 == 0;
     var b= SourceOracle.debugBuilder();
-    for(int i=0; i<pathThenContent.length; i+=2){
+    for (int i=0; i<pathThenContent.length; i+=2){
       b.putURI(URI.create(SourceOracle.root+pathThenContent[i]), pathThenContent[i+1]);
     }
     var oracle= b.build();
