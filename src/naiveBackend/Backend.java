@@ -40,7 +40,7 @@ public class Backend{
       .a("package _"+tools.pkgName()+";\n")
       .a("public interface "+iface+extendsClause(l)+"{\n");
     for (var m:l.ms()){ emitTopMethod(sb, l, m, abstractOnly); }
-    var hasInstance= hasInstance(l, abstractOnly);
+    var hasInstance= !abstractOnly && hasInstance(l);
     if (hasInstance && implementsType(l,"base.InMemoryLog",1)){
       sb.a("  java.util.ArrayList<Object> _logStore= new java.util.ArrayList<>();\n");
       sb.a("  default java.util.ArrayList<Object> _log(){ return _logStore; }\n");
@@ -71,8 +71,7 @@ public class Backend{
     }
     return "";
   }
-  private boolean hasInstance(Literal l, boolean abstractOnly) {
-    if (abstractOnly){ return false; } 
+  private boolean hasInstance(Literal l) {
     assert !l.thisName().isEmpty() || LiteralDeclarations.has(l.cs(),LiteralDeclarations.captureFree);
     return l.ms().stream().noneMatch(m->m.sig().abs());
   }
@@ -96,7 +95,7 @@ public class Backend{
         .a("  }\n");
       return;
     }
-    tools.checks().checkTopMethod(m, decTypeName(l.name()), jName, hasInstance(l, abstractOnly));
+    tools.checks().checkTopMethod(m, decTypeName(l.name()), jName, hasInstance(l));
     //TODO: an imm method with no parameters and an imm result, of a type with an instance (a singleton, like Directions.map),
     //always returns the same value: cache it, so that the body runs only one time.
     sb.a("  default Object "+jName+paramsSig(m)+"{\n");
