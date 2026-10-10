@@ -110,9 +110,14 @@ class Helper{
   static Layer layerOf(Coordinator coordinator, SourceOracle o, Path project, OutputOracle out, SourceOracle stLib){
     var map= pkgMap(o,project);
     List<Ref> allRanks= map.values().stream().map(Helper::okPkgContent).toList();
-    Layer l= mapFromRanks(coordinator,allRanks,o,out,stLib);
-    return layers(coordinator,map,l,allRanks.stream()
-      .sorted(Comparator.comparingInt(Helper::rankNumber).thenComparing(Ref::fearPath)).toList());
+    Map<String,Map<String,String>> res; try {res= new FrontendLogicMain()
+      .parseRankFiles(allRanks, Comparator.comparingInt(Helper::rankNumber), Push.of(allRanks.stream().map(Helper::pkgName).toList(), "base"));}
+    catch(FearlessException fe){ throw Report.sourceError(fe.render(o)); }
+    Layer l= new BaseLayer(coordinator,res,out.commitMap(res, allRanks.stream().mapToLong(Ref::lastModified).max().getAsLong()),stLib);
+    var byRank= new TreeMap<Integer,LinkedHashMap<String,List<Ref>>>();
+    allRanks.stream().sorted(Comparator.comparing(Ref::fearPath)).forEach(r->byRank.computeIfAbsent(rankNumber(r),_->new LinkedHashMap<>()).put(pkgName(r),map.get(pkgName(r))));
+    for (var pkgs: byRank.values()){ l= new MiddleLayer(coordinator,l,pkgs); }
+    return l;
   }
   static List<String> compile(Coordinator coordinator, Path project, SourceOracle stLib){
     SourceOracle o= coordinator.sourceOracle(project);
@@ -145,22 +150,6 @@ class Helper{
     var map= new LinkedHashMap<String,List<Ref>>();
     for (Ref u:o.allFiles()){ pkgNameOpt(u).ifPresent(pn->map.computeIfAbsent(pn,_->new ArrayList<>()).add(u)); }
     return map;
-  }
-  static Layer layers(Coordinator coordinator, Map<String,List<Ref>> map, Layer l, List<Ref> ranks){
-    int lastNum= rankNumber(ranks.getFirst());
-    var pkgs= new LinkedHashMap<String, List<Ref>>();
-    for (Ref u:ranks){
-      if (rankNumber(u) != lastNum){ l= new MiddleLayer(coordinator,l,pkgs); pkgs= new LinkedHashMap<>(); lastNum= rankNumber(u); }
-      pkgs.put(pkgName(u),map.get(pkgName(u)));
-    }
-    return new MiddleLayer(coordinator,l,pkgs);
-  }
-  static Layer mapFromRanks(Coordinator coordinator, List<Ref> allRanks, SourceOracle o, OutputOracle out, SourceOracle stLib){
-    Map<String,Map<String,String>> res; try {res= new FrontendLogicMain()
-      .parseRankFiles(allRanks, Comparator.comparingInt(Helper::rankNumber), Push.of(allRanks.stream().map(Helper::pkgName).toList(), "base"));}
-    catch(FearlessException fe){ throw Report.sourceError(fe.render(o)); }
-    long baseStamp= out.commitMap(res, allRanks.stream().mapToLong(Ref::lastModified).max().getAsLong());
-    return new BaseLayer(coordinator,res,baseStamp,stLib);
   }
   static int rankNumber(Ref u){
     var m= rankName.matcher(isFear(u) ? Fs.fileNameWithoutExtension(u.fearPath()) : "");
