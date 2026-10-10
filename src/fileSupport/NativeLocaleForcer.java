@@ -7,7 +7,6 @@ import java.lang.foreign.MemoryLayout;
 import java.lang.foreign.MemorySegment;
 import java.lang.foreign.SymbolLookup;
 import java.lang.invoke.MethodHandle;
-import java.lang.invoke.VarHandle;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
@@ -105,8 +104,7 @@ public class NativeLocaleForcer {
   private static void verifyUiLanguage(MethodHandle get, Arena arena, MemorySegment callState) throws Throwable {
     var count= arena.allocate(JAVA_INT);
     var buffer= arena.allocate(JAVA_CHAR, maxProcessUiLanguageChars);
-    var bufferChars= arena.allocate(JAVA_INT);
-    bufferChars.set(JAVA_INT, 0, maxProcessUiLanguageChars);
+    var bufferChars= arena.allocateFrom(JAVA_INT, maxProcessUiLanguageChars);
     int ok= (int) get.invokeExact(callState, 8/*MUI_LANGUAGE_NAME*/, count, buffer, bufferChars);
     if (ok == 0){
       throw Violation.couldNotForceEnglish("Windows process UI language read failed (GetLastError=" + lastError(callState) + ")");
@@ -116,9 +114,7 @@ public class NativeLocaleForcer {
     throw Violation.couldNotForceEnglish("Fearless set the Windows process UI language to en-US, but Windows reported the language as " + languages + " instead");
   }
   private static int lastError(MemorySegment callState){
-    VarHandle h= Linker.Option.captureStateLayout()
-      .varHandle(MemoryLayout.PathElement.groupElement("GetLastError"));
-    return (int) h.get(callState, 0L);
+    return (int) Linker.Option.captureStateLayout().varHandle(MemoryLayout.PathElement.groupElement("GetLastError")).get(callState, 0L);
   }
   private static List<String> parseDoubleNullTerminatedUtf16(MemorySegment wideList){
     var out= new ArrayList<String>();
