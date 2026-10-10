@@ -44,9 +44,9 @@ public interface OutputOracle{
     return OtherPackages.start(map,OutputHelper.cachedPkgApi(pkgApiPath(pkg)),stamp);
   }
   default long commitPkgApi(String pkg, List<Literal> core, long minExclusiveMillis){
-    var res= OutputHelper.pkgApiFromJSon(pkgApiPath(pkg));
+    var res= OutputHelper.pkgApiFromJson(pkgApiPath(pkg));
     if (res.isPresent() && OutputHelper.consistent(res.get(),core)){ return pkgApiStamp(pkg); }
-    return Fs.writeUtf8(pkgApiPath(pkg), ApiJson.toJSon(core), res.isEmpty() ? -1 : minExclusiveMillis);
+    return Fs.writeUtf8(pkgApiPath(pkg), ApiJson.toJson(core), res.isEmpty() ? -1 : minExclusiveMillis);
   }
   default Optional<MainsInfo> mainsInfo(){ return Optional.of(mainsPath()).filter(Files::exists).map(MainsInfo::parse); }
   default void commitMains(String pkg, Map<String,MainsInfo.Main> mains){ Fs.writeUtf8(mainsPath(pkg), new MainsInfo(mains).print()); }
@@ -54,27 +54,27 @@ public interface OutputOracle{
     return new MainsInfo(pkgs.stream().flatMap(p->MainsInfo.parse(mainsPath(p)).mains().entrySet().stream()).collect(Collectors.toMap(Map.Entry::getKey,Map.Entry::getValue)));
   }
   default long commitMap(Map<String,Map<String,String>> map, long minExclusiveMillis){
-    var res= OutputHelper.mapFromJSon(mapPath());
+    var res= OutputHelper.mapFromJson(mapPath());
     if (res.filter(map::equals).isPresent()){ return mapStamp(); }
-    return Fs.writeUtf8(mapPath(), OutputHelper.toJSon(map), res.isEmpty() ? -1 : minExclusiveMillis);
+    return Fs.writeUtf8(mapPath(), OutputHelper.toJson(map), res.isEmpty() ? -1 : minExclusiveMillis);
   }
   //commitMap only write if different from the old, and in that case it will bumps mtime strictly above minExclusiveMillis
 }
 
 class OutputHelper{
   static String fileList(List<Ref> files){ return Join.of(files.stream().map(Ref::fearPath).sorted(),"","\n",""); }
-  static String toJSon(Map<String,Map<String,String>> map){
+  static String toJson(Map<String,Map<String,String>> map){
     if (map.isEmpty()){ return "{}"; }
     return obj(map, m->obj(m, s->"\""+s+"\""));
   }
-  static Optional<Map<TName,Literal>> pkgApiFromJSon(Path p){ return readAllowed(p).map(s->new LimitedJsonParser(s, p).apiJsonToMap()); }
-  static Map<TName,Literal> cachedPkgApi(Path p){ return pkgApiFromJSon(p).orElseThrow(()->Violation.cacheMissingPkgApiFile(p)); }
+  static Optional<Map<TName,Literal>> pkgApiFromJson(Path p){ return readAllowed(p).map(s->new LimitedJsonParser(s, p).apiJsonToMap()); }
+  static Map<TName,Literal> cachedPkgApi(Path p){ return pkgApiFromJson(p).orElseThrow(()->Violation.cacheMissingPkgApiFile(p)); }
   private static <T> String obj(Map<String,T> m, Function<T,String> v){
     return Join.of(m.entrySet().stream()
       .map(e->"\""+e.getKey()+"\":"+v.apply(e.getValue())),
       "{",",\n","}\n");//correctly throw for empty
   }
-  static Optional<Map<String,Map<String,String>>> mapFromJSon(Path p){ return readAllowed(p).map(s->new LimitedJsonParser(s,p).obj2()); }
+  static Optional<Map<String,Map<String,String>>> mapFromJson(Path p){ return readAllowed(p).map(s->new LimitedJsonParser(s,p).obj2()); }
   private static Optional<String> readAllowed(Path p){
     if (!Files.exists(p)){ return Optional.empty(); }
     var s= Fs.readUtf8(p);

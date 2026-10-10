@@ -12,7 +12,7 @@ import utils.Join;
 
 public final class ApiJson{
   //Note: we do not filter _names, because they can still be needed since they can appear as meth signatures or subtypes and type system need to reason on them, even if can not be used by name outside pkg
-  public static String toJSon(List<Literal> core){ return arr(AllLs.of(core).values().stream().map(ApiJson::typeJ)); }
+  public static String toJson(List<Literal> core){ return arr(AllLs.of(core).values().stream().map(ApiJson::typeJ)); }
   static String arr(Stream<String> es){ return Join.of(es, "[", ",", "]", "[]"); }
   static String typeJ(Literal l){ return arr(Stream.of(q(l.name().s()), q(l.rc().name()), bsJ(l.bs()), arr(l.cs().stream().map(ApiJson::cJ)), arr(l.ms().stream().map(m->mJ(m.sig()))), q(l.thisName()))); }
   static String bsJ(List<B> bs){ return arr(bs.stream().map(ApiJson::bJ)); }
