@@ -6,15 +6,15 @@ import java.io.StringWriter;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.charset.CharacterCodingException;
-import java.nio.charset.CoderResult;
-import java.nio.charset.CodingErrorAction;
+import java.nio.charset.MalformedInputException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.EnumSet;
 import java.util.HexFormat;
 import java.util.Set;
 import java.util.function.BiConsumer;
-import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import fileSupport.ByteFiles.Kind;
 import fileSupport.ByteFiles.Op;
@@ -26,22 +26,10 @@ public final class StringFiles {
     byte[] bytes= ByteFiles.read(path,(k,c)->
       fail(onError,requiresReport.contains(k),FailureText.explain(Op.Read,k,path),c));
     var input= ByteBuffer.wrap(bytes);
-    var output= CharBuffer.allocate(bytes.length);
-    var decoder= StandardCharsets.UTF_8.newDecoder()
-      .onMalformedInput(CodingErrorAction.REPORT)
-      .onUnmappableCharacter(CodingErrorAction.REPORT);
-    var result= decoder.decode(input,output,true);
-    if (result.isError()){
-      var cause= codingException(result);
-      output.flip();
-      return fail(onError,false,
-        invalidUtf8(path,bytes,input.position(),result.length(),output.toString()),cause);
+    try { return StandardCharsets.UTF_8.newDecoder().decode(input).toString(); }
+    catch(CharacterCodingException e){
+      return fail(onError,false,invalidUtf8(path,bytes,input.position(),((MalformedInputException)e).getInputLength()),e);
     }
-    assert !result.isOverflow();
-    result= decoder.flush(output);
-    assert result.isUnderflow();
-    output.flip();
-    return output.toString();
   }
   //Whole-file create with UTF-8 content: refuses to touch anything already at the location.
   public static void writeNew(Path path, String text, BiConsumer<String,String> onError){
@@ -56,10 +44,7 @@ public final class StringFiles {
   //propagates as an Error, like the other observed-bug throws.
   private static byte[] utf8(String text){
     try {
-      var buffer= StandardCharsets.UTF_8.newEncoder()
-        .onMalformedInput(CodingErrorAction.REPORT)
-        .onUnmappableCharacter(CodingErrorAction.REPORT)
-        .encode(CharBuffer.wrap(text));
+      var buffer= StandardCharsets.UTF_8.newEncoder().encode(CharBuffer.wrap(text));
       var bytes= new byte[buffer.remaining()];
       buffer.get(bytes);
       return bytes;
@@ -74,19 +59,15 @@ public final class StringFiles {
       boolean report,
       Explanation explanation,
       Throwable cause){
-    var outAction= report ? "" : explanation.text();
-    if (!report && explanation.suppressed().isEmpty()){ onError.accept(outAction,""); throw Bug.unreachable(); }
-    var outReport= new StringBuilder(report ? explanation.text() : "")
-      .append("\nOriginal failure:\n").append(stackTrace(cause));
-    for (var i= 0; i < explanation.suppressed().size(); i++){ outReport
-      .append("\nSuppressed error ").append(i).append(":\n")
-      .append(stackTrace(explanation.suppressed().get(i)));
-    }
-    onError.accept(outAction,outReport.toString());
+    var errors= explanation.suppressed();
+    var details= !report && errors.isEmpty() ? "" : "\nOriginal failure:\n"+stackTrace(cause)
+      +IntStream.range(0,errors.size()).mapToObj(i->"\nSuppressed error "+i+":\n"+stackTrace(errors.get(i))).collect(Collectors.joining());
+    onError.accept(report ? "" : explanation.text(),(report ? explanation.text() : "")+details);
     throw Bug.unreachable();
   }
-  private static Explanation invalidUtf8(Path path, byte[] bytes, int offset, int length, String prefix){
-    var location= location(prefix);
+  private static Explanation invalidUtf8(Path path, byte[] bytes, int offset, int length){
+    var lines= new String(bytes,0,offset,StandardCharsets.UTF_8).split("\r\n|\r|\n",-1);
+    var last= lines[lines.length-1];
     var suppressed= new Suppressed();
     var text= CommonInfo.of(Op.Read,path,suppressed)+"""
 The file's bytes were read successfully, but they do not form valid UTF-8 text.
@@ -102,28 +83,13 @@ Valid text immediately before it on that line:
 Invalid bytes: %s
 Nearby bytes:  %s
 """.formatted(
-      location.line(),
-      location.column(),
+      lines.length,
+      last.codePoints().count()+1,
       offset,
-      Message.displayString(tail(location.linePrefix(),80)),
+      Message.displayString(last.replaceFirst("(?s).+(.{80})\\z","...$1")),
       hex(bytes,offset,Math.min(bytes.length,offset+length)),
       hex(bytes,Math.max(0,offset-8),Math.min(bytes.length,offset+length+8)));
     return new Explanation(text,suppressed.toList());
-  }
-  private static CharacterCodingException codingException(CoderResult result){
-    try { result.throwException(); throw Bug.unreachable(); }
-    catch(CharacterCodingException e){ return e; }
-  }
-  private static final Pattern lineBreak= Pattern.compile("\r\n|\r|\n");
-  private static Location location(String prefix){
-    var line= 1;
-    var start= 0;
-    for (var m= lineBreak.matcher(prefix); m.find(); start= m.end()){ line++; }
-    return new Location(line,prefix.codePointCount(start,prefix.length())+1,prefix.substring(start));
-  }
-  private static String tail(String text, int length){
-    var size= text.codePointCount(0,text.length());
-    return size <= length ? text : "..."+text.substring(text.offsetByCodePoints(0,size-length));
   }
   private static String hex(byte[] bytes, int from, int to){
     return HexFormat.ofDelimiter(" ").withUpperCase().formatHex(bytes,from,to);
@@ -133,5 +99,4 @@ Nearby bytes:  %s
     error.printStackTrace(new PrintWriter(out));
     return out.toString();
   }
-  private record Location(int line, int column, String linePrefix){}
 }
