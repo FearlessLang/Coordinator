@@ -54,13 +54,8 @@ public final class JUnitReport{
     while(end > 0 && bytes[end-1] != '\n'){ end-= 1; }
     var whole= ByteBuffer.wrap(bytes, 0, end);
     var text= Fs.of(()->UTF_8.newDecoder().decode(whole).toString());
-    var done= 0;
-    while(done < text.length()){
-      var close= text.startsWith("<testcase ", done) ? text.indexOf("</testcase>\n", done) : done;
-      if (close < 0){ return text.substring(0, done); }
-      done= text.indexOf('\n', close)+1;
-    }
-    return text;
+    var open= Pattern.compile("(?dm)^<testcase ").matcher(text);
+    return open.find(text.lastIndexOf("</testcase>\n")+1) ? text.substring(0, open.start()) : text;
   }
   private static int count(String body, String what){ return body.split(what,-1).length-1; }
   private static String skipped(MatchResult mr){
