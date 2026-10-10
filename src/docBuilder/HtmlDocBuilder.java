@@ -130,10 +130,8 @@ public final class HtmlDocBuilder{
 
   void link(DocResolver resolver, DocOcc occ, Scope scope,
       Map<DocOcc,List<ResolvedSpan>> spans, List<String> problems){
-    var found= DocRefScanner.refSpans(occ.text());
-    if (found.isEmpty()){ return; }
     var res= new ArrayList<ResolvedSpan>();
-    for (var sp: found){
+    for (var sp: DocRefScanner.refSpans(occ.text())){
       var ref= DocRefScanner.wholeRef(occ.text(),sp);
       if (ref.isEmpty()){ problems.add(problem(occ,sp,notAName)); continue; }
       var link= resolver.resolve(ref.get(),scope);

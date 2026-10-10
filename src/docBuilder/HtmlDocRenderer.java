@@ -143,7 +143,6 @@ final class HtmlDocRenderer{
 
   void renderDocText(StringBuilder sb, String indent, Object owner, List<DocOcc> docs, Map<DocOcc,Object> claims){
     var visible= visibleDocs(owner,docs,claims);
-    if (visible.isEmpty()){ return; }
     visible.stream().filter(c->!c.example()).forEach(c->appendIndented(sb,indent,c.text()));
     var examples= visible.stream().filter(DocOcc::example).map(DocOcc::text).toList();
     if (examples.isEmpty()){ return; }
@@ -446,12 +445,10 @@ code{
 
   String renderText(DocOcc occ){
     var text= occ.text();
-    var codeSpans= DocRefScanner.codeSpans(text);
-    if (codeSpans.isEmpty()){ return h(text); }
     var linked= spans.getOrDefault(occ,List.of());
     var sb= new StringBuilder();
     int i= 0;
-    for (var cs: codeSpans){
+    for (var cs: DocRefScanner.codeSpans(text)){
       sb.append(h(text.substring(i,cs.start()-cs.fence())));
       sb.append("<code>").append(renderCode(text,cs,linked)).append("</code>");
       i= cs.end()+cs.fence();
