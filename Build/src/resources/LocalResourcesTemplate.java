@@ -10,20 +10,20 @@ public class LocalResourcesTemplate{ //public class LocalResources {
   //example for mac
   //private static Path prefix= ...
 
-  static public final Path stLibPath= prefix.resolve("StandardLibrary","base");
-  static public final Path stLibRTPath= prefix.resolve("StandardLibrary","rt");
-  static public final Path stLibDebugOut= prefix.resolve("StandardLibrary","dbgOut");
-  static public final Path integrationTests= prefix.resolve("StandardLibrary","integrationTests");
-  static public final Path commonsSrc= prefix.resolve("Commons","src");
-  static public final Path frontendSrc= prefix.resolve("Frontend","FearlessFrontend","src");
-  static public final Path frontendSrcModule= prefix.resolve("Frontend","FearlessFrontend","srcModule");
-  static public final Path coordinatorSrc= prefix.resolve("Coordinator","src");
-  static public final Path coordinatorSrcModule= prefix.resolve("Coordinator","srcModule");
-  static public final Path controllerSrc= prefix.resolve("Controllers","src");
-  static public final Path controllerSrcModule= prefix.resolve("Controllers","srcModule");
-  static public final Path portableFolderOut= prefix.resolve("StandardLibrary","fearlessArtefact");
-  static public final Path managedFolderOut= prefix.resolve("StandardLibrary","fearlessManagedArtefact");
-  static public final Path badZipCorpous= prefix.resolve("Coordinator","badZips");
-  static public final Path packaging= prefix.resolve("Coordinator","_fearless_packaging");
-  static public final Path portableEclipse= prefix.resolve("eclipse");
+  public static final Path stLibPath= prefix.resolve("StandardLibrary","base");
+  public static final Path stLibRTPath= prefix.resolve("StandardLibrary","rt");
+  public static final Path stLibDebugOut= prefix.resolve("StandardLibrary","dbgOut");
+  public static final Path integrationTests= prefix.resolve("StandardLibrary","integrationTests");
+  public static final Path commonsSrc= prefix.resolve("Commons","src");
+  public static final Path frontendSrc= prefix.resolve("Frontend","FearlessFrontend","src");
+  public static final Path frontendSrcModule= prefix.resolve("Frontend","FearlessFrontend","srcModule");
+  public static final Path coordinatorSrc= prefix.resolve("Coordinator","src");
+  public static final Path coordinatorSrcModule= prefix.resolve("Coordinator","srcModule");
+  public static final Path controllerSrc= prefix.resolve("Controllers","src");
+  public static final Path controllerSrcModule= prefix.resolve("Controllers","srcModule");
+  public static final Path portableFolderOut= prefix.resolve("StandardLibrary","fearlessArtefact");
+  public static final Path managedFolderOut= prefix.resolve("StandardLibrary","fearlessManagedArtefact");
+  public static final Path badZipCorpous= prefix.resolve("Coordinator","badZips");
+  public static final Path packaging= prefix.resolve("Coordinator","_fearless_packaging");
+  public static final Path portableEclipse= prefix.resolve("eclipse");
 }

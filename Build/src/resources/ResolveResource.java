@@ -9,29 +9,29 @@ You need to add a file LocalResources.java (that is already in the gitignore)
 following the template LocalResourcesTemplate.java
 */
 public final class ResolveResource{
-  static public final Path stLibPath= LocalResources.stLibPath;
-  static public final Path stLibRTPath= LocalResources.stLibRTPath;
-  static public final Path stLibDebugOut= LocalResources.stLibDebugOut;
-  static public final Path integrationTests= LocalResources.integrationTests;
+  public static final Path stLibPath= LocalResources.stLibPath;
+  public static final Path stLibRTPath= LocalResources.stLibRTPath;
+  public static final Path stLibDebugOut= LocalResources.stLibDebugOut;
+  public static final Path integrationTests= LocalResources.integrationTests;
 
-  static public final Path commonsSrc= LocalResources.commonsSrc;
-  static public final Path frontendSrc= LocalResources.frontendSrc;
-  static public final Path frontendSrcModule= LocalResources.frontendSrcModule;
-  static public final Path coordinatorSrc= LocalResources.coordinatorSrc;
-  static public final Path coordinatorSrcModule= LocalResources.coordinatorSrcModule;
-  static public final Path coordinatorJars= coordinatorSrc.getParent().resolve("externalJars");
-  static public final Path coordinatorTestJars= coordinatorSrc.getParent().resolve("testJars");
-  static public final Path controllerSrc= LocalResources.controllerSrc;
-  static public final Path controllerSrcModule= LocalResources.controllerSrcModule;
-  static public final Path controllerPluginSrc= controllerSrc.getParent().resolve("fearlessPluginProject");
-  static public final Path portableEclipse= LocalResources.portableEclipse;
-  static public final Path eclipsePlugins= portableEclipse.resolve("plugins");
+  public static final Path commonsSrc= LocalResources.commonsSrc;
+  public static final Path frontendSrc= LocalResources.frontendSrc;
+  public static final Path frontendSrcModule= LocalResources.frontendSrcModule;
+  public static final Path coordinatorSrc= LocalResources.coordinatorSrc;
+  public static final Path coordinatorSrcModule= LocalResources.coordinatorSrcModule;
+  public static final Path coordinatorJars= coordinatorSrc.getParent().resolve("externalJars");
+  public static final Path coordinatorTestJars= coordinatorSrc.getParent().resolve("testJars");
+  public static final Path controllerSrc= LocalResources.controllerSrc;
+  public static final Path controllerSrcModule= LocalResources.controllerSrcModule;
+  public static final Path controllerPluginSrc= controllerSrc.getParent().resolve("fearlessPluginProject");
+  public static final Path portableEclipse= LocalResources.portableEclipse;
+  public static final Path eclipsePlugins= portableEclipse.resolve("plugins");
 
-  static public final Path portableFolderOut= LocalResources.portableFolderOut;
-  static public final Path managedFolderOut= LocalResources.managedFolderOut;
-  static public final Path badZipCorpous= LocalResources.badZipCorpous;
-  static public final Path packaging= LocalResources.packaging;
+  public static final Path portableFolderOut= LocalResources.portableFolderOut;
+  public static final Path managedFolderOut= LocalResources.managedFolderOut;
+  public static final Path badZipCorpous= LocalResources.badZipCorpous;
+  public static final Path packaging= LocalResources.packaging;
 
-  static public final String eclipseJavaVersion= "21";
+  public static final String eclipseJavaVersion= "21";
   public static final String versionId= "0_001";
 }
