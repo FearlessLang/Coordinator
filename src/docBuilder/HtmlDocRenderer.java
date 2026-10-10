@@ -381,7 +381,7 @@ code{
     sb.append("</details>\n");
   }
   String fromLink(MethodRef r){
-    return "<a href=\""+h(linkTo(r.owner(),r.method()))+"\">"+h(refName(r))+h(r.method().sig().m().toString())+"</a>";
+    return "<a href=\""+h(prefix(r.owner().pkgName())+"#"+methodId(r.owner(),r.method()))+"\">"+h(refName(r))+h(r.method().sig().m().toString())+"</a>";
   }
 
   List<MethodRef> fromRefs(MethodDoc m){
@@ -480,9 +480,7 @@ code{
   String renderCandidate(Candidate c){
     var sb= new StringBuilder("<a href=\"").append(h(candidateHref(c))).append("\">")
       .append(h(toStr.typeNameWithArity(c.owner())));
-    if (c.selector().isPresent()){
-      sb.append(h(c.selector().get())).append(h(DocResolver.shape(c.arity(),"(",")")));
-    }
+    c.selector().ifPresent(s->sb.append(h(s+DocResolver.shape(c.arity(),"(",")"))));
     sb.append("</a>");
     c.localMethod().ifPresent(m->m.docs.stream().filter(d->!d.example() && !d.testOnly()).findFirst()
       .ifPresent(d->sb.append(" <span class=\"opt-doc\">\u2014 ").append(h(d.text())).append("</span>")));
@@ -525,8 +523,6 @@ code{
   }
 
   String linkTo(TName n){ return prefix(n.pkgName())+"#"+typeId(n); }
-
-  String linkTo(TName owner, M m){ return prefix(owner.pkgName())+"#"+methodId(owner,m); }
 
   String prefix(String pkg){
     if (pkg.equals(pkgName)){ return ""; }
