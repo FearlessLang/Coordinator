@@ -19,25 +19,36 @@ import tools.Fs;
 import tools.SourceOracle;
 import tools.SourceOracle.Ref;
 import tools.SourceOracle.RefParent;
-record Tree(
-  Path root,
-  ArrayList<Ref> visibleFiles,
-  LinkedHashMap<RefParent,Set<RefParent>> visKidsByDir,
-  LinkedHashMap<RefParent,Set<RefParent>> dotKidsByDir
-  ){
-  Tree{ assert root.equals(root.toAbsolutePath().normalize()); }
-  public void collect(){    
+public final class BuildWithZip{
+  public static boolean isInvisible(RefParent r){
+    return AutoloadHandler.components(r.fearPath()).stream().anyMatch(s->s.startsWith("."));
+  }
+  private final Path root;
+  private final ArrayList<Ref> visibleFiles= new ArrayList<>();
+  private final LinkedHashMap<RefParent,Set<RefParent>> visKidsByDir= new LinkedHashMap<>();
+  private final LinkedHashMap<RefParent,Set<RefParent>> dotKidsByDir= new LinkedHashMap<>();
+  BuildWithZip(Path root){ this.root= root.toAbsolutePath().normalize(); }
+  List<Ref> build(){
     reqNoEmptyDirs();
     Fs.walkV(root, s->s
       .filter(p->!p.equals(root))
       .filter(p->!isDirectory(p))
       .forEach(this::collectFile)
     );
+    visKidsByDir.forEach((_,kids)->{
+      kids.forEach(BuildWithZip::checkIndividualVisibleSegment);
+      checkCollectiveVisible(kids);
+    });
+    dotKidsByDir.forEach((_,kids)->{
+      kids.forEach(BuildWithZip::checkIndividualInvisibleSegment);
+      checkCollectiveInvisible(kids);
+    });
+    return visibleFiles.stream().sorted(Comparator.comparing(Ref::fearPath)).toList();
   }
   private void collectFile(Path abs){
     var rel= root.relativize(abs);
     var pe= new PathEntry(root, rel);
-    var invisible= BuildWithZip.isInvisible(pe);
+    var invisible= isInvisible(pe);
     if (Files.isSymbolicLink(abs)){
       if (invisible){ return; }
       throw Report.symlinkForbidden(abs);
@@ -64,7 +75,7 @@ record Tree(
     Fs.walkV(root, s->s.filter(p->!p.equals(root)).forEach(abs->{
       var rel= root.relativize(abs);
       nonEmpty.add(rel.resolveSibling(""));
-      if (BuildWithZip.isInvisible(new PathEntry(root, rel))){ return; }
+      if (isInvisible(new PathEntry(root, rel))){ return; }
       if (isDirectory(abs)){ dirs.add(rel); }
     }));
     for (var d: dirs){ if (!nonEmpty.contains(d)){ throw Report.emptyDirectory(d); } }
@@ -75,33 +86,14 @@ record Tree(
     for (var e: ZipEntry.allEntryPaths(root, rel)){
       if (e.segments().getLast().endsWith(".zip")){ continue; }//expanded
       addKids(e);
-      if (!BuildWithZip.isInvisible(e)){ visibleFiles.add(e); }
+      if (!isInvisible(e)){ visibleFiles.add(e); }
     }
   }
   private void addKids(RefParent leaf){
     for (RefParent p= leaf; p.parent()!=p; p= p.parent()){
-      var m= BuildWithZip.isInvisible(p.parent()) ? dotKidsByDir : visKidsByDir;
+      var m= isInvisible(p.parent()) ? dotKidsByDir : visKidsByDir;
       m.computeIfAbsent(p.parent(), _->new LinkedHashSet<>()).add(p);
     }
-  }
-}
-public final class BuildWithZip{
-  public static boolean isInvisible(RefParent r){
-    return AutoloadHandler.components(r.fearPath()).stream().anyMatch(s->s.startsWith("."));
-  }
-  private final Tree t;
-  BuildWithZip(Path root){ t= new Tree(root.toAbsolutePath().normalize(), new ArrayList<>(), new LinkedHashMap<>(), new LinkedHashMap<>()); }
-  List<Ref> build(){
-    t.collect();
-    t.visKidsByDir().forEach((_,kids)->{
-      kids.forEach(BuildWithZip::checkIndividualVisibleSegment);
-      checkCollectiveVisible(kids);
-    });
-    t.dotKidsByDir().forEach((_,kids)->{
-      kids.forEach(BuildWithZip::checkIndividualInvisibleSegment);
-      checkCollectiveInvisible(kids);
-    });
-    return t.visibleFiles().stream().sorted(Comparator.comparing(Ref::fearPath)).toList();
   }
   static void checkTooLong(RefParent kid){     if (kid.fearPath().length() > 200 + SourceOracle.root.length()){ throw Report.pathTooLong(kid); } }
   public static void checkIndividualVisibleSegment(RefParent kid){
