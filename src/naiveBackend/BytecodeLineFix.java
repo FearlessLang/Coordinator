@@ -44,7 +44,6 @@ final class BytecodeLineFix implements Consumer<Path>{
     return a(s);
   }
   @Override public void accept(Path classesDir){
-    assert nonNull(classesDir);
     var cf= ClassFile.of();
     Fs.walkV(classesDir, s->s
       .filter(p->matches(p.getFileName().toString()))
@@ -55,13 +54,11 @@ final class BytecodeLineFix implements Consumer<Path>{
     return n.equals(base+".class") || n.endsWith(".class") && n.startsWith(base+"$"); // anon/inner: Foo$1.class etc
   }
   private void patchOne(ClassFile cf, Path classFile){
-    byte[] in= Fs.of(()->Files.readAllBytes(classFile));
-    var model= cf.parse(in);
     var xform= ClassTransform
       .dropping(e->e instanceof SourceFileAttribute)
       .andThen(ClassTransform.endHandler(b->b.with(SourceFileAttribute.of(sourceFile))))
       .andThen(ClassTransform.transformingMethodBodies(this::patchCode));
-    byte[] out= cf.transformClass(model, xform);
+    byte[] out= cf.transformClass(cf.parse(Fs.of(()->Files.readAllBytes(classFile))), xform);
     Fs.ofV(()->Files.write(classFile, out));
   }
   private void patchCode(CodeBuilder cb, CodeElement ce){
