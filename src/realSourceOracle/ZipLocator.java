@@ -20,7 +20,12 @@ import utils.Range;
 
 public final class ZipLocator{
   private static Map<String, byte[]> readHere(Path diskZip, List<String> steps, byte[] bytes){
-    return readZip(diskZip, steps).readAll(()->zipStream(diskZip, bytes));
+    return new ReadZip(
+      n->Report.zipBadEntryName(diskZip, steps, n),
+      a->Report.zipDuplicateEntryName(diskZip, steps, a),
+      n->Report.zipEntryTooBig(diskZip, steps, n),
+      n->Report.zipEmptyDirectoryEntry(diskZip, steps, n)
+    ).readAll(()->zipStream(diskZip, bytes));
   }
   public static List<String> entryNames(Path diskZip, List<String> steps){
     return fetch(diskZip, steps, bytes->reqEntries(diskZip, steps, bytes, List.copyOf(readHere(diskZip, steps, bytes).keySet())));
@@ -36,14 +41,6 @@ public final class ZipLocator{
     var res= fetch(diskZip, steps, bytes->readHere(diskZip, steps, bytes).get(entryName));
     if (res == null){ throw Violation.cacheCouldNotFindZipEntry(diskZip, steps, entryName); }
     return res;
-  }
-  private static ReadZip readZip(Path diskZip, List<String> steps){
-    return new ReadZip(
-      n->Report.zipBadEntryName(diskZip, steps, n),
-      a->Report.zipDuplicateEntryName(diskZip, steps, a),
-      n->Report.zipEntryTooBig(diskZip, steps, n),
-      n->Report.zipEmptyDirectoryEntry(diskZip, steps, n)
-    );
   }
   private static ZipInputStream zipStream(Path diskZip, byte[] bytes) throws IOException{
     return bytes==null
