@@ -1,4 +1,5 @@
 package fileSupport;
+
 import static fileSupport.ByteFiles.Kind.*;
 
 import java.util.Arrays;

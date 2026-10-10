@@ -20,6 +20,7 @@ import tools.SourceOracle;
 import tools.SourceOracle.Ref;
 import tools.SourceOracle.RefParent;
 import utils.Range;
+
 record Tree(
   Path root,
   ArrayList<Ref> visibleFiles,

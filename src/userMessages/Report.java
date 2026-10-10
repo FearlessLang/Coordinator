@@ -1,5 +1,10 @@
 package userMessages;
 
+import static userMessages.UserError.disp;
+import static userMessages.UserError.showRel;
+import static userMessages.UserError.showZipRel;
+import static userMessages.UserError.path;
+
 import java.nio.file.Path;
 import java.util.Collections;
 import java.util.LinkedHashSet;
@@ -19,11 +24,6 @@ import tools.SourceOracle.Ref;
 import tools.SourceOracle.RefParent;
 import utils.Join;
 import utils.Pop;
-
-import static userMessages.UserError.disp;
-import static userMessages.UserError.showRel;
-import static userMessages.UserError.showZipRel;
-import static userMessages.UserError.path;
 
 /// Report: the user gave us something we cannot accept, and can fix it by changing
 /// what they gave us. Their file and folder names, their zips, their project layout,

@@ -1,5 +1,9 @@
 package fileSupport;
 
+import static java.lang.foreign.ValueLayout.ADDRESS;
+import static java.lang.foreign.ValueLayout.JAVA_CHAR;
+import static java.lang.foreign.ValueLayout.JAVA_INT;
+
 import java.lang.foreign.Arena;
 import java.lang.foreign.FunctionDescriptor;
 import java.lang.foreign.Linker;
@@ -16,10 +20,6 @@ import java.util.Locale;
 import tools.Fs;
 import userMessages.UserError;
 import userMessages.Violation;
-
-import static java.lang.foreign.ValueLayout.ADDRESS;
-import static java.lang.foreign.ValueLayout.JAVA_CHAR;
-import static java.lang.foreign.ValueLayout.JAVA_INT;
 
 // Code to be executed at the very beginning of main.
 // Java is forced to Locale.US.
