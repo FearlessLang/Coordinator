@@ -2,10 +2,12 @@ package coordinator;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
+import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -278,6 +280,55 @@ final class RecompilationCacheTest{
 
     new MiddleLayer(stub, base, pkgsB).compile(emptySrc, out);
     assertEquals(2, stub.calls("b"));
+  }
+
+  private static final class EditableRef implements Ref{
+    final String fearPath;
+    volatile long lastModified;
+    EditableRef(String fearPath, long lastModified){ this.fearPath= fearPath; this.lastModified= lastModified; }
+    @Override public String fearPath(){ return fearPath; }
+    @Override public long lastModified(){ return lastModified; }
+    @Override public byte[] loadBytes(){ return new byte[0]; }
+    @Override public String toString(){ return fearPath; }
+  }
+
+  @Test void aSourceSavedAfterThePackageWasReadMustBeCompiledAgainByTheNextBuild(@TempDir Path tmp){
+    long start= System.currentTimeMillis();
+    OutputOracle out= ()->tmp;
+    var stub= new ScriptedCoordinator();
+    var edited= new EditableRef(SourceOracle.root+"_a/a.fear", start-MARGIN);
+    stub.scripts.put("a", _->{
+      sleep(20);
+      edited.lastModified= System.currentTimeMillis();
+      return List.of(literal("A1", RC.imm));
+    });
+    var pkgs= new LinkedHashMap<String,List<Ref>>();
+    pkgs.put("a", List.of(edited));
+    var layer= new MiddleLayer(stub, fixedBase(start-MARGIN), pkgs);
+
+    layer.compile(emptySrc, out);
+    assertEquals(1, stub.calls("a"));
+
+    layer.compile(emptySrc, out);
+    assertEquals(2, stub.calls("a"));
+  }
+
+  private static void sleep(long millis){
+    try{ Thread.sleep(millis); }
+    catch(InterruptedException e){ throw new AssertionError(e); }
+  }
+
+  @Test void aSourceDatedInTheFutureMustNotStallTheBuild(@TempDir Path tmp){
+    long start= System.currentTimeMillis();
+    OutputOracle out= ()->tmp;
+    var stub= new ScriptedCoordinator();
+    stub.fixedOutput("a", List.of(literal("A1", RC.imm)));
+    var pkgs= new LinkedHashMap<String,List<Ref>>();
+    pkgs.put("a", refs("a", start+3_600_000));
+    var layer= new MiddleLayer(stub, fixedBase(start-MARGIN), pkgs);
+
+    assertTimeoutPreemptively(Duration.ofSeconds(10), ()->{ layer.compile(emptySrc, out); });
+    assertEquals(1, stub.calls("a"));
   }
 
   private static final TName aName= new TName("A1", 0, Pos.unknown);
