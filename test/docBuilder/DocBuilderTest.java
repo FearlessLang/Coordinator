@@ -166,7 +166,7 @@ final class DocBuilderTest{
   }
 
   private static Literal literal(String name, RC rc){
-    return new Literal(rc, new TName(name, 0, Pos.unknown), List.of(), List.of(), "this", List.of(), Src.syntetic, false);
+    return new Literal(rc, new TName(name, 0, Pos.unknown), List.of(), List.of(), "this", List.of(), Src.synthetic, false);
   }
 
   @Test void aLocalTypeThatSharesABaseNameShadowsIt(){
