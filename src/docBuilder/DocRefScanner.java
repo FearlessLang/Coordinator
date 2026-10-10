@@ -1,6 +1,5 @@
 package docBuilder;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.OptionalInt;
@@ -21,39 +20,13 @@ final class DocRefScanner{
   record Found(int start, int end, DocRef ref){}
   record CodeSpan(int start, int end, int fence){}
 
+  private static final Pattern fenced= Pattern.compile("(?s)(?<!`)(`+)(?!`)(.*?)(?<!`)\\1(?!`)");
   static List<CodeSpan> codeSpans(String text){
-    var res= new ArrayList<CodeSpan>();
-    int i= 0;
-    while (i < text.length()){
-      if (text.charAt(i) != '`'){ i += 1; continue; }
-      int fence= runLength(text,i);
-      int close= closingFence(text, i+fence, fence);
-      if (close < 0){ i += fence; continue; }
-      res.add(new CodeSpan(i+fence, close, fence));
-      i= close+fence;
-    }
-    return res;
+    return fenced.matcher(text).results().map(m->new CodeSpan(m.start(2), m.end(2), m.group(1).length())).toList();
   }
 
   static List<CodeSpan> refSpans(String text){
     return codeSpans(text).stream().filter(sp->sp.fence()==1).toList();
-  }
-
-  private static int runLength(String text, int at){
-    int n= 0;
-    while (at+n < text.length() && text.charAt(at+n) == '`'){ n += 1; }
-    return n;
-  }
-
-  private static int closingFence(String text, int from, int fence){
-    int i= from;
-    while (i < text.length()){
-      if (text.charAt(i) != '`'){ i += 1; continue; }
-      int n= runLength(text,i);
-      if (n == fence){ return i; }
-      i += n;
-    }
-    return -1;
   }
 
   //the whole span must be the name: "`Foo.bar`" is one, "`this.foo(x)`" is not, and
