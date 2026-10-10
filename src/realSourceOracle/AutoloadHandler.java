@@ -45,7 +45,7 @@ public record AutoloadHandler(Predicate<String> matches, String baseType){
     assert path.startsWith(SourceOracle.root);
     return Stream.of(path.substring(SourceOracle.root.length()).split("/")).toList();
   }
-  public static String dropExt(String name){ return name.substring(0,name.lastIndexOf('.')); }
+  public static String dropExt(String name){ int dot= name.lastIndexOf('.'); assert dot > 0; return name.substring(0,dot); }
   static String standardTypeName(String pkgName,SourceOracle.Ref ref,String path){
     var all= components(dropExt(path));
     int i= all.indexOf(pkgName);

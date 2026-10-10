@@ -131,7 +131,9 @@ class Helper{
     catch(FearlessException fe){ throw Report.sourceError(fe.render(o)); }
     Layer l= new BaseLayer(coordinator,res,out.commitMap(res, allRanks.stream().mapToLong(Ref::lastModified).max().getAsLong()),stLib);
     var byRank= new TreeMap<Integer,LinkedHashMap<String,List<Ref>>>();
-    allRanks.stream().sorted(Comparator.comparing(Ref::fearPath)).forEach(r->byRank.computeIfAbsent(rankNumber(r),_->new LinkedHashMap<>()).put(pkgName(r),map.get(pkgName(r))));
+    for (var r: allRanks.stream().sorted(Comparator.comparing(Ref::fearPath)).toList()){
+      byRank.computeIfAbsent(rankNumber(r),_->new LinkedHashMap<>()).put(pkgName(r),map.get(pkgName(r)));
+    }
     for (var pkgs: byRank.values()){ l= new MiddleLayer(coordinator,l,pkgs); }
     return l;
   }
