@@ -72,7 +72,7 @@ record Tree(
   private static boolean isDirectory(Path abs){ return Files.isDirectory(abs, LinkOption.NOFOLLOW_LINKS); }
   private static boolean isRegularFile(Path abs){ return Files.isRegularFile(abs, LinkOption.NOFOLLOW_LINKS); }
   private void collectBodyDiskZip(Path rel){
-    for (var e: ZipWellFormedness.allEntryPaths(root, rel)){
+    for (var e: ZipEntry.allEntryPaths(root, rel)){
       if (e.segments().getLast().endsWith(".zip")){ continue; }//expanded
       addKids(e);
       if (!BuildWithZip.isInvisible(e)){ visibleFiles.add(e); }
