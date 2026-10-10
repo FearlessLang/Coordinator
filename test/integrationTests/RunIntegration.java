@@ -132,7 +132,7 @@ imm Assert._fail(_) error line: [###]
 imm MyTests# error line: 5 in file _hello/_rank_app.fear
 """, out);
   }
-  @Test void map_a_to_pkc(){ utils.Err.strCmp("CTEXT\n", run("map_a_to_pkc"));}
+  @Test void mapAToPkc(){ utils.Err.strCmp("CTEXT\n", run("map_a_to_pkc"));}
   // What counts as a main of a package: a top level type implementing base.Main, and
   // also one declared inside a method when it implements base.CaptureFree, since that
   // is the promise that it captures nothing and so the backend gives it an instance.
