@@ -83,13 +83,10 @@ class OutputHelper{
     return Optional.of(s);
   }
   static boolean consistent(Map<TName,Literal> map, List<Literal> core){
-    var allCore= AllLs.of(core).values();
     //Not filtered to public-only: privates can still be mentioned in meth parameters and ret types.
-    return map.size() == allCore.size() && allCore.stream().allMatch(l->map.containsKey(l.name()) && eqApi(l, map.get(l.name())));
+    return api(map.values()).equals(api(AllLs.of(core).values()));
   }
-  private static boolean eqApi(Literal a, Literal b){
-    return a.rc() == b.rc() && a.name().equals(b.name()) && a.thisName().equals(b.thisName())
-      && a.bs().equals(b.bs()) && a.cs().equals(b.cs()) && sigs(a).equals(sigs(b));
+  private static Map<TName,List<?>> api(Collection<Literal> ls){
+    return ls.stream().collect(Collectors.toMap(Literal::name,l->List.of(l.rc(),l.thisName(),l.bs(),l.cs(),l.ms().stream().map(M::sig).toList())));
   }
-  private static List<Sig> sigs(Literal l){ return l.ms().stream().map(M::sig).toList(); }
 }
