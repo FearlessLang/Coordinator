@@ -69,9 +69,30 @@ public interface Coordinator {
     }
     return Collections.unmodifiableMap(res);
   }
-  default String main(Path project, SourceOracle stLib) throws InterruptedException{ return Helper.main(this, project, stLib); }
-  default List<String> compile(Path project, SourceOracle stLib){ return Helper.compile(this, project, stLib); }
-  default Optional<Map<String,String>> mains(Path project, SourceOracle stLib){ return Helper.mains(this, project, stLib); }
+  default String main(Path project, SourceOracle stLib) throws InterruptedException{
+    var sb= new StringBuilder();
+    for (var p: compile(project,stLib)){ sb.append(runAllMains(p,Helper.out(project))); }
+    return sb.toString();
+  }
+  default List<String> compile(Path project, SourceOracle stLib){
+    SourceOracle o= sourceOracle(project);
+    var out= Helper.out(project);
+    Layer l= Helper.layerOf(this,o,project,out,stLib);
+    l.compile(o, out);
+    Fs.writeUtf8(out.mainsPath(), out.mains(l.pkgs().keySet()).located(o,stLib).print());
+    return List.copyOf(l.pkgs().keySet());//by design: only the highest rank number's packages have their Main run
+  }
+  default Optional<Map<String,String>> mains(Path project, SourceOracle stLib){
+    var c= new NoCompile(baseCachePath());
+    SourceOracle o= sourceOracle(project);
+    var out= new NoCommit(Helper.out(project).rootDir());
+    Layer l;
+    try{ l= Helper.layerOf(c,o,project,out,stLib); l.compile(o,out); }
+    catch(WouldCompile _){ return Optional.empty(); }
+    var res= new TreeMap<String,String>();
+    out.mains(l.pkgs().keySet()).mains().forEach((k,v)->res.put(k,v.file()));
+    return Optional.of(Collections.unmodifiableMap(res));
+  }
   static ChildJvm startMain(Path project, Path base, String main, List<Path> sharedClasspath, java.util.function.Consumer<String> out){
     var pkg= main.substring(0, main.indexOf('.'));
     return JavaTool.startMainFromJars(runData(project,base),Push.of(genJava(project),sharedClasspath), "_"+pkg+".Main", out, main);
@@ -119,31 +140,6 @@ class Helper{
     for (var pkgs: byRank.values()){ l= new MiddleLayer(coordinator,l,pkgs); }
     return l;
   }
-  static List<String> compile(Coordinator coordinator, Path project, SourceOracle stLib){
-    SourceOracle o= coordinator.sourceOracle(project);
-    var out= out(project);
-    Layer l= layerOf(coordinator,o,project,out,stLib);
-    l.compile(o, out);
-    Fs.writeUtf8(out.mainsPath(), out.mains(l.pkgs().keySet()).located(o,stLib).print());
-    return List.copyOf(l.pkgs().keySet());//by design: only the highest rank number's packages have their Main run
-  }
-  static String main(Coordinator coordinator, Path project, SourceOracle stLib) throws InterruptedException{
-    var out= out(project);
-    var sb= new StringBuilder();
-    for (var p: compile(coordinator,project,stLib)){ sb.append(coordinator.runAllMains(p,out)); }
-    return sb.toString();
-  }
-  static Optional<Map<String,String>> mains(Coordinator coordinator, Path project, SourceOracle stLib){
-    var c= new NoCompile(coordinator);
-    SourceOracle o= c.sourceOracle(project);
-    var out= new NoCommit(out(project).rootDir());
-    Layer l;
-    try{ l= layerOf(c,o,project,out,stLib); l.compile(o,out); }
-    catch(WouldCompile _){ return Optional.empty(); }
-    var res= new TreeMap<String,String>();
-    out.mains(l.pkgs().keySet()).mains().forEach((k,v)->res.put(k,v.file()));
-    return Optional.of(Collections.unmodifiableMap(res));
-  }
   static LinkedHashMap<String,List<Ref>> pkgMap(SourceOracle o, Path path){
     if (o.allFiles().stream().noneMatch(Helper::isFear)){ throw Report.projectEmpty(path); }
     o.allFiles().stream().filter(Helper::isFear).forEach(Helper::pkgName);//err if not under a pkg
@@ -184,10 +180,7 @@ class Helper{
   }
 }
 @SuppressWarnings("serial") class WouldCompile extends RuntimeException{}
-record NoCompile(Coordinator inner) implements Coordinator{
-  @Override public Path modsPath(){ return inner.modsPath(); }
-  @Override public Optional<Path> baseCachePath(){ return inner.baseCachePath(); }
-  @Override public SourceOracle sourceOracle(Path path){ return inner.sourceOracle(path); }
+record NoCompile(Optional<Path> baseCachePath) implements Coordinator{
   @Override public List<Literal> frontend(String pkgName, List<Ref> files, SourceOracle oracle, OtherPackages other, Map<String,String> vres){ throw new WouldCompile(); }
   @Override public void backend(String pkgName, List<Literal> core, SourceOracle oracle, OtherPackages other, CapabilityEnvironment capabilities){ throw new WouldCompile(); }
 }
