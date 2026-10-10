@@ -236,7 +236,7 @@ public final class InitialSupportGuiMain{
   </body>
 </html>
 """;
-  public static final String afterCreateWinHtml= """
+  private static String afterCreate(String steps){ return """
 <html>
   <body>
     <h2 style='margin-top:0;'>Demo created</h2>
@@ -246,6 +246,11 @@ public final class InitialSupportGuiMain{
       Inside it, you will find <b>start.fearless</b>.
     </p>
 
+"""+steps+"""
+  </body>
+</html>
+"""; }
+  public static final String afterCreateWinHtml= afterCreate("""
     <h3>Run it</h3>
     <ol>
       <li>Double-click <b>start.fearless</b>.</li>
@@ -262,19 +267,8 @@ public final class InitialSupportGuiMain{
     <p>
       Tip: if you don't see ".fearless", enable "File name extensions" in Explorer's View menu.
     </p>
-  </body>
-</html>
-""";
-  public static final String afterCreateMacHtml= """
-<html>
-  <body>
-    <h2 style='margin-top:0;'>Demo created</h2>
-
-    <p>
-      Your demo folder should now be open.
-      Inside it, you will find <b>start.fearless</b>.
-    </p>
-
+""");
+  public static final String afterCreateMacHtml= afterCreate("""
     <h3>Run it</h3>
     <ol>
       <li>Double-click <b>start.fearless</b>.</li>
@@ -293,19 +287,8 @@ public final class InitialSupportGuiMain{
       Tip: if you don't see ".fearless", Finder -> Settings (Preferences) -> Advanced -> enable
       <b>Show all filename extensions</b>.
     </p>
-  </body>
-</html>
-""";
-  public static final String afterCreateLinuxHtml= """
-<html>
-  <body>
-    <h2 style='margin-top:0;'>Demo created</h2>
-
-    <p>
-      Your demo folder should now be open.
-      Inside it, you will find <b>start.fearless</b>.
-    </p>
-
+""");
+  public static final String afterCreateLinuxHtml= afterCreate("""
     <h3>One-time setup: register the .fearless file type</h3>
     <ol>
       <li>In the Fearless installation folder, find the file <b>fearless-mime.xml</b>.</li>
@@ -329,7 +312,5 @@ public final class InitialSupportGuiMain{
       Tip: if after the MIME step the file still looks like plain text, close and reopen the file manager (or log out/in)
       and then do the <b>Open With</b> step again.
     </p>
-  </body>
-</html>
-""";
+""");
 }
