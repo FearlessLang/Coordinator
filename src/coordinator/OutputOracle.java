@@ -18,7 +18,6 @@ import core.AllLs;
 import core.E.Literal;
 import core.M;
 import core.OtherPackages;
-import core.Sig;
 import core.TName;
 import tools.Fs;
 import tools.SourceOracle.Ref;
