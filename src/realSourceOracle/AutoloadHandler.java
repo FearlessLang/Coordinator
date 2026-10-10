@@ -1,5 +1,6 @@
 package realSourceOracle;
 
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -11,11 +12,35 @@ import java.util.stream.Stream;
 import core.TName;
 import tools.SourceOracle;
 import userMessages.Report;
+import utils.Bug;
 import utils.Pop;
 
 public record AutoloadHandler(Predicate<String> matches, String baseType){
   String generate(SourceOracleWithAutoload.Triple t, String path, String type){
-    return type+": "+baseType+"{\n"+AssetAutoload.descriptorMethods(t, path)+"}\n";
+    return type+": "+baseType+"{\n"
+      +"  .path: base.Str -> \""+path+"\";\n"
+      +"  .diskPath: base.Str -> \""+t.diskPath()+"\";\n"
+      +"  .zipSteps: base.Str -> \""+t.zipSteps()+"\";\n"
+      +"  .zipEntry: base.Str -> \""+t.zipEntry()+"\";\n"
+      +"  .originalFileName: base.Str -> \""+components(path).getLast()+"\";\n"
+      +"}\n";
+  }
+  static SourceOracleWithAutoload.Triple triple(SourceOracle.Ref ref){ return switch(ref){
+    case PathEntry p -> new SourceOracleWithAutoload.Triple(localPath(p.local()), "", "");
+    case ZipEntry z -> new SourceOracleWithAutoload.Triple(localPath(z.local()),
+      z.zips().stream().map(AutoloadHandler::portableZipPath).collect(Collectors.joining(";")),
+      portableZipPath(z.lastZips()));
+    default -> throw Bug.unreachable();
+  };}
+  private static String localPath(Path local){
+    if (local.isAbsolute() || !local.normalize().equals(local)){ throw Bug.of(""+local); }
+    return portableZipPath(String.join("/", PathEntry.localSegments(local)));
+  }
+  private static String portableZipPath(String path){
+    Stream.of(path.split("/", -1))
+      .filter(s->s.isEmpty() || s.startsWith(".") || s.indexOf('\\') >= 0 || s.indexOf(';') >= 0)
+      .findFirst().ifPresent(s->{ throw Bug.of(s); });
+    return path;
   }
   static List<String> components(String path){
     assert path.startsWith(SourceOracle.root);
