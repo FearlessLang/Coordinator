@@ -1,0 +1,35 @@
+The protocol of a round of TestAgentTools.java
+
+A round runs the agentTools tests of Controllers on one desk. Two parties take part:
+- the tests: the JVM TestAgentTools.java starts. They drive the desk as a person does and check what a person
+  sees. They never start, stop, wait for or repair the desk.
+- the agent running the round: it gets the desk ready, starts TestAgentTools.java, answers the channel folder
+  in agent mode, reads the results, and leaves the desk bare.
+
+What the manager does is ControllersDesign (ZeroToHero/tasks/ControllersDesign). The manager does only what the
+design describes: neither a test nor a round is a reason to change what it does.
+
+Before the round
+- One desk at a time: at most one VM runs.
+- The desk is ready before the first test starts: the session is logged in and settled, its display server
+  answers (on a wayland desk, Xwayland too), and the keystroke the tests use opens a terminal. What tells a
+  desk ready is one of the facts of that desk, kept with its other facts.
+- The desk is bare: no manager, no terminal, no file manager.
+
+During the round
+- With agent false the tests replay the recorded values of the desk; with agent true they ask the agent for
+  each value through the channel folder, and the agent answers from what it sees on the screen.
+- While a test runs, its pointer and keyboard belong to it: the agent does not touch the desk.
+
+When a test fails, the agent finds which of these it is before changing anything:
+1. The desk was not ready, or not bare: the round is wrong. Fix how the desk is got ready, then run the test
+   again. Neither the test nor the manager changes.
+2. The test is wrong: a value that misses, a step a person would not do (a key, a wait, an extra click that
+   gets around a behaviour of the manager), or an action whose effect it does not check. Fix the test.
+3. The manager does not do what the design says: a bug. Fix it, with the test that shows it.
+4. The test can not pass while the manager does what the design says, or it meets something the design does
+   not say: stop, and report it to the user. The design is discussed and changed first; no code changes
+   before.
+
+After the round
+- The manager and everything the tests opened are closed, the VM is shut down, and ubuntu_gnome is bare.
