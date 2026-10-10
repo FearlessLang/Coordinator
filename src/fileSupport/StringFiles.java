@@ -11,6 +11,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.HexFormat;
 import java.util.function.BiConsumer;
+import java.util.regex.Pattern;
 
 import fileSupport.ByteFiles.Op;
 import metaParser.Message;
@@ -120,16 +121,11 @@ Nearby bytes:  %s
     try { result.throwException(); throw Bug.unreachable(); }
     catch(CharacterCodingException e){ return e; }
   }
+  private static final Pattern lineBreak= Pattern.compile("\r\n|\r|\n");
   private static Location location(String prefix){
     var line= 1;
     var start= 0;
-    for (var i= 0; i < prefix.length();){
-      var c= prefix.charAt(i++);
-      if (c != '\r' && c != '\n'){ continue; }
-      if (c == '\r' && i < prefix.length() && prefix.charAt(i) == '\n'){ i++; }
-      line++;
-      start= i;
-    }
+    for (var m= lineBreak.matcher(prefix); m.find(); start= m.end()){ line++; }
     return new Location(line,prefix.codePointCount(start,prefix.length())+1,prefix.substring(start));
   }
   private static String tail(String text, int length){
