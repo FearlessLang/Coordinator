@@ -2,6 +2,7 @@ package userMessages;
 
 import java.awt.Dialog;
 import java.awt.HeadlessException;
+import java.awt.Window;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.reflect.InvocationTargetException;
@@ -67,8 +68,8 @@ public final class UserError extends RuntimeException{
   private static boolean managerOwner= false;
   public static void becameManagerOwner(){ managerOwner= true; }
 
-  private static java.awt.Window owner= null;
-  public static void owner(java.awt.Window w){ owner= w; }
+  private static Window owner= null;
+  public static void owner(Window w){ owner= w; }
 
   //-- building
   static UserError die(String first, String... more){

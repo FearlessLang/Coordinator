@@ -1,5 +1,6 @@
 package realSourceOracle;
 
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.stream.Collectors;
 
@@ -26,7 +27,7 @@ final class AssetAutoload{
     default -> throw Bug.unreachable();
   };}
 
-  private static String localPath(java.nio.file.Path local){
+  private static String localPath(Path local){
     if (local.isAbsolute() || !local.normalize().equals(local)){ throw Bug.of(""+local); }
     return portableZipPath(String.join("/", PathEntry.localSegments(local)));
   }

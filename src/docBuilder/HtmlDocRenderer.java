@@ -1,6 +1,7 @@
 package docBuilder;
 
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -461,7 +462,7 @@ code{
   //of them are one paragraph, kept on their own lines so that a list stays a list and
   //an indented line stays indented (the doc block is rendered with pre-wrap).
   void renderProse(StringBuilder sb, List<DocOcc> prose){
-    var para= new java.util.ArrayList<DocOcc>();
+    var para= new ArrayList<DocOcc>();
     for (var occ: prose){
       if (occ.text().isBlank()){ endParagraph(sb,para); continue; }
       para.add(occ);

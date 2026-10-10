@@ -9,6 +9,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -200,7 +202,7 @@ final class DocBuilderTest{
 
   @Test void renderExamplesWrapsRunnableExampleLinesInAnExpandableDetailsBlock(){
     var sb= new StringBuilder();
-    var renderer= new HtmlDocRenderer("pkg", java.util.Map.of(), List.of(), OtherPackages.empty(), java.util.Map.of(), Optional.empty());
+    var renderer= new HtmlDocRenderer("pkg", Map.of(), List.of(), OtherPackages.empty(), Map.of(), Optional.empty());
     renderer.renderExamples(sb, List.of(".check{1.assertEq(1)}"));
     var rendered= sb.toString();
     assertTrue(rendered.contains("<details class=\"examples\">"), "examples must render as an expandable details block: "+rendered);
@@ -209,7 +211,7 @@ final class DocBuilderTest{
 
   @Test void renderExamplesRendersNothingWhenThereAreNoExamples(){
     var sb= new StringBuilder();
-    var renderer= new HtmlDocRenderer("pkg", java.util.Map.of(), List.of(), OtherPackages.empty(), java.util.Map.of(), Optional.empty());
+    var renderer= new HtmlDocRenderer("pkg", Map.of(), List.of(), OtherPackages.empty(), Map.of(), Optional.empty());
     renderer.renderExamples(sb, List.of());
     assertEquals("", sb.toString());
   }
@@ -244,7 +246,7 @@ final class DocBuilderTest{
     return fooMethodAt(rc, origin, TSpan.fromPos(Pos.unknown,1));
   }
   private static List<B> twoBounds(){
-    return List.of(new B("X1",java.util.EnumSet.of(RC.imm)), new B("X2",java.util.EnumSet.of(RC.imm)));
+    return List.of(new B("X1",EnumSet.of(RC.imm)), new B("X2",EnumSet.of(RC.imm)));
   }
   private static M namedMethod(String selector, TName origin){
     var sig= new Sig(RC.imm, new MName(selector,0), List.of(), List.of(), retVoid(), origin, false, TSpan.fromPos(Pos.unknown,1));
@@ -908,7 +910,7 @@ Holder
   }
 
   private static List<String> idsIn(String html, String prefix){
-    var res= new java.util.ArrayList<String>();
+    var res= new ArrayList<String>();
     for (int i= html.indexOf(prefix); i >= 0; i= html.indexOf(prefix,i+1)){
       var from= i+prefix.length();
       res.add(html.substring(from, html.indexOf('"', from)));

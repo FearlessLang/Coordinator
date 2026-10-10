@@ -11,7 +11,9 @@ import java.util.stream.Stream;
 import core.*;
 import core.E.*;
 import offensiveUtils.Require;
+import realSourceOracle.SourceOracleWithAutoload;
 import tools.Fs;
+import utils.Bug;
 import utils.Join;
 import utils.Pos;
 import utils.Range;
@@ -150,7 +152,7 @@ public class Backend{
     sb.append("    throw new AssertionError(\"No main called \"+n+\" in package ").append(tools.pkgName()).append("\");\n  }\n}\n");
     Fs.writeUtf8(out.resolve("Main.java"), sb.toString());
   }
-  static String assetLiteral(realSourceOracle.SourceOracleWithAutoload.Triple t){
+  static String assetLiteral(SourceOracleWithAutoload.Triple t){
     return "{"+javaStrLit(t.diskPath())+","+javaStrLit(t.zipSteps())+","+javaStrLit(t.zipEntry())+"}";
   }
   static String javaStrLit(String s){
@@ -175,6 +177,6 @@ public class Backend{
     case '?' -> "q";
     case '#' -> "hash";
     case '\\' -> "bslash";
-    default -> throw utils.Bug.unreachable();
+    default -> throw Bug.unreachable();
   };}
 }
