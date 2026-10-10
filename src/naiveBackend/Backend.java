@@ -73,7 +73,7 @@ public class Backend{
     return "";
   }
   private boolean hasInstance(Literal l, boolean abstractOnly) {
-    if (abstractOnly){ return false; } 
+    if (abstractOnly){ return false; }
     assert !l.thisName().isEmpty() || LiteralDeclarations.has(l.cs(),LiteralDeclarations.captureFree);
     return l.ms().stream().noneMatch(m->m.sig().abs());
   }
@@ -115,7 +115,7 @@ public class Backend{
     var head= s.substring(0, s.length() - k);
     assert head.indexOf('\'')==-1: "prime (') must be trailing only: "+s;
     return head + "$p" + k;
-  }  
+  }
   String decTypeName(TName n){ return encodeTrailingPrimes(n.simpleName())+"$"+caseTag(n.simpleName())+"$"+n.arity(); }
   String typeName(TName n){ return "_"+encodeTrailingPrimes(n.s())+"$"+caseTag(n.simpleName())+"$"+n.arity(); }
   static String caseTag(String s){

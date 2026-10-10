@@ -27,7 +27,7 @@ record Tree(
   LinkedHashMap<RefParent,Set<RefParent>> dotKidsByDir
   ){
   Tree{ assert root.equals(root.toAbsolutePath().normalize()); }
-  public void collect(){    
+  public void collect(){
     reqNoEmptyDirs();
     Fs.walkV(root, s->s
       .filter(p->!p.equals(root))

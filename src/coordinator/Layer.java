@@ -44,7 +44,7 @@ record MiddleLayer(Coordinator coordinator, Layer next, LinkedHashMap<String,Lis
       }};
     pkgs.forEach(res::compilePkg);
     return res.nextOther;
-  }  
+  }
 }
 record BaseLayer(Coordinator coordinator, Map<String,Map<String,String>> map, long baseStamp, SourceOracle stLib) implements Layer{
   @Override public OtherPackages compile(SourceOracle _ignoreSrc, OutputOracle out){
