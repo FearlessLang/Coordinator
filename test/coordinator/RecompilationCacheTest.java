@@ -260,6 +260,26 @@ final class RecompilationCacheTest{
     assertEquals(2, stub.calls("a"));
   }
 
+  @Test void deletingALowerPackageMustRecompileThePackageBuiltAgainstIt(@TempDir Path tmp){
+    long start= System.currentTimeMillis();
+    OutputOracle out= ()->tmp;
+    var stub= new ScriptedCoordinator();
+    stub.fixedOutput("a", List.of(literal("A1", RC.imm)));
+    stub.fixedOutput("b", List.of(literal("B1", RC.imm)));
+    var pkgsA= new LinkedHashMap<String,List<Ref>>();
+    pkgsA.put("a", refs("a", start-MARGIN));
+    var pkgsB= new LinkedHashMap<String,List<Ref>>();
+    pkgsB.put("b", refs("b", start-MARGIN));
+    var base= fixedBase(start-MARGIN);
+
+    new MiddleLayer(stub, new MiddleLayer(stub, base, pkgsA), pkgsB).compile(emptySrc, out);
+    assertEquals(1, stub.calls("a"));
+    assertEquals(1, stub.calls("b"));
+
+    new MiddleLayer(stub, base, pkgsB).compile(emptySrc, out);
+    assertEquals(2, stub.calls("b"));
+  }
+
   private static final TName aName= new TName("A1", 0, Pos.unknown);
   private static final TName bName= new TName("B1", 0, Pos.unknown);
 
