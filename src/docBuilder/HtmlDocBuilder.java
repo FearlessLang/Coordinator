@@ -21,7 +21,7 @@ import metaParser.Span;
 import tools.Fs;
 import tools.SourceOracle;
 import userMessages.Report;
-import utils.Bug;
+import utils.Pos;
 
 public final class HtmlDocBuilder{
   public HtmlDocBuilder(SourceOracle oracle, OtherPackages other, List<Literal> core, Optional<Path> baseDocLocation){
@@ -63,13 +63,14 @@ public final class HtmlDocBuilder{
     assert nonNull(l);
     var t= typeBySrc.get(l.src());
     if (t == null){
-      t= new TypeDoc(l,docsForLiteral(l));
+      t= new TypeDoc(l,docsAt(l.pos(),!l.infName()));
       typeBySrc.put(l.src(),t);
       types.add(t);
     }
     else{ t.addVariant(l); }
     for (var m:l.ms()){
-      if (m.sig().origin().equals(l.name())){ t.declared(m.sig().span().pos(),m,methodDocAt(l,m),inheritedMethods(l,m)); }
+      var p= m.sig().span().pos();
+      if (m.sig().origin().equals(l.name())){ t.declared(p,m,docsAt(p,p.line() != l.pos().line()),inheritedMethods(l,m)); }
       else{ t.imported(m,inheritedMethods(l,m)); }
     }
   }
@@ -91,19 +92,17 @@ public final class HtmlDocBuilder{
 
   void writeTest(HtmlDocRenderer renderer){
     var names= renderer.testNames();
-    var declared= types.stream().map(t->t.main().name().simpleName()).collect(Collectors.toUnmodifiableSet());
-    if (names.perType().isEmpty() || declared.contains(names.top())){ Fs.rmTree(testPath.getParent()); return; }
-    var collided= names.perType().stream().filter(declared::contains).findFirst();
-    if (collided.isPresent()){ throw Report.generatedTestNameReserved(reservedNameProblem(collided.get()),names.top()); }
+    var declared= types.stream().map(TypeDoc::main).collect(Collectors.toMap(l->l.name().simpleName(),l->l,(a,_)->a));
+    if (names.perType().isEmpty() || declared.containsKey(names.top())){ Fs.rmTree(testPath.getParent()); return; }
+    var collided= names.perType().stream().filter(declared::containsKey).findFirst();
+    if (collided.isPresent()){ throw Report.generatedTestNameReserved(reservedNameProblem(declared.get(collided.get())),names.top()); }
     Fs.cleanDir(testPath.getParent());
     Fs.writeUtf8(testPath,renderer.renderTest());
   }
 
-  String reservedNameProblem(String name){
-    var owner= types.stream().filter(t->t.main().name().simpleName().equals(name)).findFirst()
-      .orElseThrow(Bug::unreachable).main();
+  String reservedNameProblem(Literal owner){
     var p= owner.pos();
-    return message(new Span(p.fileName(),p.line(),p.column(),p.line(),p.column()+name.length()-1), "This name is reserved for an auto-generated test suite.");
+    return message(new Span(p.fileName(),p.line(),p.column(),p.line(),p.column()+owner.name().simpleName().length()-1), "This name is reserved for an auto-generated test suite.");
   }
   String message(Span span, String msg){
     return Message.of(oracle::loadString, List.of(new Frame("the documentation of package "+pkgName, span)), msg);
@@ -186,7 +185,7 @@ public final class HtmlDocBuilder{
   //by design, "From:" shows every provider along the chain, shadowed ones included.
   List<MethodRef> inheritedMethods(Literal owner, M m){
     return owner.cs().stream()
-      .flatMap(c->literal(c.name()).stream().flatMap(sup->matchingMethods(c,sup,m)))
+      .flatMap(c->Stream.ofNullable(currentByName.getOrDefault(c.name(),other.__of(c.name()))).flatMap(sup->matchingMethods(c,sup,m)))
       .toList();
   }
 
@@ -196,22 +195,8 @@ public final class HtmlDocBuilder{
       .map(sm->new MethodRef(provider.name(),Optional.of(provider),sm));
   }
 
-  Optional<Literal> literal(TName n){
-    return Optional.ofNullable(currentByName.get(n)).or(()->Optional.ofNullable(other.__of(n)));
-  }
-
-  List<DocOcc> docsForLiteral(Literal l){
-    if (l.pos().line() == 0){ return List.of(); }
-    return source(l.pos().fileName()).docsAt(l.pos(),!l.infName());
-  }
-
-  List<DocOcc> methodDocAt(Literal owner, M m){
-    var p= m.sig().span().pos();
+  List<DocOcc> docsAt(Pos p, boolean includeBefore){
     if (p.line() == 0){ return List.of(); }
-    return source(p.fileName()).docsAt(p,p.line() != owner.pos().line());
-  }
-
-  SourceDocs source(URI uri){
-    return sources.computeIfAbsent(uri,u->new SourceDocs(u,oracle.loadString(u)));
+    return sources.computeIfAbsent(p.fileName(),u->new SourceDocs(u,oracle.loadString(u))).docsAt(p,includeBefore);
   }
 }
