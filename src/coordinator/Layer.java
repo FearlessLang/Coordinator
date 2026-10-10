@@ -4,7 +4,6 @@ import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import core.AllLs;
 import core.E.Literal;
@@ -38,8 +37,7 @@ record MiddleLayer(Coordinator coordinator, Layer next, LinkedHashMap<String,Lis
         long newStamp= out.commitPkgApi(pkg, core, maxIn); // newStamp will be the old api file mtime if there was no reason to commit.
         out.commitMains(pkg, mains);
         out.commitBuilt(pkg, files, maxIn);
-        var map= AllLs.of(core).values().stream().collect(Collectors.toUnmodifiableMap (Literal::name, d->d));
-        nextOther = nextOther.mergeWith(map,Math.max(nextOther.stamp(),newStamp));
+        nextOther = nextOther.mergeWith(AllLs.of(core),Math.max(nextOther.stamp(),newStamp));
       }};
     pkgs.forEach(res::compilePkg);
     return res.nextOther;
