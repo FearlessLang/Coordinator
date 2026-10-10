@@ -37,9 +37,6 @@ public final class ZipLocator{
     if (res == null){ throw Violation.cacheCouldNotFindZipEntry(diskZip, steps, entryName); }
     return res;
   }
-  private static <T> T fetch(Path diskZip, List<String> steps, Function<byte[],T> onFinal){
-    return Fs.of(()->fetchSteps(diskZip, steps, onFinal));
-  }
   private static ReadZip readZip(Path diskZip, List<String> steps){
     return new ReadZip(
       n->Report.zipBadEntryName(diskZip, steps, n),
@@ -53,7 +50,7 @@ public final class ZipLocator{
       ? new ZipInputStream(Files.newInputStream(diskZip), UTF_8)
       : new ZipInputStream(new ByteArrayInputStream(bytes), UTF_8);
   }
-  private static <T> T fetchSteps(Path diskZip, List<String> steps, Function<byte[],T> onFinal) throws IOException{
+  private static <T> T fetch(Path diskZip, List<String> steps, Function<byte[],T> onFinal){
     byte[] bytes= null;
     for (int i: Range.of(steps)){
       var upTo= steps.subList(0, i+1);
