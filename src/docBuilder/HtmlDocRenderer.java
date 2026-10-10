@@ -45,7 +45,7 @@ final class HtmlDocRenderer{
   final Optional<Path> baseDocLocation;
   //filled by href() as links are emitted, so every ambiguous link that reaches the
   //page also gets its landing section; rendered after all types, when it is complete.
-  final Map<DocLink.Ambiguous,String> pages= new LinkedHashMap<>();
+  final LinkedHashMap<DocLink.Ambiguous,String> pages= new LinkedHashMap<>();
   final ExportedToStr toStr;
   final DocResolver resolver;
 
@@ -475,7 +475,7 @@ code{
     endParagraph(sb,para);
   }
 
-  void endParagraph(StringBuilder sb, List<DocOcc> para){
+  void endParagraph(StringBuilder sb, ArrayList<DocOcc> para){
     if (para.isEmpty()){ return; }
     sb.append("<p>")
       .append(para.stream().map(this::renderText).collect(Collectors.joining("\n")))

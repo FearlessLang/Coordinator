@@ -154,7 +154,7 @@ record Explanation(String text, List<Throwable> suppressed){
   Explanation{ assert Require.unmodifiable(suppressed,"suppressed"); }
 }
 final class Suppressed{
-  private final List<Throwable> errors= new ArrayList<>();
+  private final ArrayList<Throwable> errors= new ArrayList<>();
   String mark(Throwable error){
     var index= errors.size();
     errors.add(error);

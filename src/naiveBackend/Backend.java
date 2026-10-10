@@ -4,7 +4,6 @@ import java.math.BigInteger;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.TreeMap;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -33,7 +32,7 @@ public class Backend{
   }
   Path out;
   BackendTools tools;
-  List<Consumer<Path>> fixers= new ArrayList<>();
+  ArrayList<Consumer<Path>> fixers= new ArrayList<>();
   boolean isRepr(Literal l){ return l.name().equals(new TName("base.Repr",1,Pos.unknown)); }
   public List<Consumer<Path>> produceJavaCode(){
     Fs.ensureDir(out);
@@ -141,7 +140,7 @@ public class Backend{
     if (s.startsWith(".")){ return encodeTrailingPrimes(s.substring(1)); }
     return "$" + mangleOp(s);
   }
-  final Map<String,String> mains= new TreeMap<>();
+  final TreeMap<String,String> mains= new TreeMap<>();
   void writeMainJava(){
     var all= Join.of(mains.keySet().stream().map(n->"\""+n+"\""),"{",",","}","{}");
     var assets= Join.of(tools.capabilities().autoloadedAssets().values().stream().map(Backend::assetLiteral),"{",",","}","{}");
