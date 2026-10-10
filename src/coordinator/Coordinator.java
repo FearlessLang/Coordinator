@@ -149,7 +149,7 @@ final class Helper{
   }
   static Layer layers(Coordinator coordinator, Map<String,List<Ref>> map, Layer l, List<Ref> ranks){
     int lastNum= rankNumber(ranks.getFirst());
-    var pkgs= new LinkedHashMap<String, List<Ref>>();
+    var pkgs= new LinkedHashMap<String,List<Ref>>();
     for (var u: ranks){
       if (rankNumber(u) != lastNum){ l= new MiddleLayer(coordinator,l,pkgs); pkgs= new LinkedHashMap<>(); lastNum= rankNumber(u); }
       pkgs.put(pkgName(u),map.get(pkgName(u)));
