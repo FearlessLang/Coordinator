@@ -63,8 +63,7 @@ record ProduceBody(BytecodeLineFix sb, Backend b, String thisName, M m){
       return;
     }
     if (!lit.infName() || lit.onlyImmCapture().inner){ b.generateInterface(lit, true); }
-    var base= b.ifaceNameFor(lit);
-      sb.a("new ").a(base).a("(){");
+    sb.a("new ").a(b.ifaceNameFor(lit)).a("(){");
     if (b.isRepr(lit)){
       sb.a("""
         volatile java.util.concurrent.ConcurrentHashMap<Object,Entry> _reprCache;
