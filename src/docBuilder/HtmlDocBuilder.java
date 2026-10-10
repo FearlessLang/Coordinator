@@ -80,7 +80,7 @@ public final class HtmlDocBuilder{
     var spans= new IdentityHashMap<DocOcc,List<ResolvedSpan>>();
     var problems= new ArrayList<String>();
     sources.values().stream().flatMap(s->s.orphanRuns().stream()).map(this::orphan).forEach(problems::add);
-    sources.values().stream().flatMap(s->s.ambiguousInlineDocs().stream()).map(this::ambiguousInline).forEach(problems::add);
+    sources.values().stream().flatMap(s->s.ambiguousInline.stream()).map(this::ambiguousInline).forEach(problems::add);
     types.forEach(t->linkType(resolver,t,spans,problems));
     if (!problems.isEmpty()){ throw Report.docReferences(problems); }
     var renderer= new HtmlDocRenderer(pkgName,uses,types,other,spans,baseDocLocation);

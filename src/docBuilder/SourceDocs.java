@@ -40,8 +40,6 @@ final class SourceDocs{
     return arr == null || column > arr.length ? 0 : arr[column-1];
   }
 
-  List<DocOcc> ambiguousInlineDocs(){ return List.copyOf(ambiguousInline); }
-
   //every /// and //> that no declaration took, as runs of consecutive lines
   List<List<DocOcc>> orphanRuns(){
     var lost= docsByLine.values().stream()
