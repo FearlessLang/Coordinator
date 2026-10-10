@@ -158,24 +158,7 @@ public class Backend{
     assert s.indexOf('"') < 0 && s.indexOf('\\') < 0 && s.indexOf('\n') < 0 && s.indexOf('\r') < 0;
     return "\""+s+"\"";
   }
-  String mangleOp(String op){ return op.chars().mapToObj(c->opTok((char)c)).collect(Collectors.joining("_")); }
-  static String opTok(char c){ return switch(c){
-    case '+' -> "plus";
-    case '-' -> "dash";
-    case '*' -> "star";
-    case '/' -> "slash";
-    case '%' -> "pct";
-    case '<' -> "lt";
-    case '>' -> "gt";
-    case '=' -> "eq";
-    case '!' -> "bang";
-    case '&' -> "and";
-    case '|' -> "or";
-    case '^' -> "xor";
-    case '~' -> "tilde";
-    case '?' -> "q";
-    case '#' -> "hash";
-    case '\\' -> "bslash";
-    default -> throw utils.Bug.unreachable();
-  };}
+  String mangleOp(String op){ return op.chars().mapToObj(c->opNames.get(opChars.indexOf(c))).collect(Collectors.joining("_")); }
+  static final String opChars= "+-*/%<>=!&|^~?#\\";
+  static final List<String> opNames= List.of("plus","dash","star","slash","pct","lt","gt","eq","bang","and","or","xor","tilde","q","hash","bslash");
 }
