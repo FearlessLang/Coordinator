@@ -64,30 +64,15 @@ public final class InitialSupportGuiMain{
     var root= new JPanel(new BorderLayout(12,12));
     root.setBorder(new EmptyBorder(12,12,12,12));
     frame.setContentPane(root);
-    root.add(header(), BorderLayout.NORTH);
-    root.add(center(), BorderLayout.CENTER);
-    root.add(footer(), BorderLayout.SOUTH);
-    frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
-    frame.setMinimumSize(new Dimension(300,300));
-    frame.setSize(new Dimension(950,700));
-    frame.setLocationRelativeTo(null);
-    frame.setVisible(true);
-  }
-
-  private JComponent header(){
-    var p= new JPanel(new BorderLayout());
+    var head= new JPanel(new BorderLayout());
     var title= new JLabel("Welcome to Fearless");
     title.setFont(uiFont.deriveFont(Font.BOLD, uiFont.getSize2D() + 6f));
-    p.add(title, BorderLayout.NORTH);
+    head.add(title, BorderLayout.NORTH);
     var sub= new JLabel(startText);
     sub.setBorder(new EmptyBorder(6,0,0,0));
-    p.add(sub, BorderLayout.SOUTH);
-    return p;
-  }
-
-  private JComponent center(){
-    var left= textPaneHtml(welcomeHtml);
-    var leftScroll= new JScrollPane(left);
+    head.add(sub, BorderLayout.SOUTH);
+    root.add(head, BorderLayout.NORTH);
+    var leftScroll= new JScrollPane(textPaneHtml(welcomeHtml));
     leftScroll.setBorder(border("About"));
     var rightScroll= new JScrollPane(actions);
     rightScroll.setBorder(border("Actions"));
@@ -99,15 +84,17 @@ public final class InitialSupportGuiMain{
     split.setContinuousLayout(true);
     rightScroll.getViewport().setViewPosition(new Point(0,0));
     leftScroll.getViewport().setViewPosition(new Point(0,0));
-    return split;
-  }
-
-  private JComponent footer(){
-    var p= new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
-    var info= addBtn(p, "Info", "About Fearless", _->showHtml(aboutHtml, "About Fearless"));
+    root.add(split, BorderLayout.CENTER);
+    var foot= new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+    var info= addBtn(foot, "Info", "About Fearless", _->showHtml(aboutHtml, "About Fearless"));
     info.setFont(uiFont.deriveFont(uiFont.getSize2D() - 2f));
     info.setMargin(new Insets(2,8,2,8));
-    return p;
+    root.add(foot, BorderLayout.SOUTH);
+    frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+    frame.setMinimumSize(new Dimension(300,300));
+    frame.setSize(new Dimension(950,700));
+    frame.setLocationRelativeTo(null);
+    frame.setVisible(true);
   }
 
   private void toggleMore(JButton more){
