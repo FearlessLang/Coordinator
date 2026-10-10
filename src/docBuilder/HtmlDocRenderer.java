@@ -3,6 +3,7 @@ package docBuilder;
 import static offensiveUtils.Require.*;
 
 import java.nio.file.Path;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -377,10 +378,10 @@ code{
     return "<a href=\""+h(prefix(r.owner().pkgName())+"#"+methodId(r.owner(),r.method()))+"\">"+h(refName(r))+h(r.method().sig().m().toString())+"</a>";
   }
 
-  List<MethodRef> fromRefs(MethodDoc m){
+  Collection<MethodRef> fromRefs(MethodDoc m){
     if (!m.inheritedFrom.isEmpty()){ return m.inheritedFrom; }
     if (m.declared){ return List.of(); }
-    return List.of(MethodRef.origin(m.main()));
+    return List.of(new MethodRef(m.main().sig().origin(),Optional.empty(),m.main()));
   }
 
   String refName(MethodRef r){

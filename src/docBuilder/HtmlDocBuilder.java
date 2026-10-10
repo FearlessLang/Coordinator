@@ -193,7 +193,7 @@ public final class HtmlDocBuilder{
   Stream<MethodRef> matchingMethods(T.C provider, Literal sup, M m){
     return sup.ms().stream()
       .filter(sm->sm.sig().rc() == m.sig().rc() && sm.sig().m().equals(m.sig().m()))
-      .map(sm->MethodRef.provider(provider,sm));
+      .map(sm->new MethodRef(provider.name(),Optional.of(provider),sm));
   }
 
   Optional<Literal> literal(TName n){
