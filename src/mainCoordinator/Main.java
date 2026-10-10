@@ -53,7 +53,7 @@ public final class Main{
     var appDir= JavacTool.reqAppDir(Violation::mustUseLauncher);
     offerAssociation(appDir);
     Optional<Path> launch= Stream.of(args).filter(a->!a.startsWith("-psn_")).findFirst().map(Main::normalize);
-    if (Fs.isMac() && !hasConsoleFlag()){ registerMacSpawnHandler(appDir); }
+    if (Fs.isMac() && !hasConsoleFlag()){ Desktop.getDesktop().setOpenFileHandler(e->e.getFiles().forEach(f->spawnMac(appDir, f.toPath()))); }
     if (launch.isEmpty()){
       if (Fs.isMac()){ Thread.sleep(1000); }
       if (macSpawnOk.get() == 0){ InitialSupportGuiMain.main(new String[]{}); }
@@ -90,9 +90,6 @@ public final class Main{
       Violation::associationNotWritable,
       Violation::associationLeftHalfDone);
   }
-  private static void registerMacSpawnHandler(Path appDir){
-    Desktop.getDesktop().setOpenFileHandler(e->e.getFiles().forEach(f->spawnMac(appDir, f.toPath())));
-  }
   private static void spawnMac(Path appDir, Path file){
     var bundle= appDir.getParent().getParent();
     Fs.ofV(()->Fs.processBuilder(List.of("open","-n","-a",bundle.toString(),"--args",file.toString())).start());
@@ -115,17 +112,13 @@ public final class Main{
     Fs.ofV(()->{
       var icon= ImageIO.read(JavacTool.reqAppDir(Violation::mustUseLauncher).resolve("icon.png").toFile());
       frame.setIconImage(icon);
-      if (Taskbar.isTaskbarSupported()){
-        var tb= Taskbar.getTaskbar();
-        if (tb.isSupported(Taskbar.Feature.ICON_IMAGE)){ tb.setIconImage(icon); }
-      }
+      if (Taskbar.isTaskbarSupported() && Taskbar.getTaskbar().isSupported(Taskbar.Feature.ICON_IMAGE)){ Taskbar.getTaskbar().setIconImage(icon); }
     });
     frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
     frame.add(new JScrollPane(area));
     frame.pack();
     var screen= GraphicsEnvironment.getLocalGraphicsEnvironment().getMaximumWindowBounds();
-    var pref= frame.getSize();
-    frame.setSize(Math.min(pref.width, screen.width), Math.min(pref.height, screen.height));
+    frame.setSize(Math.min(frame.getWidth(), screen.width), Math.min(frame.getHeight(), screen.height));
     frame.setLocationRelativeTo(null);
     return s->SwingUtilities.invokeLater(()->{
       if (!frame.isVisible()){ frame.setVisible(true); }
