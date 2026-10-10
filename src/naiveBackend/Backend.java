@@ -119,13 +119,8 @@ public class Backend{
   String decTypeName(TName n){ return encodeTrailingPrimes(n.simpleName())+"$"+caseTag(n.simpleName())+"$"+n.arity(); }
   String typeName(TName n){ return "_"+encodeTrailingPrimes(n.s())+"$"+caseTag(n.simpleName())+"$"+n.arity(); }
   static String caseTag(String s){
-    var bits= new StringBuilder("1");
-    for (int i : Range.of(0,s.length())){
-      char c= s.charAt(i);
-      if ('A' <= c && c <= 'Z'){ bits.append('1'); }
-      if ('a' <= c && c <= 'z'){ bits.append('0'); }
-    }
-    return new BigInteger(bits.toString(),2).toString(36);
+    var bits= s.chars().filter(c->'A' <= c && c <= 'Z' || 'a' <= c && c <= 'z').mapToObj(c->c < 'a' ? "1" : "0").collect(Collectors.joining());
+    return new BigInteger("1"+bits,2).toString(36);
   }
   String mangledMethodName(RC rc, MName m){ return rc.name()+"$"+methodBaseName(m)+"$"+m.arity(); }
   String methodBaseName(MName m){
