@@ -34,9 +34,6 @@ public interface OutputOracle{
   default boolean stillBuilt(String pkg, List<Ref> files, long minMillis){
     return Fs.lastModified(builtPath(pkg)) >= minMillis && Fs.readUtf8(builtPath(pkg)).equals(OutputHelper.fileList(files)) && Files.exists(mainsPath(pkg));
   }
-  default void commitBuilt(String pkg, List<Ref> files, long minExclusiveMillis){
-    Fs.writeUtf8(builtPath(pkg), OutputHelper.fileList(files), minExclusiveMillis);
-  }
   default OtherPackages addCachedPkgApi(OtherPackages other, String pkg){
     return other.mergeWith(OutputHelper.cachedPkgApi(pkgApiPath(pkg)), Math.max(other.stamp(), pkgApiStamp(pkg)));
   }//READS the pkg info and adds to other; Does not update the disk. Just reads info
@@ -49,7 +46,12 @@ public interface OutputOracle{
     return Fs.writeUtf8(pkgApiPath(pkg), ApiJson.toJSon(core), res.isEmpty() ? -1 : minExclusiveMillis);
   }
   default Optional<MainsInfo> mainsInfo(){ return Optional.of(mainsPath()).filter(Files::exists).map(MainsInfo::parse); }
-  default void commitMains(String pkg, Map<String,MainsInfo.Main> mains){ Fs.writeUtf8(mainsPath(pkg), new MainsInfo(mains).print()); }
+  default long commit(String pkg, List<Literal> core, Map<String,MainsInfo.Main> mains, List<Ref> files, long minExclusiveMillis){
+    long newStamp= commitPkgApi(pkg, core, minExclusiveMillis);
+    Fs.writeUtf8(mainsPath(pkg), new MainsInfo(mains).print());
+    Fs.writeUtf8(builtPath(pkg), OutputHelper.fileList(files), minExclusiveMillis);
+    return newStamp;
+  }
   default MainsInfo mains(Collection<String> pkgs){
     return new MainsInfo(pkgs.stream().flatMap(p->MainsInfo.parse(mainsPath(p)).mains().entrySet().stream()).collect(Collectors.toMap(Map.Entry::getKey,Map.Entry::getValue)));
   }
