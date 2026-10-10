@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import core.MName;
 import core.TName;
@@ -34,7 +35,7 @@ final class DocRefScanner{
   static Optional<DocRef> wholeRef(String text, CodeSpan sp){
     var p= new Parse(text.substring(sp.start(), sp.end()));
     var res= p.ref();
-    return p.done() ? res : Optional.empty();
+    return p.ok && p.i == p.s.length() ? res : Optional.empty();
   }
 
   //a rendered signature is code, not prose: every maximal word that is a type name is
@@ -56,18 +57,14 @@ final class DocRefScanner{
     int i= 0;
     boolean ok= true;
 
-    boolean done(){ return ok && i == s.length(); }
-
     Optional<DocRef> ref(){
       var receiver= startsSelector() ? Optional.<DocRef.Receiver>empty() : receiver();
-      if (!ok){ return Optional.empty(); }
       var sel= selector();
-      if (!ok){ return Optional.empty(); }
       if (sel.isEmpty()){ return receiver.map(r->(DocRef)r); }
       return Optional.of(new DocRef.MethodName(receiver, sel.get(), arity(callArity)));
     }
 
-    boolean startsSelector(){ return i < s.length() && (s.charAt(i) == '.' || opChar(i)); }
+    boolean startsSelector(){ return s.startsWith(".",i) || !ops(i).isEmpty(); }
 
     //".foo" or an operator such as "++": an operator method is named like any other,
     //so "Foo++(_,_)" reads the same way as "Foo.foo(_,_)".
@@ -81,31 +78,18 @@ final class DocRefScanner{
 
     //core decides what an operator character is: a one character operator is itself a
     //method name, while a letter, a digit or a "." is not.
-    boolean opChar(int at){
-      return at < s.length() && MName.isMethodName(String.valueOf(s.charAt(at)));
-    }
-
-    String ops(int from){
-      int end= from;
-      while (opChar(end)){ end += 1; }
-      return s.substring(from, end);
-    }
+    String ops(int from){ return s.substring(from).chars().mapToObj(Character::toString).takeWhile(MName::isMethodName).collect(Collectors.joining()); }
 
     //a type, possibly package qualified, or a name bound where the comment is written
     Optional<DocRef.Receiver> receiver(){
       var first= word(i);
-      if (first.isEmpty()){ ok= false; return Optional.empty(); }
       i += first.length();
-      if (TName.isTypeName(first)){ return Optional.of(type(Optional.empty(), first)); }
-      var second= i < s.length() && s.charAt(i) == '.' ? word(i+1) : "";
+      if (TName.isTypeName(first)){ return Optional.of(new DocRef.TypeName(Optional.empty(), first, arity(typeArity))); }
+      var second= s.startsWith(".",i) ? word(i+1) : "";
       if (!TName.isTypeName(second)){ return Optional.of(new DocRef.LocalName(first)); }
       if (!TName.isPkgName(first)){ ok= false; return Optional.empty(); }
       i += 1+second.length();
-      return Optional.of(type(Optional.of(first), second));
-    }
-
-    DocRef.Receiver type(Optional<String> pkg, String name){
-      return new DocRef.TypeName(pkg, name, arity(typeArity));
+      return Optional.of(new DocRef.TypeName(Optional.of(first), second, arity(typeArity)));
     }
 
     String word(int from){
