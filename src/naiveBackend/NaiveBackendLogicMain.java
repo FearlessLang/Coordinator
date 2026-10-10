@@ -14,8 +14,7 @@ public final class NaiveBackendLogicMain{
     var outPath= genJava.resolve(tools.pkgName());
     var fixers= new Backend(outPath, tools).produceJavaCode();
     var classes= genJava.resolve("_classes");
-    Fs.ensureDir(classes);
-    Fs.cleanDirContents(classes);
+    Fs.cleanDir(classes);
     var pkgPath= classes.resolve("_"+tools.pkgName());
     if (tools.pkgName().equals("base")){
       Fs.copyTreeFlat(tools.rtPath(), outPath);

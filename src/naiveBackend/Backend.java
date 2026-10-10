@@ -28,8 +28,7 @@ public final class Backend{
   List<Consumer<Path>> fixers= new ArrayList<>();
   boolean isRepr(Literal l){ return l.name().equals(new TName("base.Repr", 1, Pos.unknown)); }
   public List<Consumer<Path>> produceJavaCode(){
-    Fs.ensureDir(out);
-    Fs.cleanDirContents(out);
+    Fs.cleanDir(out);
     tools.decs().forEach(d -> {generateInterface(d, false); tools.checks().checkFileReplacement(d, decTypeName(d.name()));});
     tools.checks().checkMagicFulfilled();
     writeMainJava();
