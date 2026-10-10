@@ -5,7 +5,6 @@ public class TestAllFrontend{
   public static void main(String[] args) throws InterruptedException{
     ModularBuild.commons();
     ModularBuild.frontendMain();
-    ModularBuild.frontendTest();
-    ModularBuild.runJUnit(ModularBuild.out.resolve("frontend-test"), "--exclude-package=instantiationSweep");
+    ModularBuild.runJUnit(ModularBuild.frontendTest(), "--exclude-package=instantiationSweep");
   }
 }

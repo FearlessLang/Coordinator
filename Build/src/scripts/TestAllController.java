@@ -3,10 +3,7 @@ package scripts;
 
 public class TestAllController{
   public static void main(String[] args) throws InterruptedException{
-    ModularBuild.commons();
-    ModularBuild.frontendMain();
-    ModularBuild.coordinatorMain();
-    ModularBuild.controllerTest();
-    ModularBuild.runJUnit(ModularBuild.out.resolve("controller-test"), "--exclude-package=agentTools");
+    ModularBuild.mainJars();
+    ModularBuild.runJUnit(ModularBuild.controllerTest(), "--exclude-package=agentTools");
   }
 }

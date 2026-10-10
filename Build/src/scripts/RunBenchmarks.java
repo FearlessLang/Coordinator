@@ -13,9 +13,7 @@ import tools.JavaTool;
 
 public class RunBenchmarks{
   public static void main(String[] args) throws InterruptedException{
-    ModularBuild.commons();
-    ModularBuild.frontendMain();
-    ModularBuild.coordinatorMain();
+    ModularBuild.mainJars();
     var stlibs= new ArrayList<String>();
     var include= new ArrayList<String>();
     for (var a: args){ (a.contains("=") ? stlibs : include).add(a); }
