@@ -116,12 +116,12 @@ public final class ByteFiles{
   private interface IoOperation<T>{ T run() throws IOException; }
 
   public static <X extends Throwable> byte[] read(Path path, Handler<byte[],X> handler) throws X {
-    return attempt(Op.Read, path, () -> Files.readAllBytes(path), handler);
+    return attempt(Op.Read, path, ()->Files.readAllBytes(path), handler);
   }
   // Whole-file create: refuses to touch anything already at the location
   // (CREATE_NEW); the refusal classifies as Kind.FileAlreadyExists.
   public static <X extends Throwable> void writeNew(Path path, byte[] bytes, Handler<Void,X> handler) throws X {
-    attempt(Op.Write, path, () -> { Files.write(path, bytes, StandardOpenOption.WRITE, StandardOpenOption.CREATE_NEW); return null; }, handler);
+    attempt(Op.Write, path, ()->{ Files.write(path, bytes, StandardOpenOption.WRITE, StandardOpenOption.CREATE_NEW); return null; }, handler);
   }
   private static <T, X extends Throwable> T attempt(Op op, Path path, IoOperation<T> operation, Handler<T,X> handler) throws X {
     try{ return operation.run(); }

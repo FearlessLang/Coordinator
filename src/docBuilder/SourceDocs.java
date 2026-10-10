@@ -140,7 +140,7 @@ final class SourceDocs{
   //its carets under the offending characters: past the "///" and the space clean drops.
   void add(int line, int column, String text, boolean pureLine, boolean example, boolean testOnly){
     var clean= text.startsWith(" ") ? text.substring(1) : text;
-    docsByLine.computeIfAbsent(line,_ -> new ArrayList<>())
+    docsByLine.computeIfAbsent(line,_->new ArrayList<>())
       .add(new DocOcc(uri,line,column,column+3+(text.length()-clean.length()),clean,pureLine,example,testOnly));
   }
 

@@ -104,7 +104,7 @@ public final class UserError extends RuntimeException{
     return showRelText(zipPath)+printEntryName(entryName)+"\n";
   }
   private static String printEntryName(String entryName){
-    var simple= entryName.codePoints().allMatch(cp -> cp < 128 && Fs.allowed.indexOf((char)cp) >= 0);
+    var simple= entryName.codePoints().allMatch(cp->cp < 128 && Fs.allowed.indexOf((char)cp) >= 0);
     if (simple){ return "Entry: "+disp(entryName); }
     return "Entry contains non-standard characters.\nShown as: "+disp(entryName);
   }

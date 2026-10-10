@@ -23,6 +23,6 @@ final class UserErrorTest{
     assertWhitelisted(PrettyFileName.displayFileName(nonAscii.toUri()));
   }
   private static void assertWhitelisted(String s){
-    assertTrue(s.codePoints().allMatch(cp-> cp < 128 && Fs.allowed.indexOf((char)cp) >= 0), s);
+    assertTrue(s.codePoints().allMatch(cp->cp < 128 && Fs.allowed.indexOf((char)cp) >= 0), s);
   }
 }

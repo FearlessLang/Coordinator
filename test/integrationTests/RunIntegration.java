@@ -222,7 +222,7 @@ Hello world
   @Test void testAssets(){ testOk("testAssets");}
   private Path theOneLogFile(Path dir, String prefix) throws IOException{
     try (var files= Files.list(dir)){
-      var found= files.filter(p-> p.getFileName().toString().startsWith(prefix)).toList();
+      var found= files.filter(p->p.getFileName().toString().startsWith(prefix)).toList();
       Assertions.assertEquals(1, found.size(), found.toString());
       return found.get(0);
     }

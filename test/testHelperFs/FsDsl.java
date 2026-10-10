@@ -53,7 +53,7 @@ public final class FsDsl{
     try{
       var zips= new LinkedHashMap<Path,ZipNode>();
       for (var it: parse(spec)){ emit(root, zips, it); }
-      zips.forEach((diskZip, node)-> writeDiskZip(diskZip, node));
+      zips.forEach((diskZip, node)->writeDiskZip(diskZip, node));
     }
     catch(InvalidPathException e){
       Assumptions.abort("OS forbids creating this path on disk: "+e.getMessage());
