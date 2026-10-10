@@ -101,7 +101,7 @@ public class Backend{
     //TODO: an imm method with no parameters and an imm result, of a type with an instance (a singleton, like Directions.map),
     //always returns the same value: cache it, so that the body runs only one time.
     sb.a("  default Object "+jName+paramsSig(m)+"{\n");
-    new ProduceBody(sb,this, iface, l.thisName(), m).emitBody();
+    new ProduceBody(sb,this, l.thisName(), m).emitBody();
   }
   String ifaceNameFor(Literal l){
     if (!l.infName() || l.onlyImmCapture().inner){ return decTypeName(l.name()); }

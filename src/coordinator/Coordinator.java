@@ -55,7 +55,7 @@ public interface Coordinator {
   static Map<String,Boolean> pkgsBuilt(Path path){
     var o= new RealSourceOracleWithZip(path);
     var map= Helper.pkgMap(o,path);
-    var ranks= map.values().stream().map(u->Helper.okPkgContent(u,path)).toList();
+    var ranks= map.values().stream().map(Helper::okPkgContent).toList();
     var out= Helper.out(path);
     var top= ranks.stream().mapToInt(Helper::rankNumber).max().getAsInt();
     var listed= Files.exists(out.mainsPath());
@@ -109,7 +109,7 @@ class Helper{
   }
   static Layer layerOf(Coordinator coordinator, SourceOracle o, Path project, OutputOracle out, SourceOracle stLib){
     var map= pkgMap(o,project);
-    List<Ref> allRanks= map.values().stream().map(u->okPkgContent(u,project)).toList();
+    List<Ref> allRanks= map.values().stream().map(Helper::okPkgContent).toList();
     Layer l= mapFromRanks(coordinator,allRanks,o,out,stLib);
     return layers(coordinator,map,l,allRanks.stream()
       .sorted(Comparator.comparingInt(Helper::rankNumber).thenComparing(Ref::fearPath)).toList());
@@ -172,11 +172,11 @@ class Helper{
   private static final Pattern rankName= Pattern.compile("("+String.join("|",ranks)+")(\\d{3})?");
 
   static boolean hasReservedRankPrefix(Ref u){ return Fs.fileNameWithExtension(u.fearPath()).startsWith("_rank_"); }
-  static Ref okPkgContent(List<Ref> u, Path root){
+  static Ref okPkgContent(List<Ref> u){
     var pkg= pkgName(u.getFirst());
     var reserved= u.stream().filter(Helper::hasReservedRankPrefix).toList();
     reserved.forEach(Helper::rankNumber);//err malformed rank file name is malformed
-    if (reserved.isEmpty()){ throw Report.projectMissingRankFile(pkg, root); }
+    if (reserved.isEmpty()){ throw Report.projectMissingRankFile(pkg); }
     if (reserved.size() > 1){ throw Report.projectMultipleRankFiles(pkg, reserved); }
     return reserved.getFirst();
   }

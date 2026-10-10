@@ -382,7 +382,7 @@ Invalid entry names (based on the exact text of the entry name):
      +"\".zip\"); the content of the zip entry would be mixed with the content of\n"
      +"that folder.");
   }
-  public static UserError zipNestingTooDeep(Path diskZip, List<String> steps, int depth, int maxDepth){
+  public static UserError zipNestingTooDeep(Path diskZip, List<String> steps, int depth){
     assert !steps.isEmpty();
     var all= Pop.right(steps);
     return directFail(showZipRel(diskZip,all,steps.getLast()),"""
@@ -541,7 +541,7 @@ Examples:
   _rank_worker999.fear
 
 """;
-  public static UserError projectMissingRankFile(String pkg, Path pkgRoot){ return new UserError(("""
+  public static UserError projectMissingRankFile(String pkg){ return new UserError(("""
 Missing rank file for a package.
 
 Package:

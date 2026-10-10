@@ -5,7 +5,7 @@ import core.E.*;
 import utils.Range;
 import utils.Streams;
 
-record ProduceBody(BytecodeLineFix sb, Backend b, String iface, String thisName, M m){
+record ProduceBody(BytecodeLineFix sb, Backend b, String thisName, M m){
   public void emitBody(){
     if (!"_".equals(thisName)){ sb.a("    var ").a(thisName).a("$= this;\n"); }
     Streams.zipI(m.xs(), m.sig().ts())
@@ -84,7 +84,7 @@ record ProduceBody(BytecodeLineFix sb, Backend b, String iface, String thisName,
       assert m.e().isPresent();
       var jName= b.mangledMethodName(m.sig().rc(), m.sig().m());
       sb.a("\n    public Object "+jName+b.paramsSig(m)+"{\n");
-      new ProduceBody(sb,b, base, lit.thisName(), m).emitBody();
+      new ProduceBody(sb,b, lit.thisName(), m).emitBody();
     }
     sb.a("\n}");
   }

@@ -27,7 +27,7 @@ public final class ZipWellFormedness{
     return List.copyOf(out);
   }
   private static void reqCollect(Path diskZip, Path root, Path local, List<String> steps, int depth, ArrayList<ZipEntry> out){
-    if (depth > maxZipNesting){ throw Report.zipNestingTooDeep(diskZip, steps, depth, maxZipNesting); }
+    if (depth > maxZipNesting){ throw Report.zipNestingTooDeep(diskZip, steps, depth); }
     for (var name: ZipLocator.entryNames(diskZip, steps)){
       out.add(new ZipEntry(root, local, zipsToSegments(steps, name), steps, name));
       if (name.endsWith(".zip")){ reqCollect(diskZip, root, local, Push.of(steps, name), depth+1, out); }
