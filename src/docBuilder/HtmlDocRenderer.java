@@ -22,7 +22,7 @@ import utils.Range;
 
 final class HtmlDocRenderer{
   HtmlDocRenderer(String pkgName, Map<String,String> uses, List<TypeDoc> types, OtherPackages other,
-      Map<DocOcc,List<ResolvedSpan>> spans, Optional<Path> baseDocLocation){
+      Map<DocOcc,Map<Integer,DocLink>> spans, Optional<Path> baseDocLocation){
     assert nonNull(pkgName,uses,types,other,spans,baseDocLocation);
     this.pkgName= pkgName;
     this.uses= uses;
@@ -38,7 +38,7 @@ final class HtmlDocRenderer{
   final Map<String,String> uses;
   final List<TypeDoc> types;
   final OtherPackages other;
-  final Map<DocOcc,List<ResolvedSpan>> spans;
+  final Map<DocOcc,Map<Integer,DocLink>> spans;
   final Optional<Path> baseDocLocation;
   //filled by href() as links are emitted, so every ambiguous link that reaches the
   //page also gets its landing section; rendered after all types, when it is complete.
@@ -440,7 +440,7 @@ code{
 
   String renderText(DocOcc occ){
     var text= occ.text();
-    var linked= spans.getOrDefault(occ,List.of());
+    var linked= spans.getOrDefault(occ,Map.of());
     var sb= new StringBuilder();
     int i= 0;
     for (var cs: DocRefScanner.codeSpans(text)){
@@ -452,14 +452,10 @@ code{
     return sb.toString();
   }
 
-  String renderCode(String text, DocRefScanner.CodeSpan cs, List<ResolvedSpan> linked){
+  String renderCode(String text, DocRefScanner.CodeSpan cs, Map<Integer,DocLink> linked){
     var body= h(text.substring(cs.start(),cs.end()));
-    return linked.stream()
-      .filter(sp->sp.start()==cs.start() && sp.end()==cs.end())
-      .filter(sp->!(sp.link() instanceof DocLink.NoLink))
-      .findFirst()
-      .map(sp->"<a href=\""+h(href(sp.link()))+"\">"+body+"</a>")
-      .orElse(body);
+    var link= linked.get(cs.start());
+    return link == null || link instanceof DocLink.NoLink ? body : "<a href=\""+h(href(link))+"\">"+body+"</a>";
   }
 
   void renderPage(StringBuilder sb, DocLink.Ambiguous p, String anchor){

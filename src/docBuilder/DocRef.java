@@ -37,5 +37,3 @@ sealed interface DocLink{
   /// variable. Shown as code, never an error.
   record NoLink() implements DocLink{}
 }
-
-record ResolvedSpan(int start, int end, DocLink link){}

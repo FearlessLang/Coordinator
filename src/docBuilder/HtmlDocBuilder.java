@@ -77,7 +77,7 @@ public final class HtmlDocBuilder{
   public void complete(){
     assert nonNull(pkgName,htmlPath);
     var resolver= new DocResolver(pkgName,types,other);
-    var spans= new IdentityHashMap<DocOcc,List<ResolvedSpan>>();
+    var spans= new IdentityHashMap<DocOcc,Map<Integer,DocLink>>();
     var problems= new ArrayList<String>();
     sources.values().stream().flatMap(s->s.orphanRuns().stream()).map(this::orphan).forEach(problems::add);
     sources.values().stream().flatMap(s->s.ambiguousInline.stream()).map(this::ambiguousInline).forEach(problems::add);
@@ -109,14 +109,14 @@ public final class HtmlDocBuilder{
     return Message.of(oracle::loadString, List.of(new Frame("the documentation of package "+pkgName, span)), msg);
   }
 
-  void linkType(DocResolver resolver, TypeDoc t, Map<DocOcc,List<ResolvedSpan>> spans, List<String> problems){
+  void linkType(DocResolver resolver, TypeDoc t, Map<DocOcc,Map<Integer,DocLink>> spans, List<String> problems){
     linkGroup(resolver,Scope.of(t.main()),t.docs,spans,problems);
     t.methods.forEach(m->linkGroup(resolver,Scope.of(t.main(),m.main()),m.docs,spans,problems));
   }
 
   //one group per declaration, carrying the scope its comment is written in: a fenced
   //``` ... ``` block never spans declarations, so "inside a fence" resets per group.
-  void linkGroup(DocResolver resolver, Scope scope, List<DocOcc> docs, Map<DocOcc,List<ResolvedSpan>> spans,
+  void linkGroup(DocResolver resolver, Scope scope, List<DocOcc> docs, Map<DocOcc,Map<Integer,DocLink>> spans,
       List<String> problems){
     var inFence= false;
     for (var occ: docs){
@@ -129,14 +129,14 @@ public final class HtmlDocBuilder{
   }
 
   void link(DocResolver resolver, DocOcc occ, Scope scope,
-      Map<DocOcc,List<ResolvedSpan>> spans, List<String> problems){
-    var res= new ArrayList<ResolvedSpan>();
+      Map<DocOcc,Map<Integer,DocLink>> spans, List<String> problems){
+    var res= new HashMap<Integer,DocLink>();
     for (var sp: DocRefScanner.refSpans(occ.text())){
       var ref= DocRefScanner.wholeRef(occ.text(),sp);
       if (ref.isEmpty()){ problems.add(problem(occ,sp,notAName)); continue; }
       var link= resolver.resolve(ref.get(),scope);
       if (link.isEmpty()){ problems.add(problem(occ,sp,noSuchName)); continue; }
-      res.add(new ResolvedSpan(sp.start(),sp.end(),link.get()));
+      res.put(sp.start(),link.get());
     }
     spans.put(occ,res);
   }
