@@ -44,7 +44,8 @@ public final class InitialSupportGuiMain{
   public static void main(String[] args){
     try{ UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName()); }
     catch(Exception _){ throw Bug.unreachable(); }
-    setUiFont(uiFont);
+    var d= UIManager.getDefaults();
+    for (var k: d.keySet()){ if (d.get(k) instanceof Font){ d.put(k, new FontUIResource(uiFont)); } }
     SwingUtilities.invokeLater(InitialSupportGuiMain::new);
   }
 
@@ -68,7 +69,7 @@ public final class InitialSupportGuiMain{
     var title= new JLabel("Welcome to Fearless");
     title.setFont(uiFont.deriveFont(Font.BOLD, uiFont.getSize2D() + 6f));
     head.add(title, BorderLayout.NORTH);
-    var sub= new JLabel(startText);
+    var sub= new JLabel("Predictable programming at scale");
     sub.setBorder(new EmptyBorder(6,0,0,0));
     head.add(sub, BorderLayout.SOUTH);
     root.add(head, BorderLayout.NORTH);
@@ -111,11 +112,8 @@ public final class InitialSupportGuiMain{
     JOptionPane.showMessageDialog(frame, s, title, JOptionPane.INFORMATION_MESSAGE);
   }
   private static void openUri(String s){
-    try{
-      var browse= Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE);
-      if (browse){ Desktop.getDesktop().browse(URI.create(s)); return; }
-    }catch(Exception _){}
-    Toolkit.getDefaultToolkit().beep();
+    try{ Desktop.getDesktop().browse(URI.create(s)); }
+    catch(Exception _){ Toolkit.getDefaultToolkit().beep(); }
   }
   private void selectFile(JButton b){
     var fc= new JFileChooser();
@@ -126,13 +124,6 @@ public final class InitialSupportGuiMain{
     if (fc.showSaveDialog(b) != JFileChooser.APPROVE_OPTION){ return; }
     MakeDemo.of(fc.getSelectedFile().toPath());
     showHtml(Fs.isWindows() ? afterCreateWinHtml : Fs.isMac() ? afterCreateMacHtml : afterCreateLinuxHtml, "Next steps");
-  }
-  private static void setUiFont(Font f){
-    var d= UIManager.getDefaults();
-    for (var k: d.keySet()){
-      var v= d.get(k);
-      if (v instanceof Font){ d.put(k, new FontUIResource(f)); }
-    }
   }
   private static TitledBorder border(String title){
     return BorderFactory.createTitledBorder(BorderFactory.createEtchedBorder(), title);
@@ -164,14 +155,10 @@ public final class InitialSupportGuiMain{
     parent.add(Box.createVerticalStrut(8));
     return b;
   }
-  private static JButton addBtn(Container parent, String text){
-    var b= addBtn(parent, text, comingSoon, _->{});
-    b.setEnabled(false);
-    return b;
+  private static void addBtn(Container parent, String text){
+    addBtn(parent, text, "Coming soon", _->{}).setEnabled(false);
   }
   private static final Font uiFont= new Font(Font.SANS_SERIF, Font.PLAIN, 16);
-  public static final String startText= "Predictable programming at scale";
-  public static final String comingSoon= "Coming soon";
   public static final String welcomeHtml= """
 <html>
   <body>
