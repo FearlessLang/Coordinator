@@ -27,16 +27,16 @@ public record ZipEntry(Path root, Path local, List<String> segments, List<String
   public static List<ZipEntry> allEntryPaths(Path root, Path local){
     assert root.isAbsolute() && !local.isAbsolute();
     var out= new ArrayList<ZipEntry>();
-    reqCollect(root.resolve(local),root,local, List.of(), 0, out);
+    reqCollect(root.resolve(local),root,local, List.of(), out);
     reqNoFileUsedAsDirectory(out);
     reqNoFolderForNestedZipName(out);
     return List.copyOf(out);
   }
-  private static void reqCollect(Path diskZip, Path root, Path local, List<String> steps, int depth, ArrayList<ZipEntry> out){
-    if (depth > maxZipNesting){ throw Report.zipNestingTooDeep(diskZip, steps, depth); }
+  private static void reqCollect(Path diskZip, Path root, Path local, List<String> steps, ArrayList<ZipEntry> out){
+    if (steps.size() > maxZipNesting){ throw Report.zipNestingTooDeep(diskZip, steps); }
     for (var name: ZipLocator.entryNames(diskZip, steps)){
       out.add(new ZipEntry(root, local, zipsToSegments(steps, name), steps, name));
-      if (name.endsWith(".zip")){ reqCollect(diskZip, root, local, Push.of(steps, name), depth+1, out); }
+      if (name.endsWith(".zip")){ reqCollect(diskZip, root, local, Push.of(steps, name), out); }
     }
   }
   private static void reqNoFileUsedAsDirectory(List<ZipEntry> out){

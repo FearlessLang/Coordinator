@@ -382,15 +382,13 @@ Invalid entry names (based on the exact text of the entry name):
      +"\".zip\"); the content of the zip entry would be mixed with the content of\n"
      +"that folder.");
   }
-  public static UserError zipNestingTooDeep(Path diskZip, List<String> steps, int depth){
-    assert !steps.isEmpty();
-    var all= Pop.right(steps);
-    return directFail(showZipRel(diskZip,all,steps.getLast()),"""
+  public static UserError zipNestingTooDeep(Path diskZip, List<String> steps){
+    return directFail(showZip(diskZip, steps),"""
 Too many layers of nested zips.
 We explored %s layers and there was still more.
 Different systems handle very nested zips differently; overall if
 recursively unzipped, it would clearly go over the OS path length limit.
-""".formatted(depth));}
+""".formatted(steps.size()));}
   //Reached when reading THIS ONE entry exhausted the memory of the whole program,
   //so the size we could report is exactly the size we could not measure.
   public static UserError zipEntryTooBig(Path diskZip, List<String> steps, String entryName){
