@@ -459,8 +459,8 @@ REAL ASSET CONTENT
 """);
     var out= coordinator(root).main(root, stLib);
     Assertions.assertFalse(out.contains("TOP-SECRET-NOT-AN-ASSET"), out);
-    Assertions.assertTrue(out.contains("was not recognized by the compiler as auto-imported"), out);
-    Assertions.assertTrue(out.contains("REAL ASSET CONTENT"), out);
+    utils.Err.strCmp("[###]was not recognized by the compiler as auto-imported[###]", out);
+    utils.Err.strCmp("[###]REAL ASSET CONTENT[###]", out);
   }
 
   @Test void aBaseAssetIsReadFromTheStdLibBase(@TempDir Path tmp) throws InterruptedException{
@@ -1170,7 +1170,7 @@ use base.Main as Main;
 Hello:Main{s->base.Debug#("from app")}
 """);
     var out= coordinator(root).main(root, stLib);
-    Assertions.assertTrue(out.contains("from app"), out);
+    utils.Err.strCmp("[###]from app[###]", out);
     Assertions.assertFalse(out.contains("from core"), out);
   }
 
@@ -1190,8 +1190,8 @@ use base.Main as Main;
 Hello:Main{s->base.Debug#("from z")}
 """);
     var out= coordinator(root).main(root, stLib);
-    Assertions.assertTrue(out.contains("from a"), out);
-    Assertions.assertTrue(out.contains("from z"), out);
+    utils.Err.strCmp("[###]from a[###]", out);
+    utils.Err.strCmp("[###]from z[###]", out);
   }
 
   @Test void flowsAreDeterministic(){ testOk("testFlowDeterminism"); }
@@ -1453,7 +1453,7 @@ Hello:Main{s->base.Debug#("""+call.replace("$URL",url)+")}\n";
       FsDsl.materialize(root, downloadProject(url(server,"/ok"),
         "s.download.downloadStrUtf8(\"$URL\", 1000, NeverRecovers)"));
       var out= coordinator(root).main(root, stLib);
-      Assertions.assertTrue(out.contains("hello download"), out);
+      utils.Err.strCmp("[###]hello download[###]", out);
     }
     finally{ server.stop(0); }
   }
@@ -1466,7 +1466,7 @@ Hello:Main{s->base.Debug#("""+call.replace("$URL",url)+")}\n";
       FsDsl.materialize(root, downloadProject(url(server,"/bytes"),
         "s.download.downloadBytes(\"$URL\", 1000).size"));
       var out= coordinator(root).main(root, stLib);
-      Assertions.assertTrue(out.contains("3"), out);
+      utils.Err.strCmp("[###]3[###]", out);
     }
     finally{ server.stop(0); }
   }
@@ -1477,8 +1477,8 @@ Hello:Main{s->base.Debug#("""+call.replace("$URL",url)+")}\n";
     FsDsl.materialize(root, downloadProject("ftp://127.0.0.1/x",
       "s.download.downloadStrUtf8(\"$URL\", 1000, NeverRecovers)"));
     var out= coordinator(root).main(root, stLib);
-    Assertions.assertTrue(out.contains("Invalid URL descriptor"), out);
-    Assertions.assertTrue(out.contains("unsupported scheme"), out);
+    utils.Err.strCmp("[###]Invalid URL descriptor[###]", out);
+    utils.Err.strCmp("[###]unsupported scheme[###]", out);
   }
 
   @Test void downloadRejectsMalformedUrl(@TempDir Path tmp) throws Exception{
@@ -1487,7 +1487,7 @@ Hello:Main{s->base.Debug#("""+call.replace("$URL",url)+")}\n";
     FsDsl.materialize(root, downloadProject("not a url",
       "s.download.downloadStrUtf8(\"$URL\", 1000, NeverRecovers)"));
     var out= coordinator(root).main(root, stLib);
-    Assertions.assertTrue(out.contains("Invalid URL descriptor"), out);
+    utils.Err.strCmp("[###]Invalid URL descriptor[###]", out);
   }
 
   @Test void downloadFailsWhenContentLengthExceedsMaxBytes(@TempDir Path tmp) throws Exception{
@@ -1498,8 +1498,8 @@ Hello:Main{s->base.Debug#("""+call.replace("$URL",url)+")}\n";
       FsDsl.materialize(root, downloadProject(url(server,"/big"),
         "s.download.downloadBytes(\"$URL\", 4).size"));
       var out= coordinator(root).main(root, stLib);
-      Assertions.assertTrue(out.contains("Download exceeds maxBytes"), out);
-      Assertions.assertTrue(out.contains("contentLength"), out);
+      utils.Err.strCmp("[###]Download exceeds maxBytes[###]", out);
+      utils.Err.strCmp("[###]contentLength[###]", out);
     }
     finally{ server.stop(0); }
   }
@@ -1512,8 +1512,8 @@ Hello:Main{s->base.Debug#("""+call.replace("$URL",url)+")}\n";
       FsDsl.materialize(root, downloadProject(url(server,"/chunked"),
         "s.download.downloadBytes(\"$URL\", 4).size"));
       var out= coordinator(root).main(root, stLib);
-      Assertions.assertTrue(out.contains("Download exceeds maxBytes"), out);
-      Assertions.assertTrue(out.contains("bytesRead"), out);
+      utils.Err.strCmp("[###]Download exceeds maxBytes[###]", out);
+      utils.Err.strCmp("[###]bytesRead[###]", out);
     }
     finally{ server.stop(0); }
   }
@@ -1533,7 +1533,7 @@ Hello:Main{s->base.Debug#("""+call.replace("$URL",url)+")}\n";
       FsDsl.materialize(root, downloadProject(url(server,"/start"),
         "s.download.downloadStrUtf8(\"$URL\", 1000, NeverRecovers)"));
       var out= coordinator(root).main(root, stLib);
-      Assertions.assertTrue(out.contains("landed"), out);
+      utils.Err.strCmp("[###]landed[###]", out);
     }
     finally{ server.stop(0); }
   }
@@ -1546,7 +1546,7 @@ Hello:Main{s->base.Debug#("""+call.replace("$URL",url)+")}\n";
       FsDsl.materialize(root, downloadProject(url(server,"/loop"),
         "s.download.downloadStrUtf8(\"$URL\", 1000, NeverRecovers)"));
       var out= coordinator(root).main(root, stLib);
-      Assertions.assertTrue(out.contains("too many redirects"), out);
+      utils.Err.strCmp("[###]too many redirects[###]", out);
     }
     finally{ server.stop(0); }
   }
@@ -1559,9 +1559,9 @@ Hello:Main{s->base.Debug#("""+call.replace("$URL",url)+")}\n";
       FsDsl.materialize(root, downloadProject(url(server,"/go"),
         "s.download.downloadStrUtf8(\"$URL\", 1000, NeverRecovers)"));
       var out= coordinator(root).main(root, stLib);
-      Assertions.assertTrue(out.contains("Invalid URL descriptor"), out);
-      Assertions.assertTrue(out.contains("unsupported scheme"), out);
-      Assertions.assertTrue(out.contains("file:///etc/passwd"), out);
+      utils.Err.strCmp("[###]Invalid URL descriptor[###]", out);
+      utils.Err.strCmp("[###]unsupported scheme[###]", out);
+      utils.Err.strCmp("[###]file:///etc/passwd[###]", out);
     }
     finally{ server.stop(0); }
   }
@@ -1574,7 +1574,7 @@ Hello:Main{s->base.Debug#("""+call.replace("$URL",url)+")}\n";
       FsDsl.materialize(root, downloadProject(url(server,"/missing"),
         "s.download.downloadStrUtf8(\"$URL\", 1000, NeverRecovers)"));
       var out= coordinator(root).main(root, stLib);
-      Assertions.assertTrue(out.contains("HTTP status: 404"), out);
+      utils.Err.strCmp("[###]HTTP status: 404[###]", out);
     }
     finally{ server.stop(0); }
   }
@@ -1603,8 +1603,8 @@ Hello:Main{s->base.Debug#(
 `, 1000, NeverRecoversU).size.str))}
 """);
       var out= coordinator(root).main(root, stLib);
-      Assertions.assertTrue(out.contains("caf?"), out);
-      Assertions.assertTrue(out.contains("|4"), out);
+      utils.Err.strCmp("[###]caf?[###]", out);
+      utils.Err.strCmp("[###]|4[###]", out);
     }
     finally{ server.stop(0); }
   }
@@ -1618,7 +1618,7 @@ Hello:Main{s->base.Debug#(
       FsDsl.materialize(root, downloadProject(url(server,"/img.png"),
         "s.download.downloadImage(\"$URL\", 100_000, 1_000_000).width"));
       var out= coordinator(root).main(root, stLib);
-      Assertions.assertTrue(out.contains("3"), out);
+      utils.Err.strCmp("[###]3[###]", out);
     }
     finally{ server.stop(0); }
   }
@@ -1633,7 +1633,7 @@ Hello:Main{s->base.Debug#(
       FsDsl.materialize(root, downloadProject(url(server,"/stall"),
         "s.download.downloadStrUtf8(\"$URL\", 1000, NeverRecovers)"));
       var out= coordinator(root).main(root, stLib);
-      Assertions.assertTrue(out.contains("Download timed out"), out);
+      utils.Err.strCmp("[###]Download timed out[###]", out);
     }
     finally{ server.stop(0); }
   }

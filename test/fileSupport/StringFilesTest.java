@@ -8,13 +8,16 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.opentest4j.AssertionFailedError;
 
 import tools.Fs;
 import utils.Box;
 
 final class StringFilesTest{
+  static{ utils.Err.setUp(AssertionFailedError.class, Assertions::assertEquals, Assertions::assertTrue); }
   @SuppressWarnings("serial")
   private static final class Marker extends RuntimeException{}
 
@@ -28,7 +31,7 @@ final class StringFilesTest{
     assertThrows(Marker.class, ()->
       StringFiles.read(file, (actionTxt,_)->{ captured.set(actionTxt); throw new Marker(); }));
     var msg= captured.get();
-    assertTrue(msg.contains("..."), msg);
+    utils.Err.strCmp("[###]...[###]", msg);
     assertTrue(msg.codePoints().allMatch(cp->cp < 128 && Fs.allowed.indexOf((char)cp) >= 0), msg);
   }
 }

@@ -239,7 +239,7 @@ Package name: "rank"
     SourceOracle.Ref file= new FakeRef("fear:/src/x/y/bar.fear"); // deliberately unrelated to the candidates below
     var candidates= List.of("_zzcandidateone","_zzcandidatetwo");
     var msg= Report.projectAmbiguousPackageSegment(file, candidates).getMessage();
-    Assertions.assertTrue(msg.contains("_zzcandidateone"), msg);
-    Assertions.assertTrue(msg.contains("_zzcandidatetwo"), msg);
+    utils.Err.strCmp("[###]_zzcandidateone[###]", msg);
+    utils.Err.strCmp("[###]_zzcandidatetwo[###]", msg);
   }
 }
