@@ -24,15 +24,11 @@ record ProduceBody(BytecodeLineFix sb, Backend b, String thisName, M m){
     return "("+b.typeName(lit ? LiteralDeclarations.superLiteral(n) : n)+")";
   }
   void emitE(core.E e){ switch(e){
-    case X x -> emitX(x);
+    case X x -> sb.a(b.encodeTrailingPrimes(x.name())+"$");
     case Type t -> emitType(t);
     case Call c -> emitCall(c);
     case Literal lit -> emitLit(lit);
   };}
-  private void emitX(X x){
-    assert !"_".equals(x.name());
-    sb.a(b.encodeTrailingPrimes(x.name())+"$");
-  }
   private void emitType(Type t){
     var n= t.type().c().name();
     var lit= n.pkgName().equals("base") && LiteralDeclarations.isPrimitiveLiteral(n.simpleName());
