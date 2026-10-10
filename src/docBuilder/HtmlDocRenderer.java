@@ -72,13 +72,11 @@ final class HtmlDocRenderer{
   List<TypeDoc> testableTypes(){
     return visibleTypes().stream()
       .filter(t -> !t.main().infName())
-      .filter(t -> visibleMethods(t).stream().anyMatch(this::hasTestContent))
+      .filter(t -> visibleMethods(t).stream().anyMatch(m -> !testLines(m).isEmpty()))
       .toList();
   }
 
-  boolean hasTestContent(MethodDoc m){
-    return m.docs.stream().anyMatch(d -> d.example() || d.testOnly());
-  }
+  List<String> testLines(MethodDoc m){ return m.docs.stream().filter(d -> d.example() || d.testOnly()).map(DocOcc::text).toList(); }
 
   GeneratedTestNames testNames(){
     var shown= testableTypes();
@@ -94,11 +92,7 @@ final class HtmlDocRenderer{
     var sb= new StringBuilder(4_000).append(HtmlDocBuilder.generatedMark).append(pkgName).append("; any edit is overwritten\n\n");
     for (int i : Range.of(shown)){
       sb.append(names.perType().get(i)).append(": base.Test {::\n");
-      for (var m: visibleMethods(shown.get(i))){
-        var examples= m.docs.stream().filter(d -> d.example() || d.testOnly()).map(DocOcc::text).toList();
-        if (examples.isEmpty()){ continue; }
-        sb.append("  .test base.Test{::\n").append(String.join("\n", examples)).append("\n  }\n");
-      }
+      for (var m: visibleMethods(shown.get(i))){ sb.append(Join.of(testLines(m), "  .test base.Test{::\n", "\n", "\n  }\n", "")); }
       sb.append("  }\n\n");
     }
     sb.append(names.top()).append(": base.UnitTests {::\n");
