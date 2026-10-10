@@ -49,7 +49,7 @@ public final class Main{
     catch(UserError e){ System.err.print(e.getMessage()); }
     catch(Throwable t){ System.err.print(UserError.crash(t)); }
   }
-  private static void run(String[] args) throws InvocationTargetException, InterruptedException, ExecutionException{
+  private static void run(String[] args) throws InterruptedException{
     var appDir= JavacTool.reqAppDir(Violation::mustUseLauncher);
     offerAssociation(appDir);
     Optional<Path> launch= launchPath(args);
@@ -64,7 +64,7 @@ public final class Main{
     var stdLib= appDir.resolve("stdLib");
     run(Files.isDirectory(l) ? l : l.getParent(), stdLib.resolve("base"), stdLib.resolve("rt"));
   }
-  public static void run(Path project, Path base, Path rt) throws InvocationTargetException, InterruptedException, ExecutionException{
+  public static void run(Path project, Path base, Path rt) throws InterruptedException{
     var c= new Coordinator(){
       @Override public Optional<Path> baseCachePath(){ return Optional.of(base.getParent().resolve("baseCache")); }
       @Override public BackendTools backendTools(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, CapabilityEnvironment capabilities){
