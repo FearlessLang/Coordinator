@@ -11,8 +11,12 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import core.*;
-import core.E.*;
+import core.E.Literal;
+import core.M;
+import core.OtherPackages;
+import core.Src;
+import core.T;
+import core.TName;
 import metaParser.Frame;
 import metaParser.Message;
 import metaParser.Span;

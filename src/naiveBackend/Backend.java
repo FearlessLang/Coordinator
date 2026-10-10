@@ -1,15 +1,22 @@
 package naiveBackend;
 
 import java.math.BigInteger;
-import java.nio.file.*;
-import java.util.*;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
-import core.*;
-import core.E.*;
+import core.E.Literal;
+import core.LiteralDeclarations;
+import core.M;
+import core.MName;
+import core.RC;
+import core.TName;
 import offensiveUtils.Require;
 import realSourceOracle.SourceOracleWithAutoload;
 import tools.Fs;

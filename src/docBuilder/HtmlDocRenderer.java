@@ -12,8 +12,13 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import core.*;
-import core.E.*;
+import core.B;
+import core.E.Literal;
+import core.ExportedToStr;
+import core.M;
+import core.OtherPackages;
+import core.T;
+import core.TName;
 import offensiveUtils.Require;
 import utils.Pos;
 import utils.Range;
