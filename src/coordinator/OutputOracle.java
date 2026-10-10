@@ -35,10 +35,6 @@ public interface OutputOracle{
   default boolean stillBuilt(String pkg, List<Ref> files, List<String> below, long minMillis){
     return Fs.lastModified(builtPath(pkg)) >= minMillis && Fs.readUtf8(builtPath(pkg)).equals(OutputHelper.built(files, below)) && Files.exists(mainsPath(pkg));
   }
-  default void commitBuilt(String pkg, List<Ref> files, List<String> below, long inputsStamp){
-    Fs.writeUtf8(builtPath(pkg), OutputHelper.built(files, below));
-    Fs.ofV(() -> Files.setLastModifiedTime(builtPath(pkg), FileTime.fromMillis(inputsStamp)));
-  }
   default void forgetAllBut(List<String> pkgs){
     if (!Files.isDirectory(rootDir())){ return; }
     var gone= Fs.walk(rootDir(), s -> s.map(Path::getFileName).map(Path::toString)
@@ -61,7 +57,13 @@ public interface OutputOracle{
     return Fs.writeUtf8(pkgApiPath(pkg), ApiJson.toJSon(core), res.isEmpty() ? -1 : minExclusiveMillis);
   }
   default Optional<MainsInfo> mainsInfo(){ return Optional.of(mainsPath()).filter(Files::exists).map(MainsInfo::parse); }
-  default void commitMains(String pkg, Map<String,MainsInfo.Main> mains){ Fs.writeUtf8(mainsPath(pkg), new MainsInfo(mains).print()); }
+  default long commit(String pkg, List<Literal> core, Map<String,MainsInfo.Main> mains, List<Ref> files, List<String> below, long inputsStamp){
+    long newStamp= commitPkgApi(pkg, core, inputsStamp);
+    Fs.writeUtf8(mainsPath(pkg), new MainsInfo(mains).print());
+    Fs.writeUtf8(builtPath(pkg), OutputHelper.built(files, below));
+    Fs.ofV(() -> Files.setLastModifiedTime(builtPath(pkg), FileTime.fromMillis(inputsStamp)));
+    return newStamp;
+  }
   default MainsInfo mains(Collection<String> pkgs){
     return new MainsInfo(pkgs.stream().flatMap(p -> MainsInfo.parse(mainsPath(p)).mains().entrySet().stream()).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
   }
