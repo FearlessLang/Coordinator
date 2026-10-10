@@ -80,14 +80,14 @@ public sealed interface Info{
       ws();
       if (!more()){ throw err(here(),"The text ends here, but a value (a string \"...\", a list [...] or an object {...}) was expected."); }
       if (depth == 100){ throw err(here(),"Lists and objects nest at most 100 deep, and this value is inside 100 of them."); }
-      depth+= 1;
+      depth += 1;
       var res= switch(peek()){
         case '"' -> str();
         case '[' -> list();
         case '{' -> obj();
         default -> throw err(here(),"Expected a string \"...\", a list [...] or an object {...} here.");
       };
-      depth-= 1;
+      depth -= 1;
       return res;
     }
     private Str str(){
@@ -168,8 +168,8 @@ public sealed interface Info{
     private char advance(){
       var c= text.charAt(i);
       if (Fs.allowed.indexOf(c) < 0){ throw err(here(),"The character "+Message.displayChar(c)+" is outside the safe character set of Fearless: letters, digits, space, newline and common punctuation."); }
-      i+= 1;
-      if (c == '\n'){ line+= 1; col= 1; } else{ col+= 1; }
+      i += 1;
+      if (c == '\n'){ line += 1; col= 1; } else{ col += 1; }
       return c;
     }
     private Span here(){ return new Span(uri,line,col,line,col); }

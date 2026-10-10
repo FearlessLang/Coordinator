@@ -100,7 +100,7 @@ public final class UserError extends RuntimeException{
     assert diskZip.isAbsolute();
     diskZip= root.relativize(diskZip);
     String zipPath= diskZip.toString().replace("\\","/");
-    if (!steps.isEmpty()){ zipPath+="/"+String.join("/", steps); }
+    if (!steps.isEmpty()){ zipPath += "/"+String.join("/", steps); }
     return showRelText(zipPath)+printEntryName(entryName)+"\n";
   }
   private static String printEntryName(String entryName){
