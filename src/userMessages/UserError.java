@@ -135,12 +135,12 @@ Details:
     return res+"\nIt will also terminate these Fearless user processes:\n"+programs;
   }
   public void display() throws InterruptedException{
-    try { displayGui(); }
+    try{ displayGui(); }
     catch(HeadlessException e){ displayStderr(e); }
   }
   private void displayGui() throws InterruptedException{
     if (SwingUtilities.isEventDispatchThread()){ displayNow(); return; }
-    try { SwingUtilities.invokeAndWait(this::displayNow); }
+    try{ SwingUtilities.invokeAndWait(this::displayNow); }
     catch(InvocationTargetException e){ displayStderr(e.getCause()); }//Rare, could be a memory overflow or other JVM stuff?
   }
   private void displayNow(){

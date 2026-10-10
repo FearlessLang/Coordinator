@@ -1107,7 +1107,7 @@ We check this so that you[###]
 """);}
 
   private static void createSymbolicLinkOrSkip(Path link, Path target) throws Exception{
-    try { Files.createSymbolicLink(link, target); }
+    try{ Files.createSymbolicLink(link, target); }
     catch(AccessDeniedException e){ Assumptions.abort("OS denies creating symbolic links here"); }
   }
 

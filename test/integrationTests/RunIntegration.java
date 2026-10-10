@@ -85,8 +85,8 @@ public class RunIntegration{
   }
   String run(String name){ return main(freshIntegrationRoot(name), List.of()); }
   String main(Path project, List<String> jvmArgs){
-    try { return coordinator(project, jvmArgs).main(project, stLib);}
-    catch (InterruptedException e){ return Assertions.fail(e);}
+    try{ return coordinator(project, jvmArgs).main(project, stLib);}
+    catch(InterruptedException e){ return Assertions.fail(e);}
   }
   void testOk(String name){ unitTestsOk(name, freshIntegrationRoot(name)); }
   void unitTestsOk(String name, Path root){
@@ -1520,7 +1520,7 @@ Hello:Main{s->base.Debug#("""+call.replace("$URL",url)+")}\n";
 
   @Test void downloadFollowsRedirectsThenSucceeds(@TempDir Path tmp) throws Exception{
     var server= startServer(ex->{
-      switch (ex.getRequestURI().getPath()){
+      switch(ex.getRequestURI().getPath()){
         case "/start" -> redirect(ex,"/next");
         case "/next" -> redirect(ex,"/final");
         case "/final" -> reply(ex,200,"landed".getBytes(UTF_8));

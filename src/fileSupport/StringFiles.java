@@ -50,7 +50,7 @@ public final class StringFiles{
   //an unencodable String reaching this point is a bug on the Fearless side, so it
   //propagates as an Error, like the other observed-bug throws.
   private static byte[] utf8(String text){
-    try {
+    try{
       var buffer= StandardCharsets.UTF_8.newEncoder()
         .onMalformedInput(CodingErrorAction.REPORT)
         .onUnmappableCharacter(CodingErrorAction.REPORT)
@@ -117,7 +117,7 @@ Nearby bytes:  %s
     return new Explanation(text,suppressed.toList());
   }
   private static CharacterCodingException codingException(CoderResult result){
-    try { result.throwException(); throw Bug.unreachable(); }
+    try{ result.throwException(); throw Bug.unreachable(); }
     catch(CharacterCodingException e){ return e; }
   }
   private static Location location(String prefix){

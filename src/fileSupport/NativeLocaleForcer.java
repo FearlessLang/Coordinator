@@ -48,14 +48,14 @@ public class NativeLocaleForcer{
 
   public static void forceEnglish(){
     Locale.setDefault(Locale.US);
-    try {
+    try{
       if (Fs.isWindows()){ forceWindowsUiLanguage(); setCLocale(0); return; }//WINDOWS_LC_ALL
       if (Fs.isMac()){ setCLocale(0); return; }//MACOS_LC_ALL
       if (Fs.isLinux()){ setCLocale(6); return; }//LINUX_LC_ALL
       throw Violation.unsupportedOperatingSystem();
     }
-    catch (UserError e){ throw e; }
-    catch (Throwable t){ throw Violation.couldNotForceEnglish("The call into the operating system failed.", t); }
+    catch(UserError e){ throw e; }
+    catch(Throwable t){ throw Violation.couldNotForceEnglish("The call into the operating system failed.", t); }
   }
   // char* setlocale(int category, const char* locale);
   // Returns NULL when the request is rejected; per the fail-loudly policy (and unlike

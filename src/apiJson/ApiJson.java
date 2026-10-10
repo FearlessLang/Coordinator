@@ -22,7 +22,7 @@ public final class ApiJson{
     q(s.m().s()), q(s.rc().name()), bsJ(s.bs()), arr(s.ts().stream().map(ApiJson::tJ)), tJ(s.ret()),
     q(s.origin().s()), q(""+s.origin().arity()), q(s.abs() ?"abs":"concrete"))); }
   static String tJ(T t){
-    var es= switch (t){
+    var es= switch(t){
       case T.X(var n,_) -> Stream.of(q("x"), q(n));
       case T.ReadImmX(var x) -> Stream.of(q("x"), q("read/imm"), q(x.name()));
       case T.RCX(var rc, var x) -> Stream.of(q("x"), q(rc.name()), q(x.name()));

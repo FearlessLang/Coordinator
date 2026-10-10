@@ -35,7 +35,7 @@ public class ProjectTreeErrorTest{
     var c= new Coordinator(){
       @Override public SourceOracle sourceOracle(Path path){ return oracle; }
     };
-    try { c.main(fakeRoot, oracle); }
+    try{ c.main(fakeRoot, oracle); }
     catch(RuntimeException e){ return e.getMessage(); }
     catch(InterruptedException e){ throw new AssertionError(e); }
     return Assertions.fail("Expected an error, but the project was accepted");

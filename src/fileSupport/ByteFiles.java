@@ -124,7 +124,7 @@ public final class ByteFiles{
     attempt(Op.Write, path, () -> { Files.write(path, bytes, StandardOpenOption.WRITE, StandardOpenOption.CREATE_NEW); return null; }, handler);
   }
   private static <T, X extends Throwable> T attempt(Op op, Path path, IoOperation<T> operation, Handler<T,X> handler) throws X {
-    try { return operation.run(); }
+    try{ return operation.run(); }
     catch(IOException|UnsupportedOperationException|ClosedFileSystemException|FileSystemNotFoundException e){ return classifyError(op, path, e, handler); }
     catch(OutOfMemoryError e){ return classifyMemoryError(e, handler); }
   }
@@ -141,17 +141,17 @@ public final class ByteFiles{
   }
   private static <T, X extends Throwable> T checkOpenFailure(Op op, Path path, Throwable firstFailure, Handler<T,X> handler) throws X {
     FileChannel channel;
-    try { channel= FileChannel.open(path, op.probeOptions); }
+    try{ channel= FileChannel.open(path, op.probeOptions); }
     catch(IOException|UnsupportedOperationException|ClosedFileSystemException|FileSystemNotFoundException e){
       e.addSuppressed(firstFailure);
       return handler.failure(UnknownOpenFailure, e);
     }
-    try { channel.close(); }
+    try{ channel.close(); }
     catch(IOException e){ firstFailure.addSuppressed(e); }
     return handler.failure(UnknownFailureAfterSuccessfulOpen, firstFailure);
   }
   private static boolean isFolder(Path path) {
-    try { return Files.readAttributes(path, BasicFileAttributes.class).isDirectory(); }
+    try{ return Files.readAttributes(path, BasicFileAttributes.class).isDirectory(); }
     catch(IOException|UnsupportedOperationException|ClosedFileSystemException|FileSystemNotFoundException e){ return false; }
   }
   private static Kind kindFromFailure(Throwable cause) {

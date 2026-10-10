@@ -184,7 +184,7 @@ class CommonInfo{
   // macOS: DiskArbitration. Same suppressed-on-failure pattern as volumeOf below.
   }
   private static String volumeOf(Path path, Suppressed suppressed){
-    try {
+    try{
       var store= Files.getFileStore(path);
       return Message.displayString(store.name())+"  "+Message.displayString(store.type());
     }
@@ -195,7 +195,7 @@ class CommonInfo{
     var out= new StringBuilder();
     Path current= path.toAbsolutePath().normalize();//normalize is lexical, no I/O
     var depth= 0;
-    try {
+    try{
       while (Files.isSymbolicLink(current)){//returns false (not throws) on error, ending the walk
         if (depth >= MaxLinkFollowed){ return out.append("\nChain exceeds ").append(MaxLinkFollowed).append(" links; not followed further.\n").toString(); }
         if (!visited.add(current)){ return out.append("\nChain loops back to ").append(Message.displayString(current.toString())).append(".\n").toString(); }
