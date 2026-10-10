@@ -1203,7 +1203,7 @@ Hello:Main{s->base.Debug#("from z")}
     c.compile(project, stLib);
     var out= new StringBuilder();
     var child= Coordinator.startMain(project, ResolveResource.stLibPath, "term.FirstDoesNotWaitForTheRest", c.sharedClasspath(), out::append);
-    var waiter= new Thread(()->{ try{ child.await(); } catch(InterruptedException e){ child.kill(); } });
+    var waiter= new Thread(()->{ try{ child.await(); } catch(InterruptedException _){ child.kill(); } });
     waiter.start();
     waiter.join(60_000);
     if (waiter.isAlive()){ child.kill(); Assertions.fail("first! did not return within 60s while the later elements diverge:\n"+out); }
@@ -1625,7 +1625,7 @@ Hello:Main{s->base.Debug#(
 
   @Test void downloadTimesOutOnStalledResponse(@TempDir Path tmp) throws Exception{
     var server= startServer(_->{
-      try{ Thread.sleep(40_000); } catch(InterruptedException ignored){}
+      try{ Thread.sleep(40_000); } catch(InterruptedException _){}
     });
     try{
       Path root= tmp.resolve("root");

@@ -87,7 +87,7 @@ final class LimitedJsonParser{
   }
   private int nat(Object o){
     try{ return Integer.parseInt("+"+asStr(o)); }//to reject negatives
-    catch(NumberFormatException nfe){ throw err("Expected unsigned int"); }
+    catch(NumberFormatException _){ throw err("Expected unsigned int"); }
   }
   private B bFrom(List<Object> a){
     if (a.size() < 2){ throw err("Bad B"); }

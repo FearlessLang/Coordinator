@@ -1108,7 +1108,7 @@ We check this so that you[###]
 
   private static void createSymbolicLinkOrSkip(Path link, Path target) throws Exception{
     try{ Files.createSymbolicLink(link, target); }
-    catch(AccessDeniedException e){ Assumptions.abort("OS denies creating symbolic links here"); }
+    catch(AccessDeniedException _){ Assumptions.abort("OS denies creating symbolic links here"); }
   }
 
   @Test void err_visible_symlink_forbidden(@TempDir Path tmp) throws Exception{

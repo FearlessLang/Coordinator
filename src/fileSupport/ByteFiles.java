@@ -152,7 +152,7 @@ public final class ByteFiles{
   }
   private static boolean isFolder(Path path){
     try{ return Files.readAttributes(path, BasicFileAttributes.class).isDirectory(); }
-    catch(IOException|UnsupportedOperationException|ClosedFileSystemException|FileSystemNotFoundException e){ return false; }
+    catch(IOException|UnsupportedOperationException|ClosedFileSystemException|FileSystemNotFoundException _){ return false; }
   }
   private static Kind kindFromFailure(Throwable cause){
     return switch(cause){
