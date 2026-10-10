@@ -160,6 +160,24 @@ Hello world
 /// this string must not become documentation
 """, run("testDocs"));
   }
+  @Test void aProjectWithDocExamplesMustCompileAgainAfterItsTestsWereGenerated(@TempDir Path tmp){
+    var root= tmp.resolve("root");
+    UserError.root= root;
+    Fs.ensureDir(root.resolve("_p"));
+    Fs.writeUtf8(root.resolve("_p").resolve("_rank_app.fear"), """
+      use base.Main as Main;
+      use base.Nat as Nat;
+      use base.Debug as Debug;
+      Calc:{
+        ///Adds one.
+        //> .check{Calc.inc(1) .assertEq 2}
+        .inc(n: Nat): Nat -> n + 1;
+      }
+      App:Main{s->Debug#("hi")}
+      """);
+    utils.Err.strCmp("hi\n", main(root, List.of()));
+    utils.Err.strCmp("[###]hi\n", main(root, List.of()));
+  }
   @Test void onlyImmCapture(@TempDir Path tmp){
     var root= tmp.resolve("root");
     UserError.root= root;
