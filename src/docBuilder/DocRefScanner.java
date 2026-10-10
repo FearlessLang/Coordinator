@@ -68,7 +68,7 @@ final class DocRefScanner{
       var sel= selector();
       if (!ok){ return Optional.empty(); }
       if (sel.isEmpty()){ return receiver.map(r->(DocRef)r); }
-      return Optional.of(new DocRef.MethodName(receiver, sel.get(), arity('(',')')));
+      return Optional.of(new DocRef.MethodName(receiver, sel.get(), arity(callArity)));
     }
 
     boolean startsSelector(){ return i < s.length() && (s.charAt(i) == '.' || opChar(i)); }
@@ -109,7 +109,7 @@ final class DocRefScanner{
     }
 
     DocRef.Receiver type(Optional<String> pkg, String name){
-      return new DocRef.TypeName(pkg, name, arity('[',']'));
+      return new DocRef.TypeName(pkg, name, arity(typeArity));
     }
 
     String word(int from){
@@ -120,19 +120,13 @@ final class DocRefScanner{
 
     //"[_,_]" or "()" only: a real argument list like "[Int]" is not an arity marker,
     //and leaves the arity unspecified with nothing consumed.
-    OptionalInt arity(char open, char close){
-      if (i >= s.length() || s.charAt(i) != open){ return OptionalInt.empty(); }
-      if (i+1 < s.length() && s.charAt(i+1) == close){ i += 2; return OptionalInt.of(0); }
-      int count= 0;
-      int at= i+1;
-      while (true){
-        if (at >= s.length() || s.charAt(at) != '_'){ return OptionalInt.empty(); }
-        count += 1;
-        at += 1;
-        if (at < s.length() && s.charAt(at) == close){ i= at+1; return OptionalInt.of(count); }
-        if (at >= s.length() || s.charAt(at) != ','){ return OptionalInt.empty(); }
-        at += 1;
-      }
+    OptionalInt arity(Pattern p){
+      var m= p.matcher(s).region(i,s.length());
+      if (!m.lookingAt()){ return OptionalInt.empty(); }
+      i= m.end();
+      return OptionalInt.of(m.group(1) == null ? 0 : (m.group(1).length()+1)/2);
     }
+    private static final Pattern typeArity= Pattern.compile("\\[(_(,_)*)?]");
+    private static final Pattern callArity= Pattern.compile("\\((_(,_)*)?\\)");
   }
 }
