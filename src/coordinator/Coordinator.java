@@ -12,6 +12,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import java.util.stream.LongStream;
 import java.util.stream.Stream;
 
@@ -53,8 +54,7 @@ public interface Coordinator {
   }
   default SourceOracle sourceOracle(Path path){ return new RealSourceOracleWithZip(path); }
   static Map<String,Boolean> pkgsBuilt(Path path){
-    var o= new RealSourceOracleWithZip(path);
-    var map= Helper.pkgMap(o,path);
+    var map= Helper.pkgMap(new RealSourceOracleWithZip(path),path);
     var ranks= map.values().stream().map(Helper::okPkgContent).toList();
     var out= Helper.out(path);
     var top= ranks.stream().mapToInt(Helper::rankNumber).max().getAsInt();
@@ -63,8 +63,7 @@ public interface Coordinator {
     for (var r: ranks){
       var pkg= Helper.pkgName(r);
       var below= ranks.stream().filter(d->Helper.rankNumber(d) < Helper.rankNumber(r)).mapToLong(d->out.pkgApiStamp(Helper.pkgName(d)));
-      var own= map.get(pkg).stream().mapToLong(Ref::lastModified);
-      var maxIn= LongStream.concat(LongStream.concat(own,below),LongStream.of(out.mapStamp())).max().getAsLong();
+      var maxIn= LongStream.concat(LongStream.concat(map.get(pkg).stream().mapToLong(Ref::lastModified),below),LongStream.of(out.mapStamp())).max().getAsLong();
       res.put(pkg,out.stillBuilt(pkg,map.get(pkg),maxIn) && (listed || Helper.rankNumber(r) != top));
     }
     return Collections.unmodifiableMap(res);
@@ -94,8 +93,7 @@ public interface Coordinator {
     return Optional.of(Collections.unmodifiableMap(res));
   }
   static ChildJvm startMain(Path project, Path base, String main, List<Path> sharedClasspath, java.util.function.Consumer<String> out){
-    var pkg= main.substring(0, main.indexOf('.'));
-    return JavaTool.startMainFromJars(runData(project,base),Push.of(genJava(project),sharedClasspath), "_"+pkg+".Main", out, main);
+    return JavaTool.startMainFromJars(runData(project,base),Push.of(genJava(project),sharedClasspath), "_"+main.substring(0, main.indexOf('.'))+".Main", out, main);
   }
   static Path genJava(Path project){ return project.resolve(outDir).resolve("gen_java"); }
   String outDir= ".fearless_out";
@@ -105,8 +103,7 @@ public interface Coordinator {
     catch(FearlessException fe){ throw Report.sourceError(fe.render(oracle)); }
   }
   default void backend(String pkgName, List<Literal> core, SourceOracle oracle, OtherPackages other, CapabilityEnvironment capabilities){
-    var tools= backendTools(pkgName,oracle,other,core,capabilities);
-    new NaiveBackendLogicMain().of(tools,sharedClasspath());
+    new NaiveBackendLogicMain().of(backendTools(pkgName,oracle,other,core,capabilities),sharedClasspath());
   }
   default BackendTools backendTools(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, CapabilityEnvironment capabilities){
     var unused= Path.of("unused");
@@ -143,9 +140,7 @@ class Helper{
   static LinkedHashMap<String,List<Ref>> pkgMap(SourceOracle o, Path path){
     if (o.allFiles().stream().noneMatch(Helper::isFear)){ throw Report.projectEmpty(path); }
     o.allFiles().stream().filter(Helper::isFear).forEach(Helper::pkgName);//err if not under a pkg
-    var map= new LinkedHashMap<String,List<Ref>>();
-    for (Ref u:o.allFiles()){ pkgNameOpt(u).ifPresent(pn->map.computeIfAbsent(pn,_->new ArrayList<>()).add(u)); }
-    return map;
+    return o.allFiles().stream().filter(u->pkgNameOpt(u).isPresent()).collect(Collectors.groupingBy(Helper::pkgName,LinkedHashMap::new,Collectors.toList()));
   }
   static int rankNumber(Ref u){
     var m= rankName.matcher(isFear(u) ? Fs.fileNameWithoutExtension(u.fearPath()) : "");
@@ -166,7 +161,6 @@ class Helper{
   }
   static String pkgName(Ref u){ return pkgNameOpt(u).orElseThrow(()->Report.projectNoPackageSegment(u)); }
 
-  private static final Set<String> reservedPkgNames= Set.of("base","rank");
   static Optional<String> pkgNameOpt(Ref u){
     var candidates= Stream.of(u.fearPath().split("/"))
       .filter(s->s.startsWith("_") && !s.contains("."))
@@ -175,7 +169,7 @@ class Helper{
     if (candidates.size() != 1){ throw Report.projectAmbiguousPackageSegment(u, candidates); }
     var pkg= candidates.getFirst().substring(1);
     if (!TName.isPkgName(pkg)){ throw Report.projectBadPackageName(u, candidates.getFirst()); }
-    if (reservedPkgNames.contains(pkg)){ throw Report.projectReservedPackageName(u, candidates.getFirst()); }
+    if (List.of("base","rank").contains(pkg)){ throw Report.projectReservedPackageName(u, candidates.getFirst()); }
     return Optional.of(pkg);
   }
 }
