@@ -77,7 +77,7 @@ public sealed interface Info{
       while(true){
         if (!more()){ throw err(from(start),"This string is never closed with a matching \"."); }
         var c= peek();
-        if (c == '"'){ var end= here(); advance(); return new Str(sb.toString(),between(start,end)); }
+        if (c == '"'){ var span= from(start); advance(); return new Str(sb.toString(),span); }
         if (c == '\n'){ throw err(here(),"A string cannot contain a raw newline; write \\n instead."); }
         if (c == '\\'){ advance(); sb.append(escape()); continue; }
         sb.append(advance());
@@ -88,8 +88,7 @@ public sealed interface Info{
       var at= here();
       var c= advance();
       return switch(c){
-        case '"' -> '"';
-        case '\\' -> '\\';
+        case '"', '\\' -> c;
         case 'n' -> '\n';
         default -> throw err(from(at),"Unknown escape \\"+c+": only \\\", \\\\ and \\n exist.");
       };
@@ -116,7 +115,7 @@ public sealed interface Info{
       while(true){
         ws();
         if (!more()){ throw err(from(start),"This "+what+" is never closed with a matching "+close+"."); }
-        if (peek() == close && (afterItem || items.isEmpty())){ var end= here(); advance(); return make.apply(items,between(start,end)); }
+        if (peek() == close && (afterItem || items.isEmpty())){ var span= from(start); advance(); return make.apply(items,span); }
         if (!afterItem){ items.add(item.get()); afterItem= true; continue; }
         if (peek() != ','){ throw err(here(),"Expected ',' or '"+close+"' here, to continue or to close the "+what+"."); }
         advance();
@@ -125,10 +124,8 @@ public sealed interface Info{
     }
     private void ws(){
       while(more()){
-        var c= peek();
-        if (c == ' ' || c == '\n'){ advance(); continue; }
-        var comment= c == '/' && i+1 < text.length() && text.charAt(i+1) == '/';
-        if (!comment){ return; }
+        if (peek() == ' ' || peek() == '\n'){ advance(); continue; }
+        if (!text.startsWith("//",i)){ return; }
         while(more() && peek() != '\n'){ advance(); }
       }
     }
@@ -142,10 +139,7 @@ public sealed interface Info{
       return c;
     }
     private Span here(){ return new Span(uri,line,col,line,col); }
-    private Span from(Span start){ return between(start,here()); }
-    private Span between(Span start, Span end){
-      return new Span(uri,start.startLine(),start.startCol(),end.startLine(),end.startCol());
-    }
+    private Span from(Span start){ return new Span(uri,start.startLine(),start.startCol(),line,col); }
     private UserError err(Span span, String msg){ return Info.err(text,span,msg); }
   }
 }
