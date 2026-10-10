@@ -14,7 +14,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import core.*;
-import utils.Pos;
+import tools.Fs;
 import utils.Range;
 
 final class HtmlDocRenderer{
@@ -551,15 +551,7 @@ code{
   String shortTitle(TypeDoc t){
     if (!t.main().infName()){ return typeTitle(t); }
     var p= t.main().pos();
-    return "Anon@"+shortFile(p)+":"+p.line();
-  }
-
-  String shortFile(Pos p){
-    var s= p.fileName().toString();
-    var slash= s.lastIndexOf('/');
-    if (slash >= 0){ s= s.substring(slash+1); }
-    if (s.endsWith(".fear")){ s= s.substring(0,s.length()-5); }
-    return s;
+    return "Anon@"+Fs.fileNameWithExtension(p.fileName().toString()).replaceFirst("\\.fear$","")+":"+p.line();
   }
 
   String typeLink(T.C c){
