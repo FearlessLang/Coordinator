@@ -1,4 +1,5 @@
 // java --module-path ../../../Commons/Commons.jar --add-modules Commons scripts/TestAgentTools.java <desk> <agent> [TestClassName] <channelFolder> <filesIOFolder>
+// a round of these tests follows scripts/agent_tools_protocol.txt
 package scripts;
 
 import java.nio.file.Path;
