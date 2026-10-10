@@ -31,7 +31,7 @@ record MiddleLayer(Coordinator coordinator, Layer next, LinkedHashMap<String,Lis
       private void compilePkg(String pkg, List<Ref> files){
         long maxSrc= files.stream().mapToLong(Ref::lastModified).max().getAsLong();
         long maxIn= Math.max(maxSrc, other.stamp());//out.mapStamp() must be <= then other.watermark() since it comes from next
-        if (out.stillBuilt(pkg, files, maxIn)){ nextOther = out.addCachedPkgApi(nextOther, pkg); return; }
+        if (out.stillBuilt(pkg, files, maxIn)){ nextOther= out.addCachedPkgApi(nextOther, pkg); return; }
         var rich= SourceOracleWithAutoload.of(src, "_"+pkg);
         List<Literal> core= coordinator.frontend(pkg, rich.sources(files), rich.oracle(), other,other.virtualizationMap().getOrDefault(pkg,Map.of()));
         var mains= MainsInfo.of(core, src, stLib());
@@ -40,7 +40,7 @@ record MiddleLayer(Coordinator coordinator, Layer next, LinkedHashMap<String,Lis
         out.commitMains(pkg, mains);
         out.commitBuilt(pkg, files, maxIn);
         var map= AllLs.of(core).values().stream().collect(Collectors.toUnmodifiableMap (Literal::name, d->d));
-        nextOther = nextOther.mergeWith(map,Math.max(nextOther.stamp(),newStamp));
+        nextOther= nextOther.mergeWith(map,Math.max(nextOther.stamp(),newStamp));
       }};
     pkgs.forEach(res::compilePkg);
     return res.nextOther;
