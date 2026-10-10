@@ -586,7 +586,7 @@ File:
   }
   private static UserError claim(SourceOracle src, Literal l, String msg){
     var owner= owner(l);
-    return new UserError(Message.of(src::loadString,List.of(new Frame(owner,l.span().inner)),owner.substring(0,1).toUpperCase()+owner.substring(1)+msg));
+    return new UserError(Message.of(src::loadString,List.of(new Frame(owner,l.span().inner)),Character.toUpperCase(owner.charAt(0))+owner.substring(1)+msg));
   }
   private static UserError claim(SourceOracle src, Literal l, T.C c, String msg){ return claim(src,l," implements "+disp(repr(c))+".\n"+msg); }
   private static String withArity(TName n){ return n.s()+Join.of(Collections.nCopies(n.arity(),"_"),"[",",","]",""); }
