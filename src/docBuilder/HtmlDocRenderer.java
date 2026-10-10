@@ -16,6 +16,7 @@ import java.util.stream.Stream;
 
 import core.*;
 import tools.Fs;
+import utils.Join;
 import utils.Range;
 
 final class HtmlDocRenderer{
@@ -121,11 +122,7 @@ final class HtmlDocRenderer{
   }
 
   void renderTypeText(StringBuilder sb, TypeDoc t, Map<DocOcc,Object> claims){
-    sb.append(typeTitle(t));
-    if (!t.main().cs().isEmpty()){
-      sb.append(" : ").append(t.main().cs().stream().map(toStr::typeName).collect(Collectors.joining(", ")));
-    }
-    sb.append('\n');
+    sb.append(typeTitle(t)).append(Join.of(t.main().cs().stream().map(toStr::typeName)," : ",", ","","")).append('\n');
     renderDocText(sb,"  ",t,t.docs,claims);
     visibleMethods(t).forEach(m->renderMethodText(sb,m,claims));
     sb.append('\n');
@@ -137,11 +134,7 @@ final class HtmlDocRenderer{
   void renderMethodText(StringBuilder sb, MethodDoc m, Map<DocOcc,Object> claims){
     sb.append('\t').append(toStr.sig(m.main().sig())).append('\n');
     if (m.declared){ renderDocText(sb,"    ",m,m.docs,claims); }
-    var refs= fromRefs(m);
-    if (refs.isEmpty()){ return; }
-    sb.append("    from: ").append(refs.stream()
-      .map(r->refName(r)+r.method().sig().m())
-      .collect(Collectors.joining(", "))).append('\n');
+    sb.append(Join.of(fromRefs(m).stream().map(r->refName(r)+r.method().sig().m()),"    from: ",", ","\n",""));
   }
 
   static List<DocOcc> visibleDocs(Object owner, List<DocOcc> docs, Map<DocOcc,Object> claims){
@@ -372,13 +365,7 @@ code{
     sb.append("<section class=\"type\" id=\"").append(typeId(t)).append("\">\n")
       .append("<h2>").append(h(typeTitle(t))).append("</h2>\n");
     renderDoc(sb,t,t.docs,claims);
-    if (!t.main().cs().isEmpty()){
-      sb.append("<p class=\"extends\"><b>Extends:</b> ")
-        .append(t.main().cs().stream()
-          .map(this::typeLink)
-          .collect(Collectors.joining(", ")))
-        .append("</p>\n");
-    }
+    sb.append(Join.of(t.main().cs().stream().map(this::typeLink),"<p class=\"extends\"><b>Extends:</b> ",", ","</p>\n",""));
     renderVariants(sb,"Typed literal variants",t.variants,toStr::lit);
     sb.append("<h3>Methods</h3>\n");
     visibleMethods(t).forEach(m->renderMethod(sb,m,claims));
@@ -389,16 +376,9 @@ code{
       .append("<summary><span class=\"disclosure\">&#9656;</span><span class=\"sig\">")
       .append(renderSig(m)).append("</span></summary>\n");
     if (m.declared){ renderDoc(sb,m,m.docs,claims); }
-    renderFrom(sb,m);
+    sb.append(Join.of(fromRefs(m).stream().map(this::fromLink),"<p class=\"doc from\">From: ",", ",".</p>\n",""));
     renderVariants(sb,"Typed method variants",m.variants,v->toStr.sig(v.sig()));
     sb.append("</details>\n");
-  }
-  void renderFrom(StringBuilder sb, MethodDoc m){
-    var refs= fromRefs(m);
-    if (refs.isEmpty()){ return; }
-    sb.append("<p class=\"doc from\">From: ")
-      .append(refs.stream().map(this::fromLink).collect(Collectors.joining(", ")))
-      .append(".</p>\n");
   }
   String fromLink(MethodRef r){
     return "<a href=\""+h(linkTo(r.owner(),r.method()))+"\">"+h(refName(r))+h(r.method().sig().m().toString())+"</a>";
@@ -452,10 +432,7 @@ code{
   }
 
   void renderExamples(StringBuilder sb, List<String> examples){
-    if (examples.isEmpty()){ return; }
-    sb.append("<details class=\"examples\"><summary><span class=\"disclosure\">&#9656;</span>runnable example</summary>\n<pre class=\"example\">")
-      .append(examples.stream().map(HtmlDocRenderer::h).collect(Collectors.joining("\n")))
-      .append("</pre></details>\n");
+    sb.append(Join.of(examples.stream().map(HtmlDocRenderer::h),"<details class=\"examples\"><summary><span class=\"disclosure\">&#9656;</span>runnable example</summary>\n<pre class=\"example\">","\n","</pre></details>\n",""));
   }
 
   //an empty doc line is where the author put a paragraph break; the lines between two
@@ -546,8 +523,7 @@ code{
   String typeTitle(TypeDoc t){
     var l= t.main();
     if (l.infName()){ return "anonymous literal at "+l.pos(); }
-    if (l.bs().isEmpty()){ return toStr.typeNameWithArity(l.name()); }
-    return toStr.typeName(l.name())+l.bs().stream().map(B::compactToString).collect(Collectors.joining(",","[","]"));
+    return toStr.typeName(l.name())+Join.of(l.bs().stream().map(B::compactToString),"[",",","]","");
   }
   String shortTitle(TypeDoc t){
     if (!t.main().infName()){ return typeTitle(t); }
