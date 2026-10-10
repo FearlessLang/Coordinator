@@ -11,6 +11,7 @@ import tools.JavacTool;
 import tools.JavaTool;
 import tools.PortableApp;
 import utils.OneOr;
+import utils.Push;
 
 public class ModularBuild{
   static final Path out= ResolveResource.coordinatorSrc.getParent().getParent().resolve("out").resolve("modular");
@@ -33,9 +34,7 @@ public class ModularBuild{
   static void coordinatorTest(){ test(ResolveResource.coordinatorSrc, "coordinator-test", resources); }
   static void controllerTest(){ test(ResolveResource.controllerSrc, "controller-test", resources); }
   static void test(Path src, String name, Path... extra){
-    var srcs= new ArrayList<>(List.of(src, src.getParent().resolve("test"), src.getParent().resolve("testModule")));
-    srcs.addAll(List.of(extra));
-    JavacTool.javac(srcs, out.resolve(name), mods);
+    JavacTool.javac(Push.<Path>of(List.of(src, src.getParent().resolve("test"), src.getParent().resolve("testModule")), List.of(extra)), out.resolve(name), mods);
   }
   static void buildJar(String name, List<Path> srcs){ buildJar(name, srcs, List.of()); }
   static void buildJar(String name, List<Path> srcs, List<String> extraLintDisables){
@@ -45,10 +44,9 @@ public class ModularBuild{
   }
 
   static void runJUnit(Path testClasses, String... extraArgs) throws InterruptedException{
-    var args= new ArrayList<String>(List.of("execute",
+    var args= Push.<String>of(List.of("execute",
       "--class-path", testClasses.toString(), "--scan-class-path="+testClasses,
-      "--include-classname=.*", "--details=summary", "--disable-ansi-colors"));
-    args.addAll(List.of(extraArgs));
+      "--include-classname=.*", "--details=summary", "--disable-ansi-colors"), List.of(extraArgs));
     JavaTool.runMain(List.of("-ea"), testClasses, mods, "org.junit.platform.console.ConsoleLauncher", args.toArray(String[]::new));
   }
 
