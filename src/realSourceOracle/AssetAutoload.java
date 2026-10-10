@@ -1,7 +1,7 @@
 package realSourceOracle;
 
-import java.util.Arrays;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import tools.SourceOracle;
 import utils.Bug;
@@ -32,19 +32,9 @@ final class AssetAutoload{
   }
 
   private static String portableZipPath(String path){
-    return Arrays.stream(path.split("/", -1))
-      .map(AssetAutoload::portableSegment)
-      .collect(Collectors.joining("/"));
-  }
-
-  private static String portableSegment(String s){
-    if (
-      s.isEmpty()
-      || s.startsWith(".")
-      || s.indexOf('/') >= 0
-      || s.indexOf('\\') >= 0
-      || s.indexOf(';') >= 0
-      ){ throw Bug.of(s); }
-    return s;
+    Stream.of(path.split("/", -1))
+      .filter(s->s.isEmpty() || s.startsWith(".") || s.indexOf('\\') >= 0 || s.indexOf(';') >= 0)
+      .findFirst().ifPresent(s->{ throw Bug.of(s); });
+    return path;
   }
 }
