@@ -537,6 +537,21 @@ final class DocBuilderTest{
     assertFalse(text.contains("Hidden"), "an undocumented anonymous literal must not reach the text doc either: "+text);
   }
 
+  @Test void aDocumentedAnonymousLiteralIsListedByItsFileAndLineAndTitledByItsPosition(){
+    var at= Pos.of(file,2,1);
+    var src= new Src(new Src.SrcObj(){
+      @Override public Pos pos(){ return at; }
+      @Override public TSpan span(){ return TSpan.fromPos(at,1); }
+    });
+    var anon= new Literal(RC.imm, new TName("pkg.Anon",0,at), List.of(), List.of(), "this", List.of(), src, true);
+    SourceOracle oracle= SourceOracle.debugBuilder().putURI(file, "\nx /// the anonymous one\n").build();
+    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(anon), Optional.empty());
+    builder.visitLiteral(anon);
+    var html= new HtmlDocRenderer("pkg", Map.of(), builder.types, OtherPackages.empty(), Map.of(), Optional.empty()).render();
+    assertTrue(html.contains(">Anon@a:2<"), html);
+    assertTrue(html.contains("anonymous literal at "), html);
+  }
+
   @Test void renderTextProducesAPlainSignatureLineWithNoPlaceholderForMissingDocs(){
     var ownerName= new TName("pkg.Holder",0,Pos.unknown);
     var bar= namedMethod(".bar", ownerName);
