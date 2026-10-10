@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.BiFunction;
 import java.util.function.Supplier;
 
 import metaParser.Frame;
@@ -114,22 +115,10 @@ public sealed interface Info{
         default -> throw err(from(at),"Unknown escape \\"+c+": only \\\", \\\\ and \\n exist.");
       };
     }
-    private Lst list(){
-      var start= here();
-      advance();
-      var items= seq(start,']',"list",this::value);
-      var end= here();
-      advance();
-      return new Lst(items,between(start,end));
-    }
+    private Lst list(){ return seq(']',"list",this::value,Lst::new); }
     private Obj obj(){
-      var start= here();
-      advance();
       var seen= new HashSet<String>();
-      var fields= seq(start,'}',"object",()->field(seen));
-      var end= here();
-      advance();
-      return new Obj(fields,between(start,end));
+      return seq('}',"object",()->field(seen),Obj::new);
     }
     private Obj.Field field(HashSet<String> seen){
       if (peek() != '"'){ throw err(here(),"Expected a quoted key \"...\" here."); }
@@ -140,18 +129,19 @@ public sealed interface Info{
       advance();
       return new Obj.Field(key.value(),key.span(),value());
     }
-    private <T> List<T> seq(Span start, char close, String what, Supplier<T> item){
+    private <T,R> R seq(char close, String what, Supplier<T> item, BiFunction<List<T>,Span,R> make){
+      var start= here();
+      advance();
       var items= new ArrayList<T>();
+      var afterItem= false;
       while(true){
         ws();
         if (!more()){ throw err(from(start),"This "+what+" is never closed with a matching "+close+"."); }
-        if (peek() == close && items.isEmpty()){ return items; }
-        items.add(item.get());
-        ws();
-        if (!more()){ throw err(from(start),"This "+what+" is never closed with a matching "+close+"."); }
-        if (peek() == close){ return items; }
+        if (peek() == close && (afterItem || items.isEmpty())){ var end= here(); advance(); return make.apply(items,between(start,end)); }
+        if (!afterItem){ items.add(item.get()); afterItem= true; continue; }
         if (peek() != ','){ throw err(here(),"Expected ',' or '"+close+"' here, to continue or to close the "+what+"."); }
         advance();
+        afterItem= false;
       }
     }
     private void ws(){
