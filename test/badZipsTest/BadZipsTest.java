@@ -12,7 +12,7 @@ import resources.ResolveResource;
 import realSourceOracle.RealSourceOracleWithZip;
 import testHelperFs.FsDsl;
 
-public class BadZipsTest{
+final class BadZipsTest{
   static{ utils.Err.setUp(AssertionFailedError.class, Assertions::assertEquals, Assertions::assertTrue); }
   static Path root= ResolveResource.badZipCorpous;
   public static void runErrIOE(String in, String expected){

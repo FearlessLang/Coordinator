@@ -4,7 +4,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 import tools.Fs;
 
-public class FsExtSegTest{
+final class FsExtSegTest{
   private static void ok(String s){ assertTrue(Fs.isExtSeg(s)); }
   private static void ko(String s){ assertFalse(Fs.isExtSeg(s)); }
   @Test void oneChar(){ ok("a"); }
