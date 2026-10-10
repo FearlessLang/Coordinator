@@ -28,7 +28,6 @@ public final class HtmlDocBuilder{
     assert nonNull(oracle,other,core,baseDocLocation);
     this.oracle= oracle;
     this.other= other;
-    this.core= core;
     this.baseDocLocation= baseDocLocation;
     this.currentByName= core.stream().collect(Collectors.toUnmodifiableMap(Literal::name,l->l));
   }
@@ -36,14 +35,11 @@ public final class HtmlDocBuilder{
 
   final SourceOracle oracle;
   final OtherPackages other;
-  final List<Literal> core;
   final Map<TName,Literal> currentByName;
 
   String pkgName;
   Path htmlPath;
-  Path textPath;
   Path testPath;
-  Map<String,String> uses= Map.of();
 
   final List<TypeDoc> types= new ArrayList<>();
   final IdentityHashMap<Src,TypeDoc> typeBySrc= new IdentityHashMap<>();
@@ -54,9 +50,7 @@ public final class HtmlDocBuilder{
     assert this.pkgName == null;
     this.pkgName= pkgName;
     this.htmlPath= htmlPath;
-    this.textPath= htmlPath.resolveSibling(pkgName+".txt");
     this.testPath= testPath;
-    this.uses= DocNames.uses(pkgName,core);
   }
 
   public void visitLiteral(Literal l){
@@ -84,9 +78,9 @@ public final class HtmlDocBuilder{
     sources.values().stream().flatMap(s->s.ambiguousInline.stream()).map(this::ambiguousInline).forEach(problems::add);
     types.forEach(t->linkType(resolver,t,spans,problems));
     if (!problems.isEmpty()){ throw Report.docReferences(problems); }
-    var renderer= new HtmlDocRenderer(pkgName,uses,types,other,spans,baseDocLocation);
+    var renderer= new HtmlDocRenderer(pkgName,DocNames.uses(pkgName,currentByName.values()),types,other,spans,baseDocLocation);
     Fs.writeUtf8(htmlPath,renderer.render());
-    Fs.writeUtf8(textPath,renderer.renderText());
+    Fs.writeUtf8(htmlPath.resolveSibling(pkgName+".txt"),renderer.renderText());
     writeTest(renderer);
   }
 
