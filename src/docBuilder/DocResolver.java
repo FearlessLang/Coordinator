@@ -99,15 +99,12 @@ record DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other){
     if (local.isPresent()){
       return local.get().methods.stream()
         .filter(MethodDoc::visible)
-        .filter(m->m.main().sig().m().s().equals(selector))
-        .filter(m->arity.isEmpty() || m.main().sig().m().arity()==arity.getAsInt())
+        .filter(m->named(m.main(),selector,arity))
         .gather(DistinctBy.<MethodDoc,String>of(m->HtmlDocRenderer.methodId(owner,m.main())))
         .map(m->Candidate.ofLocalMethod(owner,m))
         .toList();
     }
-    var lit= other.__of(owner);
-    if (lit == null){ return List.of(); }
-    return foreignCandidates(owner, declaredAndInherited(lit), selector, arity).toList();
+    return literalOf(owner).stream().flatMap(lit->foreignCandidates(owner, declaredAndInherited(lit), selector, arity)).toList();
   }
 
   private Optional<TypeDoc> localTypeDoc(TName n){
@@ -132,25 +129,22 @@ record DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other){
       .filter(TypeDoc::visible)
       .flatMap(t->t.methods.stream()
         .filter(MethodDoc::visible)
-        .filter(m->m.main().sig().m().s().equals(selector))
-        .filter(m->arity.isEmpty() || m.main().sig().m().arity()==arity.getAsInt())
+        .filter(m->named(m.main(),selector,arity))
         .map(m->Candidate.ofLocalMethod(t.main().name(),m)));
     var foreignCands= other.dom().stream()
-      .flatMap(n->foreignCandidates(n,selector,arity));
+      .flatMap(n->foreignCandidates(n,other.__of(n).ms(),selector,arity));
     return pack(selector+shape(arity,"(",")"), Stream.concat(localCands,foreignCands).toList());
   }
 
-  private Stream<Candidate> foreignCandidates(TName owner, String selector, OptionalInt arity){
-    var lit= other.__of(owner);
-    if (lit == null){ return Stream.empty(); }
-    return foreignCandidates(owner, lit.ms(), selector, arity);
-  }
   private Stream<Candidate> foreignCandidates(TName owner, List<M> ms, String selector, OptionalInt arity){
     return ms.stream()
-      .filter(m->m.sig().m().s().equals(selector))
-      .filter(m->arity.isEmpty() || m.sig().m().arity()==arity.getAsInt())
+      .filter(m->named(m,selector,arity))
       .gather(DistinctBy.<M,Integer>of(m->m.sig().m().arity()))
-      .map(m->Candidate.ofForeignMethod(owner,selector,m.sig().m().arity()));
+      .map(m->new Candidate(owner,Optional.of(selector),OptionalInt.of(m.sig().m().arity()),Optional.empty()));
+  }
+
+  private static boolean named(M m, String selector, OptionalInt arity){
+    return m.sig().m().s().equals(selector) && (arity.isEmpty() || m.sig().m().arity()==arity.getAsInt());
   }
 
   static String shape(OptionalInt arity, String open, String close){
