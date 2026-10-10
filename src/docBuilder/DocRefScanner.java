@@ -48,10 +48,6 @@ final class DocRefScanner{
   }
   private static final Pattern word= Pattern.compile("[\\p{L}\\p{Nd}_']+");
 
-  static boolean isWordChar(char c){
-    return Character.isLetterOrDigit(c) || c == '_' || c == '\'';
-  }
-
   /// One reference, read left to right: an optional receiver, then an optional
   /// selector. Each name is handed to core to be judged.
   private static final class Parse{
@@ -113,9 +109,8 @@ final class DocRefScanner{
     }
 
     String word(int from){
-      int end= from;
-      while (end < s.length() && isWordChar(s.charAt(end))){ end += 1; }
-      return s.substring(Math.min(from,s.length()), end);
+      var m= word.matcher(s).region(Math.min(from,s.length()), s.length());
+      return m.lookingAt() ? m.group() : "";
     }
 
     //"[_,_]" or "()" only: a real argument list like "[Int]" is not an arity marker,
