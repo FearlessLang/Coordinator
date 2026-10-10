@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import userMessages.Violation;
 import core.B;
@@ -50,13 +51,9 @@ final class LimitedJsonParser{
     return res;
   }
   Map<TName,Literal> apiJsonToMap(){
-    var out= new LinkedHashMap<TName,Literal>();
-    for (var x: end(arr())){
-      var lit= typeLit(asArr(x));
-      if (out.put(lit.name(), lit) != null){ throw err("Duplicate type "+lit.name().s()); }
-    }
-    return Collections.unmodifiableMap(out);
+    return Collections.unmodifiableMap(end(arr()).stream().map(x->typeLit(asArr(x))).collect(Collectors.toMap(Literal::name,l->l,this::dup,LinkedHashMap::new)));
   }
+  private Literal dup(Literal a, Literal b){ throw err("Duplicate type "+a.name().s()); }
   private Literal typeLit(List<Object> a){
     if (a.size() != 6){ throw err("Bad type record size"); }
     var nameS= asStr(a.get(0));
@@ -80,10 +77,8 @@ final class LimitedJsonParser{
     var tag= asStr(a.get(7));
     boolean abs= tag.equals("abs");
     if (!abs && !tag.equals("concrete")){ throw err("Bad abs/concrete tag"); }
-    var sig= new Sig(rc, new MName(nameS, ts.size()), bs, ts, ret,
-      new TName(originS, originA, Pos.unknown), abs, dummySpan());
-    var xs= IntStream.range(0, ts.size()).mapToObj(j->"x"+j).toList();
-    return new M(sig, xs, Optional.empty());
+    return new M(new Sig(rc, new MName(nameS, ts.size()), bs, ts, ret, new TName(originS, originA, Pos.unknown), abs, dummySpan()),
+      IntStream.range(0, ts.size()).mapToObj(j->"x"+j).toList(), Optional.empty());
   }
   private int nat(Object o){
     try{ return Integer.parseInt("+"+asStr(o)); }//to reject negatives
@@ -108,11 +103,10 @@ final class LimitedJsonParser{
       return new T.RCC(RC.valueOf(rc), cFrom(a.subList(2, a.size())), dummySpan());
     }
     if (!k.equals("x")){ throw err("Bad T kind"); }
-    if (a.size() == 2){ return new T.X(asStr(a.get(1)), dummySpan()); }
-    if (a.size() != 3){ throw err("Bad x T"); }
-    var n= asStr(a.get(2));
-    if (rc.equals("read/imm")){ return new T.ReadImmX(new T.X(n, dummySpan())); }
-    return new T.RCX(RC.valueOf(rc), new T.X(n, dummySpan()));
+    if (a.size() > 3){ throw err("Bad x T"); }
+    var x= new T.X(asStr(a.getLast()), dummySpan());
+    if (a.size() == 2){ return x; }
+    return rc.equals("read/imm") ? new T.ReadImmX(x) : new T.RCX(RC.valueOf(rc), x);
   }
   private List<Object> arr(){
     req('['); if (eat(']')){ return List.of(); }
@@ -122,19 +116,16 @@ final class LimitedJsonParser{
   private Object val(){
     ws();
     if (i >= s.length()){ throw err("Unexpected end"); }
-    char c= s.charAt(i);
-    if (c == '"'){ return str(); }
-    if (c == '['){ return arr(); }
+    if (s.charAt(i) == '"'){ return str(); }
+    if (s.charAt(i) == '['){ return arr(); }
     throw err("Expected string or array");
   }
   private String str(){
-    ws(); req('"');
+    req('"');
     int j= i;
     for (; i < s.length() && s.charAt(i) != '"'; i += s.charAt(i) == '\\' ? 2 : 1){}
     if (i >= s.length()){ throw err("Unterminated string"); }
-    var out= s.substring(j, i).replaceAll("\\\\(.)", "$1");
-    i += 1;
-    return out;
+    return s.substring(j, i++).replaceAll("\\\\(.)", "$1");
   }
   private String asStr(Object o){
     if (o instanceof String s){ return s; }
