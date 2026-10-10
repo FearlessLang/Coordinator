@@ -1,7 +1,5 @@
 package docBuilder;
 
-import static offensiveUtils.Require.*;
-
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -18,6 +16,7 @@ import core.E.*;
 import metaParser.Frame;
 import metaParser.Message;
 import metaParser.Span;
+import offensiveUtils.Require;
 import tools.Fs;
 import tools.SourceOracle;
 import userMessages.Report;
@@ -25,7 +24,7 @@ import utils.Bug;
 
 public final class HtmlDocBuilder{
   public HtmlDocBuilder(SourceOracle oracle, OtherPackages other, List<Literal> core, Optional<Path> baseDocLocation){
-    assert nonNull(oracle,other,core,baseDocLocation);
+    assert Require.nonNull(oracle,other,core,baseDocLocation);
     this.oracle= oracle;
     this.other= other;
     this.core= core;
@@ -50,7 +49,7 @@ public final class HtmlDocBuilder{
   final Map<URI,SourceDocs> sources= new HashMap<>();
 
   public void packageLocation(String pkgName, Path htmlPath, Path testPath){
-    assert nonNull(pkgName,htmlPath,testPath);
+    assert Require.nonNull(pkgName,htmlPath,testPath);
     assert this.pkgName == null;
     this.pkgName= pkgName;
     this.htmlPath= htmlPath;
@@ -60,7 +59,7 @@ public final class HtmlDocBuilder{
   }
 
   public void visitLiteral(Literal l){
-    assert nonNull(l);
+    assert Require.nonNull(l);
     var t= typeBySrc.get(l.src());
     if (t == null){
       t= new TypeDoc(l,docsForLiteral(l));
@@ -75,7 +74,7 @@ public final class HtmlDocBuilder{
   }
 
   public void complete(){
-    assert nonNull(pkgName,htmlPath);
+    assert Require.nonNull(pkgName,htmlPath);
     var resolver= new DocResolver(pkgName,types,other);
     var spans= new IdentityHashMap<DocOcc,List<ResolvedSpan>>();
     var problems= new ArrayList<String>();

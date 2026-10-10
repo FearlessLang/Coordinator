@@ -1,7 +1,5 @@
 package docBuilder;
 
-import static offensiveUtils.Require.*;
-
 import java.nio.file.Path;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -15,13 +13,14 @@ import java.util.stream.Stream;
 
 import core.*;
 import core.E.*;
+import offensiveUtils.Require;
 import utils.Pos;
 import utils.Range;
 
 final class HtmlDocRenderer{
   HtmlDocRenderer(String pkgName, Map<String,String> uses, List<TypeDoc> types, OtherPackages other,
       Map<DocOcc,List<ResolvedSpan>> spans, Optional<Path> baseDocLocation){
-    assert nonNull(pkgName,uses,types,other,spans,baseDocLocation);
+    assert Require.nonNull(pkgName,uses,types,other,spans,baseDocLocation);
     this.pkgName= pkgName;
     this.uses= uses;
     this.types= types;

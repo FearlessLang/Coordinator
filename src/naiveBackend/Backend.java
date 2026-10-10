@@ -1,7 +1,5 @@
 package naiveBackend;
 
-import static offensiveUtils.Require.*;
-
 import java.math.BigInteger;
 import java.nio.file.*;
 import java.util.*;
@@ -12,6 +10,7 @@ import java.util.stream.Stream;
 
 import core.*;
 import core.E.*;
+import offensiveUtils.Require;
 import tools.Fs;
 import utils.Join;
 import utils.Pos;
@@ -19,7 +18,7 @@ import utils.Range;
 
 public class Backend{
   public Backend(Path out, BackendTools tools){
-    assert nonNull(out,tools);
+    assert Require.nonNull(out,tools);
     this.out= out;
     this.tools= tools;
   }
