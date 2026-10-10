@@ -350,7 +350,7 @@ code{
 
   Map<DocOcc,Object> inlineClaims(List<TypeDoc> shown){
     var res= new HashMap<DocOcc,Object>();
-    for (var t:shown){
+    for (var t: shown){
       t.docs.stream().filter(DocOcc::inline).forEach(c->res.put(c,t));
       visibleMethods(t).forEach(m->
         m.docs.stream().filter(DocOcc::inline).forEach(c->res.put(c,m)));

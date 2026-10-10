@@ -138,7 +138,7 @@ public final class BuildWithZip{
   }
   private static void checkExtSeg(RefParent kid, String seg){
     if (seg.length() > Fs.maxExtSeg){ throw Report.extLenMustBe1To16(kid); }
-    for (char c : seg.toCharArray()){
+    for (var c: seg.toCharArray()){
       if (!Fs.isExtSegChar(c)){ throw Report.extInvalidChar(kid, c); }
     }
   }

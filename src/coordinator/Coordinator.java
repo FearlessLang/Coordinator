@@ -143,13 +143,13 @@ class Helper{
     if (o.allFiles().stream().noneMatch(Helper::isFear)){ throw Report.projectEmpty(path); }
     o.allFiles().stream().filter(Helper::isFear).forEach(Helper::pkgName);//err if not under a pkg
     var map= new LinkedHashMap<String,List<Ref>>();
-    for (Ref u:o.allFiles()){ pkgNameOpt(u).ifPresent(pn->map.computeIfAbsent(pn,_->new ArrayList<>()).add(u)); }
+    for (var u: o.allFiles()){ pkgNameOpt(u).ifPresent(pn->map.computeIfAbsent(pn,_->new ArrayList<>()).add(u)); }
     return map;
   }
   static Layer layers(Coordinator coordinator, Map<String,List<Ref>> map, Layer l, List<Ref> ranks){
     int lastNum= rankNumber(ranks.getFirst());
     var pkgs= new LinkedHashMap<String, List<Ref>>();
-    for (Ref u:ranks){
+    for (var u: ranks){
       if (rankNumber(u) != lastNum){ l= new MiddleLayer(coordinator,l,pkgs); pkgs= new LinkedHashMap<>(); lastNum= rankNumber(u); }
       pkgs.put(pkgName(u),map.get(pkgName(u)));
     }

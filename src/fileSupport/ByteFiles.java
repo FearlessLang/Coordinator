@@ -179,6 +179,6 @@ public final class ByteFiles{
     var text= e instanceof FileSystemException fs && fs.getReason() != null ? fs.getReason() : e.getMessage();
     if (text != null){ out.append(' ').append(text); }
     appendText(out, e.getCause());
-    for (var suppressed : e.getSuppressed()){ appendText(out, suppressed); }
+    for (var suppressed: e.getSuppressed()){ appendText(out, suppressed); }
   }
 }

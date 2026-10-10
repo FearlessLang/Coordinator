@@ -68,7 +68,7 @@ public final class HtmlDocBuilder{
       types.add(t);
     }
     else{ t.addVariant(l); }
-    for (var m:l.ms()){
+    for (var m: l.ms()){
       if (m.sig().origin().equals(l.name())){ t.declared(m.sig().span().pos(),m,methodDocAt(l,m),inheritedMethods(l,m)); }
       else{ t.imported(m,inheritedMethods(l,m)); }
     }

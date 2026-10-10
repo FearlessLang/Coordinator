@@ -79,7 +79,7 @@ record ProduceBody(BytecodeLineFix sb, Backend b, String iface, String thisName,
         public void _reprCacheFlush(){ var m= _reprCache; if (m != null){ m.clear(); } }
         """);
     }
-    for (var m:lit.ms()){
+    for (var m: lit.ms()){
       if (!m.sig().origin().equals(lit.name())){ continue; }
       assert m.e().isPresent();
       var jName= b.mangledMethodName(m.sig().rc(), m.sig().m());

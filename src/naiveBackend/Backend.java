@@ -40,7 +40,7 @@ public class Backend{
     var sb= new BytecodeLineFix(iface, l.pos().fileName())
       .a("package _"+tools.pkgName()+";\n")
       .a("public interface "+iface+extendsClause(l)+"{\n");
-    for (var m:l.ms()){ emitTopMethod(sb, l, m, abstractOnly); }
+    for (var m: l.ms()){ emitTopMethod(sb, l, m, abstractOnly); }
     var hasInstance= hasInstance(l, abstractOnly);
     if (hasInstance && implementsType(l,"base.InMemoryLog",1)){
       sb.a("  java.util.ArrayList<Object> _logStore= new java.util.ArrayList<>();\n");
