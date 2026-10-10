@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 import metaParser.Frame;
 import metaParser.Message;
@@ -14,7 +15,6 @@ import metaParser.Span;
 import tools.Fs;
 import userMessages.UserError;
 import utils.OneOr;
-import utils.Range;
 
 public sealed interface Info{
   Span span();
@@ -29,39 +29,18 @@ public sealed interface Info{
   static UserError err(String source, Span span, String msg){
     return new UserError(Message.of(_->source,List.of(new Frame("",span)),msg));
   }
-  static String print(Info info){
-    var sb= new StringBuilder();
-    write(info,0,sb);
-    return sb.append('\n').toString();
+  static String print(Info info){ return write(info,0)+"\n"; }
+  private static String write(Info info, int indent){
+    return switch(info){
+      case Str s -> quote(s.value());
+      case Lst l -> l.items().stream().map(i->write(i,0)).collect(Collectors.joining(", ","[","]"));
+      case Obj o -> o.fields().isEmpty() ? "{}" : o.fields().stream()
+        .map(f->"  ".repeat(indent+1)+quote(f.key())+": "+write(f.value(),indent+1))
+        .collect(Collectors.joining(",\n","{\n","\n"+"  ".repeat(indent)+"}"));
+    };
   }
-  private static void write(Info info, int indent, StringBuilder sb){
-    switch(info){
-      case Str s -> quote(s.value(),sb);
-      case Lst l -> { sb.append('['); join(l.items(),sb); sb.append(']'); }
-      case Obj o -> writeObj(o,indent,sb);
-    }
-  }
-  private static void join(List<Info> items, StringBuilder sb){
-    for (int i : Range.of(items)){
-      if (i > 0){ sb.append(", "); }
-      write(items.get(i),0,sb);
-    }
-  }
-  private static void writeObj(Obj o, int indent, StringBuilder sb){
-    if (o.fields().isEmpty()){ sb.append("{}"); return; }
-    sb.append("{\n");
-    for (int i : Range.of(o.fields())){
-      var f= o.fields().get(i);
-      sb.append("  ".repeat(indent+1));
-      quote(f.key(),sb);
-      sb.append(": ");
-      write(f.value(),indent+1,sb);
-      sb.append(i+1 < o.fields().size() ? ",\n" : "\n");
-    }
-    sb.append("  ".repeat(indent)).append('}');
-  }
-  private static void quote(String value, StringBuilder sb){
-    sb.append('"').append(value.replace("\\","\\\\").replace("\"","\\\"").replace("\n","\\n")).append('"');
+  private static String quote(String value){
+    return "\""+value.replace("\\","\\\\").replace("\"","\\\"").replace("\n","\\n")+"\"";
   }
   final class Parser{
     private final String text;
