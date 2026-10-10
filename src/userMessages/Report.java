@@ -34,14 +34,10 @@ public final class Report {
 
   //-- the shape of a project-scan message: what is wrong, how to fix it, then the rules
   private static UserError fail(String rel, String wentWrong, String howToFix){
-    String msg= "Invalid path in this project folder.\n\n"
-      + rel
-      + "\nWhat went wrong\n" + wentWrong
-      + "\n\nHow to fix\n" + howToFix+"\n\n" + rulesWall();
-    return new UserError(msg);
+    return directFail("Invalid path in this project folder.\n\n"+rel, "What went wrong\n"+wentWrong+"\n\nHow to fix\n"+howToFix);
   }
   private static UserError directFail(String rel, String msg){
-    return new UserError(rel+"\n"+msg+"\n\n" + rulesWall());
+    return new UserError(rel+"\n"+msg+"\n\n" + rulesWall);
   }
   public static final Set<String> allowedNoExtFiles= """
 readme
@@ -77,7 +73,7 @@ min.css
 
   private static String tickList(Set<String> xs){ return Join.of(xs.stream().map(x->"`"+x+"`"),"",", ",""); }
 
-  private static String rulesWall(){ return """
+  private static final String rulesWall= """
 We check this so that you do not get surprises later.
 Fearless enforces simple, portable names so the same data/repository works on Windows, Linux, and Mac,
 and in common tools such as Git/GitHub and file browsers.
@@ -121,7 +117,6 @@ Other rules (everywhere)
 - Symbolic links are not allowed.
 - Only normal files and folders are allowed.
 """.formatted(tickList(allowedNoExtFiles), tickList(allowedMultiDotExts));
-  }
 
   //-- the project folder itself
   public static UserError launchPathNotFound(Path given){ return new UserError("""
@@ -232,13 +227,12 @@ or version control systems (git).
     + "  Examples: \".txt\", \".fear\", \".md\", \".tar.gz\""
     );
   }
+  private static String listed(String label, RefParent r){ return "  "+label+":\n  "+showRel(r).replace("\nPath:", "\n  Path:")+"\n"; }
   public static UserError extensionlessMaskExtension(RefParent kid, RefParent noExtKid){
     return fail(showRel(kid),
       "- Both an allowed extensionless file and an extended file share the same base name.\n"
-    + "  Extensionless file:\n  "
-    + showRel(noExtKid).replace("\nPath:", "\n  Path:")+"\n"
-    + "  Extended file:\n  "
-    + showRel(kid).replace("\nPath:", "\n  Path:")+"\n"
+    + listed("Extensionless file", noExtKid)
+    + listed("Extended file", kid)
     + "  This is confusing in file browsers (extensions may be hidden).",
       "- Rename one of them so they are clearly distinct."
     );
@@ -246,10 +240,8 @@ or version control systems (git).
   public static UserError zipNameClashes(RefParent zipKid, RefParent otherKid, String other){
     return fail(showRel(zipKid),
       "- A zip file and a "+other+" share the same base name.\n"
-    + "  Zip file:\n  "
-    + showRel(zipKid).replace("\nPath:", "\n  Path:")+"\n"
-    + "  "+Character.toUpperCase(other.charAt(0))+other.substring(1)+":\n  "
-    + showRel(otherKid).replace("\nPath:", "\n  Path:")+"\n"
+    + listed("Zip file", zipKid)
+    + listed(Character.toUpperCase(other.charAt(0))+other.substring(1), otherKid)
     + "  Fearless expands each zip file into a folder named after it (without the\n"
     + "  \".zip\"); that folder would have the exact same name as this "+other+".",
       "- Rename one of them, or move/rename the zip file, so this name is no longer\n"
