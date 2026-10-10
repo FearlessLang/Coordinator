@@ -8,29 +8,11 @@ This project needs to know how to locate some resources on your machine.
 You need to add a file LocalResources.java (that is already in the gitignore)
 following the template LocalResourcesTemplate.java
 */
-public final class ResolveResource{
-  static public final Path stLibPath= LocalResources.stLibPath;
-  static public final Path stLibRTPath= LocalResources.stLibRTPath;
-  static public final Path stLibDebugOut= LocalResources.stLibDebugOut;
-  static public final Path integrationTests= LocalResources.integrationTests;
-
-  static public final Path commonsSrc= LocalResources.commonsSrc;
-  static public final Path frontendSrc= LocalResources.frontendSrc;
-  static public final Path frontendSrcModule= LocalResources.frontendSrcModule;
-  static public final Path coordinatorSrc= LocalResources.coordinatorSrc;
-  static public final Path coordinatorSrcModule= LocalResources.coordinatorSrcModule;
+public final class ResolveResource extends LocalResources{
   static public final Path coordinatorJars= coordinatorSrc.getParent().resolve("externalJars");
   static public final Path coordinatorTestJars= coordinatorSrc.getParent().resolve("testJars");
-  static public final Path controllerSrc= LocalResources.controllerSrc;
-  static public final Path controllerSrcModule= LocalResources.controllerSrcModule;
   static public final Path controllerPluginSrc= controllerSrc.getParent().resolve("fearlessPluginProject");
-  static public final Path portableEclipse= LocalResources.portableEclipse;
   static public final Path eclipsePlugins= portableEclipse.resolve("plugins");
-
-  static public final Path portableFolderOut= LocalResources.portableFolderOut;
-  static public final Path managedFolderOut= LocalResources.managedFolderOut;
-  static public final Path badZipCorpous= LocalResources.badZipCorpous;
-  static public final Path packaging= LocalResources.packaging;
 
   static public final String eclipseJavaVersion= "21";
   public static final String versionId= "0_001";
