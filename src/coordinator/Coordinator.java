@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.regex.Pattern;
 import java.util.stream.LongStream;
 import java.util.stream.Stream;
 
@@ -32,7 +33,6 @@ import tools.JavacTool;
 import tools.SourceOracle;
 import tools.SourceOracle.Ref;
 import utils.Push;
-import utils.Range;
 
 public interface Coordinator {
   default String runAllMains(String pkgName,OutputOracle out) throws InterruptedException{
@@ -163,22 +163,13 @@ class Helper{
     return new BaseLayer(coordinator,res,baseStamp,stLib);
   }
   static int rankNumber(Ref u){
-    if (!isFear(u)){ throw Report.projectMalformedRankFileName(u); }
-    var stem= Fs.fileNameWithoutExtension(u.fearPath());
-    for (int i : Range.of(ranks)){
-      var pref= ranks.get(i);
-      int base= (i+1)*1000;
-      if (stem.equals(pref)){ return base+999; } // shortcut: _rank_app.fear == _rank_app999.fear
-      if (!stem.startsWith(pref)){ continue; }
-      if (stem.length()!=pref.length()+3){ throw Report.projectMalformedRankFileName(u); }
-      var digits= stem.substring(pref.length());
-      if (!digits.chars().allMatch(Character::isDigit)){ throw Report.projectMalformedRankFileName(u); }
-      return base+Integer.parseInt(digits);
-    }
-    throw Report.projectMalformedRankFileName(u);
+    var m= rankName.matcher(isFear(u) ? Fs.fileNameWithoutExtension(u.fearPath()) : "");
+    if (!m.matches()){ throw Report.projectMalformedRankFileName(u); }
+    return (ranks.indexOf(m.group(1))+1)*1000+(m.group(2) == null ? 999 : Integer.parseInt(m.group(2))); // shortcut: _rank_app.fear == _rank_app999.fear
   }
   private static final List<String> ranks= List.of(
     "_rank_base","_rank_core","_rank_driver","_rank_worker","_rank_framework","_rank_accumulator","_rank_tool","_rank_app");
+  private static final Pattern rankName= Pattern.compile("("+String.join("|",ranks)+")(\\d{3})?");
 
   static boolean hasReservedRankPrefix(Ref u){ return Fs.fileNameWithExtension(u.fearPath()).startsWith("_rank_"); }
   static Ref okPkgContent(List<Ref> u, Path root){
