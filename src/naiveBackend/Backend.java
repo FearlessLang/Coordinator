@@ -51,7 +51,7 @@ public class Backend{
         var name= l.name().simpleName();
         sb.a("  _base.AppLog _appLog= _base.AppLog.open(java.nio.file.Path.of(\".out\",\"logs\",\""+tools.pkgName()+"\",\""+name+".log\"), false);\n");
         sb.a("  default _base.AppLog _log(){ return _appLog; }\n");
-      } else {
+      } else{
         sb.a("  default _base.AppLog _log(){ return null; }\n");
       }
     }
@@ -72,7 +72,7 @@ public class Backend{
     }
     return "";
   }
-  private boolean hasInstance(Literal l, boolean abstractOnly) {
+  private boolean hasInstance(Literal l, boolean abstractOnly){
     if (abstractOnly){ return false; }
     assert !l.thisName().isEmpty() || LiteralDeclarations.has(l.cs(),LiteralDeclarations.captureFree);
     return l.ms().stream().noneMatch(m->m.sig().abs());

@@ -169,7 +169,7 @@ public sealed interface Info{
       var c= text.charAt(i);
       if (Fs.allowed.indexOf(c) < 0){ throw err(here(),"The character "+Message.displayChar(c)+" is outside the safe character set of Fearless: letters, digits, space, newline and common punctuation."); }
       i+= 1;
-      if (c == '\n'){ line+= 1; col= 1; } else { col+= 1; }
+      if (c == '\n'){ line+= 1; col= 1; } else{ col+= 1; }
       return c;
     }
     private Span here(){ return new Span(uri,line,col,line,col); }
