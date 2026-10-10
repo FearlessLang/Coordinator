@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -582,13 +583,8 @@ code{
     return "method-"+id(owner.s())+"-"+id(m.sig().rc().name())+"-"+id(m.sig().m().s())+"-"+m.sig().m().arity();
   }
 
-  static String id(String s){
-    return s.chars().mapToObj(HtmlDocRenderer::idChar).collect(Collectors.joining());
-  }
-  static String idChar(int c){
-    var plain= c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9';
-    return plain ? Character.toString(c) : "_"+Integer.toHexString(c)+"_";
-  }
+  private static final Pattern notPlain= Pattern.compile("[^a-zA-Z0-9]");
+  static String id(String s){ return notPlain.matcher(s).replaceAll(m->"_"+Integer.toHexString(m.group().codePointAt(0))+"_"); }
 
   static String h(String s){
     return s.replace("&","&amp;").replace("<","&lt;").replace(">","&gt;").replace("\"","&quot;");
