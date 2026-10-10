@@ -52,12 +52,10 @@ public record ZipEntry(Path root, Path local, List<String> segments, List<String
     for (var e: out){
       if (!e.lastZips().endsWith(".zip")){ continue; }
       var folder= dropZipExt(e.segments());
-      var inFolder= out.stream()
+      out.stream()
         .filter(o->o.zips().equals(e.zips()))
         .filter(o->isProperPrefix(folder, o.segments()))
-        .findFirst();
-      if (inFolder.isEmpty()){ continue; }
-      throw Report.zipNameClashesWithFolder(e.root().resolve(e.local()), e.zips(), e.lastZips(), inFolder.get().lastZips());
+        .findFirst().ifPresent(o->{ throw Report.zipNameClashesWithFolder(e.root().resolve(e.local()), e.zips(), e.lastZips(), o.lastZips()); });
     }
   }
   private static boolean isProperPrefix(List<String> prefix, List<String> full){
