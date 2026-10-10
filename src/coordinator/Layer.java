@@ -18,7 +18,6 @@ import userMessages.Violation;
 public interface Layer{
   default LinkedHashMap<String,List<Ref>> pkgs(){ return new LinkedHashMap<>();}
   OtherPackages compile(SourceOracle src, OutputOracle out);
-  Coordinator coordinator();
   SourceOracle stLib();
 }
 record MiddleLayer(Coordinator coordinator, Layer next, LinkedHashMap<String,List<Ref>> pkgs) implements Layer{
