@@ -14,7 +14,6 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import core.*;
-import core.E.*;
 import utils.Pos;
 import utils.Range;
 
@@ -544,14 +543,10 @@ code{
   }
 
   String typeTitle(TypeDoc t){
-    if (!t.main().infName()){ return typeDeclName(t.main()); }
-    return "anonymous literal at "+t.main().pos();
-  }
-  String typeDeclName(Literal l){
+    var l= t.main();
+    if (l.infName()){ return "anonymous literal at "+l.pos(); }
     if (l.bs().isEmpty()){ return toStr.typeNameWithArity(l.name()); }
-    return toStr.typeName(l.name())+l.bs().stream()
-      .map(B::compactToString)
-      .collect(Collectors.joining(",","[","]"));
+    return toStr.typeName(l.name())+l.bs().stream().map(B::compactToString).collect(Collectors.joining(",","[","]"));
   }
   String shortTitle(TypeDoc t){
     if (!t.main().infName()){ return typeTitle(t); }
