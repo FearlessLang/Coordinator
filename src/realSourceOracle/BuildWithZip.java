@@ -19,7 +19,6 @@ import tools.Fs;
 import tools.SourceOracle;
 import tools.SourceOracle.Ref;
 import tools.SourceOracle.RefParent;
-import utils.Range;
 record Tree(
   Path root,
   ArrayList<Ref> visibleFiles,
@@ -116,29 +115,23 @@ public final class BuildWithZip{
       return;
     }
     checkVisibleAtom(kid, name.substring(0, d0));
-    checkExt(kid, name.substring(d0 + 1, name.length()));
+    checkExt(kid, name.substring(d0 + 1));
   }
   private static void checkVisibleAtom(RefParent kid, String atom){
     char c0= atom.charAt(0);
     var letterOr_= c0 == '_' || ('a' <= c0 && c0 <= 'z');
     if (!letterOr_){ throw Report.visibleMustStartWithLetterOrUnderscore(kid); }
-    for (int i : Range.of(1,atom.length())){
-      char c= atom.charAt(i);
-      boolean ok= ('a' <= c && c <= 'z') || ('0' <= c && c <= '9') || c == '_';
-      if (!ok){ throw Report.visibleInvalidChar(kid, c); }
-    }
+    atom.chars().skip(1).filter(c->c != '_' && !Fs.isExtSegChar((char)c)).findFirst().ifPresent(c->{ throw Report.visibleInvalidChar(kid, (char)c); });
     if (winReserved.contains(atom)){ throw Report.windowsReservedName(kid); }
   }
   private static void checkExt(RefParent kid, String tail){
     if (tail.isEmpty()){ throw Report.missingExtension(kid); }
-    if (tail.indexOf('.') < 0){ checkExtSeg(kid, tail); return; }
-    if (!Report.allowedMultiDotExts.contains(tail)){ throw Report.multiDotExtNotAllowed(kid); }
-  }
-  private static void checkExtSeg(RefParent kid, String seg){
-    if (seg.length() > Fs.maxExtSeg){ throw Report.extLenMustBe1To16(kid); }
-    for (char c : seg.toCharArray()){
-      if (!Fs.isExtSegChar(c)){ throw Report.extInvalidChar(kid, c); }
+    if (tail.indexOf('.') >= 0){
+      if (!Report.allowedMultiDotExts.contains(tail)){ throw Report.multiDotExtNotAllowed(kid); }
+      return;
     }
+    if (tail.length() > Fs.maxExtSeg){ throw Report.extLenMustBe1To16(kid); }
+    tail.chars().filter(c->!Fs.isExtSegChar((char)c)).findFirst().ifPresent(c->{ throw Report.extInvalidChar(kid, (char)c); });
   }
   private static final Set<String> winReserved= Set.of(
     "con","prn","aux","nul",
@@ -192,13 +185,8 @@ public final class BuildWithZip{
     }
   }
   private static void checkNoExtBaseClash(List<RefParent> visKids, RefParent noExtKid, String base){
-    for (var kid: visKids){
-      if (kid.equals(noExtKid)){ continue; }
-      var name= Fs.fileNameWithExtension(kid.fearPath());
-      int d0= name.indexOf('.');
-      if (d0 < 0){ continue; }
-      if (!name.substring(0, d0).equals(base)){ continue; }
-      throw Report.extensionlessMaskExtension(kid, noExtKid);
-    }
+    visKids.stream()
+      .filter(kid->!kid.equals(noExtKid) && Fs.fileNameWithExtension(kid.fearPath()).startsWith(base+"."))
+      .findFirst().ifPresent(kid->{ throw Report.extensionlessMaskExtension(kid, noExtKid); });
   }
 }
