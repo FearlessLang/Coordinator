@@ -163,8 +163,8 @@ final class Suppressed{
   List<Throwable> toList(){ return List.copyOf(errors); }
 }
 final class CommonInfo{
-  private static final int PortableLinkDepth= 8;  // POSIX guarantees only SYMLOOP_MAX >= 8
-  private static final int MaxLinkFollowed= 64;   // backstop so the walk always terminates
+  private static final int portableLinkDepth= 8;  // POSIX guarantees only SYMLOOP_MAX >= 8
+  private static final int maxLinkFollowed= 64;   // backstop so the walk always terminates
 
   static String of(Op op, Path path, Suppressed suppressed){
     return "Fearless could not "+op.verb+" this file:\n\n  "+located(path, suppressed)+"\n\n"+chain(path, suppressed);
@@ -197,7 +197,7 @@ final class CommonInfo{
     var depth= 0;
     try{
       while (Files.isSymbolicLink(current)){//returns false (not throws) on error, ending the walk
-        if (depth >= MaxLinkFollowed){ return out.append("\nChain exceeds ").append(MaxLinkFollowed).append(" links; not followed further.\n").toString(); }
+        if (depth >= maxLinkFollowed){ return out.append("\nChain exceeds ").append(maxLinkFollowed).append(" links; not followed further.\n").toString(); }
         if (!visited.add(current)){ return out.append("\nChain loops back to ").append(Message.displayString(current.toString())).append(".\n").toString(); }
         current= current.getParent().resolve(Files.readSymbolicLink(current)).normalize();//read to advance; relative to the link's own dir; current is absolute and a root cannot be a symlink, so getParent()!=null
         depth++;
@@ -205,7 +205,7 @@ final class CommonInfo{
       }
     }
     catch(IOException e){ return out.append("\n<reading next failed>").append(suppressed.mark(e)).append("\n").toString(); }
-    if (depth > PortableLinkDepth){ out.append("\nWarning: ").append(depth).append(" links deep; some systems may cap it at 8.\n"); }
+    if (depth > portableLinkDepth){ out.append("\nWarning: ").append(depth).append(" links deep; some systems may cap it at 8.\n"); }
     return out.toString();
   }
 }
