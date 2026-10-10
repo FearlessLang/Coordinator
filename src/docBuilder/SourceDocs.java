@@ -40,8 +40,6 @@ final class SourceDocs{
     return arr == null || column > arr.length ? 0 : arr[column-1];
   }
 
-  List<DocOcc> ambiguousInlineDocs(){ return List.copyOf(ambiguousInline); }
-
   //every /// and //> that no declaration took, as runs of consecutive lines
   List<List<DocOcc>> orphanRuns(){
     var lost= docsByLine.values().stream()
@@ -100,36 +98,25 @@ final class SourceDocs{
   }
 
   void scan(){
-    var mode= Mode.Normal;
+    var closer= "";
     var depth= 0;
     for (int l= 1; l <= lines.size(); l += 1){
       var s= lines.get(l-1);
       var arr= new int[s.length()];
       for (int i= 0; i < s.length();){
         var start= i;
-        switch(mode){
-          case Normal -> {
-            if (s.startsWith("//",i)){
-              var k= s.length() > i+2 ? s.charAt(i+2) : ' ';
-              if (k == '/' || k == '>' || k == '-'){ add(l,i+1,s.substring(i+3),s.substring(0,i).isBlank(),k == '>',k == '-'); }
-              i= s.length();
-            }
-            else if (s.startsWith("/*",i)){ mode= Mode.Block; i += 2; }
-            else if (s.charAt(i) == '"'){ mode= Mode.DoubleString; i += 1; }
-            else if (s.charAt(i) == '`'){ mode= Mode.BacktickString; i += 1; }
-            else if (s.charAt(i) == '{'){ depth += 1; i += 1; }
-            else if (s.charAt(i) == '}'){ depth -= 1; i += 1; }
-            else{ i += 1; }
-          }
-          case DoubleString, BacktickString -> {
-            if (s.charAt(i) == (mode == Mode.DoubleString ? '"' : '`')){ mode= Mode.Normal; }
-            i += 1;
-          }
-          case Block -> {
-            if (s.startsWith("*/",i)){ mode= Mode.Normal; i += 2; }
-            else{ i += 1; }
-          }
+        if (!closer.isEmpty()){
+          if (s.startsWith(closer,i)){ i += closer.length(); closer= ""; }
+          else{ i += 1; }
         }
+        else if (s.startsWith("//",i)){
+          var k= s.length() > i+2 ? s.charAt(i+2) : ' ';
+          if (k == '/' || k == '>' || k == '-'){ add(l,i+1,s.substring(i+3),s.substring(0,i).isBlank(),k == '>',k == '-'); }
+          i= s.length();
+        }
+        else if (s.startsWith("/*",i)){ closer= "*/"; i += 2; }
+        else if (s.charAt(i) == '"' || s.charAt(i) == '`'){ closer= s.substring(i,i+1); i += 1; }
+        else{ depth += s.charAt(i) == '{' ? 1 : s.charAt(i) == '}' ? -1 : 0; i += 1; }
         Arrays.fill(arr,start,i,depth);
       }
       depthByLine.put(l,arr);
@@ -143,6 +130,4 @@ final class SourceDocs{
     docsByLine.computeIfAbsent(line,_ -> new ArrayList<>())
       .add(new DocOcc(uri,line,column,column+3+(text.length()-clean.length()),clean,pureLine,example,testOnly));
   }
-
-  enum Mode{ Normal, DoubleString, BacktickString, Block }
 }

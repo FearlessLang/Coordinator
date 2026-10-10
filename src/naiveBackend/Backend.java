@@ -28,10 +28,8 @@ public class Backend{
   List<Consumer<Path>> fixers= new ArrayList<>();
   boolean isRepr(Literal l){ return l.name().equals(new TName("base.Repr",1,Pos.unknown)); }
   public List<Consumer<Path>> produceJavaCode(){
-    Fs.ensureDir(out);
-    Fs.cleanDirContents(out);
+    Fs.cleanDir(out);
     tools.decs().forEach(d->{tools.docs().visitLiteral(d); generateInterface(d,false); tools.checks().checkFileReplacement(d, decTypeName(d.name()));});
-    tools.checks().checkMagicFulfilled();
     writeMainJava();
     return List.copyOf(fixers);
   }
@@ -41,19 +39,15 @@ public class Backend{
       .a("package _"+tools.pkgName()+";\n")
       .a("public interface "+iface+extendsClause(l)+"{\n");
     for (var m:l.ms()){ emitTopMethod(sb, l, m, abstractOnly); }
-    var hasInstance= hasInstance(l, abstractOnly);
+    var hasInstance= !abstractOnly && hasInstance(l);
     if (hasInstance && implementsType(l,"base.InMemoryLog",1)){
       sb.a("  java.util.ArrayList<Object> _logStore= new java.util.ArrayList<>();\n");
       sb.a("  default java.util.ArrayList<Object> _log(){ return _logStore; }\n");
     }
     if (hasInstance && implementsType(l,"base.FileLog",0)){
-      if (l.name().arity() == 0){
-        var name= l.name().simpleName();
-        sb.a("  _base.AppLog _appLog= _base.AppLog.open(java.nio.file.Path.of(\".out\",\"logs\",\""+tools.pkgName()+"\",\""+name+".log\"), false);\n");
-        sb.a("  default _base.AppLog _log(){ return _appLog; }\n");
-      } else {
-        sb.a("  default _base.AppLog _log(){ return null; }\n");
-      }
+      sb.a(l.name().arity() == 0
+        ? "  _base.AppLog _appLog= _base.AppLog.open(java.nio.file.Path.of(\".out\",\"logs\",\""+tools.pkgName()+"\",\""+l.name().simpleName()+".log\"), false);\n  default _base.AppLog _log(){ return _appLog; }\n"
+        : "  default _base.AppLog _log(){ return null; }\n");
     }
     if (isRepr(l)){
       sb.a("  Object _reprCacheGet(Object k, java.util.function.Supplier<Object> f, long time);\n");
@@ -72,8 +66,7 @@ public class Backend{
     }
     return "";
   }
-  private boolean hasInstance(Literal l, boolean abstractOnly) {
-    if (abstractOnly){ return false; } 
+  private boolean hasInstance(Literal l) {
     assert !l.thisName().isEmpty() || LiteralDeclarations.has(l.cs(),LiteralDeclarations.captureFree);
     return l.ms().stream().noneMatch(m->m.sig().abs());
   }
@@ -88,20 +81,16 @@ public class Backend{
   );}
   void emitTopMethod(BytecodeLineFix sb, Literal l, M m, boolean abstractOnly){
     if (!m.sig().origin().equals(l.name())){ return ; }
-    String iface=ifaceNameFor(l);
     var jName= mangledMethodName(m.sig().rc(), m.sig().m());
+    sb.a("  default Object "+jName+paramsSig(m)+"{\n");
     if (abstractOnly || m.sig().abs()){
-      sb.a("  default Object ").a(jName).a(paramsSig(m)).a("{\n")
-        .a("    throw new AssertionError(\"Uncallable method: ")
-        .a(iface).a(".").a(jName).a("\"+this.getClass().getName());\n")
-        .a("  }\n");
+      sb.a("    throw new AssertionError(\"Uncallable method: "+ifaceNameFor(l)+"."+jName+"\"+this.getClass().getName());\n  }\n");
       return;
     }
-    tools.checks().checkTopMethod(m, decTypeName(l.name()), jName, hasInstance(l, abstractOnly));
+    tools.checks().checkTopMethod(m, decTypeName(l.name()), jName, hasInstance(l));
     //TODO: an imm method with no parameters and an imm result, of a type with an instance (a singleton, like Directions.map),
     //always returns the same value: cache it, so that the body runs only one time.
-    sb.a("  default Object "+jName+paramsSig(m)+"{\n");
-    new ProduceBody(sb,this, iface, l.thisName(), m).emitBody();
+    new ProduceBody(sb,this, l.thisName(), m).emitBody();
   }
   String ifaceNameFor(Literal l){
     if (!l.infName() || l.onlyImmCapture().inner){ return decTypeName(l.name()); }
@@ -119,19 +108,12 @@ public class Backend{
   String decTypeName(TName n){ return encodeTrailingPrimes(n.simpleName())+"$"+caseTag(n.simpleName())+"$"+n.arity(); }
   String typeName(TName n){ return "_"+encodeTrailingPrimes(n.s())+"$"+caseTag(n.simpleName())+"$"+n.arity(); }
   static String caseTag(String s){
-    var bits= new StringBuilder("1");
-    for (int i : Range.of(0,s.length())){
-      char c= s.charAt(i);
-      if ('A' <= c && c <= 'Z'){ bits.append('1'); }
-      if ('a' <= c && c <= 'z'){ bits.append('0'); }
-    }
-    return new BigInteger(bits.toString(),2).toString(36);
+    var bits= s.chars().filter(c->'A' <= c && c <= 'Z' || 'a' <= c && c <= 'z').mapToObj(c->c < 'a' ? "1" : "0").collect(Collectors.joining());
+    return new BigInteger("1"+bits,2).toString(36);
   }
-  String mangledMethodName(RC rc, MName m){ return rc.name()+"$"+methodBaseName(m)+"$"+m.arity(); }
-  String methodBaseName(MName m){
+  String mangledMethodName(RC rc, MName m){
     var s= m.s();
-    if (s.startsWith(".")){ return encodeTrailingPrimes(s.substring(1)); }
-    return "$" + mangleOp(s);
+    return rc.name()+"$"+(s.startsWith(".") ? encodeTrailingPrimes(s.substring(1)) : "$"+mangleOp(s))+"$"+m.arity();
   }
   final Map<String,String> mains= new TreeMap<>();
   void writeMainJava(){
@@ -158,24 +140,7 @@ public class Backend{
     assert s.indexOf('"') < 0 && s.indexOf('\\') < 0 && s.indexOf('\n') < 0 && s.indexOf('\r') < 0;
     return "\""+s+"\"";
   }
-  String mangleOp(String op){ return op.chars().mapToObj(c->opTok((char)c)).collect(Collectors.joining("_")); }
-  static String opTok(char c){ return switch(c){
-    case '+' -> "plus";
-    case '-' -> "dash";
-    case '*' -> "star";
-    case '/' -> "slash";
-    case '%' -> "pct";
-    case '<' -> "lt";
-    case '>' -> "gt";
-    case '=' -> "eq";
-    case '!' -> "bang";
-    case '&' -> "and";
-    case '|' -> "or";
-    case '^' -> "xor";
-    case '~' -> "tilde";
-    case '?' -> "q";
-    case '#' -> "hash";
-    case '\\' -> "bslash";
-    default -> throw utils.Bug.unreachable();
-  };}
+  String mangleOp(String op){ return op.chars().mapToObj(c->opNames.get(opChars.indexOf(c))).collect(Collectors.joining("_")); }
+  static final String opChars= "+-*/%<>=!&|^~?#\\";
+  static final List<String> opNames= List.of("plus","dash","star","slash","pct","lt","gt","eq","bang","and","or","xor","tilde","q","hash","bslash");
 }

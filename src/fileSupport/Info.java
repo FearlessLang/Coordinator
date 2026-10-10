@@ -5,7 +5,9 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.BiFunction;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 import metaParser.Frame;
 import metaParser.Message;
@@ -13,7 +15,6 @@ import metaParser.Span;
 import tools.Fs;
 import userMessages.UserError;
 import utils.OneOr;
-import utils.Range;
 
 public sealed interface Info{
   Span span();
@@ -28,39 +29,18 @@ public sealed interface Info{
   static UserError err(String source, Span span, String msg){
     return new UserError(Message.of(_->source,List.of(new Frame("",span)),msg));
   }
-  static String print(Info info){
-    var sb= new StringBuilder();
-    write(info,0,sb);
-    return sb.append('\n').toString();
+  static String print(Info info){ return write(info,0)+"\n"; }
+  private static String write(Info info, int indent){
+    return switch(info){
+      case Str s -> quote(s.value());
+      case Lst l -> l.items().stream().map(i->write(i,0)).collect(Collectors.joining(", ","[","]"));
+      case Obj o -> o.fields().isEmpty() ? "{}" : o.fields().stream()
+        .map(f->"  ".repeat(indent+1)+quote(f.key())+": "+write(f.value(),indent+1))
+        .collect(Collectors.joining(",\n","{\n","\n"+"  ".repeat(indent)+"}"));
+    };
   }
-  private static void write(Info info, int indent, StringBuilder sb){
-    switch(info){
-      case Str s -> quote(s.value(),sb);
-      case Lst l -> { sb.append('['); join(l.items(),sb); sb.append(']'); }
-      case Obj o -> writeObj(o,indent,sb);
-    }
-  }
-  private static void join(List<Info> items, StringBuilder sb){
-    for (int i : Range.of(items)){
-      if (i > 0){ sb.append(", "); }
-      write(items.get(i),0,sb);
-    }
-  }
-  private static void writeObj(Obj o, int indent, StringBuilder sb){
-    if (o.fields().isEmpty()){ sb.append("{}"); return; }
-    sb.append("{\n");
-    for (int i : Range.of(o.fields())){
-      var f= o.fields().get(i);
-      sb.append("  ".repeat(indent+1));
-      quote(f.key(),sb);
-      sb.append(": ");
-      write(f.value(),indent+1,sb);
-      sb.append(i+1 < o.fields().size() ? ",\n" : "\n");
-    }
-    sb.append("  ".repeat(indent)).append('}');
-  }
-  private static void quote(String value, StringBuilder sb){
-    sb.append('"').append(value.replace("\\","\\\\").replace("\"","\\\"").replace("\n","\\n")).append('"');
+  private static String quote(String value){
+    return "\""+value.replace("\\","\\\\").replace("\"","\\\"").replace("\n","\\n")+"\"";
   }
   final class Parser{
     private final String text;
@@ -97,7 +77,7 @@ public sealed interface Info{
       while(true){
         if (!more()){ throw err(from(start),"This string is never closed with a matching \"."); }
         var c= peek();
-        if (c == '"'){ var end= here(); advance(); return new Str(sb.toString(),between(start,end)); }
+        if (c == '"'){ var span= from(start); advance(); return new Str(sb.toString(),span); }
         if (c == '\n'){ throw err(here(),"A string cannot contain a raw newline; write \\n instead."); }
         if (c == '\\'){ advance(); sb.append(escape()); continue; }
         sb.append(advance());
@@ -108,28 +88,15 @@ public sealed interface Info{
       var at= here();
       var c= advance();
       return switch(c){
-        case '"' -> '"';
-        case '\\' -> '\\';
+        case '"', '\\' -> c;
         case 'n' -> '\n';
         default -> throw err(from(at),"Unknown escape \\"+c+": only \\\", \\\\ and \\n exist.");
       };
     }
-    private Lst list(){
-      var start= here();
-      advance();
-      var items= seq(start,']',"list",this::value);
-      var end= here();
-      advance();
-      return new Lst(items,between(start,end));
-    }
+    private Lst list(){ return seq(']',"list",this::value,Lst::new); }
     private Obj obj(){
-      var start= here();
-      advance();
       var seen= new HashSet<String>();
-      var fields= seq(start,'}',"object",()->field(seen));
-      var end= here();
-      advance();
-      return new Obj(fields,between(start,end));
+      return seq('}',"object",()->field(seen),Obj::new);
     }
     private Obj.Field field(HashSet<String> seen){
       if (peek() != '"'){ throw err(here(),"Expected a quoted key \"...\" here."); }
@@ -140,26 +107,25 @@ public sealed interface Info{
       advance();
       return new Obj.Field(key.value(),key.span(),value());
     }
-    private <T> List<T> seq(Span start, char close, String what, Supplier<T> item){
+    private <T,R> R seq(char close, String what, Supplier<T> item, BiFunction<List<T>,Span,R> make){
+      var start= here();
+      advance();
       var items= new ArrayList<T>();
+      var afterItem= false;
       while(true){
         ws();
         if (!more()){ throw err(from(start),"This "+what+" is never closed with a matching "+close+"."); }
-        if (peek() == close && items.isEmpty()){ return items; }
-        items.add(item.get());
-        ws();
-        if (!more()){ throw err(from(start),"This "+what+" is never closed with a matching "+close+"."); }
-        if (peek() == close){ return items; }
+        if (peek() == close && (afterItem || items.isEmpty())){ var span= from(start); advance(); return make.apply(items,span); }
+        if (!afterItem){ items.add(item.get()); afterItem= true; continue; }
         if (peek() != ','){ throw err(here(),"Expected ',' or '"+close+"' here, to continue or to close the "+what+"."); }
         advance();
+        afterItem= false;
       }
     }
     private void ws(){
       while(more()){
-        var c= peek();
-        if (c == ' ' || c == '\n'){ advance(); continue; }
-        var comment= c == '/' && i+1 < text.length() && text.charAt(i+1) == '/';
-        if (!comment){ return; }
+        if (peek() == ' ' || peek() == '\n'){ advance(); continue; }
+        if (!text.startsWith("//",i)){ return; }
         while(more() && peek() != '\n'){ advance(); }
       }
     }
@@ -173,10 +139,7 @@ public sealed interface Info{
       return c;
     }
     private Span here(){ return new Span(uri,line,col,line,col); }
-    private Span from(Span start){ return between(start,here()); }
-    private Span between(Span start, Span end){
-      return new Span(uri,start.startLine(),start.startCol(),end.startLine(),end.startCol());
-    }
+    private Span from(Span start){ return new Span(uri,start.startLine(),start.startCol(),line,col); }
     private UserError err(Span span, String msg){ return Info.err(text,span,msg); }
   }
 }

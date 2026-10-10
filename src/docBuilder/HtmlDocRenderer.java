@@ -3,6 +3,7 @@ package docBuilder;
 import static offensiveUtils.Require.*;
 
 import java.nio.file.Path;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -10,17 +11,18 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import core.*;
-import core.E.*;
-import utils.Pos;
+import tools.Fs;
+import utils.Join;
 import utils.Range;
 
 final class HtmlDocRenderer{
   HtmlDocRenderer(String pkgName, Map<String,String> uses, List<TypeDoc> types, OtherPackages other,
-      Map<DocOcc,List<ResolvedSpan>> spans, Optional<Path> baseDocLocation){
+      Map<DocOcc,Map<Integer,DocLink>> spans, Optional<Path> baseDocLocation){
     assert nonNull(pkgName,uses,types,other,spans,baseDocLocation);
     this.pkgName= pkgName;
     this.uses= uses;
@@ -36,7 +38,7 @@ final class HtmlDocRenderer{
   final Map<String,String> uses;
   final List<TypeDoc> types;
   final OtherPackages other;
-  final Map<DocOcc,List<ResolvedSpan>> spans;
+  final Map<DocOcc,Map<Integer,DocLink>> spans;
   final Optional<Path> baseDocLocation;
   //filled by href() as links are emitted, so every ambiguous link that reaches the
   //page also gets its landing section; rendered after all types, when it is complete.
@@ -75,13 +77,11 @@ final class HtmlDocRenderer{
   List<TypeDoc> testableTypes(){
     return visibleTypes().stream()
       .filter(t->!t.main().infName())
-      .filter(t->visibleMethods(t).stream().anyMatch(this::hasTestContent))
+      .filter(t->visibleMethods(t).stream().anyMatch(m->!testLines(m).isEmpty()))
       .toList();
   }
 
-  boolean hasTestContent(MethodDoc m){
-    return m.docs.stream().anyMatch(d->d.example() || d.testOnly());
-  }
+  List<String> testLines(MethodDoc m){ return m.docs.stream().filter(d->d.example() || d.testOnly()).map(DocOcc::text).toList(); }
 
   GeneratedTestNames testNames(){
     var shown= testableTypes();
@@ -107,11 +107,7 @@ final class HtmlDocRenderer{
     sb.append('\n');
     for (int i : Range.of(shown)){
       sb.append(names.perType().get(i)).append(": Test {::\n");
-      for (var m: visibleMethods(shown.get(i))){
-        var examples= m.docs.stream().filter(d->d.example() || d.testOnly()).map(DocOcc::text).toList();
-        if (examples.isEmpty()){ continue; }
-        sb.append("  .test Test{::\n").append(String.join("\n",examples)).append("\n  }\n");
-      }
+      for (var m: visibleMethods(shown.get(i))){ sb.append(Join.of(testLines(m),"  .test Test{::\n","\n","\n  }\n","")); }
       sb.append("  }\n\n");
     }
     sb.append(names.top()).append(": UnitTests {::\n");
@@ -121,11 +117,7 @@ final class HtmlDocRenderer{
   }
 
   void renderTypeText(StringBuilder sb, TypeDoc t, Map<DocOcc,Object> claims){
-    sb.append(typeTitle(t));
-    if (!t.main().cs().isEmpty()){
-      sb.append(" : ").append(t.main().cs().stream().map(toStr::typeName).collect(Collectors.joining(", ")));
-    }
-    sb.append('\n');
+    sb.append(typeTitle(t)).append(Join.of(t.main().cs().stream().map(toStr::typeName)," : ",", ","","")).append('\n');
     renderDocText(sb,"  ",t,t.docs,claims);
     visibleMethods(t).forEach(m->renderMethodText(sb,m,claims));
     sb.append('\n');
@@ -137,11 +129,7 @@ final class HtmlDocRenderer{
   void renderMethodText(StringBuilder sb, MethodDoc m, Map<DocOcc,Object> claims){
     sb.append('\t').append(toStr.sig(m.main().sig())).append('\n');
     if (m.declared){ renderDocText(sb,"    ",m,m.docs,claims); }
-    var refs= fromRefs(m);
-    if (refs.isEmpty()){ return; }
-    sb.append("    from: ").append(refs.stream()
-      .map(r->refName(r)+r.method().sig().m())
-      .collect(Collectors.joining(", "))).append('\n');
+    sb.append(Join.of(fromRefs(m).stream().map(r->refName(r)+r.method().sig().m()),"    from: ",", ","\n",""));
   }
 
   static List<DocOcc> visibleDocs(Object owner, List<DocOcc> docs, Map<DocOcc,Object> claims){
@@ -150,7 +138,6 @@ final class HtmlDocRenderer{
 
   void renderDocText(StringBuilder sb, String indent, Object owner, List<DocOcc> docs, Map<DocOcc,Object> claims){
     var visible= visibleDocs(owner,docs,claims);
-    if (visible.isEmpty()){ return; }
     visible.stream().filter(c->!c.example()).forEach(c->appendIndented(sb,indent,c.text()));
     var examples= visible.stream().filter(DocOcc::example).map(DocOcc::text).toList();
     if (examples.isEmpty()){ return; }
@@ -372,13 +359,7 @@ code{
     sb.append("<section class=\"type\" id=\"").append(typeId(t)).append("\">\n")
       .append("<h2>").append(h(typeTitle(t))).append("</h2>\n");
     renderDoc(sb,t,t.docs,claims);
-    if (!t.main().cs().isEmpty()){
-      sb.append("<p class=\"extends\"><b>Extends:</b> ")
-        .append(t.main().cs().stream()
-          .map(this::typeLink)
-          .collect(Collectors.joining(", ")))
-        .append("</p>\n");
-    }
+    sb.append(Join.of(t.main().cs().stream().map(this::typeLink),"<p class=\"extends\"><b>Extends:</b> ",", ","</p>\n",""));
     renderVariants(sb,"Typed literal variants",t.variants,toStr::lit);
     sb.append("<h3>Methods</h3>\n");
     visibleMethods(t).forEach(m->renderMethod(sb,m,claims));
@@ -389,25 +370,18 @@ code{
       .append("<summary><span class=\"disclosure\">&#9656;</span><span class=\"sig\">")
       .append(renderSig(m)).append("</span></summary>\n");
     if (m.declared){ renderDoc(sb,m,m.docs,claims); }
-    renderFrom(sb,m);
+    sb.append(Join.of(fromRefs(m).stream().map(this::fromLink),"<p class=\"doc from\">From: ",", ",".</p>\n",""));
     renderVariants(sb,"Typed method variants",m.variants,v->toStr.sig(v.sig()));
     sb.append("</details>\n");
   }
-  void renderFrom(StringBuilder sb, MethodDoc m){
-    var refs= fromRefs(m);
-    if (refs.isEmpty()){ return; }
-    sb.append("<p class=\"doc from\">From: ")
-      .append(refs.stream().map(this::fromLink).collect(Collectors.joining(", ")))
-      .append(".</p>\n");
-  }
   String fromLink(MethodRef r){
-    return "<a href=\""+h(linkTo(r.owner(),r.method()))+"\">"+h(refName(r))+h(r.method().sig().m().toString())+"</a>";
+    return "<a href=\""+h(prefix(r.owner().pkgName())+"#"+methodId(r.owner(),r.method()))+"\">"+h(refName(r))+h(r.method().sig().m().toString())+"</a>";
   }
 
-  List<MethodRef> fromRefs(MethodDoc m){
+  Collection<MethodRef> fromRefs(MethodDoc m){
     if (!m.inheritedFrom.isEmpty()){ return m.inheritedFrom; }
     if (m.declared){ return List.of(); }
-    return List.of(MethodRef.origin(m.main()));
+    return List.of(new MethodRef(m.main().sig().origin(),Optional.empty(),m.main()));
   }
 
   String refName(MethodRef r){
@@ -452,40 +426,24 @@ code{
   }
 
   void renderExamples(StringBuilder sb, List<String> examples){
-    if (examples.isEmpty()){ return; }
-    sb.append("<details class=\"examples\"><summary><span class=\"disclosure\">&#9656;</span>runnable example</summary>\n<pre class=\"example\">")
-      .append(examples.stream().map(HtmlDocRenderer::h).collect(Collectors.joining("\n")))
-      .append("</pre></details>\n");
+    sb.append(Join.of(examples.stream().map(HtmlDocRenderer::h),"<details class=\"examples\"><summary><span class=\"disclosure\">&#9656;</span>runnable example</summary>\n<pre class=\"example\">","\n","</pre></details>\n",""));
   }
 
   //an empty doc line is where the author put a paragraph break; the lines between two
   //of them are one paragraph, kept on their own lines so that a list stays a list and
   //an indented line stays indented (the doc block is rendered with pre-wrap).
   void renderProse(StringBuilder sb, List<DocOcc> prose){
-    var para= new java.util.ArrayList<DocOcc>();
-    for (var occ: prose){
-      if (occ.text().isBlank()){ endParagraph(sb,para); continue; }
-      para.add(occ);
-    }
-    endParagraph(sb,para);
+    var lines= prose.stream().map(o->o.text().isBlank() ? "" : renderText(o)).collect(Collectors.joining("\n"));
+    paragraph.matcher(lines).results().forEach(p->sb.append("<p>").append(p.group()).append("</p>\n"));
   }
-
-  void endParagraph(StringBuilder sb, List<DocOcc> para){
-    if (para.isEmpty()){ return; }
-    sb.append("<p>")
-      .append(para.stream().map(this::renderText).collect(Collectors.joining("\n")))
-      .append("</p>\n");
-    para.clear();
-  }
+  private static final Pattern paragraph= Pattern.compile("(?dm)^.+(\n.+)*");
 
   String renderText(DocOcc occ){
     var text= occ.text();
-    var codeSpans= DocRefScanner.codeSpans(text);
-    if (codeSpans.isEmpty()){ return h(text); }
-    var linked= spans.getOrDefault(occ,List.of());
+    var linked= spans.getOrDefault(occ,Map.of());
     var sb= new StringBuilder();
     int i= 0;
-    for (var cs: codeSpans){
+    for (var cs: DocRefScanner.codeSpans(text)){
       sb.append(h(text.substring(i,cs.start()-cs.fence())));
       sb.append("<code>").append(renderCode(text,cs,linked)).append("</code>");
       i= cs.end()+cs.fence();
@@ -494,14 +452,10 @@ code{
     return sb.toString();
   }
 
-  String renderCode(String text, DocRefScanner.CodeSpan cs, List<ResolvedSpan> linked){
+  String renderCode(String text, DocRefScanner.CodeSpan cs, Map<Integer,DocLink> linked){
     var body= h(text.substring(cs.start(),cs.end()));
-    return linked.stream()
-      .filter(sp->sp.start()==cs.start() && sp.end()==cs.end())
-      .filter(sp->!(sp.link() instanceof DocLink.NoLink))
-      .findFirst()
-      .map(sp->"<a href=\""+h(href(sp.link()))+"\">"+body+"</a>")
-      .orElse(body);
+    var link= linked.get(cs.start());
+    return link == null || link instanceof DocLink.NoLink ? body : "<a href=\""+h(href(link))+"\">"+body+"</a>";
   }
 
   void renderPage(StringBuilder sb, DocLink.Ambiguous p, String anchor){
@@ -514,9 +468,7 @@ code{
   String renderCandidate(Candidate c){
     var sb= new StringBuilder("<a href=\"").append(h(candidateHref(c))).append("\">")
       .append(h(toStr.typeNameWithArity(c.owner())));
-    if (c.selector().isPresent()){
-      sb.append(h(c.selector().get())).append(h(DocResolver.shape(c.arity(),"(",")")));
-    }
+    c.selector().ifPresent(s->sb.append(h(s+DocResolver.shape(c.arity(),"(",")"))));
     sb.append("</a>");
     c.localMethod().ifPresent(m->m.docs.stream().filter(d->!d.example() && !d.testOnly()).findFirst()
       .ifPresent(d->sb.append(" <span class=\"opt-doc\">\u2014 ").append(h(d.text())).append("</span>")));
@@ -544,27 +496,14 @@ code{
   }
 
   String typeTitle(TypeDoc t){
-    if (!t.main().infName()){ return typeDeclName(t.main()); }
-    return "anonymous literal at "+t.main().pos();
-  }
-  String typeDeclName(Literal l){
-    if (l.bs().isEmpty()){ return toStr.typeNameWithArity(l.name()); }
-    return toStr.typeName(l.name())+l.bs().stream()
-      .map(B::compactToString)
-      .collect(Collectors.joining(",","[","]"));
+    var l= t.main();
+    if (l.infName()){ return "anonymous literal at "+l.pos(); }
+    return toStr.typeName(l.name())+Join.of(l.bs().stream().map(B::compactToString),"[",",","]","");
   }
   String shortTitle(TypeDoc t){
     if (!t.main().infName()){ return typeTitle(t); }
     var p= t.main().pos();
-    return "Anon@"+shortFile(p)+":"+p.line();
-  }
-
-  String shortFile(Pos p){
-    var s= p.fileName().toString();
-    var slash= s.lastIndexOf('/');
-    if (slash >= 0){ s= s.substring(slash+1); }
-    if (s.endsWith(".fear")){ s= s.substring(0,s.length()-5); }
-    return s;
+    return "Anon@"+Fs.fileNameWithExtension(p.fileName().toString()).replaceFirst("\\.fear$","")+":"+p.line();
   }
 
   String typeLink(T.C c){
@@ -572,8 +511,6 @@ code{
   }
 
   String linkTo(TName n){ return prefix(n.pkgName())+"#"+typeId(n); }
-
-  String linkTo(TName owner, M m){ return prefix(owner.pkgName())+"#"+methodId(owner,m); }
 
   String prefix(String pkg){
     if (pkg.equals(pkgName)){ return ""; }
@@ -595,13 +532,8 @@ code{
     return "method-"+id(owner.s())+"-"+id(m.sig().rc().name())+"-"+id(m.sig().m().s())+"-"+m.sig().m().arity();
   }
 
-  static String id(String s){
-    return s.chars().mapToObj(HtmlDocRenderer::idChar).collect(Collectors.joining());
-  }
-  static String idChar(int c){
-    var plain= c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9';
-    return plain ? Character.toString(c) : "_"+Integer.toHexString(c)+"_";
-  }
+  private static final Pattern notPlain= Pattern.compile("[^a-zA-Z0-9]");
+  static String id(String s){ return notPlain.matcher(s).replaceAll(m->"_"+Integer.toHexString(m.group().codePointAt(0))+"_"); }
 
   static String h(String s){
     return s.replace("&","&amp;").replace("<","&lt;").replace(">","&gt;").replace("\"","&quot;");

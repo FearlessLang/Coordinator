@@ -4,7 +4,6 @@ package scripts;
 public class TestAllFrontendCoordinator{
   public static void main(String[] args) throws InterruptedException{
     TestAllFrontend.main(args);
-    ModularBuild.coordinatorTest();
-    ModularBuild.runJUnit(ModularBuild.out.resolve("coordinator-test"), "--exclude-package=integrationTests");
+    ModularBuild.runJUnit(ModularBuild.coordinatorTest(), "--exclude-package=integrationTests");
   }
 }

@@ -96,19 +96,15 @@ public record MainsInfo(Map<String,Main> mains){
       if (!LiteralDeclarations.has(l.cs(),main)){ throw Report.claimNotMain(src,l,cs.getFirst().name()); }
       var exts= new HashMap<String,T.C>();
       for (var c: cs){
-        var concrete= c.ts().getFirst() instanceof T.RCC i && i.c().ts().isEmpty();
-        if (!concrete){ throw Report.claimIconNotConcrete(src,l,c); }
+        if (!(c.ts().getFirst() instanceof T.RCC i && i.c().ts().isEmpty())){ throw Report.claimIconNotConcrete(src,l,c); }
         if (SourceOracleWithAutoload.imageAsset(src,stLib,name(c.ts().getFirst())).isEmpty()){ throw Report.claimIconNotAsset(src,l,c); }
         if (c.ts().size() == 1){ continue; }
         var lit= c.ts().get(1) instanceof T.RCC e ? e.c().name().simpleName() : "";
-        var str= lit.startsWith("\"") || lit.startsWith("`");
-        if (!str){ throw Report.claimExtNotStr(src,l,c); }
+        if (!lit.startsWith("\"") && !lit.startsWith("`")){ throw Report.claimExtNotStr(src,l,c); }
         var ext= lit.substring(1,lit.length()-1);
-        var valid= Fs.isExtSeg(ext) && !ext.equals("fearless");
-        if (!valid){ throw Report.claimExtInvalid(src,l,c,ext); }
-        var fapp= ext.matches("fapp[0-9]{3}");
+        if (!Fs.isExtSeg(ext) || ext.equals("fearless")){ throw Report.claimExtInvalid(src,l,c,ext); }
         var shortcut= c.name().equals(claims.get(3));
-        if (shortcut != fapp){ throw shortcut ? Report.claimShortcutNotFapp(src,l,c,ext) : Report.claimOpenWithFapp(src,l,c,ext); }
+        if (shortcut != ext.matches("fapp[0-9]{3}")){ throw shortcut ? Report.claimShortcutNotFapp(src,l,c,ext) : Report.claimOpenWithFapp(src,l,c,ext); }
         var prev= exts.putIfAbsent(ext,c);
         if (prev != null){ throw Report.claimExtTwice(src,l,prev,c,ext); }
       }

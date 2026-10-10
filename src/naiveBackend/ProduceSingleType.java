@@ -5,7 +5,7 @@ import core.E.*;
 import utils.Range;
 import utils.Streams;
 
-record ProduceBody(BytecodeLineFix sb, Backend b, String iface, String thisName, M m){
+record ProduceBody(BytecodeLineFix sb, Backend b, String thisName, M m){
   public void emitBody(){
     if (!"_".equals(thisName)){ sb.a("    var ").a(thisName).a("$= this;\n"); }
     Streams.zipI(m.xs(), m.sig().ts())
@@ -24,15 +24,11 @@ record ProduceBody(BytecodeLineFix sb, Backend b, String iface, String thisName,
     return "("+b.typeName(lit ? LiteralDeclarations.superLiteral(n) : n)+")";
   }
   void emitE(core.E e){ switch(e){
-    case X x -> emitX(x);
+    case X x -> sb.a(b.encodeTrailingPrimes(x.name())+"$");
     case Type t -> emitType(t);
     case Call c -> emitCall(c);
     case Literal lit -> emitLit(lit);
   };}
-  private void emitX(X x){
-    assert !"_".equals(x.name());
-    sb.a(b.encodeTrailingPrimes(x.name())+"$");
-  }
   private void emitType(Type t){
     var n= t.type().c().name();
     var lit= n.pkgName().equals("base") && LiteralDeclarations.isPrimitiveLiteral(n.simpleName());
@@ -63,8 +59,7 @@ record ProduceBody(BytecodeLineFix sb, Backend b, String iface, String thisName,
       return;
     }
     if (!lit.infName() || lit.onlyImmCapture().inner){ b.generateInterface(lit, true); }
-    var base= b.ifaceNameFor(lit);
-      sb.a("new ").a(base).a("(){");
+    sb.a("new ").a(b.ifaceNameFor(lit)).a("(){");
     if (b.isRepr(lit)){
       sb.a("""
         volatile java.util.concurrent.ConcurrentHashMap<Object,Entry> _reprCache;
@@ -84,7 +79,7 @@ record ProduceBody(BytecodeLineFix sb, Backend b, String iface, String thisName,
       assert m.e().isPresent();
       var jName= b.mangledMethodName(m.sig().rc(), m.sig().m());
       sb.a("\n    public Object "+jName+b.paramsSig(m)+"{\n");
-      new ProduceBody(sb,b, base, lit.thisName(), m).emitBody();
+      new ProduceBody(sb,b, lit.thisName(), m).emitBody();
     }
     sb.a("\n}");
   }

@@ -2,6 +2,7 @@ package docBuilder;
 
 import static offensiveUtils.Require.*;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -65,7 +66,7 @@ public final class DocNames{
 "WidenTo"
 );
 
-  public static Map<String,String> uses(String pkgName, List<Literal> core){
+  public static Map<String,String> uses(String pkgName, Collection<Literal> core){
     assert nonNull(pkgName,core);
     var local= core.stream()
       .filter(l->l.name().pkgName().equals(pkgName))

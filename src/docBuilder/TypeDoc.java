@@ -15,17 +15,12 @@ final class TypeDoc{
 
   final List<Literal> variants= new ArrayList<>();
   final List<DocOcc> docs;
-  final List<MethodDoc> methods= new ArrayList<>();
-  final Map<DeclaredMethodKey,MethodDoc> declaredByKey= new LinkedHashMap<>();
-  final Map<ImportedKey,MethodDoc> importedByKey= new LinkedHashMap<>();
+  final SequencedMap<Object,MethodDoc> byKey= new LinkedHashMap<>();
+  final SequencedCollection<MethodDoc> methods= byKey.sequencedValues();
 
   Literal main(){ return variants.getFirst(); }
 
-  boolean visible(){ return !main().infName() || hasDocs(); }
-
-  boolean hasDocs(){
-    return !docs.isEmpty() || methods.stream().anyMatch(MethodDoc::hasDocs);
-  }
+  boolean visible(){ return !main().infName() || !docs.isEmpty() || methods.stream().anyMatch(MethodDoc::hasDocs); }
 
   void addVariant(Literal l){
     assert variants.stream().noneMatch(v->v.name().equals(l.name())):
@@ -34,39 +29,33 @@ final class TypeDoc{
   }
 
   void declared(Pos pos, M m, List<DocOcc> docs, List<MethodRef> inheritedFrom){
-    oneOf(declaredByKey, new DeclaredMethodKey(pos.fileName(),pos.line(),pos.column(),m.sig().m()), true, docs, inheritedFrom).add(m);
+    oneOf(new DeclaredMethodKey(pos.fileName(),pos.line(),pos.column(),m.sig().m()), true, docs, inheritedFrom).add(m);
   }
 
   void imported(M m, List<MethodRef> from){
-    oneOf(importedByKey, new ImportedKey(m.sig().origin(),m.sig().rc(),m.sig().m()), false, List.of(), from).add(m);
+    oneOf(new ImportedKey(m.sig().origin(),m.sig().rc(),m.sig().m()), false, List.of(), from).add(m);
   }
 
-  private <K> MethodDoc oneOf(Map<K,MethodDoc> byKey, K k, boolean declared, List<DocOcc> docs, List<MethodRef> inheritedFrom){
-    var d= byKey.get(k);
-    if (d == null){
-      d= new MethodDoc(this,declared,docs,inheritedFrom);
-      byKey.put(k,d);
-      methods.add(d);
-    }
-    else{ d.addInheritedFrom(inheritedFrom); }
+  private MethodDoc oneOf(Object k, boolean declared, List<DocOcc> docs, List<MethodRef> inheritedFrom){
+    var d= byKey.computeIfAbsent(k,_->new MethodDoc(this,declared,docs));
+    d.addInheritedFrom(inheritedFrom);
     return d;
   }
 }
 
 final class MethodDoc{
-  MethodDoc(TypeDoc owner, boolean declared, List<DocOcc> docs, List<MethodRef> inheritedFrom){
+  MethodDoc(TypeDoc owner, boolean declared, List<DocOcc> docs){
     this.owner= owner;
     this.declared= declared;
     this.docs= docs;
-    addInheritedFrom(inheritedFrom);
   }
 
   final TypeDoc owner;
   final boolean declared;
   final List<DocOcc> docs;
   final List<M> variants= new ArrayList<>();
-  final List<MethodRef> inheritedFrom= new ArrayList<>();
-  final Set<MethodRefKey> inheritedKeys= new LinkedHashSet<>();
+  final Map<MethodRefKey,MethodRef> inheritedByKey= new LinkedHashMap<>();
+  final Collection<MethodRef> inheritedFrom= inheritedByKey.values();
 
   M main(){ return variants.getFirst(); }
   boolean hasDocs(){ return !docs.isEmpty(); }
@@ -74,9 +63,7 @@ final class MethodDoc{
   void add(M m){ variants.add(m); }
 
   void addInheritedFrom(List<MethodRef> refs){
-    refs.forEach(r->{
-      if (inheritedKeys.add(MethodRefKey.of(r))){ inheritedFrom.add(r); }
-    });
+    refs.forEach(r->inheritedByKey.putIfAbsent(MethodRefKey.of(r),r));
   }
 }
 
@@ -85,14 +72,7 @@ final class MethodDoc{
  * provider is the actual type-use through which the method was found, when we
  * have one. This preserves distinctions such as DataType[_] vs DataType[_,_].
  */
-record MethodRef(TName owner, Optional<T.C> provider, M method){
-  static MethodRef provider(T.C provider, M method){
-    return new MethodRef(provider.name(),Optional.of(provider),method);
-  }
-  static MethodRef origin(M method){
-    return new MethodRef(method.sig().origin(),Optional.empty(),method);
-  }
-}
+record MethodRef(TName owner, Optional<T.C> provider, M method){}
 
 record DeclaredMethodKey(URI file, int line, int column, MName m){}
 record MethodRefKey(String provider, RC rc, MName m){

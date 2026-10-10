@@ -194,18 +194,16 @@ class CommonInfo{
     var visited= new HashSet<Path>();
     var out= new StringBuilder();
     Path current= path.toAbsolutePath().normalize();//normalize is lexical, no I/O
-    var depth= 0;
     try {
       while (Files.isSymbolicLink(current)){//returns false (not throws) on error, ending the walk
-        if (depth >= MaxLinkFollowed){ return out.append("\nChain exceeds ").append(MaxLinkFollowed).append(" links; not followed further.\n").toString(); }
+        if (visited.size() >= MaxLinkFollowed){ return out.append("\nChain exceeds ").append(MaxLinkFollowed).append(" links; not followed further.\n").toString(); }
         if (!visited.add(current)){ return out.append("\nChain loops back to ").append(Message.displayString(current.toString())).append(".\n").toString(); }
         current= current.getParent().resolve(Files.readSymbolicLink(current)).normalize();//read to advance; relative to the link's own dir; current is absolute and a root cannot be a symlink, so getParent()!=null
-        depth++;
         out.append("\n  ").append(located(current, suppressed)).append("\n");//either last is final location or a dedicated message is present
       }
     }
     catch(IOException e){ return out.append("\n<reading next failed>").append(suppressed.mark(e)).append("\n").toString(); }
-    if (depth > PortableLinkDepth){ out.append("\nWarning: ").append(depth).append(" links deep; some systems may cap it at 8.\n"); }
+    if (visited.size() > PortableLinkDepth){ out.append("\nWarning: ").append(visited.size()).append(" links deep; some systems may cap it at 8.\n"); }
     return out.toString();
   }
 }

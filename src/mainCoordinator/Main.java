@@ -49,11 +49,11 @@ public final class Main{
     catch(UserError e){ System.err.print(e.getMessage()); }
     catch(Throwable t){ System.err.print(UserError.crash(t)); }
   }
-  private static void run(String[] args) throws InvocationTargetException, InterruptedException, ExecutionException{
+  private static void run(String[] args) throws InterruptedException{
     var appDir= JavacTool.reqAppDir(Violation::mustUseLauncher);
     offerAssociation(appDir);
-    Optional<Path> launch= launchPath(args);
-    if (Fs.isMac() && !hasConsoleFlag()){ registerMacSpawnHandler(appDir); }
+    Optional<Path> launch= Stream.of(args).filter(a->!a.startsWith("-psn_")).findFirst().map(Main::normalize);
+    if (Fs.isMac() && !hasConsoleFlag()){ Desktop.getDesktop().setOpenFileHandler(e->e.getFiles().forEach(f->spawnMac(appDir, f.toPath()))); }
     if (launch.isEmpty()){
       if (Fs.isMac()){ Thread.sleep(1000); }
       if (macSpawnOk.get() == 0){ InitialSupportGuiMain.main(new String[]{}); }
@@ -64,7 +64,7 @@ public final class Main{
     var stdLib= appDir.resolve("stdLib");
     run(Files.isDirectory(l) ? l : l.getParent(), stdLib.resolve("base"), stdLib.resolve("rt"));
   }
-  public static void run(Path project, Path base, Path rt) throws InvocationTargetException, InterruptedException, ExecutionException{
+  public static void run(Path project, Path base, Path rt) throws InterruptedException{
     var c= new Coordinator(){
       @Override public Optional<Path> baseCachePath(){ return Optional.of(base.getParent().resolve("baseCache")); }
       @Override public BackendTools backendTools(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, CapabilityEnvironment capabilities){
@@ -79,7 +79,7 @@ public final class Main{
     var launcher= ProcessHandle.current().info().command().map(Path::of);
     if (launcher.isEmpty()){ return; }
     var l= launcher.get();
-    var identity= identity(l);
+    var identity= l.getFileName().toString().replaceFirst("\\.[^.]*$","");
     if (!belongsToFamily.test(identity)){ return; }
     var icon= appDir.resolve("icon.png");
     FileAssociations.reconcile(identity, belongsToFamily, l, List.of(new Icon(".fearless", l, icon)), l, icon,
@@ -90,21 +90,9 @@ public final class Main{
       Violation::associationNotWritable,
       Violation::associationLeftHalfDone);
   }
-  private static String identity(Path launcher){
-    var file= launcher.getFileName().toString();
-    var dot= file.lastIndexOf('.');
-    return dot < 0 ? file : file.substring(0, dot);
-  }
-  private static void registerMacSpawnHandler(Path appDir){
-    Desktop.getDesktop().setOpenFileHandler(e->e.getFiles().forEach(f->spawnMac(appDir, f.toPath())));
-  }
   private static void spawnMac(Path appDir, Path file){
     var bundle= appDir.getParent().getParent();
-    Fs.ofV(()->{
-      var pb= new ProcessBuilder("open","-n","-a",bundle.toString(),"--args",file.toString());
-      pb.environment().remove("_JPACKAGE_LAUNCHER");
-      pb.start();
-    });
+    Fs.ofV(()->Fs.processBuilder(List.of("open","-n","-a",bundle.toString(),"--args",file.toString())).start());
     macSpawnOk.incrementAndGet();
   }
   private static void hookStd() throws InvocationTargetException, InterruptedException, ExecutionException{
@@ -124,17 +112,13 @@ public final class Main{
     Fs.ofV(()->{
       var icon= ImageIO.read(JavacTool.reqAppDir(Violation::mustUseLauncher).resolve("icon.png").toFile());
       frame.setIconImage(icon);
-      if (Taskbar.isTaskbarSupported()){
-        var tb= Taskbar.getTaskbar();
-        if (tb.isSupported(Taskbar.Feature.ICON_IMAGE)){ tb.setIconImage(icon); }
-      }
+      if (Taskbar.isTaskbarSupported() && Taskbar.getTaskbar().isSupported(Taskbar.Feature.ICON_IMAGE)){ Taskbar.getTaskbar().setIconImage(icon); }
     });
     frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
     frame.add(new JScrollPane(area));
     frame.pack();
     var screen= GraphicsEnvironment.getLocalGraphicsEnvironment().getMaximumWindowBounds();
-    var pref= frame.getSize();
-    frame.setSize(Math.min(pref.width, screen.width), Math.min(pref.height, screen.height));
+    frame.setSize(Math.min(frame.getWidth(), screen.width), Math.min(frame.getHeight(), screen.height));
     frame.setLocationRelativeTo(null);
     return s->SwingUtilities.invokeLater(()->{
       if (!frame.isVisible()){ frame.setVisible(true); }
@@ -142,11 +126,6 @@ public final class Main{
     });
   }
   private static boolean hasConsoleFlag(){ return JavacTool.consoleKey.equals(System.getProperty(JavacTool.launcherKey)); }
-  private static Optional<Path> launchPath(String[] args){
-    return Stream.of(args)
-      .filter(a->!a.startsWith("-psn_"))
-      .findFirst().map(Main::normalize);
-  }
   private static Path normalize(String s){
     assert !s.isEmpty();
     Path p; try{ p= s.startsWith("file:")?Path.of(URI.create(s)):Path.of(s); }

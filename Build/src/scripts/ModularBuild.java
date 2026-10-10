@@ -11,14 +11,17 @@ import tools.JavacTool;
 import tools.JavaTool;
 import tools.PortableApp;
 import utils.OneOr;
+import utils.Push;
 
 public class ModularBuild{
-  static final Path out= ResolveResource.coordinatorSrc.getParent().getParent().resolve("out").resolve("modular");
+  static final Path root= ResolveResource.coordinatorSrc.getParent().getParent();
+  static final Path out= root.resolve("out").resolve("modular");
   static final Path mods= out.resolve("mods");
   static final Path resources= ResolveResource.coordinatorSrc.getParent().resolve("Build","src","resources");
 
+  static void mainJars(){ commons(); frontendMain(); coordinatorMain(); }
   static void commons(){
-    Fs.cleanDir(mods); Fs.ensureDir(mods);
+    Fs.cleanDir(mods);
     Fs.copyTreeFlat(ResolveResource.coordinatorJars, mods);
     Fs.copyTreeFlat(ResolveResource.coordinatorTestJars, mods);
     buildJar("Commons", List.of(ResolveResource.commonsSrc));
@@ -29,13 +32,12 @@ public class ModularBuild{
   static void coordinatorMain(){
     buildJar("Coordinator", List.of(ResolveResource.coordinatorSrc, ResolveResource.coordinatorSrcModule));
   }
-  static void frontendTest(){ test(ResolveResource.frontendSrc, "frontend-test"); }
-  static void coordinatorTest(){ test(ResolveResource.coordinatorSrc, "coordinator-test", resources); }
-  static void controllerTest(){ test(ResolveResource.controllerSrc, "controller-test", resources); }
-  static void test(Path src, String name, Path... extra){
-    var srcs= new ArrayList<>(List.of(src, src.getParent().resolve("test"), src.getParent().resolve("testModule")));
-    srcs.addAll(List.of(extra));
-    JavacTool.javac(srcs, out.resolve(name), mods);
+  static Path frontendTest(){ return test(ResolveResource.frontendSrc, "frontend-test"); }
+  static Path coordinatorTest(){ return test(ResolveResource.coordinatorSrc, "coordinator-test", resources); }
+  static Path controllerTest(){ return test(ResolveResource.controllerSrc, "controller-test", resources); }
+  static Path test(Path src, String name, Path... extra){
+    JavacTool.javac(Push.<Path>of(List.of(src, src.getParent().resolve("test"), src.getParent().resolve("testModule")), List.of(extra)), out.resolve(name), mods);
+    return out.resolve(name);
   }
   static void buildJar(String name, List<Path> srcs){ buildJar(name, srcs, List.of()); }
   static void buildJar(String name, List<Path> srcs, List<String> extraLintDisables){
@@ -44,16 +46,22 @@ public class ModularBuild{
     JavacTool.jar(classes, mods.resolve(name+".jar"));
   }
 
-  static void runJUnit(Path testClasses, String... extraArgs) throws InterruptedException{
-    var args= new ArrayList<String>(List.of("execute",
-      "--class-path", testClasses.toString(), "--scan-class-path="+testClasses,
-      "--include-classname=.*", "--details=summary", "--disable-ansi-colors"));
-    args.addAll(List.of(extraArgs));
-    JavaTool.runMain(List.of("-ea"), testClasses, mods, "org.junit.platform.console.ConsoleLauncher", args.toArray(String[]::new));
+  static void fearlessTour(){
+    var tour= root.resolve("FearlessTour");
+    Fs.copyTreeFlat(tour.resolve("externalJars"), mods);
+    //an automatic module (flexmark has no module-info) pulls every other automatic
+    //module into the graph, so this shaded jar's bundled junit classes collide
+    //with the real org.junit.jupiter.api module also sitting in mods
+    var jars= Fs.walk(mods, s->s.filter(p->p.getFileName().toString().startsWith("junit-platform-console-standalone")).toList());
+    Fs.ofV(()->Files.delete(OneOr.of("Expected exactly one junit console jar in "+mods, jars.stream())));
+    buildJar("FearlessTour", List.of(tour.resolve("src"), resources), List.of("-requires-automatic"));
   }
 
-  static void deployBaseCache(Path appRoot) throws InterruptedException{
-    JavaTool.runMain(List.of("-ea"), out.resolve("coordinator-test"), mods, "testBuildBase.BaseCacheBuilder", appRoot.toString());
+  static void runJUnit(Path testClasses, String... extraArgs) throws InterruptedException{
+    var args= Push.<String>of(List.of("execute",
+      "--class-path", testClasses.toString(), "--scan-class-path="+testClasses,
+      "--include-classname=.*", "--details=summary", "--disable-ansi-colors"), List.of(extraArgs));
+    JavaTool.runMain(List.of("-ea"), testClasses, mods, "org.junit.platform.console.ConsoleLauncher", args.toArray(String[]::new));
   }
 
   static void deploy(Path folderOut, List<List<Path>> srcs, String binName, String mainClass, boolean eclipsePlugin) throws InterruptedException{
@@ -62,8 +70,7 @@ public class ModularBuild{
       ResolveResource.coordinatorJars, binName, ResolveResource.versionId, mainClass).build();
     commons();
     frontendMain();
-    coordinatorTest();
-    deployBaseCache(appRoot);
+    JavaTool.runMain(List.of("-ea"), coordinatorTest(), mods, "testBuildBase.BaseCacheBuilder", appRoot.toString());
     if (eclipsePlugin){ deployEclipsePlugin(appRoot); }
   }
 
@@ -79,7 +86,7 @@ public class ModularBuild{
   static Path buildEclipsePlugin(){
     var plugin= ResolveResource.controllerPluginSrc;
     var classes= out.resolve("eclipsePluginClasses");
-    Fs.cleanDir(classes); Fs.ensureDir(classes);
+    Fs.cleanDir(classes);
     var plugins= ResolveResource.eclipsePlugins;
     var bundles= Fs.walk(plugins, s->s.filter(p->p.getParent().equals(plugins) && p.toString().endsWith(".jar")).map(Path::toString).sorted().toList());
     var args= new ArrayList<>(JavacTool.javacArgs);
@@ -90,7 +97,7 @@ public class ModularBuild{
       Fs.walkV(src, s->s.filter(p->p.toString().endsWith(".java")).forEach(p->args.add(p.toString()))));
     Fs.runTool("javac", args);
     var res= out.resolve("eclipsePlugin");
-    Fs.cleanDir(res); Fs.ensureDir(res);
+    Fs.cleanDir(res);
     Fs.runTool("jar", List.of("--create",
       "--file", res.resolve(bundleFileName(plugin)).toString(),
       "--manifest", plugin.resolve("META-INF","MANIFEST.MF").toString(),

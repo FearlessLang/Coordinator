@@ -18,7 +18,6 @@ import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
-import javax.swing.JComponent;
 import javax.swing.JEditorPane;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
@@ -44,7 +43,8 @@ public final class InitialSupportGuiMain{
   public static void main(String[] args){
     try{ UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName()); }
     catch(Exception _){ throw Bug.unreachable(); }
-    setUiFont(uiFont);
+    var d= UIManager.getDefaults();
+    for (var k: d.keySet()){ if (d.get(k) instanceof Font){ d.put(k, new FontUIResource(uiFont)); } }
     SwingUtilities.invokeLater(InitialSupportGuiMain::new);
   }
 
@@ -64,30 +64,15 @@ public final class InitialSupportGuiMain{
     var root= new JPanel(new BorderLayout(12,12));
     root.setBorder(new EmptyBorder(12,12,12,12));
     frame.setContentPane(root);
-    root.add(header(), BorderLayout.NORTH);
-    root.add(center(), BorderLayout.CENTER);
-    root.add(footer(), BorderLayout.SOUTH);
-    frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
-    frame.setMinimumSize(new Dimension(300,300));
-    frame.setSize(new Dimension(950,700));
-    frame.setLocationRelativeTo(null);
-    frame.setVisible(true);
-  }
-
-  private JComponent header(){
-    var p= new JPanel(new BorderLayout());
+    var head= new JPanel(new BorderLayout());
     var title= new JLabel("Welcome to Fearless");
     title.setFont(uiFont.deriveFont(Font.BOLD, uiFont.getSize2D() + 6f));
-    p.add(title, BorderLayout.NORTH);
-    var sub= new JLabel(startText);
+    head.add(title, BorderLayout.NORTH);
+    var sub= new JLabel("Predictable programming at scale");
     sub.setBorder(new EmptyBorder(6,0,0,0));
-    p.add(sub, BorderLayout.SOUTH);
-    return p;
-  }
-
-  private JComponent center(){
-    var left= textPaneHtml(welcomeHtml);
-    var leftScroll= new JScrollPane(left);
+    head.add(sub, BorderLayout.SOUTH);
+    root.add(head, BorderLayout.NORTH);
+    var leftScroll= new JScrollPane(textPaneHtml(welcomeHtml));
     leftScroll.setBorder(border("About"));
     var rightScroll= new JScrollPane(actions);
     rightScroll.setBorder(border("Actions"));
@@ -99,15 +84,17 @@ public final class InitialSupportGuiMain{
     split.setContinuousLayout(true);
     rightScroll.getViewport().setViewPosition(new Point(0,0));
     leftScroll.getViewport().setViewPosition(new Point(0,0));
-    return split;
-  }
-
-  private JComponent footer(){
-    var p= new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
-    var info= addBtn(p, "Info", "About Fearless", _->showHtml(aboutHtml, "About Fearless"));
+    root.add(split, BorderLayout.CENTER);
+    var foot= new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+    var info= addBtn(foot, "Info", "About Fearless", _->showHtml(aboutHtml, "About Fearless"));
     info.setFont(uiFont.deriveFont(uiFont.getSize2D() - 2f));
     info.setMargin(new Insets(2,8,2,8));
-    return p;
+    root.add(foot, BorderLayout.SOUTH);
+    frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+    frame.setMinimumSize(new Dimension(300,300));
+    frame.setSize(new Dimension(950,700));
+    frame.setLocationRelativeTo(null);
+    frame.setVisible(true);
   }
 
   private void toggleMore(JButton more){
@@ -124,11 +111,8 @@ public final class InitialSupportGuiMain{
     JOptionPane.showMessageDialog(frame, s, title, JOptionPane.INFORMATION_MESSAGE);
   }
   private static void openUri(String s){
-    try{
-      var browse= Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE);
-      if (browse){ Desktop.getDesktop().browse(URI.create(s)); return; }
-    }catch(Exception _){}
-    Toolkit.getDefaultToolkit().beep();
+    try{ Desktop.getDesktop().browse(URI.create(s)); }
+    catch(Exception _){ Toolkit.getDefaultToolkit().beep(); }
   }
   private void selectFile(JButton b){
     var fc= new JFileChooser();
@@ -139,13 +123,6 @@ public final class InitialSupportGuiMain{
     if (fc.showSaveDialog(b) != JFileChooser.APPROVE_OPTION){ return; }
     MakeDemo.of(fc.getSelectedFile().toPath());
     showHtml(Fs.isWindows() ? afterCreateWinHtml : Fs.isMac() ? afterCreateMacHtml : afterCreateLinuxHtml, "Next steps");
-  }
-  private static void setUiFont(Font f){
-    var d= UIManager.getDefaults();
-    for (var k: d.keySet()){
-      var v= d.get(k);
-      if (v instanceof Font){ d.put(k, new FontUIResource(f)); }
-    }
   }
   private static TitledBorder border(String title){
     return BorderFactory.createTitledBorder(BorderFactory.createEtchedBorder(), title);
@@ -177,14 +154,10 @@ public final class InitialSupportGuiMain{
     parent.add(Box.createVerticalStrut(8));
     return b;
   }
-  private static JButton addBtn(Container parent, String text){
-    var b= addBtn(parent, text, comingSoon, _->{});
-    b.setEnabled(false);
-    return b;
+  private static void addBtn(Container parent, String text){
+    addBtn(parent, text, "Coming soon", _->{}).setEnabled(false);
   }
   private static final Font uiFont= new Font(Font.SANS_SERIF, Font.PLAIN, 16);
-  public static final String startText= "Predictable programming at scale";
-  public static final String comingSoon= "Coming soon";
   public static final String welcomeHtml= """
 <html>
   <body>
@@ -236,7 +209,7 @@ public final class InitialSupportGuiMain{
   </body>
 </html>
 """;
-  public static final String afterCreateWinHtml= """
+  private static String afterCreate(String steps){ return """
 <html>
   <body>
     <h2 style='margin-top:0;'>Demo created</h2>
@@ -246,6 +219,11 @@ public final class InitialSupportGuiMain{
       Inside it, you will find <b>start.fearless</b>.
     </p>
 
+"""+steps+"""
+  </body>
+</html>
+"""; }
+  public static final String afterCreateWinHtml= afterCreate("""
     <h3>Run it</h3>
     <ol>
       <li>Double-click <b>start.fearless</b>.</li>
@@ -262,19 +240,8 @@ public final class InitialSupportGuiMain{
     <p>
       Tip: if you don't see ".fearless", enable "File name extensions" in Explorer's View menu.
     </p>
-  </body>
-</html>
-""";
-  public static final String afterCreateMacHtml= """
-<html>
-  <body>
-    <h2 style='margin-top:0;'>Demo created</h2>
-
-    <p>
-      Your demo folder should now be open.
-      Inside it, you will find <b>start.fearless</b>.
-    </p>
-
+""");
+  public static final String afterCreateMacHtml= afterCreate("""
     <h3>Run it</h3>
     <ol>
       <li>Double-click <b>start.fearless</b>.</li>
@@ -293,19 +260,8 @@ public final class InitialSupportGuiMain{
       Tip: if you don't see ".fearless", Finder -> Settings (Preferences) -> Advanced -> enable
       <b>Show all filename extensions</b>.
     </p>
-  </body>
-</html>
-""";
-  public static final String afterCreateLinuxHtml= """
-<html>
-  <body>
-    <h2 style='margin-top:0;'>Demo created</h2>
-
-    <p>
-      Your demo folder should now be open.
-      Inside it, you will find <b>start.fearless</b>.
-    </p>
-
+""");
+  public static final String afterCreateLinuxHtml= afterCreate("""
     <h3>One-time setup: register the .fearless file type</h3>
     <ol>
       <li>In the Fearless installation folder, find the file <b>fearless-mime.xml</b>.</li>
@@ -329,7 +285,5 @@ public final class InitialSupportGuiMain{
       Tip: if after the MIME step the file still looks like plain text, close and reopen the file manager (or log out/in)
       and then do the <b>Open With</b> step again.
     </p>
-  </body>
-</html>
-""";
+""");
 }

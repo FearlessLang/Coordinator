@@ -17,8 +17,9 @@ import java.nio.file.NoSuchFileException;
 import java.nio.file.NotDirectoryException;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
-import java.nio.file.attribute.BasicFileAttributes;
+import java.util.Arrays;
 import java.util.Locale;
+import java.util.stream.Collectors;
 
 public final class ByteFiles {
   public enum Op {
@@ -126,20 +127,15 @@ public final class ByteFiles {
   private static <T, X extends Throwable> T attempt(Op op, Path path, IoOperation<T> operation, Handler<T,X> handler) throws X {
     try { return operation.run(); }
     catch(IOException|UnsupportedOperationException|ClosedFileSystemException|FileSystemNotFoundException e){ return classifyError(op, path, e, handler); }
-    catch(OutOfMemoryError e){ return classifyMemoryError(e, handler); }
-  }
-  private static <T, X extends Throwable> T classifyMemoryError(OutOfMemoryError e, Handler<T,X> handler) throws X {
-    var message= e.getMessage();
-    if (message != null && TextMatch.MFileTooLargeForByteArray.has(message.toLowerCase(Locale.ROOT))){ return handler.failure(FileTooLargeForByteArray, e); }
-    throw e;
+    catch(OutOfMemoryError e){
+      if (TextMatch.MFileTooLargeForByteArray.has(text(e))){ return handler.failure(FileTooLargeForByteArray, e); }
+      throw e;
+    }
   }
   private static <T, X extends Throwable> T classifyError(Op op, Path path, Throwable firstFailure, Handler<T,X> handler) throws X {
     var kind= kindFromFailure(firstFailure);
-    if ((kind == AccessDenied || kind == UnknownFailureAfterSuccessfulOpen) && isFolder(path)){ return handler.failure(PathIsFolder, firstFailure); }
+    if ((kind == AccessDenied || kind == UnknownFailureAfterSuccessfulOpen) && Files.isDirectory(path)){ return handler.failure(PathIsFolder, firstFailure); }
     if (kind != UnknownFailureAfterSuccessfulOpen){ return handler.failure(kind, firstFailure); }
-    return checkOpenFailure(op, path, firstFailure, handler);
-  }
-  private static <T, X extends Throwable> T checkOpenFailure(Op op, Path path, Throwable firstFailure, Handler<T,X> handler) throws X {
     FileChannel channel;
     try { channel= FileChannel.open(path, op.probeOptions); }
     catch(IOException|UnsupportedOperationException|ClosedFileSystemException|FileSystemNotFoundException e){
@@ -149,10 +145,6 @@ public final class ByteFiles {
     try { channel.close(); }
     catch(IOException e){ firstFailure.addSuppressed(e); }
     return handler.failure(UnknownFailureAfterSuccessfulOpen, firstFailure);
-  }
-  private static boolean isFolder(Path path) {
-    try { return Files.readAttributes(path, BasicFileAttributes.class).isDirectory(); }
-    catch(IOException|UnsupportedOperationException|ClosedFileSystemException|FileSystemNotFoundException e){ return false; }
   }
   private static Kind kindFromFailure(Throwable cause) {
     return switch(cause){
@@ -170,15 +162,8 @@ public final class ByteFiles {
     };
   }
   public static String text(Throwable e) {
-    var out= new StringBuilder();
-    appendText(out, e);
-    return out.toString().toLowerCase(Locale.ROOT);
-  }
-  private static void appendText(StringBuilder out, Throwable e){
-    if (e == null){ return; }
+    if (e == null){ return ""; }
     var text= e instanceof FileSystemException fs && fs.getReason() != null ? fs.getReason() : e.getMessage();
-    if (text != null){ out.append(' ').append(text); }
-    appendText(out, e.getCause());
-    for (var suppressed : e.getSuppressed()){ appendText(out, suppressed); }
+    return (text == null ? "" : " "+text.toLowerCase(Locale.ROOT))+text(e.getCause())+Arrays.stream(e.getSuppressed()).map(ByteFiles::text).collect(Collectors.joining());
   }
 }

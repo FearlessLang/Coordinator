@@ -15,11 +15,8 @@ public class TestAgentTools{
     var app= ResolveResource.managedFolderOut.resolve("fearlessManaged"+ResolveResource.versionId);
     if (stale(app)){ DeployManagedFearless.main(args); }
     Fs.copyFresh(app,Path.of(args[args.length-1]).resolve(app.getFileName()));
-    ModularBuild.commons();
-    ModularBuild.frontendMain();
-    ModularBuild.coordinatorMain();
-    ModularBuild.controllerTest();
-    var classes= ModularBuild.out.resolve("controller-test");
+    ModularBuild.mainJars();
+    var classes= ModularBuild.controllerTest();
     var select= args.length==5 ? "--select-class=agentTools."+args[2] : "--select-package=agentTools";
     var properties= List.of("-ea","-Ddesk="+args[0],"-Dagent="+args[1],"-DchannelFolder="+channel,"-DfilesIOFolder="+args[args.length-1]);
     Fs.cleanDir(channel);
