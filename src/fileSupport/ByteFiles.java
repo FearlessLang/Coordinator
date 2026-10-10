@@ -17,7 +17,6 @@ import java.nio.file.NoSuchFileException;
 import java.nio.file.NotDirectoryException;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
-import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Locale;
 
 public final class ByteFiles {
@@ -135,7 +134,7 @@ public final class ByteFiles {
   }
   private static <T, X extends Throwable> T classifyError(Op op, Path path, Throwable firstFailure, Handler<T,X> handler) throws X {
     var kind= kindFromFailure(firstFailure);
-    if ((kind == AccessDenied || kind == UnknownFailureAfterSuccessfulOpen) && isFolder(path)){ return handler.failure(PathIsFolder, firstFailure); }
+    if ((kind == AccessDenied || kind == UnknownFailureAfterSuccessfulOpen) && Files.isDirectory(path)){ return handler.failure(PathIsFolder, firstFailure); }
     if (kind != UnknownFailureAfterSuccessfulOpen){ return handler.failure(kind, firstFailure); }
     return checkOpenFailure(op, path, firstFailure, handler);
   }
@@ -149,10 +148,6 @@ public final class ByteFiles {
     try { channel.close(); }
     catch(IOException e){ firstFailure.addSuppressed(e); }
     return handler.failure(UnknownFailureAfterSuccessfulOpen, firstFailure);
-  }
-  private static boolean isFolder(Path path) {
-    try { return Files.readAttributes(path, BasicFileAttributes.class).isDirectory(); }
-    catch(IOException|UnsupportedOperationException|ClosedFileSystemException|FileSystemNotFoundException e){ return false; }
   }
   private static Kind kindFromFailure(Throwable cause) {
     return switch(cause){
