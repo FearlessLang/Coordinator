@@ -41,7 +41,7 @@ import static java.lang.foreign.ValueLayout.JAVA_INT;
 //   loaded explicitly, Windows only.
 // The two kernel32 downcalls capture GetLastError (Linker.Option.captureCallState),
 // so a failure reports the Windows error code instead of just "it failed".
-public class NativeLocaleForcer{
+public final class NativeLocaleForcer{
   private static final int maxProcessUiLanguageChars= 1_000;
   private static final String enUs= "en-US";
   private static final Linker linker= Linker.nativeLinker();

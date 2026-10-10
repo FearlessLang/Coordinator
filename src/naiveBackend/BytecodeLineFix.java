@@ -16,7 +16,7 @@ import tools.Fs;
 import utils.Pos;
 
 final class BytecodeLineFix implements Consumer<Path>{
-  StringBuilder sb= new StringBuilder(8_000);
+  final StringBuilder sb= new StringBuilder(8_000);
   private final String base;
   private final String sourceFile;
   private final TreeMap<Integer,Integer> lineMap= new TreeMap<>();

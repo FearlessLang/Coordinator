@@ -61,7 +61,7 @@ public interface OutputOracle{
   //commitMap only write if different from the old, and in that case it will bumps mtime strictly above minExclusiveMillis
 }
 
-class OutputHelper{
+final class OutputHelper{
   static String fileList(List<Ref> files){ return Join.of(files.stream().map(Ref::fearPath).sorted(),"","\n",""); }
   static String toJson(Map<String,Map<String,String>> map){
     if (map.isEmpty()){ return "{}"; }

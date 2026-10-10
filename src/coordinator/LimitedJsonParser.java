@@ -26,7 +26,7 @@ import utils.Pos;
 final class LimitedJsonParser{
   private final String s;
   private int i= 0;
-  Path forErr;
+  private final Path forErr;
   LimitedJsonParser(String s, Path forErr){ this.s= s; this.forErr= forErr; }
   Map<String,Map<String,String>> obj2(){ return end(obj(()->obj(this::name))); }
   private <R> R end(R res){

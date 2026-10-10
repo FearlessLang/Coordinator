@@ -24,15 +24,15 @@ import utils.Join;
 import utils.Pos;
 import utils.Range;
 
-public class Backend{
+public final class Backend{
   public Backend(Path out, BackendTools tools){
     assert Require.nonNull(out,tools);
     this.out= out;
     this.tools= tools;
   }
-  Path out;
-  BackendTools tools;
-  ArrayList<Consumer<Path>> fixers= new ArrayList<>();
+  final Path out;
+  final BackendTools tools;
+  final ArrayList<Consumer<Path>> fixers= new ArrayList<>();
   boolean isRepr(Literal l){ return l.name().equals(new TName("base.Repr",1,Pos.unknown)); }
   public List<Consumer<Path>> produceJavaCode(){
     Fs.ensureDir(out);

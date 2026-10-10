@@ -162,7 +162,7 @@ final class Suppressed{
   }
   List<Throwable> toList(){ return List.copyOf(errors); }
 }
-class CommonInfo{
+final class CommonInfo{
   private static final int PortableLinkDepth= 8;  // POSIX guarantees only SYMLOOP_MAX >= 8
   private static final int MaxLinkFollowed= 64;   // backstop so the walk always terminates
 
@@ -211,7 +211,7 @@ class CommonInfo{
 }
 
 // A given holder is the same program whether it triggered a sharing violation (32) or a lock violation (33)
-class Holders{
+final class Holders{
   // Holder enumeration is per-OS. Windows: Restart Manager / NtQuerySystemInformation.
   // Linux: walk /proc/*/fd (or lsof/fuser). macOS: lsof / proc_pidfdinfo.
 
@@ -254,7 +254,7 @@ Antimalware Service Executable
 // they return EXAMPLE data so the final message shape can be reviewed, and the calling
 // texts are already wired for the (path, suppressed) discovery style.
 
-class Terms{
+final class Terms{
   // User-facing glossary (review round 2): the fixed meanings of the storage words,
   // written for the AUDIENCE described at the top - no OS, shell, or file lore assumed.
   // Appended to every text whose wording depends on these words. Refinement for later:
@@ -282,7 +282,7 @@ Terms used above:
 """;
 }
 
-class ReportText{
+final class ReportText{
   static final String please= """
 
 Please report this to the Fearless developers at
@@ -293,11 +293,11 @@ what allows the fault to be routed to Fearless, to the JVM, or to the operating 
 """;
 }
 
-class NetInfo{
+final class NetInfo{
   static final String serverLine=
     "This path is hosted on the server: [[fileserver01]](read from the path itself, or from the mount table for a mounted network volume).\n\n";
 }
-class FolderInfo{
+final class FolderInfo{
   // Real implementation, similarNames: if the parent folder exists, list its entries
   // ranked by case difference, addition/removal of space, _ and -; then against
   // edit distance to the requested name; if the parent does not exist either,
@@ -328,7 +328,7 @@ The folder holds 3 entries:
 """;
 }
 
-class PermissionsInfo{
+final class PermissionsInfo{
   // Real implementation. POSIX: Files.getPosixFilePermissions plus owner/group,
   // compared with the current user. Windows: read the ACL (AclFileAttributeView) and
   // evaluate it for the current user. Query failure -> suppressed.
@@ -350,7 +350,7 @@ File permissions: [[Read/Write/Execute]](easy on linux, how to do on win?, use f
 """;
 }
 
-class NetworkProbe{
+final class NetworkProbe{
   // Real implementation: take the server from the path or the mount table, then check
   // in order: does the name resolve (DNS/NetBIOS)? does the machine answer
   // (ping / TCP 445)? does it accept the share name? Report the FIRST failing step,
@@ -368,7 +368,7 @@ Explanation of what 'name lookup' is.
 """;
 }
 
-class OpenFilesInfo{
+final class OpenFilesInfo{
   // Real implementation. POSIX: getrlimit(RLIMIT_NOFILE) for the limit, /proc/self/fd
   // for the list (readable by the process itself). Windows: GetProcessHandleCount plus
   // the C-runtime stream limit. Group by folder if many files inside a folder.
@@ -386,7 +386,7 @@ The open files, grouped by folder:
 """;
 }
 
-class InterferenceInfo{
+final class InterferenceInfo{
   //Apparently, on most OS/FS naming WHICH software interfered on THIS operation is not possible.
   //So we fall back to name WHO WAS IN A POSITION to interfere (readable right now, while the context is alive).
   // Real implementation. Windows: installed security products (WMI SecurityCenter2),
@@ -406,7 +406,7 @@ Software in a position to interfere on this program's open files:
 // ---- end of shared pieces and example-data helpers ----------------------------------
 
 //[any OS]
-class UnknownFailureAfterSuccessfulOpen{
+final class UnknownFailureAfterSuccessfulOpen{
   static String of(Path path, Suppressed suppressed){
     return msg+Holders.section(path, suppressed,
       "\nThese programs also have the file open.\n\n",
@@ -423,7 +423,7 @@ Fearless cannot tell whether the problem is with the file or with the device or 
 
 // Error 32, ERROR_SHARING_VIOLATION: an open-stage failure. Some existing handle was opened with a share mode that omits read-sharing (or write-sharing, for a write).
 //[Windows-only]
-class FileBusyWindowsSharingViolation{
+final class FileBusyWindowsSharingViolation{
   static String of(Path path, Suppressed suppressed){
     return intro+Holders.section(path, suppressed, "", whenNone, outro);
   }
@@ -447,7 +447,7 @@ yet this check (some moments after), found no program holding the file open at a
 // Error 33, ERROR_LOCK_VIOLATION: a failure at the read/write stage. The open succeeded (share modes were compatible), then the operation overlapped a byte-range lock.
 // Deliberately does NOT probe for the locked range.
 //[Windows-only]
-class FileBusyWindowsFileRegionLocked{
+final class FileBusyWindowsFileRegionLocked{
   static String of(Path path, Suppressed suppressed){
     return intro+Holders.section(path, suppressed, "", whenNone, outro);
   }
@@ -478,7 +478,7 @@ program holding the file open is listed.
 //Likely DEAD CODE. Those errors comes from Files.readAllBytes(path)/Files.write(path,..) and it seems windows will never trigger this from either.
 //Needs more checking, and could come back for other IO reporting.
 //[Windows-only]
-class FileLockWindowsFileRegionLockFailed{
+final class FileLockWindowsFileRegionLockFailed{
   static String of(Path path, Suppressed suppressed){
     return intro+Holders.section(path, suppressed, "", whenNone, "");
   }
@@ -494,7 +494,7 @@ yet this check (some moments after), found no program holding the file open at a
 """;
 }//should the terminology explain what conflicting locks really means on the various OS+Fs?
 
-class FileBusyText{
+final class FileBusyText{
   //[POSIX-only]
   //ETXTBSY is raised for a WRITE-open of a running program; a plain read does not
   //trigger it, so in practice this text serves Op.Write. Wording already neutral.
@@ -514,7 +514,7 @@ for anyone else (error 220, ERROR_FILE_CHECKED_OUT).
 //Overall, this looks like a kind of lock, I wonder if we can (without introducing abstractions and lose details)
 //cluster together the messages related to locks like constructs and make some more uniform terminology, followed by the concrete details.
 }
-class StorageBusyText{
+final class StorageBusyText{
   //[POSIX-only]
   static final String deviceOrResourceBusy= """
 The device or volume holding this file is busy with another operation and refused
@@ -534,7 +534,7 @@ whole volume - commonly a disk check, a format, or a backup or recovery tool
 //Removed since redundant "The volume becomes readable again when that operation finishes or is cancelled."
 //Question: what happens if a symlink points to a locked volume in our current set up? what error would we get?
 }
-class StorageFullText{
+final class StorageFullText{
   //[any OS]
   static final String noSpaceOnVolume= """
 The volume named above has no room left for this file's data
@@ -563,7 +563,7 @@ subject this volume reports, where the system exposes one).
 //"user account" is not in the glossary; is it assumable for this audience, or does
 //the glossary need an entry?
 }
-class StorageReadOnlyText{
+final class StorageReadOnlyText{
   //[POSIX-only] (Windows reports the write-protect flavor below instead)
   static final String volumeMountedReadOnly= """
 The volume named above is mounted read-only ("read-only file system").
@@ -580,7 +580,7 @@ On some devices this is a physical switch (the small slider on the side of an SD
 card); on others it is a setting stored on the device itself.
 """+Terms.glossary;
 }
-class StorageUnavailableText{
+final class StorageUnavailableText{
   //[POSIX-only]
   static final String staleNetworkFile= NetInfo.serverLine+"""
 The file's bytes live on the server named above. To `read` such a file, this computer
@@ -647,7 +647,7 @@ This is a momentary state of the connection, not a property of the path.
 // Error 53 gets its own class: it is the one network failure where active probing
 // turns "could be a, b or c" into one concrete finding, so it carries a probe section.
 //[Windows-only]
-class NetworkPathUnavailable{
+final class NetworkPathUnavailable{
   static String of(Path path, Suppressed suppressed){
     return msg+NetworkProbe.section(path, suppressed)+Terms.glossary;
   }
@@ -660,7 +660,7 @@ The computer or shared folder named in this path did not answer (error 53, ERROR
 //the change in terminology suggests this connection does not go/attempts to go via a 'server'.
 }
 
-class NetworkFailureText{
+final class NetworkFailureText{
   //[Windows-only]
   static final String badResponse= NetInfo.serverLine+"""
 The server named above answered, but its answer was malformed (error 58, ERROR_BAD_NET_RESP).
@@ -677,7 +677,7 @@ Communication with this server failed in a way Windows did not classify (error 5
 """+Terms.glossary;
 }
 //[any OS]
-class TooManyOpenFiles{
+final class TooManyOpenFiles{
   static String of(Path path, Suppressed suppressed){
     return msg+OpenFilesInfo.section(path, suppressed);
   }
@@ -688,7 +688,7 @@ Max files that can be open: [[34?]](POSIX: getrlimit(RLIMIT_NOFILE) and ///proc/
 """;
 }
 
-class ResourceExhaustedText{
+final class ResourceExhaustedText{
   //[POSIX-only]
   //"Closing other programs frees memory" (advice) removed; the text now only says whose memory ran out.
   static final String memory= """
@@ -714,7 +714,7 @@ This describes a momentary state of the whole computer, not a property of this f
 }
 
 //[JVM]  Read-only kind: writes hand Fearless the bytes, they never build the array.
-class FileTooLargeForByteArray{
+final class FileTooLargeForByteArray{
   static String of(Path path, Suppressed suppressed){
     String size;
     try{ size= String.format("%,d bytes", Files.size(path)); }
@@ -725,7 +725,7 @@ class FileTooLargeForByteArray{
 }
 
 //[any OS]
-class PathResolutionFileNotFound{
+final class PathResolutionFileNotFound{
   static String of(Op op, Path path, Suppressed suppressed){
     return (op == Op.Read ? msgRead : msgWrite)+FolderInfo.similarNames(path, suppressed);
   }
@@ -749,7 +749,7 @@ deepest EXISTING ancestor - the walk the FolderInfo comment already describes)
 }
 
 //[any OS]
-class PathResolutionParentIsNotAFolder{
+final class PathResolutionParentIsNotAFolder{
   static final String msg= """
 Path
   yy
@@ -767,7 +767,7 @@ files inside an archive cannot be reached by path; they are read through the arc
 }
 
 //[Windows-only]
-class PathResolutionInvalidName{
+final class PathResolutionInvalidName{
   static final String msg= """
 The path contains a name that is not valid on this system (error 123, ERROR_INVALID_NAME).
 """;
@@ -783,7 +783,7 @@ The first invalid character is marked below:
 }
 
 //[any OS]
-class PathResolutionPathTooLong{
+final class PathResolutionPathTooLong{
   // Typical limits, stated in the texts below; a real implementation should ask the
   // system instead: Windows: 259 unless long-path support is enabled, then about
   // 32,000; POSIX: pathconf PATH_MAX (commonly 4096 bytes) and NAME_MAX (commonly 255
@@ -806,7 +806,7 @@ of this path, PATH_MAX) bytes, and a single file or folder name at most
 """;
 }
 
-class PathResolutionText{
+final class PathResolutionText{
   //[POSIX-only]
   static final String symlinkLoop= """
 As shown by the chain above,
@@ -816,7 +816,7 @@ As shown by the chain above,
 }
 //[any OS]  In practice only reached by writeNew (CREATE_NEW); classified typed, from
 //FileAlreadyExistsException, before the text matcher runs.
-class FileAlreadyExists{
+final class FileAlreadyExists{
   static final String msg= """
 This `read` was asked to create a new file, with the guarantee of never touching
 anything already at this location. Something is already there:
@@ -826,7 +826,7 @@ is there was not touched.
 """;
 }
 //[any OS]
-class AccessDenied{
+final class AccessDenied{
   static String of(Op op, Path path, Suppressed suppressed){
     return msg+PermissionsInfo.section(op, path, suppressed);
   }
@@ -835,7 +835,7 @@ The operating system did not allow Fearless to `read` this file (access denied).
 """;
 }
 
-class AccessText{
+final class AccessText{
   //[any OS]
   static final String accessDeniedNetwork= NetInfo.serverLine+"""
 The server named above refused to let Fearless `read` at this path.
@@ -843,7 +843,7 @@ Given this refusal we cannot even confirm whether this path points to an actual 
 """+Terms.glossary;
 }
 //[any OS]
-class PathIsFolder{
+final class PathIsFolder{
   static String of(Path path, Suppressed suppressed){
     return msg+FolderInfo.listing(path, suppressed);
   }
@@ -853,7 +853,7 @@ This path is a folder, not a file, so it cannot be `written` as a file.
 //write twin; passive position, so it takes the participle token (see Op.fill).
 }//TODO: should look if there is a file with the same name and some extension.
 
-class MediaIoText{
+final class MediaIoText{
 
 //[any OS]
   static final String generic= """
@@ -927,7 +927,7 @@ This failure does not report further detail.
 """+Terms.glossary;
 }
 //[any OS]
-class InvalidHandleOrDescriptor{
+final class InvalidHandleOrDescriptor{
   static String of(Path path, Suppressed suppressed){
     return msg+InterferenceInfo.section(path, suppressed)+ReportText.please;
   }
@@ -938,7 +938,7 @@ This should not happen in normal operation: it points to a bug in the JVM
 """;
 }
 
-class InvalidOperationText{
+final class InvalidOperationText{
 //[POSIX-only]
   static final String invalidArgument= """
 The operating system rejected the `read` request as nonsensical for this file ("invalid argument").
@@ -977,7 +977,7 @@ JVM.]](checked by asking the device kind and volume type: the Device-line querie
 """+Terms.glossary;
 }
 
-class UnsupportedText{
+final class UnsupportedText{
 //[any OS]
   static final String unsupportedFileSystem= """
 A component involved in `reading` this file refused an operation as one it does not perform.
@@ -1005,7 +1005,7 @@ The device is [[the USB storage device "SanDisk Ultra"]] and its driver is
 """+Terms.glossary;
 }
 
-class InterruptionText{
+final class InterruptionText{
   //[JVM]
   //CHANGED(2): "the file must be reopened before trying again" was instruction;
   //replaced by the fact it encoded (stopping this way also closes the file).
@@ -1044,7 +1044,7 @@ this way: this should only be possible if some native code loaded by Fearless ha
 //CHANGED: merged the dangling "Neither Fearless nor the JVM" fragment of the previous
 //draft into the closing sentence it was clearly meant to start.
 }
-class UnknownText{
+final class UnknownText{
   //[any OS]
   static final String unknownOpenFailure= """
 Opening the file failed, and the operating system's error is not one Fearless recognizes yet.
