@@ -53,7 +53,7 @@ public final class BuildWithZip{
       if (invisible){ return; }
       throw Report.symlinkForbidden(abs);
     }
-    if (!isRegularFile(abs)){ throw invisible
+    if (!Files.isRegularFile(abs, LinkOption.NOFOLLOW_LINKS)){ throw invisible
       ? Report.invisibleOnlyRegularFilesAndDirs(abs)
       : Report.onlyRegularFilesAndDirs(abs);
     }
@@ -62,8 +62,7 @@ public final class BuildWithZip{
     if (!invisible){ visibleFiles.add(pe); }
   }
   private void reqNoSiblingForZipName(Path rel){
-    var name= rel.getFileName().toString();
-    var siblingRel= rel.resolveSibling(name.substring(0, name.length()-4));
+    var siblingRel= Path.of(AutoloadHandler.dropExt(rel.toString()));
     var sibling= root.resolve(siblingRel);
     if (!Files.exists(sibling, LinkOption.NOFOLLOW_LINKS)){ return; }
     throw Report.zipNameClashes(new PathEntry(root, rel), new PathEntry(root, siblingRel), isDirectory(sibling) ? "folder" : "plain file");
@@ -81,7 +80,6 @@ public final class BuildWithZip{
     for (var d: dirs){ if (!nonEmpty.contains(d)){ throw Report.emptyDirectory(d); } }
   }
   private static boolean isDirectory(Path abs){ return Files.isDirectory(abs, LinkOption.NOFOLLOW_LINKS); }
-  private static boolean isRegularFile(Path abs){ return Files.isRegularFile(abs, LinkOption.NOFOLLOW_LINKS); }
   private void collectBodyDiskZip(Path rel){
     for (var e: ZipEntry.allEntryPaths(root, rel)){
       if (e.segments().getLast().endsWith(".zip")){ continue; }//expanded
@@ -130,12 +128,10 @@ public final class BuildWithZip{
     checkTooLong(kid);
     var name= Fs.fileNameWithExtension(kid.fearPath());
     if (name.endsWith(".") || name.endsWith(" ")){ throw Report.invisibleNoTrailingDotOrSpace(kid, name); }
-    for (int i= 0; i < name.length(); ){
-      int cp= name.codePointAt(i);
+    for (int cp: name.codePoints().toArray()){
       if (0xD800 <= cp && cp <= 0xDFFF){ throw Report.invisibleInvalidSurrogate(kid, name); }
       if (Character.isISOControl(cp)){ throw Report.invisibleNoControlChars(kid, cp, name); }
       if (winBadChars.indexOf(cp) >= 0){ throw Report.invisibleNoWindowsBadChars(kid, (char)cp, name); }
-      i += Character.charCount(cp);
     }
     int d= name.indexOf('.');
     var base= (d < 0 ? name : name.substring(0, d)).toLowerCase(Locale.ROOT);
@@ -159,18 +155,15 @@ public final class BuildWithZip{
     throw Report.invisibleSiblingNamesCollide(kid, prev, name, caseOnly, nfcOnly);
   }
   private static void checkCollectiveVisible(Set<RefParent> kids){
-    var dotKids= new ArrayList<RefParent>();
-    var visKids= new ArrayList<RefParent>();
-    for (var kid: kids){ (Fs.fileNameWithExtension(kid.fearPath()).startsWith(".") ? dotKids : visKids).add(kid); }
-    checkCollectiveInvisible(dotKids);
-    for (var kid: visKids){
+    checkCollectiveInvisible(kids.stream().filter(kid->Fs.fileNameWithExtension(kid.fearPath()).startsWith(".")).toList());
+    for (var kid: kids){
       var name= Fs.fileNameWithExtension(kid.fearPath());
       if (!(kid instanceof Ref)){ continue; } // directory
-      if (Report.allowedNoExtFiles.contains(name)){ checkNoExtBaseClash(visKids, kid, name); }
+      if (Report.allowedNoExtFiles.contains(name)){ checkNoExtBaseClash(kids, kid, name); }
     }
   }
-  private static void checkNoExtBaseClash(List<RefParent> visKids, RefParent noExtKid, String base){
-    visKids.stream()
+  private static void checkNoExtBaseClash(Collection<RefParent> kids, RefParent noExtKid, String base){
+    kids.stream()
       .filter(kid->!kid.equals(noExtKid) && Fs.fileNameWithExtension(kid.fearPath()).startsWith(base+"."))
       .findFirst().ifPresent(kid->{ throw Report.extensionlessMaskExtension(kid, noExtKid); });
   }
