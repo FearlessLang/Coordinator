@@ -3,14 +3,15 @@ package badZipsTest;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.nio.file.Path;
+
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.opentest4j.AssertionFailedError;
 
-import userMessages.UserError;
-import resources.ResolveResource;
 import realSourceOracle.RealSourceOracleWithZip;
+import resources.ResolveResource;
 import testHelperFs.FsDsl;
+import userMessages.UserError;
 
 final class BadZipsTest{
   static{ utils.Err.setUp(AssertionFailedError.class, Assertions::assertEquals, Assertions::assertTrue); }

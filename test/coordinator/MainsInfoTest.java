@@ -8,10 +8,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.opentest4j.AssertionFailedError;
-import org.junit.jupiter.api.Assertions;
 
 import coordinator.MainsInfo.Claim;
 import coordinator.MainsInfo.Main;

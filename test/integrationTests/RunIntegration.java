@@ -12,6 +12,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
 import java.security.SecureRandom;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import javax.imageio.ImageIO;
@@ -31,23 +34,20 @@ import coordinator.Coordinator;
 import coordinator.OutputOracle;
 import core.E.Literal;
 import core.OtherPackages;
-import resources.ResolveResource;
-import testBuildBase.BaseCacheBuilder;
+import fileSupport.JUnitReport;
 import naiveBackend.Backend;
 import naiveBackend.BackendTools;
 import realSourceOracle.RealSourceOracleWithZip;
 import realSourceOracle.SourceOracleWithAutoload;
+import resources.ResolveResource;
+import testBuildBase.BaseCacheBuilder;
 import testHelperFs.FsDsl;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import fileSupport.JUnitReport;
 import tools.Fs;
 import tools.JavaTool;
 import tools.JavacTool;
 import tools.SourceOracle;
-import utils.Push;
 import userMessages.UserError;
+import utils.Push;
 
 final class RunIntegration{
   static{ utils.Err.setUp(AssertionFailedError.class, Assertions::assertEquals, Assertions::assertTrue); }

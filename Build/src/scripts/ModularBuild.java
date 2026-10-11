@@ -5,10 +5,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+
 import resources.ResolveResource;
 import tools.Fs;
-import tools.JavacTool;
 import tools.JavaTool;
+import tools.JavacTool;
 import tools.PortableApp;
 import utils.OneOr;
 

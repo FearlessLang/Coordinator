@@ -33,13 +33,13 @@ import core.OtherPackages;
 import fileAssociations.FileAssociations;
 import fileAssociations.Icon;
 import naiveBackend.BackendTools;
+import tools.Fs;
+import tools.JavacTool;
+import tools.SourceOracle;
+import tools.Utf8Sink;
 import userMessages.Report;
 import userMessages.UserError;
 import userMessages.Violation;
-import tools.Fs;
-import tools.SourceOracle;
-import tools.Utf8Sink;
-import tools.JavacTool;
 
 public final class Main{
   private static final AtomicInteger macSpawnOk= new AtomicInteger(0);

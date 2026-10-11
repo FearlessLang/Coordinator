@@ -3,24 +3,25 @@ package coordinator;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import utils.Join;
-import java.util.List;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+
 import apiJson.ApiJson;
-import metaParser.Message;
-import userMessages.Violation;
 import core.AllLs;
 import core.E.Literal;
 import core.M;
 import core.OtherPackages;
 import core.Sig;
 import core.TName;
+import metaParser.Message;
 import tools.Fs;
 import tools.SourceOracle.Ref;
+import userMessages.Violation;
+import utils.Join;
 
 public interface OutputOracle{
   Path rootDir();

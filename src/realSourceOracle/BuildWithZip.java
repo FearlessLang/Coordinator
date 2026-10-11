@@ -14,11 +14,12 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
-import userMessages.Report;
+
 import tools.Fs;
 import tools.SourceOracle;
 import tools.SourceOracle.Ref;
 import tools.SourceOracle.RefParent;
+import userMessages.Report;
 import utils.Range;
 
 record Tree(

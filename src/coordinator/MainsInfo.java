@@ -12,10 +12,10 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import core.AllLs;
+import core.E.Literal;
 import core.LiteralDeclarations;
 import core.T;
 import core.TName;
-import core.E.Literal;
 import fileSupport.Info;
 import realSourceOracle.SourceOracleWithAutoload;
 import tools.Fs;

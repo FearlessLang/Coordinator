@@ -3,6 +3,7 @@ package scripts;
 
 import java.nio.file.Files;
 import java.util.List;
+
 import resources.ResolveResource;
 import tools.Fs;
 import tools.JavaTool;

@@ -2,6 +2,7 @@
 package scripts;
 
 import java.util.List;
+
 import resources.ResolveResource;
 
 public class DeployPortableFearless{

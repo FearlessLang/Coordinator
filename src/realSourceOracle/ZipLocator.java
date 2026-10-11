@@ -12,10 +12,10 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.zip.ZipInputStream;
 
-import userMessages.Violation;
-import userMessages.Report;
 import tools.Fs;
 import tools.ReadZip;
+import userMessages.Report;
+import userMessages.Violation;
 import utils.Range;
 
 public final class ZipLocator{

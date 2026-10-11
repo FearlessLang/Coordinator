@@ -8,8 +8,8 @@ import java.util.stream.Collectors;
 
 import core.AllLs;
 import core.E.Literal;
-import realSourceOracle.SourceOracleWithAutoload;
 import core.OtherPackages;
+import realSourceOracle.SourceOracleWithAutoload;
 import tools.Fs;
 import tools.SourceOracle;
 import tools.SourceOracle.Ref;

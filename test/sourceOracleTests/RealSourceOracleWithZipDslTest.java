@@ -22,16 +22,16 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.opentest4j.AssertionFailedError;
 
-import userMessages.UserError;
-import userMessages.Report;
+import core.TName;
 import realSourceOracle.RealSourceOracleWithZip;
 import realSourceOracle.SourceOracleWithAutoload;
-import core.TName;
-import utils.Join;
-import utils.Pos;
 import testHelperFs.FsDsl;
 import tools.Fs;
 import tools.SourceOracle.Ref;
+import userMessages.Report;
+import userMessages.UserError;
+import utils.Join;
+import utils.Pos;
 
 final class RealSourceOracleWithZipDslTest{
 
