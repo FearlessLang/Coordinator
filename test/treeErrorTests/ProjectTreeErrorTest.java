@@ -45,7 +45,7 @@ final class ProjectTreeErrorTest{
   }
 
   @Test void emptyProject(){ runErr("""
-The fearless project folder contains no *.fear files
+This project folder contains no ".fear" files.
 Folder:
   %s
 """.formatted(fakeRoot),

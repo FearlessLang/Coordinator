@@ -525,7 +525,7 @@ What went wrong
 
 How to fix
 - Rename the file to use an extension made only of lowercase letters and digits.
-  Examples: ".txt", ".fear", ".md", ".tar.gz"
+  Examples: ".txt", ".fear", ".md", ".tar.gz".
 
 We check this so that you[###]
 """);}

@@ -228,7 +228,7 @@ or version control systems (git).
       "- The file extension contains an unsupported character: "+Message.displayChar(c)+".\n"
     + "  Extensions may use only lowercase letters (a-z) and digits (0-9).",
       "- Rename the file to use an extension made only of lowercase letters and digits.\n"
-    + "  Examples: \".txt\", \".fear\", \".md\", \".tar.gz\""
+    + "  Examples: \".txt\", \".fear\", \".md\", \".tar.gz\"."
     );
   }
   public static UserError extensionlessMaskExtension(RefParent kid, RefParent noExtKid){
@@ -267,7 +267,7 @@ or version control systems (git).
     return fail(showRel(kid),
       "- A protected name segment ends with a dot or a space.\n"
     + "  Some systems/tools trim these, which causes collisions.\n"
-    + "  Bad segment: "+disp(name)+"",
+    + "  Bad segment: "+disp(name),
       "- Rename the segment so it does not end with '.' or space."
     );
   }
@@ -281,8 +281,8 @@ or version control systems (git).
   public static UserError invisibleNoControlChars(RefParent kid, int cp, String name){
     return fail(showRel(kid),
       "- A protected name segment contains a control character.\n"
-     + "  Character: "+Message.displayChar(cp)+"\n"
-     + "  Segment: "+disp(name)+"",
+    + "  Character: "+Message.displayChar(cp)+"\n"
+    + "  Segment: "+disp(name),
       "- Rename the segment to remove the control character."
     );
   }
@@ -298,7 +298,7 @@ or version control systems (git).
   public static UserError invisibleWindowsReservedDeviceName(RefParent kid, String base, String name){
     return fail(showRel(kid),
       "- A protected name segment uses a Windows reserved device name.\n"
-    + "  Bad base: "+disp(base)+" in segment: "+disp(name)+"",
+    + "  Bad base: "+disp(base)+" in segment: "+disp(name),
       "- Rename it so the base name is not a Windows device name.\n"
     + "  Reserved device name: \"con\", \"prn\", \"aux\", \"nul\", \"com1\"..\"com9\", \"lpt1\"..\"lpt9\"."
     );
@@ -431,7 +431,7 @@ Fearless expands each zip file into a folder: rename this file if it is not mean
 
   //-- project layout: which folder defines a package, and the rank file of each package
   public static UserError projectEmpty(Path root){ return new UserError("""
-The fearless project folder contains no *.fear files
+This project folder contains no ".fear" files.
 Folder:
 %s
 """.formatted(path(root.toString())));
