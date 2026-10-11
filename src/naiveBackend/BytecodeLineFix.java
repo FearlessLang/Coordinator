@@ -37,7 +37,7 @@ final class BytecodeLineFix implements Consumer<Path>{
   BytecodeLineFix a(String s, Pos p){//this call == s contains exactly 1 method call located in pos
     int fl= p.line();
     assert fl >= 1 && fl <= 65535; // LineNumberTable uses u2
-    Integer prev= lineMap.putIfAbsent(javaLine, fl);
+    var prev= lineMap.putIfAbsent(javaLine, fl);
     assert prev == null || prev.intValue() == fl:
       "Two fearless lines on one java line "+javaLine+": "+prev+" vs "+fl
       + sb.toString();
@@ -55,13 +55,13 @@ final class BytecodeLineFix implements Consumer<Path>{
     return n.equals(base+".class") || n.endsWith(".class") && n.startsWith(base+"$"); // anon/inner: Foo$1.class etc
   }
   private void patchOne(ClassFile cf, Path classFile){
-    byte[] in= Fs.of(()->Files.readAllBytes(classFile));
+    var in= Fs.of(()->Files.readAllBytes(classFile));
     var model= cf.parse(in);
     var xform= ClassTransform
       .dropping(e->e instanceof SourceFileAttribute)
       .andThen(ClassTransform.endHandler(b->b.with(SourceFileAttribute.of(sourceFile))))
       .andThen(ClassTransform.transformingMethodBodies(this::patchCode));
-    byte[] out= cf.transformClass(model, xform);
+    var out= cf.transformClass(model, xform);
     Fs.ofV(()->Files.write(classFile, out));
   }
   private void patchCode(CodeBuilder cb, CodeElement ce){

@@ -25,7 +25,7 @@ record MiddleLayer(Coordinator coordinator, Layer next, LinkedHashMap<String,Lis
   MiddleLayer{ assert !pkgs.isEmpty(); }
   @Override public SourceOracle stLib(){ return next.stLib(); }
   @Override public OtherPackages compile(SourceOracle src, OutputOracle out){
-    OtherPackages other= next.compile(src, out);
+    var other= next.compile(src, out);
     var res= new Object(){
       OtherPackages nextOther= other;
       private void compilePkg(String pkg, List<Ref> files){
@@ -33,7 +33,7 @@ record MiddleLayer(Coordinator coordinator, Layer next, LinkedHashMap<String,Lis
         long maxIn= Math.max(maxSrc, other.stamp());//out.mapStamp() must be <= then other.watermark() since it comes from next
         if (out.stillBuilt(pkg, files, maxIn)){ nextOther= out.addCachedPkgApi(nextOther, pkg); return; }
         var rich= SourceOracleWithAutoload.of(src, "_"+pkg);
-        List<Literal> core= coordinator.frontend(pkg, rich.sources(files), rich.oracle(), other,other.virtualizationMap().getOrDefault(pkg,Map.of()));
+        var core= coordinator.frontend(pkg, rich.sources(files), rich.oracle(), other,other.virtualizationMap().getOrDefault(pkg,Map.of()));
         var mains= MainsInfo.of(core, src, stLib());
         coordinator.backend(pkg, core, rich.oracle(), other, new CapabilityEnvironment(rich.autoloadedAssets()));
         long newStamp= out.commitPkgApi(pkg, core, maxIn); // newStamp will be the old api file mtime if there was no reason to commit.
@@ -55,7 +55,7 @@ record BaseLayer(Coordinator coordinator, Map<String,Map<String,String>> map, lo
     long maxIn= stLib.allFiles().stream().mapToLong(Ref::lastModified).max().getAsLong();
     if (out.stillBuilt(pkgName, stLib.allFiles(), maxIn)){ return out.startCachedPkgApi(pkgName,map,Math.max(baseStamp,out.pkgApiStamp(pkgName))); }
     var rich= SourceOracleWithAutoload.ofBase(stLib);
-    List<Literal> core= coordinator.frontend(pkgName,rich.sources(stLib.allFiles()),rich.oracle(),other,Map.of());
+    var core= coordinator.frontend(pkgName,rich.sources(stLib.allFiles()),rich.oracle(),other,Map.of());
     coordinator.backend(pkgName,core,rich.oracle(),other,new CapabilityEnvironment(rich.autoloadedAssets()));
     long newStamp= out.commitPkgApi(pkgName, core, maxIn);
     out.commitMains(pkgName, Map.of());

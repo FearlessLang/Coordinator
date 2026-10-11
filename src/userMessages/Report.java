@@ -32,7 +32,7 @@ import utils.Pop;
 public final class Report{
   //-- the shape of a project-scan message: what is wrong, how to fix it, then the rules
   private static UserError fail(String rel, String wentWrong, String howToFix){
-    String msg= "Invalid path in this project folder.\n\n"
+    var msg= "Invalid path in this project folder.\n\n"
       + rel
       + "\nWhat went wrong\n"+wentWrong
       + "\n\nHow to fix\n"+howToFix+"\n\n"+rulesWall();

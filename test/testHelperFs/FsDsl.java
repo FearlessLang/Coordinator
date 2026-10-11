@@ -44,8 +44,8 @@ public final class FsDsl{
     int i= 0;
     for (; i < lines.size(); i += 1){ if (lines.get(i).equals("iii")){ break; } }
     assert i < lines.size(): "Missing iii separator";
-    String name= String.join("\n", lines.subList(0, i));
-    String content= String.join("\n", lines.subList(i+1, lines.size()));
+    var name= String.join("\n", lines.subList(0, i));
+    var content= String.join("\n", lines.subList(i+1, lines.size()));
     out.add(new Item(name, content));
   }
 
@@ -61,7 +61,7 @@ public final class FsDsl{
   }
 
   private static void emit(Path root, LinkedHashMap<Path,ZipNode> zips, Item it){
-    String name= it.name();
+    var name= it.name();
     boolean isDir= name.endsWith("/");
     if (isDir){ name= name.substring(0, name.length()-1); }
     var segs= name.split("/", -1);
@@ -69,7 +69,7 @@ public final class FsDsl{
     int zi= firstZipSeg(segs);
     if (zi < 0){ emitDisk(root, segs, isDir, it.content()); return; }
 
-    Path diskZip= root;
+    var diskZip= root;
     for (int i= 0; i <= zi; i += 1){ diskZip= diskZip.resolve(segs[i]); }
 
     var node= zips.computeIfAbsent(diskZip, _->new ZipNode());
@@ -85,7 +85,7 @@ public final class FsDsl{
   }
 
   private static void emitDisk(Path root, String[] segs, boolean isDir, String content){
-    Path p= root;
+    var p= root;
     for (var s: segs){ p= p.resolve(s); }
     if (isDir){ mkdirs(p); return; }
     mkdirs(p.getParent());
@@ -101,11 +101,11 @@ public final class FsDsl{
     while (true){
       int next= nextZipIndex(after, from);
       if (next < 0){ break; }
-      String step= String.join("/", after.subList(from, next+1));
+      var step= String.join("/", after.subList(from, next+1));
       root= root.nested.computeIfAbsent(step, _->new ZipNode());
       from= next+1;
     }
-    String entry= String.join("/", after.subList(from, after.size()));
+    var entry= String.join("/", after.subList(from, after.size()));
     if (entry.isEmpty()){ return; } // declaration only at this zip level
     root.leafs.add(new Leaf(entry, content, isDir));
   }
@@ -167,7 +167,7 @@ public final class FsDsl{
   }
 
   public static String dumpErr(Path root, RuntimeException ex){
-    String msg= String.valueOf(ex.getMessage());
+    var msg= String.valueOf(ex.getMessage());
     var abs= root.toAbsolutePath().normalize().toString();
     var absSl= abs.replace('\\','/');
     var uri= root.toUri().normalize().toString();
@@ -190,19 +190,19 @@ public final class FsDsl{
     catch(Exception e){ throw new AssertionError(e); }
   }
   public static String runOk(Path tmp, String spec){
-    Path root= tmp.resolve("root");
+    var root= tmp.resolve("root");
     UserError.root= root;
     mkdirs(root);
     materialize(root, spec);
     return dump(new RealSourceOracleWithZip(root));
   }
   public static void runErrIOE(Path tmp, String spec, String expected){
-    Path root= tmp.resolve("root").toAbsolutePath().normalize();
+    var root= tmp.resolve("root").toAbsolutePath().normalize();
     UserError.root= root;
     mkdirs(root);
     materialize(root, spec);
     var ex= assertThrows(UserError.class, ()->new RealSourceOracleWithZip(root));
-    String res= dumpErr(root, ex);
+    var res= dumpErr(root, ex);
     utils.Err.strCmp(expected, res);
   }
 }

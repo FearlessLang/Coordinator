@@ -19,7 +19,7 @@ import utils.Bug;
 
 public final class StringFiles{
   public static String read(Path path, BiConsumer<String,String> onError){
-    byte[] bytes= ByteFiles.read(path,(k,c)->
+    var bytes= ByteFiles.read(path,(k,c)->
       fail(onError,requiresReport(k),FailureText.explain(Op.Read,k,path),c));
     var input= ByteBuffer.wrap(bytes);
     var output= CharBuffer.allocate(bytes.length);

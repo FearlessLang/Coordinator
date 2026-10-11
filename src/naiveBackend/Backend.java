@@ -96,7 +96,7 @@ public final class Backend{
   );}
   void emitTopMethod(BytecodeLineFix sb, Literal l, M m, boolean abstractOnly){
     if (!m.sig().origin().equals(l.name())){ return; }
-    String iface= ifaceNameFor(l);
+    var iface= ifaceNameFor(l);
     var jName= mangledMethodName(m.sig().rc(), m.sig().m());
     if (abstractOnly || m.sig().abs()){
       sb.a("  default Object ").a(jName).a(paramsSig(m)).a("{\n")

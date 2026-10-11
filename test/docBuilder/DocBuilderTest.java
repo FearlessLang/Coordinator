@@ -755,7 +755,7 @@ Holder
     });
     var colliding= new Literal(RC.imm, new TName("pkg._Holder_Examples",0,collidingPos),
       List.of(), List.of(), "this", List.of(), collidingSrc, false);
-    SourceOracle oracle= SourceOracle.debugBuilder().putURI(file, "l1\nl2\nl3\nl4\n_Holder_Examples: Test {}\n").build();
+    var oracle= SourceOracle.debugBuilder().putURI(file, "l1\nl2\nl3\nl4\n_Holder_Examples: Test {}\n").build();
     var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(holder,colliding), Optional.empty());
     builder.visitLiteral(holder);
     builder.visitLiteral(colliding);

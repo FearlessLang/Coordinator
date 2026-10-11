@@ -47,7 +47,7 @@ record ProduceBody(BytecodeLineFix sb, Backend b, String iface, String thisName,
     sb.a(sl+"Instance.instance("+LiteralDeclarations.toJavaLiteral(n.simpleName())+")");
   }
   private void emitCall(Call c){
-    String cast= castedReceiverExpr(c.e());
+    var cast= castedReceiverExpr(c.e());
     if (!cast.isEmpty()){ sb.a("("+cast); }
     emitE(c.e());
     if (!cast.isEmpty()){ sb.a(")"); }

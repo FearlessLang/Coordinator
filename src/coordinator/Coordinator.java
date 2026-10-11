@@ -110,15 +110,15 @@ final class Helper{
   }
   static Layer layerOf(Coordinator coordinator, SourceOracle o, Path project, OutputOracle out, SourceOracle stLib){
     var map= pkgMap(o,project);
-    List<Ref> allRanks= map.values().stream().map(u->okPkgContent(u,project)).toList();
-    Layer l= mapFromRanks(coordinator,allRanks,o,out,stLib);
+    var allRanks= map.values().stream().map(u->okPkgContent(u,project)).toList();
+    var l= mapFromRanks(coordinator,allRanks,o,out,stLib);
     return layers(coordinator,map,l,allRanks.stream()
       .sorted(Comparator.comparingInt(Helper::rankNumber).thenComparing(Ref::fearPath)).toList());
   }
   static List<String> compile(Coordinator coordinator, Path project, SourceOracle stLib){
-    SourceOracle o= coordinator.sourceOracle(project);
+    var o= coordinator.sourceOracle(project);
     var out= out(project);
-    Layer l= layerOf(coordinator,o,project,out,stLib);
+    var l= layerOf(coordinator,o,project,out,stLib);
     l.compile(o, out);
     Fs.writeUtf8(out.mainsPath(), out.mains(l.pkgs().keySet()).located(o,stLib).print());
     return List.copyOf(l.pkgs().keySet());//by design: only the highest rank number's packages have their Main run
@@ -131,7 +131,7 @@ final class Helper{
   }
   static Optional<Map<String,String>> mains(Coordinator coordinator, Path project, SourceOracle stLib){
     var c= new NoCompile(coordinator);
-    SourceOracle o= c.sourceOracle(project);
+    var o= c.sourceOracle(project);
     var out= new NoCommit(out(project).rootDir());
     Layer l;
     try{ l= layerOf(c,o,project,out,stLib); l.compile(o,out); }

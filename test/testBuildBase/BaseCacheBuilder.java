@@ -42,9 +42,9 @@ public final class BaseCacheBuilder{
       };
       OutputOracle out= ()->scratch;
       var other= OtherPackages.empty();
-      SourceOracle o= c.sourceOracle(ResolveResource.stLibPath);
+      var o= c.sourceOracle(ResolveResource.stLibPath);
       var rich= SourceOracleWithAutoload.ofBase(o);
-      List<Literal> core= c.frontend(pkgName, rich.sources(o.allFiles()), rich.oracle(), other, Map.of());
+      var core= c.frontend(pkgName, rich.sources(o.allFiles()), rich.oracle(), other, Map.of());
       c.backend(pkgName, core, rich.oracle(), other, new CapabilityEnvironment(rich.autoloadedAssets()));
       out.commitPkgApi(pkgName, core, -1);
       var baseCache= stdLibDir.resolve("baseCache");
