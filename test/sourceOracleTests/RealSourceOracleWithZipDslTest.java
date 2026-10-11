@@ -466,6 +466,69 @@ How to fix
 We check this so that you[###]
 """);}
 
+  @Test void err_visible_folder_name_with_a_dot(@TempDir Path tmp){ runErrIOE(tmp, """
+_pkg/my.dir/a.fear
+iii
+X
+""","""
+Invalid path in this project folder.
+
+Root: [###]
+Path: "_pkg/my.dir"
+
+What went wrong
+- A visible folder/file name contains an unsupported character: ".".
+  Visible names may use only lowercase letters (a-z), digits (0-9), and underscore (_).
+
+How to fix
+- Rename it to use only lowercase letters, digits, and underscores.
+  Examples: "foo_bar2", "src1", "_cache".
+
+We check this so that you[###]
+""");}
+
+  @Test void err_visible_folder_name_with_a_dot_in_zip(@TempDir Path tmp){ runErrIOE(tmp, """
+_pkg/z.zip/my.dir/a.fear
+iii
+X
+""","""
+Invalid path in this project folder.
+
+Root: [###]
+Path: "_pkg/z/my.dir"
+
+What went wrong
+- A visible folder/file name contains an unsupported character: ".".
+  Visible names may use only lowercase letters (a-z), digits (0-9), and underscore (_).
+
+How to fix
+- Rename it to use only lowercase letters, digits, and underscores.
+  Examples: "foo_bar2", "src1", "_cache".
+
+We check this so that you[###]
+""");}
+
+  @Test void err_visible_folder_name_ending_with_a_dot_in_zip(@TempDir Path tmp){ runErrIOE(tmp, """
+_pkg/z.zip/my./a.fear
+iii
+X
+""","""
+Invalid path in this project folder.
+
+Root: [###]
+Path: "_pkg/z/my."
+
+What went wrong
+- A visible folder/file name contains an unsupported character: ".".
+  Visible names may use only lowercase letters (a-z), digits (0-9), and underscore (_).
+
+How to fix
+- Rename it to use only lowercase letters, digits, and underscores.
+  Examples: "foo_bar2", "src1", "_cache".
+
+We check this so that you[###]
+""");}
+
   @Test void err_missing_extension_after_dot_in_zip(@TempDir Path tmp){ runErrIOE(tmp, """
 _pkg/z.zip/a.
 iii
