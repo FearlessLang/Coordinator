@@ -1,7 +1,8 @@
 package realSourceOracle;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+
 import java.net.URI;
-import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -79,7 +80,7 @@ public record SourceOracleWithAutoload(SourceOracle base, Ref autoload, URI auto
     return new SyntheticRef(SourceOracle.root+pkgName+autoloadFileSuffix, text);
   }
   private record SyntheticRef(String fearPath, String text) implements Ref{
-    @Override public byte[] loadBytes(){ return text.getBytes(StandardCharsets.UTF_8); }
+    @Override public byte[] loadBytes(){ return text.getBytes(UTF_8); }
     @Override public String loadString(){ return text; }
     @Override public long lastModified(){ return 0; }
     @Override public String toString(){ return fearPath; }

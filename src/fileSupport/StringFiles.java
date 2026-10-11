@@ -1,5 +1,7 @@
 package fileSupport;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.nio.ByteBuffer;
@@ -7,7 +9,6 @@ import java.nio.CharBuffer;
 import java.nio.charset.CharacterCodingException;
 import java.nio.charset.CoderResult;
 import java.nio.charset.CodingErrorAction;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.HexFormat;
 import java.util.function.BiConsumer;
@@ -22,7 +23,7 @@ public final class StringFiles{
       fail(onError,requiresReport(k),FailureText.explain(Op.Read,k,path),c));
     var input= ByteBuffer.wrap(bytes);
     var output= CharBuffer.allocate(bytes.length);
-    var decoder= StandardCharsets.UTF_8.newDecoder()
+    var decoder= UTF_8.newDecoder()
       .onMalformedInput(CodingErrorAction.REPORT)
       .onUnmappableCharacter(CodingErrorAction.REPORT);
     var result= decoder.decode(input,output,true);
@@ -51,7 +52,7 @@ public final class StringFiles{
   //propagates as an Error, like the other observed-bug throws.
   private static byte[] utf8(String text){
     try{
-      var buffer= StandardCharsets.UTF_8.newEncoder()
+      var buffer= UTF_8.newEncoder()
         .onMalformedInput(CodingErrorAction.REPORT)
         .onUnmappableCharacter(CodingErrorAction.REPORT)
         .encode(CharBuffer.wrap(text));

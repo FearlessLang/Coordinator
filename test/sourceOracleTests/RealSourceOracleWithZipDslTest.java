@@ -1,12 +1,12 @@
 package sourceOracleTests;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static testHelperFs.FsDsl.runErrIOE;
 
 import java.io.ByteArrayOutputStream;
 import java.io.UncheckedIOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.AccessDeniedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -78,8 +78,8 @@ We check this so that you[###]
     return out.toByteArray();
   }
   private static void writeLocalEntry(ByteArrayOutputStream out, String name, String content){
-    var nameBytes= name.getBytes(StandardCharsets.UTF_8);
-    var data= content.getBytes(StandardCharsets.UTF_8);
+    var nameBytes= name.getBytes(UTF_8);
+    var data= content.getBytes(UTF_8);
     var crc= new CRC32(); crc.update(data);
     writeInt(out, 0x04034b50L);
     writeShort(out, 20); writeShort(out, 0); writeShort(out, 0); writeShort(out, 0); writeShort(out, 0x21);
@@ -337,12 +337,12 @@ We check this so that you[###]
     Files.createDirectories(root.resolve("_pkg"));
     Files.writeString(root.resolve("_pkg/a.fear"), "A");
     var bytes= new ByteArrayOutputStream();
-    try(var zos= new ZipOutputStream(bytes, StandardCharsets.UTF_8)){
+    try(var zos= new ZipOutputStream(bytes, UTF_8)){
       zos.putNextEntry(new ZipEntry("notes.zip"));
-      zos.write("plain text, not a zip".getBytes(StandardCharsets.UTF_8));
+      zos.write("plain text, not a zip".getBytes(UTF_8));
       zos.closeEntry();
       zos.putNextEntry(new ZipEntry("b.fear"));
-      zos.write("B".getBytes(StandardCharsets.UTF_8));
+      zos.write("B".getBytes(UTF_8));
       zos.closeEntry();
     }
     Files.write(root.resolve("_pkg/o.zip"), bytes.toByteArray());
