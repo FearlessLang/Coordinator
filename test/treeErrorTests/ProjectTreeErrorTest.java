@@ -1,5 +1,7 @@
 package treeErrorTests;
 
+import static org.junit.jupiter.api.Assertions.fail;
+
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.List;
@@ -38,7 +40,7 @@ final class ProjectTreeErrorTest{
     try{ c.main(fakeRoot, oracle); }
     catch(RuntimeException e){ return e.getMessage(); }
     catch(InterruptedException e){ throw new AssertionError(e); }
-    return Assertions.fail("Expected an error, but the project was accepted");
+    return fail("Expected an error, but the project was accepted");
   }
   static void runErr(String expected, String... pathThenContent){
     utils.Err.strCmp(expected, errMsg(pathThenContent));

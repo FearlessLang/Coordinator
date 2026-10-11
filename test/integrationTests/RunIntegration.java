@@ -1,6 +1,12 @@
 package integrationTests;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
@@ -86,7 +92,7 @@ final class RunIntegration{
   String run(String name){ return main(freshIntegrationRoot(name), List.of()); }
   String main(Path project, List<String> jvmArgs){
     try{ return coordinator(project, jvmArgs).main(project, stLib); }
-    catch(InterruptedException e){ return Assertions.fail(e); }
+    catch(InterruptedException e){ return fail(e); }
   }
   void testOk(String name){ unitTestsOk(name, freshIntegrationRoot(name)); }
   void unitTestsOk(String name, Path root){
@@ -94,11 +100,11 @@ final class RunIntegration{
     var out= main(root, List.of("-Dfearless.endMarker="+marker));
     writeJUnitReport(name, root);
     var fails= out.lines().filter(l->l.startsWith("Test failure ")).toList();
-    Assertions.assertTrue(fails.isEmpty(), ()->"Fearless unit tests failed in "+name+":\n"+String.join("\n",fails));
+    assertTrue(fails.isEmpty(), ()->"Fearless unit tests failed in "+name+":\n"+String.join("\n",fails));
     var lines= out.lines().toList();
     var mains= coordinator(root).mains(root, stLib).orElseThrow().size();
     var allCompleted= lines.stream().filter(marker::equals).count() == mains && lines.getLast().equals(marker);
-    Assertions.assertTrue(allCompleted, ()->"Not all the "+mains+" mains of "+name+" completed: a main that completes prints the line \""+marker+"\", and the output must end with that line. Output:\n"+out);
+    assertTrue(allCompleted, ()->"Not all the "+mains+" mains of "+name+" completed: a main that completes prints the line \""+marker+"\", and the output must end with that line. Output:\n"+out);
   }
   static void writeJUnitReport(String name){ writeJUnitReport(name, ResolveResource.integrationTests.resolve(name)); }
   static void writeJUnitReport(String name, Path root){
@@ -223,7 +229,7 @@ Hello world
   private Path theOneLogFile(Path dir, String prefix) throws IOException{
     try (var files= Files.list(dir)){
       var found= files.filter(p->p.getFileName().toString().startsWith(prefix)).toList();
-      Assertions.assertEquals(1, found.size(), found.toString());
+      assertEquals(1, found.size(), found.toString());
       return found.getFirst();
     }
   }
@@ -338,7 +344,7 @@ _col/foo.png
 iii
 ignored
 """);
-    var ex= Assertions.assertThrows(UserError.class, ()->coordinator(root).main(root, stLib));
+    var ex= assertThrows(UserError.class, ()->coordinator(root).main(root, stLib));
     utils.Err.strCmp("""
 Invalid path in this project folder.
 
@@ -379,7 +385,7 @@ Again:Main{s->base.Debug#("again")}
   "col.Hello": ["_col/_rank_app.fear", [], []]
 }
 """, Fs.readUtf8(mainsInfo(root)));
-    Assertions.assertEquals(Map.of("col.Again","_col/more.fear","col.Hello","_col/_rank_app.fear"), coordinator(root).mains(root, stLib).orElseThrow());
+    assertEquals(Map.of("col.Again","_col/more.fear","col.Hello","_col/_rank_app.fear"), coordinator(root).mains(root, stLib).orElseThrow());
   }
   @Test void aCaptureFreeMainDeclaredInAMethodIsListedLikeTheOnesItRuns(@TempDir Path tmp) throws InterruptedException{
     var root= tmp.resolve("root");
@@ -393,7 +399,7 @@ Top:Main{s->base.Debug#(`top`)}
 MkFree:{.mk:Main->Free:Main,CaptureFree{s->base.Debug#(`free`)}}
 """);
     utils.Err.strCmp("free\ntop\n", coordinator(root).main(root, stLib));
-    Assertions.assertEquals(Map.of("col.Free","_col/_rank_app.fear","col.Top","_col/_rank_app.fear"), coordinator(root).mains(root, stLib).orElseThrow());
+    assertEquals(Map.of("col.Free","_col/_rank_app.fear","col.Top","_col/_rank_app.fear"), coordinator(root).mains(root, stLib).orElseThrow());
   }
   @Test void aPackageNamedAfterAJavaKeywordRuns(@TempDir Path tmp) throws InterruptedException{
     var root= tmp.resolve("root");
@@ -458,7 +464,7 @@ iii
 REAL ASSET CONTENT
 """);
     var out= coordinator(root).main(root, stLib);
-    Assertions.assertFalse(out.contains("TOP-SECRET-NOT-AN-ASSET"), out);
+    assertFalse(out.contains("TOP-SECRET-NOT-AN-ASSET"), out);
     utils.Err.strCmp("[###]was not recognized by the compiler as auto-imported[###]", out);
     utils.Err.strCmp("[###]REAL ASSET CONTENT[###]", out);
   }
@@ -501,7 +507,7 @@ Lib:base.Main, base.OpenWith[base.IconsConflict,"fear"]{s->base.Debug#(`lib`)}
   }
   void claimRefused(Path tmp, String code, String expected) throws IOException{
     var root= claimsProject(tmp, code);
-    var ex= Assertions.assertThrows(UserError.class, ()->coordinator(root).compile(root, stLib));
+    var ex= assertThrows(UserError.class, ()->coordinator(root).compile(root, stLib));
     utils.Err.strCmp(expected, ex.getMessage());
   }
   @Test void wellFormedClaimsAreAccepted(@TempDir Path tmp) throws Exception{
@@ -925,7 +931,7 @@ Lib:base.Main, base.OpenWith[base.IconsConflict,"fear"]{s->base.Debug#(`lib`)}
     editAndTouch(root.resolve("_col","_rank_app.fear"), "{s->base.Debug#(`conflict`)}", """
 {s->base.Debug#(`conflict`)}
 Clash:lib.Lib, OpenWith[IconsFoo,"fear"]{s->base.Debug#(`clash`)}""");
-    var ex= Assertions.assertThrows(UserError.class, ()->coordinator(root).main(root, stLib));
+    var ex= assertThrows(UserError.class, ()->coordinator(root).main(root, stLib));
     utils.Err.strCmp("""
 In file: fear:/_col/_rank_app.fear
 
@@ -997,13 +1003,13 @@ Foo:Main, OpenWith[IconsFoo,"foo"]{s->base.Debug#(`foo`)}
 """);
     coordinator(root).compile(root, stLib);
     var text= Fs.readUtf8(mainsInfo(root));
-    Assertions.assertEquals(Map.of("col",true), Coordinator.pkgsBuilt(root));
+    assertEquals(Map.of("col",true), Coordinator.pkgsBuilt(root));
     Files.delete(root.resolve(Coordinator.outDir).resolve("col.mains.info"));
-    Assertions.assertEquals(Map.of("col",false), Coordinator.pkgsBuilt(root));
-    Assertions.assertEquals(Optional.empty(), coordinator(root).mains(root, stLib));
+    assertEquals(Map.of("col",false), Coordinator.pkgsBuilt(root));
+    assertEquals(Optional.empty(), coordinator(root).mains(root, stLib));
     coordinator(root).compile(root, stLib);
     utils.Err.strCmp(text, Fs.readUtf8(mainsInfo(root)));
-    Assertions.assertEquals(Map.of("col.Foo","_col/_rank_app.fear"), coordinator(root).mains(root, stLib).orElseThrow());
+    assertEquals(Map.of("col.Foo","_col/_rank_app.fear"), coordinator(root).mains(root, stLib).orElseThrow());
   }
   @Test void aPackageReachingTheTopRankListsItsMains(@TempDir Path tmp) throws Exception{
     var root= claimsProject(tmp, """
@@ -1014,9 +1020,9 @@ iii
 Lib:base.Main, base.OpenWith[base.IconsConflict,"fear"]{s->base.Debug#(`lib`)}
 """);
     coordinator(root).compile(root, stLib);
-    Assertions.assertEquals(Map.of("col.Foo","_col/_rank_app.fear"), coordinator(root).mains(root, stLib).orElseThrow());
+    assertEquals(Map.of("col.Foo","_col/_rank_app.fear"), coordinator(root).mains(root, stLib).orElseThrow());
     Fs.rmTree(root.resolve("_col"));
-    Assertions.assertEquals(Map.of("lib",true), Coordinator.pkgsBuilt(root));
+    assertEquals(Map.of("lib",true), Coordinator.pkgsBuilt(root));
     utils.Err.strCmp("lib\n", coordinator(root).main(root, stLib));
     utils.Err.strCmp("""
 {
@@ -1035,10 +1041,10 @@ More:base.Main{s->base.Debug#(`more`)}
     coordinator(root).compile(root, stLib);
     var text= Fs.readUtf8(mainsInfo(root));
     Files.delete(mainsInfo(root));
-    Assertions.assertEquals(Map.of("col",false,"more",false), Coordinator.pkgsBuilt(root));
+    assertEquals(Map.of("col",false,"more",false), Coordinator.pkgsBuilt(root));
     coordinator(root).compile(root, stLib);
     utils.Err.strCmp(text, Fs.readUtf8(mainsInfo(root)));
-    Assertions.assertEquals(Map.of("col",true,"more",true), Coordinator.pkgsBuilt(root));
+    assertEquals(Map.of("col",true,"more",true), Coordinator.pkgsBuilt(root));
   }
   @Test void aMovedIconOfALowerRankPackageIsFollowed(@TempDir Path tmp) throws Exception{
     var root= claimsProject(tmp, """
@@ -1104,8 +1110,8 @@ _col/_1.txt
 iii
 hello
 """);
-    var ex= Assertions.assertThrows(UserError.class, ()->coordinator(root).main(root, stLib));
-    Assertions.assertFalse(ex.getMessage().contains(SourceOracleWithAutoload.autoloadFileSuffix), ex.getMessage());
+    var ex= assertThrows(UserError.class, ()->coordinator(root).main(root, stLib));
+    assertFalse(ex.getMessage().contains(SourceOracleWithAutoload.autoloadFileSuffix), ex.getMessage());
     utils.Err.strCmp("""
 Invalid path in this project folder.
 
@@ -1149,9 +1155,9 @@ Hello:Main{s->base.Debug#(Greeting.hi)}
     editAndTouch(root.resolve("_a/_rank_core.fear"), "\"hi\"", "\"ho\"");
     c.main(root, stLib);
 
-    Assertions.assertNotEquals(aBuilt, Fs.lastModified(out.resolve("a.built")));
-    Assertions.assertEquals(aJson, Fs.lastModified(out.resolve("a.json")));
-    Assertions.assertEquals(bBuilt, Fs.lastModified(out.resolve("b.built")));
+    assertNotEquals(aBuilt, Fs.lastModified(out.resolve("a.built")));
+    assertEquals(aJson, Fs.lastModified(out.resolve("a.json")));
+    assertEquals(bBuilt, Fs.lastModified(out.resolve("b.built")));
   }
 
   // Confirms expected behaviour: only the packages at the highest rank number get their Main run.
@@ -1171,7 +1177,7 @@ Hello:Main{s->base.Debug#("from app")}
 """);
     var out= coordinator(root).main(root, stLib);
     utils.Err.strCmp("[###]from app[###]", out);
-    Assertions.assertFalse(out.contains("from core"), out);
+    assertFalse(out.contains("from core"), out);
   }
 
   // Confirms expected behaviour: packages tied for that highest rank number all run.
@@ -1206,7 +1212,7 @@ Hello:Main{s->base.Debug#("from z")}
     var waiter= new Thread(()->{ try{ child.await(); } catch(InterruptedException _){ child.kill(); } });
     waiter.start();
     waiter.join(60_000);
-    if (waiter.isAlive()){ child.kill(); Assertions.fail("first! did not return within 60s while the later elements diverge:\n"+out); }
+    if (waiter.isAlive()){ child.kill(); fail("first! did not return within 60s while the later elements diverge:\n"+out); }
     utils.Err.strCmp("0\n", out.toString());
   }
   static boolean recursionCompiled;
@@ -1224,7 +1230,7 @@ Hello:Main{s->base.Debug#("from z")}
     long start= System.nanoTime();
     utils.Err.strCmp("500000500000", runRecursionMain("rec.DeepSum"));
     long millis= (System.nanoTime()-start)/1_000_000;
-    Assertions.assertTrue(millis < 20_000, "one million steps took "+millis+"ms");
+    assertTrue(millis < 20_000, "one million steps took "+millis+"ms");
   }
   @Test void aFamilyNestingTooManyCallsOnOneThreadOverflows() throws InterruptedException{
     utils.Err.strCmp("[###]java.lang.StackOverflowError[###]", runRecursionMain("rec.CrowdedSum"));
@@ -1320,15 +1326,15 @@ b
 """, c.main(root, stLib));
     var cp= Push.of(Coordinator.genJava(root),c.sharedClasspath());
     var out= new StringBuilder();
-    Assertions.assertEquals(1, JavaTool.startMainFromJars(Coordinator.runData(root,c.stdLibBase()), cp, "_col.Main", out::append).await(), out::toString);
-    Assertions.assertEquals(1, Coordinator.startMain(root, c.stdLibBase(), "col.A", c.sharedClasspath(), out::append).await(), out::toString);
-    Assertions.assertEquals(0, Coordinator.startMain(root, c.stdLibBase(), "col.B", c.sharedClasspath(), out::append).await(), out::toString);
+    assertEquals(1, JavaTool.startMainFromJars(Coordinator.runData(root,c.stdLibBase()), cp, "_col.Main", out::append).await(), out::toString);
+    assertEquals(1, Coordinator.startMain(root, c.stdLibBase(), "col.A", c.sharedClasspath(), out::append).await(), out::toString);
+    assertEquals(0, Coordinator.startMain(root, c.stdLibBase(), "col.B", c.sharedClasspath(), out::append).await(), out::toString);
   }
   @Test void aMainEndingWithAJavaErrorExitsWith1() throws InterruptedException{
     var root= ResolveResource.integrationTests.resolve("runRecursion");
     if (!recursionCompiled){ compileOk("runRecursion"); recursionCompiled= true; }
     var out= new StringBuilder();
-    Assertions.assertEquals(1, Coordinator.startMain(root, ResolveResource.stLibPath, "rec.NaiveSum", coordinator(root).sharedClasspath(), out::append).await(), out::toString);
+    assertEquals(1, Coordinator.startMain(root, ResolveResource.stLibPath, "rec.NaiveSum", coordinator(root).sharedClasspath(), out::append).await(), out::toString);
     utils.Err.strCmp("[###]java.lang.StackOverflowError[###]", out.toString());
   }
 
@@ -1347,7 +1353,7 @@ iii
 use base.Str as Str;
 B:{.text:Str->a.C.text;}
 """);
-    var ex= Assertions.assertThrows(RuntimeException.class, ()->coordinator(root).main(root, stLib));
+    var ex= assertThrows(RuntimeException.class, ()->coordinator(root).main(root, stLib));
     utils.Err.strCmp("""
 For package "pkb", the virtual package name "a" is mapped to "nonexistentpkg",
 but package "nonexistentpkg" does not exist:
@@ -1373,7 +1379,7 @@ iii
 use base.Str as Str;
 Greeting:{ .hi: Str -> "hi" }
 """);
-    var ex= Assertions.assertThrows(RuntimeException.class, ()->coordinator(root).main(root, stLib));
+    var ex= assertThrows(RuntimeException.class, ()->coordinator(root).main(root, stLib));
     utils.Err.strCmp("""
 In file: fear:/_a/_rank_core.fear
 
