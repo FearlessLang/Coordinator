@@ -37,7 +37,7 @@ final class RealSourceOracleWithZipDslTest{
 
   static{ utils.Err.setUp(AssertionFailedError.class, Assertions::assertEquals, Assertions::assertTrue); }
 
-  private void testOk(Path tmp,String in,String out){
+  private void testOk(Path tmp, String in, String out){
     assertEquals(out, FsDsl.runOk(tmp, in));
   }
   private void autoloadErr(Path tmp, String pkgName, String spec, String expected){

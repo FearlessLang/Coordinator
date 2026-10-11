@@ -36,7 +36,7 @@ import utils.Push;
 import utils.Range;
 
 public interface Coordinator{
-  default String runAllMains(String pkgName,OutputOracle out) throws InterruptedException{
+  default String runAllMains(String pkgName, OutputOracle out) throws InterruptedException{
     return runMains(runData(out.rootDir().getParent(),stdLibBase()), Push.of(out.rootDir().resolve("gen_java"),sharedClasspath()), "_"+pkgName+".Main");
   }
   static String runMains(List<String> jvmArgs, List<Path> jarDirs, String mainClass) throws InterruptedException{
@@ -80,7 +80,7 @@ public interface Coordinator{
   static Path genJava(Path project){ return project.resolve(outDir).resolve("gen_java"); }
   String outDir= ".fearless_out";
 
-  default List<Literal> frontend(String pkgName, List<Ref> files, SourceOracle oracle, OtherPackages other,Map<String,String> vres){
+  default List<Literal> frontend(String pkgName, List<Ref> files, SourceOracle oracle, OtherPackages other, Map<String,String> vres){
     try{ return new FrontendLogicMain().of(pkgName,vres, files, other); }
     catch(FearlessException fe){ throw Report.sourceError(fe.render(oracle)); }
   }

@@ -21,8 +21,8 @@ import tools.SourceOracle;
 import userMessages.UserError;
 
 public final class FsDsl{
-  record Item(String name,String content){}
-  private record Leaf(String name,String content,boolean isDir){}
+  record Item(String name, String content){}
+  private record Leaf(String name, String content, boolean isDir){}
   private static final class ZipNode{
     final LinkedHashMap<String,ZipNode> nested= new LinkedHashMap<>();
     final ArrayList<Leaf> leafs= new ArrayList<>();
@@ -53,7 +53,7 @@ public final class FsDsl{
     try{
       var zips= new LinkedHashMap<Path,ZipNode>();
       for (var it: parse(spec)){ emit(root, zips, it); }
-      zips.forEach((diskZip, node)->writeDiskZip(diskZip, node));
+      zips.forEach((diskZip,node)->writeDiskZip(diskZip, node));
     }
     catch(InvalidPathException e){
       Assumptions.abort("OS forbids creating this path on disk: "+e.getMessage());
@@ -125,7 +125,7 @@ public final class FsDsl{
   private static byte[] buildZip(ZipNode node){
     var bout= new ByteArrayOutputStream();
     try(var zos= new ZipOutputStream(bout, UTF_8)){
-      node.nested.forEach((name, child)->{
+      node.nested.forEach((name,child)->{
         var bytes= buildZip(child);
         putFile(zos, name, bytes);
       });

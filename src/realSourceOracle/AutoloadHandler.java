@@ -26,7 +26,7 @@ public record AutoloadHandler(Predicate<String> matches, String baseType){
     assert dot > 0;
     return name.substring(0,dot);
   }
-  static String standardTypeName(String pkgName,SourceOracle.Ref ref,String path){
+  static String standardTypeName(String pkgName, SourceOracle.Ref ref, String path){
     var all= components(path);
     int i= all.indexOf(pkgName);
     assert i >= 0 && i+1 < all.size();

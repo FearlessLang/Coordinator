@@ -1413,18 +1413,18 @@ Hello:Main{s->base.Debug#("hi")}
     server.start();
     return server;
   }
-  static String url(HttpServer server,String path){ return "http://127.0.0.1:"+server.getAddress().getPort()+path; }
-  static void reply(HttpExchange ex,int status,byte[] body) throws IOException{
+  static String url(HttpServer server, String path){ return "http://127.0.0.1:"+server.getAddress().getPort()+path; }
+  static void reply(HttpExchange ex, int status, byte[] body) throws IOException{
     ex.sendResponseHeaders(status,body.length);
     ex.getResponseBody().write(body);
     ex.close();
   }
-  static void replyChunked(HttpExchange ex,byte[] body) throws IOException{
+  static void replyChunked(HttpExchange ex, byte[] body) throws IOException{
     ex.sendResponseHeaders(200,0);
     ex.getResponseBody().write(body);
     ex.close();
   }
-  static void redirect(HttpExchange ex,String location) throws IOException{
+  static void redirect(HttpExchange ex, String location) throws IOException{
     ex.getResponseHeaders().add("Location",location);
     ex.sendResponseHeaders(302,-1);
     ex.close();
@@ -1435,7 +1435,7 @@ Hello:Main{s->base.Debug#("hi")}
     ImageIO.write(img,"png",bout);
     return bout.toByteArray();
   }
-  static String downloadProject(String url,String call){
+  static String downloadProject(String url, String call){
     return """
 _col/_rank_app.fear
 iii
