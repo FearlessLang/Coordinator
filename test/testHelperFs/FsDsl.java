@@ -134,7 +134,7 @@ public final class FsDsl{
         else{ putFile(zos, e.name, e.content.getBytes(UTF_8)); }
       }
     }
-    catch(Exception ex){ throw new AssertionError(ex); }
+    catch(Exception e){ throw new AssertionError(e); }
     return bout.toByteArray();
   }
 
@@ -143,7 +143,7 @@ public final class FsDsl{
       zos.putNextEntry(new ZipEntry(name.endsWith("/") ? name : name+"/"));
       zos.closeEntry();
     }
-    catch(Exception ex){ throw new AssertionError(ex); }
+    catch(Exception e){ throw new AssertionError(e); }
   }
 
   private static void putFile(ZipOutputStream zos, String name, byte[] bytes){
@@ -152,7 +152,7 @@ public final class FsDsl{
       zos.write(bytes);
       zos.closeEntry();
     }
-    catch(Exception ex){ throw new AssertionError(ex); }
+    catch(Exception e){ throw new AssertionError(e); }
   }
 
   public static String dump(SourceOracle so){
@@ -177,17 +177,17 @@ public final class FsDsl{
   private static void mkdirs(Path p){
     if (p == null){ return; }
     try{ Files.createDirectories(p); }
-    catch(Exception ex){ throw new AssertionError(ex); }
+    catch(Exception e){ throw new AssertionError(e); }
   }
 
   private static void writeString(Path p, String s){
     try{ Files.writeString(p, s, UTF_8); }
-    catch(Exception ex){ throw new AssertionError(ex); }
+    catch(Exception e){ throw new AssertionError(e); }
   }
 
   private static void writeBytes(Path p, byte[] bs){
     try{ Files.write(p, bs); }
-    catch(Exception ex){ throw new AssertionError(ex); }
+    catch(Exception e){ throw new AssertionError(e); }
   }
   public static String runOk(Path tmp, String spec){
     Path root= tmp.resolve("root");
