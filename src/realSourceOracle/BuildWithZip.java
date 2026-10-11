@@ -108,7 +108,7 @@ public final class BuildWithZip{
     });
     return t.visibleFiles().stream().sorted(Comparator.comparing(Ref::fearPath)).toList();
   }
-  static void checkTooLong(RefParent kid){     if (kid.fearPath().length() > 200 + SourceOracle.root.length()){ throw Report.pathTooLong(kid); } }
+  static void checkTooLong(RefParent kid){ if (kid.fearPath().length() > 200 + SourceOracle.root.length()){ throw Report.pathTooLong(kid); } }
   public static void checkIndividualVisibleSegment(RefParent kid){
     checkTooLong(kid);
     var name= Fs.fileNameWithExtension(kid.fearPath());

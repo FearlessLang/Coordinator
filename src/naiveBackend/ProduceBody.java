@@ -70,7 +70,7 @@ record ProduceBody(BytecodeLineFix sb, Backend b, String iface, String thisName,
     }
     if (!lit.infName() || lit.onlyImmCapture().inner){ b.generateInterface(lit, true); }
     var base= b.ifaceNameFor(lit);
-      sb.a("new ").a(base).a("(){");
+    sb.a("new ").a(base).a("(){");
     if (b.isRepr(lit)){
       sb.a("""
         volatile java.util.concurrent.ConcurrentHashMap<Object,Entry> _reprCache;
