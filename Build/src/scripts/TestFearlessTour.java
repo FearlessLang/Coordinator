@@ -8,7 +8,7 @@ import resources.ResolveResource;
 import tools.Fs;
 import utils.OneOr;
 
-public class TestFearlessTour{
+public final class TestFearlessTour{
   public static void main(String[] args) throws InterruptedException{
     var tour= ResolveResource.commonsSrc.getParent().getParent().resolve("FearlessTour");
     DeployPortableFearless.main(args);

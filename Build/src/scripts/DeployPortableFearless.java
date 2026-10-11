@@ -5,7 +5,7 @@ import java.util.List;
 
 import resources.ResolveResource;
 
-public class DeployPortableFearless{
+public final class DeployPortableFearless{
   public static void main(String[] args) throws InterruptedException{
     ModularBuild.deploy(ResolveResource.portableFolderOut,
       List.of(

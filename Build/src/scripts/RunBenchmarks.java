@@ -12,7 +12,7 @@ import resources.ResolveResource;
 import tools.Fs;
 import tools.JavaTool;
 
-public class RunBenchmarks{
+public final class RunBenchmarks{
   public static void main(String[] args) throws InterruptedException{
     ModularBuild.commons();
     ModularBuild.frontendMain();
