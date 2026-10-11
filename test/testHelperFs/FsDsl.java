@@ -205,6 +205,4 @@ public final class FsDsl{
     String res= dumpErr(root, ex);
     utils.Err.strCmp(expected, res);
   }
-
-  private FsDsl(){}
 }

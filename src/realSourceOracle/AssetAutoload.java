@@ -8,8 +8,6 @@ import tools.SourceOracle;
 import utils.Bug;
 
 final class AssetAutoload{
-  private AssetAutoload(){}
-
   static String descriptorMethods(SourceOracleWithAutoload.Triple t, String path){
     return ""
       +"  .path: base.Str -> \""+path+"\";\n"

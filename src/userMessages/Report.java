@@ -30,8 +30,6 @@ import utils.Pop;
 /// their Fearless source.
 /// The counterpart is Violation, for when we can no longer do our safe job.
 public final class Report{
-  private Report(){}
-
   //-- the shape of a project-scan message: what is wrong, how to fix it, then the rules
   private static UserError fail(String rel, String wentWrong, String howToFix){
     String msg= "Invalid path in this project folder.\n\n"

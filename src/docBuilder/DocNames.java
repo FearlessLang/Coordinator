@@ -10,8 +10,6 @@ import core.E.Literal;
 import offensiveUtils.Require;
 
 public final class DocNames{
-  private DocNames(){}
-
   static final List<String> baseNames= List.of(
     "Action",
     "Angle",

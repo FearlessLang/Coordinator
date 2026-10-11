@@ -21,8 +21,6 @@ import utils.Join;
 /// promise, so we stop rather than continue on an unknown footing.
 /// The counterpart is Report, for what the user gave us and can change.
 public final class Violation{
-  private Violation(){}
-
   //-- the pieces of text that more than one message needs, written once
   public static String reported(Throwable cause){ return "Reported reason:\n"+cause.getMessage(); }
   private static Supplier<List<String>> running= List::of;
