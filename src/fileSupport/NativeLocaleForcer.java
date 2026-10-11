@@ -111,7 +111,7 @@ public final class NativeLocaleForcer{
       throw Violation.couldNotForceEnglish("Windows process UI language read failed (GetLastError="+lastError(callState)+")");
     }
     var languages= parseDoubleNullTerminatedUtf16(buffer);
-    if (languages.size() == 1 && enUs.equals(languages.getFirst())){ return; }
+    if (languages.size() == 1 && languages.getFirst().equals(enUs)){ return; }
     throw Violation.couldNotForceEnglish("Fearless set the Windows process UI language to en-US, but Windows reported the language as "+languages+" instead");
   }
   private static int lastError(MemorySegment callState){

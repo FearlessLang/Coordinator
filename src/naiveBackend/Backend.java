@@ -121,7 +121,7 @@ public final class Backend{
     while (k < s.length() && s.charAt(s.length()-1-k) == '\''){ k += 1; }
     if (k == 0){ return s; }
     var head= s.substring(0, s.length()-k);
-    assert head.indexOf('\'') == -1: "prime (') must be trailing only: "+s;
+    assert head.indexOf('\'') < 0: "prime (') must be trailing only: "+s;
     return head+"$p"+k;
   }
   String decTypeName(TName n){ return encodeTrailingPrimes(n.simpleName())+"$"+caseTag(n.simpleName())+"$"+n.arity(); }
