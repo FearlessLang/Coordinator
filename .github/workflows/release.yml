@@ -50,6 +50,21 @@ jobs:
           Expand-Archive -Path "$env:RUNNER_TEMP\jdk.zip" -DestinationPath "$env:RUNNER_TEMP\jdk"
           $javaBin= "$env:RUNNER_TEMP\jdk\jdk-26.0.2\bin\java.exe" -replace '\\','/'
           Add-Content -Path $env:GITHUB_ENV -Value "JAVA_BIN=$javaBin"
+      - name: Install Eclipse (linux)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/eclipse.tar.gz" https://download.eclipse.org/technology/epp/downloads/release/2026-06/R/eclipse-java-2026-06-R-linux-gtk-x86_64.tar.gz
+          tar -xzf "$RUNNER_TEMP/eclipse.tar.gz" -C "$RUNNER_TEMP"
+          echo "ECLIPSE_DIR=$RUNNER_TEMP/eclipse" >> "$GITHUB_ENV"
+      - name: Install Eclipse (windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Invoke-WebRequest -Uri "https://download.eclipse.org/technology/epp/downloads/release/2026-06/R/eclipse-java-2026-06-R-win32-x86_64.zip" -OutFile "$env:RUNNER_TEMP\eclipse.zip"
+          & "$env:SystemRoot\System32\tar.exe" -xf "$env:RUNNER_TEMP\eclipse.zip" -C "$env:RUNNER_TEMP"
+          $eclipseDir= "$env:RUNNER_TEMP\eclipse" -replace '\\','/'
+          Add-Content -Path $env:GITHUB_ENV -Value "ECLIPSE_DIR=$eclipseDir"
       - name: Generate LocalResources.java
         shell: bash
         run: |
@@ -74,6 +89,7 @@ jobs:
             static public final Path managedFolderOut= prefix.resolve("out","fearlessManagedArtefact");
             static public final Path badZipCorpous= prefix.resolve("Coordinator","badZips");
             static public final Path packaging= prefix.resolve("Coordinator","_fearless_packaging");
+            static public final Path portableEclipse= Path.of("$ECLIPSE_DIR");
           }
           JAVA
       - name: Build portable Fearless
