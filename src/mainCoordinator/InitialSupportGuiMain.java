@@ -127,7 +127,8 @@ public final class InitialSupportGuiMain{
     try{
       var browse= Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE);
       if (browse){ Desktop.getDesktop().browse(URI.create(s)); return; }
-    }catch(Exception _){}
+    }
+    catch(Exception _){}
     Toolkit.getDefaultToolkit().beep();
   }
   private void selectFile(JButton b){

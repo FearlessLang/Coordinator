@@ -43,7 +43,7 @@ public final class FsDsl{
     if (lines.isEmpty()){ return; }
     int i= 0;
     for (; i < lines.size(); i += 1){ if (lines.get(i).equals("iii")){ break; } }
-    assert i < lines.size() : "Missing iii separator";
+    assert i < lines.size(): "Missing iii separator";
     String name= String.join("\n", lines.subList(0, i));
     String content= String.join("\n", lines.subList(i+1, lines.size()));
     out.add(new Item(name, content));
@@ -94,7 +94,7 @@ public final class FsDsl{
 
   private static void emitZip(ZipNode root, List<String> after, boolean isDir, String content){
     if (after.isEmpty()){
-      assert !isDir : "Use path ending with .zip (no trailing /) to declare empty zip";
+      assert !isDir: "Use path ending with .zip (no trailing /) to declare empty zip";
       return; // declaration only: empty zip is fine
     }
     int from= 0;

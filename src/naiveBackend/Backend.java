@@ -37,7 +37,7 @@ public final class Backend{
   public List<Consumer<Path>> produceJavaCode(){
     Fs.ensureDir(out);
     Fs.cleanDirContents(out);
-    tools.decs().forEach(d->{tools.docs().visitLiteral(d); generateInterface(d,false); tools.checks().checkFileReplacement(d, decTypeName(d.name()));});
+    tools.decs().forEach(d->{ tools.docs().visitLiteral(d); generateInterface(d,false); tools.checks().checkFileReplacement(d, decTypeName(d.name())); });
     tools.checks().checkMagicFulfilled();
     writeMainJava();
     return List.copyOf(fixers);
@@ -58,7 +58,8 @@ public final class Backend{
         var name= l.name().simpleName();
         sb.a("  _base.AppLog _appLog= _base.AppLog.open(java.nio.file.Path.of(\".out\",\"logs\",\""+tools.pkgName()+"\",\""+name+".log\"), false);\n");
         sb.a("  default _base.AppLog _log(){ return _appLog; }\n");
-      } else{
+      }
+      else{
         sb.a("  default _base.AppLog _log(){ return null; }\n");
       }
     }
@@ -94,7 +95,7 @@ public final class Backend{
     "(",", ",")","()"
   );}
   void emitTopMethod(BytecodeLineFix sb, Literal l, M m, boolean abstractOnly){
-    if (!m.sig().origin().equals(l.name())){ return ; }
+    if (!m.sig().origin().equals(l.name())){ return; }
     String iface= ifaceNameFor(l);
     var jName= mangledMethodName(m.sig().rc(), m.sig().m());
     if (abstractOnly || m.sig().abs()){

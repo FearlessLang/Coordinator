@@ -23,7 +23,7 @@ import utils.Push;
 
 final class TestBuildBase{
   Coordinator c= new Coordinator(){
-    @Override public Path modsPath(){  return ResolveResource.coordinatorJars; }
+    @Override public Path modsPath(){ return ResolveResource.coordinatorJars; }
     @Override public BackendTools backendTools(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, CapabilityEnvironment capabilities){
       var testFileDest= ResolveResource.stLibDebugOut.resolve("_baseTestOut","base_test.fear");
       return BackendTools.of(pkgName, oracle, other, core, ResolveResource.stLibDebugOut, baseCachePath(), testFileDest, ResolveResource.stLibRTPath, capabilities);
@@ -43,7 +43,7 @@ final class TestBuildBase{
     }
   };
   @Test void test(){
-    try{ c.main(ResolveResource.stLibPath, c.sourceOracle(ResolveResource.stLibPath));}
-    catch(InterruptedException e){ Assertions.fail(e);}
+    try{ c.main(ResolveResource.stLibPath, c.sourceOracle(ResolveResource.stLibPath)); }
+    catch(InterruptedException e){ Assertions.fail(e); }
   }
 }

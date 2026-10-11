@@ -85,8 +85,8 @@ final class RunIntegration{
   }
   String run(String name){ return main(freshIntegrationRoot(name), List.of()); }
   String main(Path project, List<String> jvmArgs){
-    try{ return coordinator(project, jvmArgs).main(project, stLib);}
-    catch(InterruptedException e){ return Assertions.fail(e);}
+    try{ return coordinator(project, jvmArgs).main(project, stLib); }
+    catch(InterruptedException e){ return Assertions.fail(e); }
   }
   void testOk(String name){ unitTestsOk(name, freshIntegrationRoot(name)); }
   void unitTestsOk(String name, Path root){
@@ -132,7 +132,7 @@ imm Assert._fail(_) error line: [###]
 imm MyTests# error line: 5 in file _hello/_rank_app.fear
 """, out);
   }
-  @Test void mapAToPkc(){ utils.Err.strCmp("CTEXT\n", run("map_a_to_pkc"));}
+  @Test void mapAToPkc(){ utils.Err.strCmp("CTEXT\n", run("map_a_to_pkc")); }
   // What counts as a main of a package: a top level type implementing base.Main, and
   // also one declared inside a method when it implements base.CaptureFree, since that
   // is the promise that it captures nothing and so the backend gives it an instance.
@@ -145,7 +145,7 @@ capture free main in a method
 top level main
 """, run("mainInMethod"));
   }
-  @Test void testingStandardLibrary(){ testOk("testingStandardLibrary");}
+  @Test void testingStandardLibrary(){ testOk("testingStandardLibrary"); }
   @Test void baseGeneratedExamples(@TempDir Path tmp){
     Path root= tmp.resolve("root");
     UserError.root= root;
@@ -219,7 +219,7 @@ Hello world
       _GCase$1k$0.java only imm
       """, String.join("\n", got)+"\n");
   }
-  @Test void testAssets(){ testOk("testAssets");}
+  @Test void testAssets(){ testOk("testAssets"); }
   private Path theOneLogFile(Path dir, String prefix) throws IOException{
     try (var files= Files.list(dir)){
       var found= files.filter(p->p.getFileName().toString().startsWith(prefix)).toList();
