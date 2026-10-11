@@ -31,7 +31,7 @@ final class LogFilesTest{
     Fs.writeUtf8(logsDir(project).resolve("err$20260902_000000_000Z.log"),"err\n");
     var found= LogFiles.list(project);
     assertEquals(3,found.size());
-    assertEquals("log$20260903_000000_000Z.log",found.get(0).path().getFileName().toString());
+    assertEquals("log$20260903_000000_000Z.log",found.getFirst().path().getFileName().toString());
     assertEquals("err$20260902_000000_000Z.log",found.get(1).path().getFileName().toString());
     assertEquals("log$20260901_000000_000Z.log",found.get(2).path().getFileName().toString());
   }
@@ -41,7 +41,7 @@ final class LogFilesTest{
   @Test void aLiveLogFallsBackToItsFileSystemModifiedTime(@TempDir Path project){
     var file= logsDir(project).resolve("_base").resolve("log.log");
     Fs.writeUtf8(file,"hello\n");
-    var entry= LogFiles.list(project).get(0);
+    var entry= LogFiles.list(project).getFirst();
     assertTrue(ChronoUnit.SECONDS.between(entry.when(),Instant.now()) < 60);
   }
 }

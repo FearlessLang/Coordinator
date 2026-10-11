@@ -49,7 +49,7 @@ final class DocBuilderTest{
     var docs= new SourceDocs(file, text);
     var atLine2= docs.docsByLine.getOrDefault(2, List.of());
     assertEquals(1, atLine2.size(), "the /// doc comment on line 2 must be recognized as a doc comment");
-    assertEquals("this is meant to be a doc comment", atLine2.get(0).text());
+    assertEquals("this is meant to be a doc comment", atLine2.getFirst().text());
   }
 
   @Test void plainLineCommentWithAStrayBacktickAlsoSwallowsALaterDocComment(){
@@ -61,7 +61,7 @@ final class DocBuilderTest{
     var docs= new SourceDocs(file, text);
     var atLine2= docs.docsByLine.getOrDefault(2, List.of());
     assertEquals(1, atLine2.size(), "the /// doc comment on line 2 must be recognized as a doc comment");
-    assertEquals("this doc should still be found", atLine2.get(0).text());
+    assertEquals("this doc should still be found", atLine2.getFirst().text());
   }
 
   @Test void aBlockCommentIsNeverTreatedAsADocCommentEvenIfItContainsTripleSlashLookingText(){
@@ -93,7 +93,7 @@ final class DocBuilderTest{
     var docs= new SourceDocs(file, text);
     var before= docs.docsAt(Pos.of(file,3,1), true);
     assertEquals(List.of("description of foo","  .check{foo.assertEq(1)}"), before.stream().map(DocOcc::text).toList());
-    assertFalse(before.get(0).example(), "the /// line is prose, not an example");
+    assertFalse(before.getFirst().example(), "the /// line is prose, not an example");
     assertTrue(before.get(1).example(), "the //> line is a runnable example");
   }
 
@@ -116,8 +116,8 @@ final class DocBuilderTest{
     var docs= new SourceDocs(file, text);
     var found= docs.docsAt(Pos.of(file,1,1), false);
     assertEquals(1, found.size());
-    assertEquals("trailing doc", found.get(0).text());
-    assertTrue(found.get(0).inline(), "a doc comment following code on the same line must be inline, not pure");
+    assertEquals("trailing doc", found.getFirst().text());
+    assertTrue(found.getFirst().inline(), "a doc comment following code on the same line must be inline, not pure");
   }
 
   //documentation that reaches no declaration is documentation nobody reads: the usual

@@ -1212,7 +1212,7 @@ We check this so that you[###]
     Files.createDirectories(root.resolve("_pkg"));
     Files.writeString(root.resolve("_pkg/a.fear"), "X");
     var oracle= new RealSourceOracleWithZip(root);
-    var ref= oracle.allFiles().get(0);
+    var ref= oracle.allFiles().getFirst();
     var ex= Report.invisibleInvalidSurrogate(ref, ".x\uD800y");
     utils.Err.strCmp("""
 Invalid path in this project folder.
