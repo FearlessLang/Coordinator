@@ -12,7 +12,7 @@ import org.junit.jupiter.api.io.TempDir;
 import tools.Fs;
 import tools.JavacTool;
 
-public class JavacToolTest{
+final class JavacToolTest{
   private static void compiles(Path tmp, String folder){
     var src= tmp.resolve(folder).resolve("src");
     Fs.writeUtf8(src.resolve("A.java"), "class A{}\n");

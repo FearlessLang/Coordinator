@@ -5,14 +5,15 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+
 import resources.ResolveResource;
 import tools.Fs;
-import tools.JavacTool;
 import tools.JavaTool;
+import tools.JavacTool;
 import tools.PortableApp;
 import utils.OneOr;
 
-public class ModularBuild{
+public final class ModularBuild{
   static final Path out= ResolveResource.coordinatorSrc.getParent().getParent().resolve("out").resolve("modular");
   static final Path mods= out.resolve("mods");
   static final Path resources= ResolveResource.coordinatorSrc.getParent().resolve("Build","src","resources");

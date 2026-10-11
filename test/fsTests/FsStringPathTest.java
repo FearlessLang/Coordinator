@@ -1,18 +1,21 @@
 package fsTests;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
 import org.junit.jupiter.api.Test;
+
 import tools.Fs;
 
-public class FsStringPathTest{
+final class FsStringPathTest{
 
   // -------- helpers (each helper does exactly ONE call) --------
 
-  private static void okFileNameWithExt(String in,String out){ assertEquals(out, Fs.fileNameWithExtension(in)); }
-  private static void okRemoveFileName(String in,String out){ assertEquals(out, Fs.removeFileName(in)); }
-  private static void okRemoveFileNameAllowTop(String in,String out){ assertEquals(out, Fs.removeFileNameAllowTop(in)); }
-  private static void okFileNameNoExt(String in,String out){ assertEquals(out, Fs.fileNameWithoutExtension(in)); }
-  private static void okExtWithDot(String in,String out){ assertEquals(out, Fs.extensionWithDot(in)); }
+  private static void okFileNameWithExt(String in, String out){ assertEquals(out, Fs.fileNameWithExtension(in)); }
+  private static void okRemoveFileName(String in, String out){ assertEquals(out, Fs.removeFileName(in)); }
+  private static void okRemoveFileNameAllowTop(String in, String out){ assertEquals(out, Fs.removeFileNameAllowTop(in)); }
+  private static void okFileNameNoExt(String in, String out){ assertEquals(out, Fs.fileNameWithoutExtension(in)); }
+  private static void okExtWithDot(String in, String out){ assertEquals(out, Fs.extensionWithDot(in)); }
 
   // -------- fileNameWithExtension : success --------
 

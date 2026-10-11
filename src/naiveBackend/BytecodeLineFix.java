@@ -1,7 +1,5 @@
 package naiveBackend;
 
-import static offensiveUtils.Require.*;
-
 import java.lang.classfile.ClassFile;
 import java.lang.classfile.ClassTransform;
 import java.lang.classfile.CodeBuilder;
@@ -13,18 +11,20 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.TreeMap;
 import java.util.function.Consumer;
+
+import offensiveUtils.Require;
 import tools.Fs;
 import utils.Pos;
 
 final class BytecodeLineFix implements Consumer<Path>{
-  StringBuilder sb= new StringBuilder(8_000);
+  final StringBuilder sb= new StringBuilder(8_000);
   private final String base;
   private final String sourceFile;
   private final TreeMap<Integer,Integer> lineMap= new TreeMap<>();
   private int javaLine= 1;
-  BytecodeLineFix(String base,URI sourceFile){ this(base,sourceFile.toString().substring("fear:/".length())); }
-  BytecodeLineFix(String base,String sourceFile){
-    assert nonNull(base,sourceFile);
+  BytecodeLineFix(String base, URI sourceFile){ this(base,sourceFile.toString().substring("fear:/".length())); }
+  BytecodeLineFix(String base, String sourceFile){
+    assert Require.nonNull(base,sourceFile);
     this.base= base;
     this.sourceFile= sourceFile;
   }
@@ -37,14 +37,14 @@ final class BytecodeLineFix implements Consumer<Path>{
   BytecodeLineFix a(String s, Pos p){//this call == s contains exactly 1 method call located in pos
     int fl= p.line();
     assert fl >= 1 && fl <= 65535; // LineNumberTable uses u2
-    Integer prev= lineMap.putIfAbsent(javaLine, fl);
+    var prev= lineMap.putIfAbsent(javaLine, fl);
     assert prev == null || prev.intValue() == fl:
       "Two fearless lines on one java line "+javaLine+": "+prev+" vs "+fl
       + sb.toString();
     return a(s);
   }
   @Override public void accept(Path classesDir){
-    assert nonNull(classesDir);
+    assert Require.nonNull(classesDir);
     var cf= ClassFile.of();
     Fs.walkV(classesDir, s->s
       .filter(p->matches(p.getFileName().toString()))
@@ -55,13 +55,13 @@ final class BytecodeLineFix implements Consumer<Path>{
     return n.equals(base+".class") || n.endsWith(".class") && n.startsWith(base+"$"); // anon/inner: Foo$1.class etc
   }
   private void patchOne(ClassFile cf, Path classFile){
-    byte[] in= Fs.of(()->Files.readAllBytes(classFile));
+    var in= Fs.of(()->Files.readAllBytes(classFile));
     var model= cf.parse(in);
     var xform= ClassTransform
       .dropping(e->e instanceof SourceFileAttribute)
       .andThen(ClassTransform.endHandler(b->b.with(SourceFileAttribute.of(sourceFile))))
       .andThen(ClassTransform.transformingMethodBodies(this::patchCode));
-    byte[] out= cf.transformClass(model, xform);
+    var out= cf.transformClass(model, xform);
     Fs.ofV(()->Files.write(classFile, out));
   }
   private void patchCode(CodeBuilder cb, CodeElement ce){

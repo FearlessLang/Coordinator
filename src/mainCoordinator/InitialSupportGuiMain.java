@@ -77,7 +77,7 @@ public final class InitialSupportGuiMain{
   private JComponent header(){
     var p= new JPanel(new BorderLayout());
     var title= new JLabel("Welcome to Fearless");
-    title.setFont(uiFont.deriveFont(Font.BOLD, uiFont.getSize2D() + 6f));
+    title.setFont(uiFont.deriveFont(Font.BOLD, uiFont.getSize2D()+6f));
     p.add(title, BorderLayout.NORTH);
     var sub= new JLabel(startText);
     sub.setBorder(new EmptyBorder(6,0,0,0));
@@ -105,7 +105,7 @@ public final class InitialSupportGuiMain{
   private JComponent footer(){
     var p= new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
     var info= addBtn(p, "Info", "About Fearless", _->showHtml(aboutHtml, "About Fearless"));
-    info.setFont(uiFont.deriveFont(uiFont.getSize2D() - 2f));
+    info.setFont(uiFont.deriveFont(uiFont.getSize2D()-2f));
     info.setMargin(new Insets(2,8,2,8));
     return p;
   }
@@ -127,7 +127,8 @@ public final class InitialSupportGuiMain{
     try{
       var browse= Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE);
       if (browse){ Desktop.getDesktop().browse(URI.create(s)); return; }
-    }catch(Exception _){}
+    }
+    catch(Exception _){}
     Toolkit.getDefaultToolkit().beep();
   }
   private void selectFile(JButton b){
@@ -170,7 +171,7 @@ public final class InitialSupportGuiMain{
   private static JButton addBtn(Container parent, String text, String tooltip, Consumer<JButton> c){
     var b= new JButton(text);
     b.setAlignmentX(Component.CENTER_ALIGNMENT);
-    b.setMaximumSize(new Dimension(Integer.MAX_VALUE, b.getPreferredSize().height + 6));
+    b.setMaximumSize(new Dimension(Integer.MAX_VALUE, b.getPreferredSize().height+6));
     b.setToolTipText(tooltip);
     b.addActionListener(_->c.accept(b));
     parent.add(b);

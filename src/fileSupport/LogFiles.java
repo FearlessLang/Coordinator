@@ -38,6 +38,6 @@ public final class LogFiles{
     if (dollar < 0){ return Optional.empty(); }
     var stamp= name.substring(dollar+1,name.length()-".log".length());
     try{ return Optional.of(Instant.from(stampFmt.parse(stamp))); }
-    catch(DateTimeParseException e){ return Optional.empty(); }
+    catch(DateTimeParseException _){ return Optional.empty(); }
   }
 }

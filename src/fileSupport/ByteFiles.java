@@ -1,4 +1,5 @@
 package fileSupport;
+
 import static fileSupport.ByteFiles.Kind.*;
 
 import java.io.IOException;
@@ -20,8 +21,8 @@ import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Locale;
 
-public final class ByteFiles {
-  public enum Op {
+public final class ByteFiles{
+  public enum Op{
     Read("read","reading","read", StandardOpenOption.READ),
     // The write probe deliberately omits CREATE and TRUNCATE_EXISTING: a probe that
     // diagnoses a failed write must not create or empty the very file it inspects.
@@ -39,7 +40,7 @@ public final class ByteFiles {
     // individual text can forget it.
     String fill(String text){ return text.replace("`read`",verb).replace("`reading`",gerund).replace("`written`",participle); }
   }
-  public enum Kind {
+  public enum Kind{
     FileBusy_WindowsSharingViolation,
     FileBusy_WindowsFileRegionLocked,
     FileBusy_PosixTextFileBusy,
@@ -112,49 +113,49 @@ public final class ByteFiles {
   // T is the operation's result type: byte[] for read, Void for the writes. In
   // practice every handler throws; the type parameter only makes the throwing
   // handler typecheck against each entry point.
-  public interface Handler<T, X extends Throwable> { T failure(Kind kind, Throwable cause) throws X; }
-  private interface IoOperation<T> { T run() throws IOException; }
+  public interface Handler<T,X extends Throwable>{ T failure(Kind kind, Throwable cause) throws X; }
+  private interface IoOperation<T>{ T run() throws IOException; }
 
-  public static <X extends Throwable> byte[] read(Path path, Handler<byte[],X> handler) throws X {
-    return attempt(Op.Read, path, () -> Files.readAllBytes(path), handler);
+  public static <X extends Throwable> byte[] read(Path path, Handler<byte[],X> handler) throws X{
+    return attempt(Op.Read, path, ()->Files.readAllBytes(path), handler);
   }
   // Whole-file create: refuses to touch anything already at the location
   // (CREATE_NEW); the refusal classifies as Kind.FileAlreadyExists.
-  public static <X extends Throwable> void writeNew(Path path, byte[] bytes, Handler<Void,X> handler) throws X {
-    attempt(Op.Write, path, () -> { Files.write(path, bytes, StandardOpenOption.WRITE, StandardOpenOption.CREATE_NEW); return null; }, handler);
+  public static <X extends Throwable> void writeNew(Path path, byte[] bytes, Handler<Void,X> handler) throws X{
+    attempt(Op.Write, path, ()->{ Files.write(path, bytes, StandardOpenOption.WRITE, StandardOpenOption.CREATE_NEW); return null; }, handler);
   }
-  private static <T, X extends Throwable> T attempt(Op op, Path path, IoOperation<T> operation, Handler<T,X> handler) throws X {
-    try { return operation.run(); }
+  private static <T,X extends Throwable> T attempt(Op op, Path path, IoOperation<T> operation, Handler<T,X> handler) throws X{
+    try{ return operation.run(); }
     catch(IOException|UnsupportedOperationException|ClosedFileSystemException|FileSystemNotFoundException e){ return classifyError(op, path, e, handler); }
     catch(OutOfMemoryError e){ return classifyMemoryError(e, handler); }
   }
-  private static <T, X extends Throwable> T classifyMemoryError(OutOfMemoryError e, Handler<T,X> handler) throws X {
+  private static <T,X extends Throwable> T classifyMemoryError(OutOfMemoryError e, Handler<T,X> handler) throws X{
     var message= e.getMessage();
     if (message != null && TextMatch.MFileTooLargeForByteArray.has(message.toLowerCase(Locale.ROOT))){ return handler.failure(FileTooLargeForByteArray, e); }
     throw e;
   }
-  private static <T, X extends Throwable> T classifyError(Op op, Path path, Throwable firstFailure, Handler<T,X> handler) throws X {
+  private static <T,X extends Throwable> T classifyError(Op op, Path path, Throwable firstFailure, Handler<T,X> handler) throws X{
     var kind= kindFromFailure(firstFailure);
     if ((kind == AccessDenied || kind == UnknownFailureAfterSuccessfulOpen) && isFolder(path)){ return handler.failure(PathIsFolder, firstFailure); }
     if (kind != UnknownFailureAfterSuccessfulOpen){ return handler.failure(kind, firstFailure); }
     return checkOpenFailure(op, path, firstFailure, handler);
   }
-  private static <T, X extends Throwable> T checkOpenFailure(Op op, Path path, Throwable firstFailure, Handler<T,X> handler) throws X {
+  private static <T,X extends Throwable> T checkOpenFailure(Op op, Path path, Throwable firstFailure, Handler<T,X> handler) throws X{
     FileChannel channel;
-    try { channel= FileChannel.open(path, op.probeOptions); }
+    try{ channel= FileChannel.open(path, op.probeOptions); }
     catch(IOException|UnsupportedOperationException|ClosedFileSystemException|FileSystemNotFoundException e){
       e.addSuppressed(firstFailure);
       return handler.failure(UnknownOpenFailure, e);
     }
-    try { channel.close(); }
+    try{ channel.close(); }
     catch(IOException e){ firstFailure.addSuppressed(e); }
     return handler.failure(UnknownFailureAfterSuccessfulOpen, firstFailure);
   }
-  private static boolean isFolder(Path path) {
-    try { return Files.readAttributes(path, BasicFileAttributes.class).isDirectory(); }
-    catch(IOException|UnsupportedOperationException|ClosedFileSystemException|FileSystemNotFoundException e){ return false; }
+  private static boolean isFolder(Path path){
+    try{ return Files.readAttributes(path, BasicFileAttributes.class).isDirectory(); }
+    catch(IOException|UnsupportedOperationException|ClosedFileSystemException|FileSystemNotFoundException _){ return false; }
   }
-  private static Kind kindFromFailure(Throwable cause) {
+  private static Kind kindFromFailure(Throwable cause){
     return switch(cause){
       case NoSuchFileException _ -> PathResolutionFailure_FileNotFound;
       case FileAlreadyExistsException _ -> FileAlreadyExists;
@@ -169,7 +170,7 @@ public final class ByteFiles {
       default -> TextMatch.match(text(cause));
     };
   }
-  public static String text(Throwable e) {
+  public static String text(Throwable e){
     var out= new StringBuilder();
     appendText(out, e);
     return out.toString().toLowerCase(Locale.ROOT);
@@ -179,6 +180,6 @@ public final class ByteFiles {
     var text= e instanceof FileSystemException fs && fs.getReason() != null ? fs.getReason() : e.getMessage();
     if (text != null){ out.append(' ').append(text); }
     appendText(out, e.getCause());
-    for (var suppressed : e.getSuppressed()){ appendText(out, suppressed); }
+    for (var suppressed: e.getSuppressed()){ appendText(out, suppressed); }
   }
 }

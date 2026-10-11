@@ -3,23 +3,24 @@ package badZipsTest;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.nio.file.Path;
+
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.opentest4j.AssertionFailedError;
 
-import userMessages.UserError;
-import resources.ResolveResource;
 import realSourceOracle.RealSourceOracleWithZip;
+import resources.ResolveResource;
 import testHelperFs.FsDsl;
+import userMessages.UserError;
 
-public class BadZipsTest {
+final class BadZipsTest{
   static{ utils.Err.setUp(AssertionFailedError.class, Assertions::assertEquals, Assertions::assertTrue); }
   static Path root= ResolveResource.badZipCorpous;
   public static void runErrIOE(String in, String expected){
-    Path input= root.resolve(in);
+    var input= root.resolve(in);
     UserError.root= root;
     var ex= assertThrows(UserError.class, ()->new RealSourceOracleWithZip(input));
-    String res= FsDsl.dumpErr(input,ex);
+    var res= FsDsl.dumpErr(input,ex);
     utils.Err.strCmp(expected, res);
   }
 @Test void zip1(){ runErrIOE("zip1","""

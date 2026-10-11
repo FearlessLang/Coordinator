@@ -1,10 +1,18 @@
 package docBuilder;
 
 import java.net.URI;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Optional;
 
-import core.*;
 import core.E.Literal;
+import core.M;
+import core.MName;
+import core.RC;
+import core.T;
+import core.TName;
 import utils.Pos;
 
 final class TypeDoc{
@@ -13,11 +21,11 @@ final class TypeDoc{
     variants.add(l);
   }
 
-  final List<Literal> variants= new ArrayList<>();
+  final ArrayList<Literal> variants= new ArrayList<>();
   final List<DocOcc> docs;
-  final List<MethodDoc> methods= new ArrayList<>();
-  final Map<DeclaredMethodKey,MethodDoc> declaredByKey= new LinkedHashMap<>();
-  final Map<ImportedKey,MethodDoc> importedByKey= new LinkedHashMap<>();
+  final ArrayList<MethodDoc> methods= new ArrayList<>();
+  final LinkedHashMap<DeclaredMethodKey,MethodDoc> declaredByKey= new LinkedHashMap<>();
+  final LinkedHashMap<ImportedKey,MethodDoc> importedByKey= new LinkedHashMap<>();
 
   Literal main(){ return variants.getFirst(); }
 
@@ -41,7 +49,7 @@ final class TypeDoc{
     oneOf(importedByKey, new ImportedKey(m.sig().origin(),m.sig().rc(),m.sig().m()), false, List.of(), from).add(m);
   }
 
-  private <K> MethodDoc oneOf(Map<K,MethodDoc> byKey, K k, boolean declared, List<DocOcc> docs, List<MethodRef> inheritedFrom){
+  private <K> MethodDoc oneOf(LinkedHashMap<K,MethodDoc> byKey, K k, boolean declared, List<DocOcc> docs, List<MethodRef> inheritedFrom){
     var d= byKey.get(k);
     if (d == null){
       d= new MethodDoc(this,declared,docs,inheritedFrom);
@@ -64,9 +72,9 @@ final class MethodDoc{
   final TypeDoc owner;
   final boolean declared;
   final List<DocOcc> docs;
-  final List<M> variants= new ArrayList<>();
-  final List<MethodRef> inheritedFrom= new ArrayList<>();
-  final Set<MethodRefKey> inheritedKeys= new LinkedHashSet<>();
+  final ArrayList<M> variants= new ArrayList<>();
+  final ArrayList<MethodRef> inheritedFrom= new ArrayList<>();
+  final LinkedHashSet<MethodRefKey> inheritedKeys= new LinkedHashSet<>();
 
   M main(){ return variants.getFirst(); }
   boolean hasDocs(){ return !docs.isEmpty(); }

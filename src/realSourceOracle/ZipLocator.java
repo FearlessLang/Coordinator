@@ -12,14 +12,14 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.zip.ZipInputStream;
 
-import userMessages.Violation;
-import userMessages.Report;
 import tools.Fs;
 import tools.ReadZip;
+import userMessages.Report;
+import userMessages.Violation;
 import utils.Range;
 
 public final class ZipLocator{
-  private static Map<String, byte[]> readHere(Path diskZip, List<String> steps, byte[] bytes){
+  private static Map<String,byte[]> readHere(Path diskZip, List<String> steps, byte[] bytes){
     return readZip(diskZip, steps).readAll(()->zipStream(diskZip, bytes));
   }
   public static List<String> entryNames(Path diskZip, List<String> steps){
@@ -49,13 +49,13 @@ public final class ZipLocator{
     );
   }
   private static ZipInputStream zipStream(Path diskZip, byte[] bytes) throws IOException{
-    return bytes==null
+    return bytes == null
       ? new ZipInputStream(Files.newInputStream(diskZip), UTF_8)
       : new ZipInputStream(new ByteArrayInputStream(bytes), UTF_8);
   }
   private static <T> T fetchSteps(Path diskZip, List<String> steps, Function<byte[],T> onFinal) throws IOException{
     byte[] bytes= null;
-    for (int i: Range.of(steps)){
+    for (int i : Range.of(steps)){
       var upTo= steps.subList(0, i+1);
       bytes= readHere(diskZip, upTo, bytes).get(steps.get(i));
       if (bytes == null){ throw Violation.cacheCouldNotFindZipEntry(diskZip, upTo, steps.get(i)); }

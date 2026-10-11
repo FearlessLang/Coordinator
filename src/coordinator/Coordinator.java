@@ -11,31 +11,32 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.function.Consumer;
 import java.util.stream.LongStream;
 import java.util.stream.Stream;
 
-import offensiveUtils.Require;
-import userMessages.Report;
-import userMessages.Violation;
+import core.E.Literal;
 import core.FearlessException;
 import core.OtherPackages;
 import core.TName;
-import core.E.Literal;
 import main.FrontendLogicMain;
 import naiveBackend.BackendTools;
 import naiveBackend.NaiveBackendLogicMain;
+import offensiveUtils.Require;
 import realSourceOracle.RealSourceOracleWithZip;
-import tools.Fs;
 import tools.ChildJvm;
+import tools.Fs;
 import tools.JavaTool;
 import tools.JavacTool;
 import tools.SourceOracle;
 import tools.SourceOracle.Ref;
+import userMessages.Report;
+import userMessages.Violation;
 import utils.Push;
 import utils.Range;
 
-public interface Coordinator {
-  default String runAllMains(String pkgName,OutputOracle out) throws InterruptedException{
+public interface Coordinator{
+  default String runAllMains(String pkgName, OutputOracle out) throws InterruptedException{
     return runMains(runData(out.rootDir().getParent(),stdLibBase()), Push.of(out.rootDir().resolve("gen_java"),sharedClasspath()), "_"+pkgName+".Main");
   }
   static String runMains(List<String> jvmArgs, List<Path> jarDirs, String mainClass) throws InterruptedException{
@@ -72,14 +73,14 @@ public interface Coordinator {
   default String main(Path project, SourceOracle stLib) throws InterruptedException{ return Helper.main(this, project, stLib); }
   default List<String> compile(Path project, SourceOracle stLib){ return Helper.compile(this, project, stLib); }
   default Optional<Map<String,String>> mains(Path project, SourceOracle stLib){ return Helper.mains(this, project, stLib); }
-  static ChildJvm startMain(Path project, Path base, String main, List<Path> sharedClasspath, java.util.function.Consumer<String> out){
+  static ChildJvm startMain(Path project, Path base, String main, List<Path> sharedClasspath, Consumer<String> out){
     var pkg= main.substring(0, main.indexOf('.'));
     return JavaTool.startMainFromJars(runData(project,base),Push.of(genJava(project),sharedClasspath), "_"+pkg+".Main", out, main);
   }
   static Path genJava(Path project){ return project.resolve(outDir).resolve("gen_java"); }
   String outDir= ".fearless_out";
-  
-  default List<Literal> frontend(String pkgName, List<Ref> files, SourceOracle oracle, OtherPackages other,Map<String,String> vres){
+
+  default List<Literal> frontend(String pkgName, List<Ref> files, SourceOracle oracle, OtherPackages other, Map<String,String> vres){
     try{ return new FrontendLogicMain().of(pkgName,vres, files, other); }
     catch(FearlessException fe){ throw Report.sourceError(fe.render(oracle)); }
   }
@@ -102,22 +103,22 @@ public interface Coordinator {
     return Stream.concat(Stream.of(modsPath()), baseCachePath().stream()).toList();
   }
 }
-class Helper{
+final class Helper{
   static boolean isFear(Ref u){ return u.fearPath().endsWith(".fear"); }
   static OutputOracle out(Path path){
     return ()->path.resolve(Coordinator.outDir);
   }
   static Layer layerOf(Coordinator coordinator, SourceOracle o, Path project, OutputOracle out, SourceOracle stLib){
     var map= pkgMap(o,project);
-    List<Ref> allRanks= map.values().stream().map(u->okPkgContent(u,project)).toList();
-    Layer l= mapFromRanks(coordinator,allRanks,o,out,stLib);
+    var allRanks= map.values().stream().map(u->okPkgContent(u,project)).toList();
+    var l= mapFromRanks(coordinator,allRanks,o,out,stLib);
     return layers(coordinator,map,l,allRanks.stream()
       .sorted(Comparator.comparingInt(Helper::rankNumber).thenComparing(Ref::fearPath)).toList());
   }
   static List<String> compile(Coordinator coordinator, Path project, SourceOracle stLib){
-    SourceOracle o= coordinator.sourceOracle(project);
+    var o= coordinator.sourceOracle(project);
     var out= out(project);
-    Layer l= layerOf(coordinator,o,project,out,stLib);
+    var l= layerOf(coordinator,o,project,out,stLib);
     l.compile(o, out);
     Fs.writeUtf8(out.mainsPath(), out.mains(l.pkgs().keySet()).located(o,stLib).print());
     return List.copyOf(l.pkgs().keySet());//by design: only the highest rank number's packages have their Main run
@@ -130,7 +131,7 @@ class Helper{
   }
   static Optional<Map<String,String>> mains(Coordinator coordinator, Path project, SourceOracle stLib){
     var c= new NoCompile(coordinator);
-    SourceOracle o= c.sourceOracle(project);
+    var o= c.sourceOracle(project);
     var out= new NoCommit(out(project).rootDir());
     Layer l;
     try{ l= layerOf(c,o,project,out,stLib); l.compile(o,out); }
@@ -143,21 +144,21 @@ class Helper{
     if (o.allFiles().stream().noneMatch(Helper::isFear)){ throw Report.projectEmpty(path); }
     o.allFiles().stream().filter(Helper::isFear).forEach(Helper::pkgName);//err if not under a pkg
     var map= new LinkedHashMap<String,List<Ref>>();
-    for (Ref u:o.allFiles()){ pkgNameOpt(u).ifPresent(pn->map.computeIfAbsent(pn,_->new ArrayList<>()).add(u)); }
+    for (var u: o.allFiles()){ pkgNameOpt(u).ifPresent(pn->map.computeIfAbsent(pn,_->new ArrayList<>()).add(u)); }
     return map;
   }
   static Layer layers(Coordinator coordinator, Map<String,List<Ref>> map, Layer l, List<Ref> ranks){
     int lastNum= rankNumber(ranks.getFirst());
-    var pkgs= new LinkedHashMap<String, List<Ref>>();
-    for (Ref u:ranks){
+    var pkgs= new LinkedHashMap<String,List<Ref>>();
+    for (var u: ranks){
       if (rankNumber(u) != lastNum){ l= new MiddleLayer(coordinator,l,pkgs); pkgs= new LinkedHashMap<>(); lastNum= rankNumber(u); }
       pkgs.put(pkgName(u),map.get(pkgName(u)));
     }
     return new MiddleLayer(coordinator,l,pkgs);
   }
   static Layer mapFromRanks(Coordinator coordinator, List<Ref> allRanks, SourceOracle o, OutputOracle out, SourceOracle stLib){
-    Map<String,Map<String,String>> res; try {res= new FrontendLogicMain()
-      .parseRankFiles(allRanks, Comparator.comparingInt(Helper::rankNumber), Push.of(allRanks.stream().map(Helper::pkgName).toList(), "base"));}
+    Map<String,Map<String,String>> res; try{ res= new FrontendLogicMain()
+      .parseRankFiles(allRanks, Comparator.comparingInt(Helper::rankNumber), Push.of(allRanks.stream().map(Helper::pkgName).toList(), "base")); }
     catch(FearlessException fe){ throw Report.sourceError(fe.render(o)); }
     long baseStamp= out.commitMap(res, allRanks.stream().mapToLong(Ref::lastModified).max().getAsLong());
     return new BaseLayer(coordinator,res,baseStamp,stLib);
@@ -170,7 +171,7 @@ class Helper{
       int base= (i+1)*1000;
       if (stem.equals(pref)){ return base+999; } // shortcut: _rank_app.fear == _rank_app999.fear
       if (!stem.startsWith(pref)){ continue; }
-      if (stem.length()!=pref.length()+3){ throw Report.projectMalformedRankFileName(u); }
+      if (stem.length() != pref.length()+3){ throw Report.projectMalformedRankFileName(u); }
       var digits= stem.substring(pref.length());
       if (!digits.chars().allMatch(Character::isDigit)){ throw Report.projectMalformedRankFileName(u); }
       return base+Integer.parseInt(digits);
@@ -203,7 +204,8 @@ class Helper{
     if (reservedPkgNames.contains(pkg)){ throw Report.projectReservedPackageName(u, candidates.getFirst()); }
     return Optional.of(pkg);
   }
-}class WouldCompile extends RuntimeException{
+}
+final class WouldCompile extends RuntimeException{
   private static final long serialVersionUID= 1L;
 }
 record NoCompile(Coordinator inner) implements Coordinator{
@@ -215,7 +217,7 @@ record NoCompile(Coordinator inner) implements Coordinator{
 }
 record NoCommit(Path rootDir) implements OutputOracle{
   @Override public long commitMap(Map<String,Map<String,String>> map, long minExclusiveMillis){
-    if (OutputHelper.mapFromJSon(mapPath()).filter(map::equals).isEmpty()){ throw new WouldCompile(); }
+    if (OutputHelper.mapFromJson(mapPath()).filter(map::equals).isEmpty()){ throw new WouldCompile(); }
     return mapStamp();
   }
 }

@@ -9,13 +9,17 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
 
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.opentest4j.AssertionFailedError;
 
 import core.B;
 import core.E.Literal;
@@ -33,6 +37,7 @@ import userMessages.UserError;
 import utils.Pos;
 
 final class DocBuilderTest{
+  static{ utils.Err.setUp(AssertionFailedError.class, Assertions::assertEquals, Assertions::assertTrue); }
   private static final URI file= URI.create("fear:/_pkg/a.fear");
 
   @Test void plainLineCommentWithAStrayQuoteDoesNotSwallowALaterDocComment(){
@@ -44,7 +49,7 @@ final class DocBuilderTest{
     var docs= new SourceDocs(file, text);
     var atLine2= docs.docsByLine.getOrDefault(2, List.of());
     assertEquals(1, atLine2.size(), "the /// doc comment on line 2 must be recognized as a doc comment");
-    assertEquals("this is meant to be a doc comment", atLine2.get(0).text());
+    assertEquals("this is meant to be a doc comment", atLine2.getFirst().text());
   }
 
   @Test void plainLineCommentWithAStrayBacktickAlsoSwallowsALaterDocComment(){
@@ -56,7 +61,7 @@ final class DocBuilderTest{
     var docs= new SourceDocs(file, text);
     var atLine2= docs.docsByLine.getOrDefault(2, List.of());
     assertEquals(1, atLine2.size(), "the /// doc comment on line 2 must be recognized as a doc comment");
-    assertEquals("this doc should still be found", atLine2.get(0).text());
+    assertEquals("this doc should still be found", atLine2.getFirst().text());
   }
 
   @Test void aBlockCommentIsNeverTreatedAsADocCommentEvenIfItContainsTripleSlashLookingText(){
@@ -88,7 +93,7 @@ final class DocBuilderTest{
     var docs= new SourceDocs(file, text);
     var before= docs.docsAt(Pos.of(file,3,1), true);
     assertEquals(List.of("description of foo","  .check{foo.assertEq(1)}"), before.stream().map(DocOcc::text).toList());
-    assertFalse(before.get(0).example(), "the /// line is prose, not an example");
+    assertFalse(before.getFirst().example(), "the /// line is prose, not an example");
     assertTrue(before.get(1).example(), "the //> line is a runnable example");
   }
 
@@ -111,8 +116,8 @@ final class DocBuilderTest{
     var docs= new SourceDocs(file, text);
     var found= docs.docsAt(Pos.of(file,1,1), false);
     assertEquals(1, found.size());
-    assertEquals("trailing doc", found.get(0).text());
-    assertTrue(found.get(0).inline(), "a doc comment following code on the same line must be inline, not pure");
+    assertEquals("trailing doc", found.getFirst().text());
+    assertTrue(found.getFirst().inline(), "a doc comment following code on the same line must be inline, not pure");
   }
 
   //documentation that reaches no declaration is documentation nobody reads: the usual
@@ -200,16 +205,16 @@ final class DocBuilderTest{
 
   @Test void renderExamplesWrapsRunnableExampleLinesInAnExpandableDetailsBlock(){
     var sb= new StringBuilder();
-    var renderer= new HtmlDocRenderer("pkg", java.util.Map.of(), List.of(), OtherPackages.empty(), java.util.Map.of(), Optional.empty());
+    var renderer= new HtmlDocRenderer("pkg", Map.of(), List.of(), OtherPackages.empty(), Map.of(), Optional.empty());
     renderer.renderExamples(sb, List.of(".check{1.assertEq(1)}"));
     var rendered= sb.toString();
     assertTrue(rendered.contains("<details class=\"examples\">"), "examples must render as an expandable details block: "+rendered);
-    assertTrue(rendered.contains("<pre class=\"example\">.check{1.assertEq(1)}</pre>"), rendered);
+    utils.Err.strCmp("[###]<pre class=\"example\">.check{1.assertEq(1)}</pre>[###]", rendered);
   }
 
   @Test void renderExamplesRendersNothingWhenThereAreNoExamples(){
     var sb= new StringBuilder();
-    var renderer= new HtmlDocRenderer("pkg", java.util.Map.of(), List.of(), OtherPackages.empty(), java.util.Map.of(), Optional.empty());
+    var renderer= new HtmlDocRenderer("pkg", Map.of(), List.of(), OtherPackages.empty(), Map.of(), Optional.empty());
     renderer.renderExamples(sb, List.of());
     assertEquals("", sb.toString());
   }
@@ -244,7 +249,7 @@ final class DocBuilderTest{
     return fooMethodAt(rc, origin, TSpan.fromPos(Pos.unknown,1));
   }
   private static List<B> twoBounds(){
-    return List.of(new B("X1",java.util.EnumSet.of(RC.imm)), new B("X2",java.util.EnumSet.of(RC.imm)));
+    return List.of(new B("X1",EnumSet.of(RC.imm)), new B("X2",EnumSet.of(RC.imm)));
   }
   private static M namedMethod(String selector, TName origin){
     var sig= new Sig(RC.imm, new MName(selector,0), List.of(), List.of(), retVoid(), origin, false, TSpan.fromPos(Pos.unknown,1));
@@ -277,7 +282,7 @@ final class DocBuilderTest{
     var refs= builder.inheritedMethods(sub, subMut);
 
     assertEquals(1, refs.size());
-    assertTrue(refs.getFirst().method()==supMut);
+    assertTrue(refs.getFirst().method() == supMut);
   }
 
   @Test void inheritedMethodsListsEveryProviderAlongAnOverrideChainEvenTheShadowedOne(){
@@ -295,8 +300,8 @@ final class DocBuilderTest{
     var refs= builder.inheritedMethods(top, midSame);
 
     assertEquals(2, refs.size());
-    assertTrue(refs.stream().anyMatch(r->r.method()==midSame));
-    assertTrue(refs.stream().anyMatch(r->r.method()==baseSame));
+    assertTrue(refs.stream().anyMatch(r->r.method() == midSame));
+    assertTrue(refs.stream().anyMatch(r->r.method() == baseSame));
   }
 
   @Test void aSingleDeclarationWithNoExplicitRcIsDuplicatedPerRequiredRcAndEachVariantMatchesItsOwnSupertypeCounterpart(){
@@ -319,8 +324,8 @@ final class DocBuilderTest{
     assertEquals(1, builder.type(sub).methods.size());
     assertEquals(2, doc.variants.size());
     assertEquals(2, doc.inheritedFrom.size());
-    assertTrue(doc.inheritedFrom.stream().anyMatch(r->r.method()==supMut));
-    assertTrue(doc.inheritedFrom.stream().anyMatch(r->r.method()==supImm));
+    assertTrue(doc.inheritedFrom.stream().anyMatch(r->r.method() == supMut));
+    assertTrue(doc.inheritedFrom.stream().anyMatch(r->r.method() == supImm));
   }
 
   @Test void aBareTypeNameThatMatchesTwoLocalArityVariantsIsAmbiguous(){
@@ -750,7 +755,7 @@ Holder
     });
     var colliding= new Literal(RC.imm, new TName("pkg._Holder_Examples",0,collidingPos),
       List.of(), List.of(), "this", List.of(), collidingSrc, false);
-    SourceOracle oracle= SourceOracle.debugBuilder().putURI(file, "l1\nl2\nl3\nl4\n_Holder_Examples: Test {}\n").build();
+    var oracle= SourceOracle.debugBuilder().putURI(file, "l1\nl2\nl3\nl4\n_Holder_Examples: Test {}\n").build();
     var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(holder,colliding), Optional.empty());
     builder.visitLiteral(holder);
     builder.visitLiteral(colliding);
@@ -762,8 +767,8 @@ Holder
     var renderer= new HtmlDocRenderer("pkg", Map.of(), builder.types, OtherPackages.empty(), Map.of(), Optional.empty());
     var ex= assertThrows(UserError.class, ()->builder.writeTest(renderer));
 
-    assertTrue(ex.getMessage().contains("_Holder_Examples"), ex.getMessage());
-    assertTrue(ex.getMessage().contains("AllAutoTests_pkg"), ex.getMessage());
+    utils.Err.strCmp("[###]_Holder_Examples[###]", ex.getMessage());
+    utils.Err.strCmp("[###]AllAutoTests_pkg[###]", ex.getMessage());
   }
 
   @Test void renderTextShowsPlainFromProvenanceForAnInheritedMethod(){
@@ -780,7 +785,7 @@ Holder
 
     var text= new HtmlDocRenderer("pkg", Map.of(), builder.types, OtherPackages.empty(), Map.of(), Optional.empty()).renderText();
 
-    assertTrue(text.contains("from: Sup.foo"), text);
+    utils.Err.strCmp("[###]from: Sup.foo[###]", text);
     assertFalse(text.contains("<a "), text);
   }
 
@@ -796,7 +801,7 @@ Holder
 
     var ex= assertThrows(UserError.class, builder::complete);
 
-    assertTrue(ex.getMessage().contains("more than one declaration on the same line"), ex.getMessage());
+    utils.Err.strCmp("[###]more than one declaration on the same line[###]", ex.getMessage());
   }
 
   @Test void aTrailingDocSharedByThreeDeclarationsOnOneLineIsStillAnAmbiguousReferenceError(@TempDir Path tmp){
@@ -825,7 +830,7 @@ Holder
 
     var ex= assertThrows(UserError.class, builder::complete);
 
-    assertTrue(ex.getMessage().contains("more than one declaration on the same line"), ex.getMessage());
+    utils.Err.strCmp("[###]more than one declaration on the same line[###]", ex.getMessage());
   }
 
   @Test void aTrailingDocAfterAClosedNestedBraceOnTheSameLineIsNotAmbiguous(@TempDir Path tmp){
@@ -908,7 +913,7 @@ Holder
   }
 
   private static List<String> idsIn(String html, String prefix){
-    var res= new java.util.ArrayList<String>();
+    var res= new ArrayList<String>();
     for (int i= html.indexOf(prefix); i >= 0; i= html.indexOf(prefix,i+1)){
       var from= i+prefix.length();
       res.add(html.substring(from, html.indexOf('"', from)));

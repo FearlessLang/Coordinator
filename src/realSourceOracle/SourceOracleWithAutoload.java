@@ -1,7 +1,8 @@
 package realSourceOracle;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+
 import java.net.URI;
-import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -23,7 +24,7 @@ public record SourceOracleWithAutoload(SourceOracle base, Ref autoload, URI auto
     public List<Ref> sources(List<Ref> files){ return Push.of(files.stream().filter(f->f.fearPath().endsWith(".fear")).toList(), newRefs); }
   }
   public static final String autoloadFileSuffix= "/autoloaded_assets.fear";
-  static final AutoloadHandler image= new AutoloadHandler(p->p.endsWith(".png")||p.endsWith(".jpg")||p.endsWith(".jpeg")||p.endsWith(".gif")||p.endsWith(".bmp"), "base.ImageFile");
+  static final AutoloadHandler image= new AutoloadHandler(p->p.endsWith(".png") || p.endsWith(".jpg") || p.endsWith(".jpeg") || p.endsWith(".gif") || p.endsWith(".bmp"), "base.ImageFile");
   public static final List<AutoloadHandler> handlers= List.of(new AutoloadHandler(p->p.endsWith(".txt"), "base.TxtFile"), image);
   private record Generated(String text, Map<String,Triple> autoloadedAssets){}
   public static Res of(SourceOracle base, String pkgName){ return of(base, pkgName, Ref::fearPath); }
@@ -79,7 +80,7 @@ public record SourceOracleWithAutoload(SourceOracle base, Ref autoload, URI auto
     return new SyntheticRef(SourceOracle.root+pkgName+autoloadFileSuffix, text);
   }
   private record SyntheticRef(String fearPath, String text) implements Ref{
-    @Override public byte[] loadBytes(){ return text.getBytes(StandardCharsets.UTF_8); }
+    @Override public byte[] loadBytes(){ return text.getBytes(UTF_8); }
     @Override public String loadString(){ return text; }
     @Override public long lastModified(){ return 0; }
     @Override public String toString(){ return fearPath; }

@@ -10,7 +10,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Supplier;
 import java.util.stream.IntStream;
-import userMessages.Violation;
+
 import core.B;
 import core.E.Literal;
 import core.M;
@@ -21,12 +21,13 @@ import core.Src;
 import core.T;
 import core.TName;
 import core.TSpan;
+import userMessages.Violation;
 import utils.Pos;
 
 final class LimitedJsonParser{
   private final String s;
   private int i= 0;
-  Path forErr;
+  private final Path forErr;
   LimitedJsonParser(String s, Path forErr){ this.s= s; this.forErr= forErr; }
   Map<String,Map<String,String>> obj2(){ return end(obj(()->obj(this::name))); }
   private <R> R end(R res){
@@ -87,7 +88,7 @@ final class LimitedJsonParser{
   }
   private int nat(Object o){
     try{ return Integer.parseInt("+"+asStr(o)); }//to reject negatives
-    catch(NumberFormatException nfe){ throw err("Expected unsigned int"); }
+    catch(NumberFormatException _){ throw err("Expected unsigned int"); }
   }
   private B bFrom(List<Object> a){
     if (a.size() < 2){ throw err("Bad B"); }
@@ -147,12 +148,12 @@ final class LimitedJsonParser{
   }
   private TSpan dummySpan(){ return TSpan.fromPos(Pos.unknown, 1); }
 
-  void ws(){ for (; i < s.length() && (s.charAt(i)==' ' || s.charAt(i)=='\n'); i++); }
+  void ws(){ for (; i < s.length() && (s.charAt(i) == ' ' || s.charAt(i) == '\n'); i += 1); }
   private void req(char c){ if (!eat(c)){ throw err("Expected '"+c+"'"); } }
   private boolean eat(char c){
     ws();
     if (i >= s.length() || s.charAt(i) != c){ return false; }
-    i++; return true;
+    i += 1; return true;
   }
   private RuntimeException err(String msg){
     return Violation.cacheInvalidFile(forErr,msg+" at "+i);

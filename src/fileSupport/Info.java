@@ -80,21 +80,21 @@ public sealed interface Info{
       ws();
       if (!more()){ throw err(here(),"The text ends here, but a value (a string \"...\", a list [...] or an object {...}) was expected."); }
       if (depth == 100){ throw err(here(),"Lists and objects nest at most 100 deep, and this value is inside 100 of them."); }
-      depth+= 1;
+      depth += 1;
       var res= switch(peek()){
         case '"' -> str();
         case '[' -> list();
         case '{' -> obj();
         default -> throw err(here(),"Expected a string \"...\", a list [...] or an object {...} here.");
       };
-      depth-= 1;
+      depth -= 1;
       return res;
     }
     private Str str(){
       var start= here();
       advance();
       var sb= new StringBuilder();
-      while(true){
+      while (true){
         if (!more()){ throw err(from(start),"This string is never closed with a matching \"."); }
         var c= peek();
         if (c == '"'){ var end= here(); advance(); return new Str(sb.toString(),between(start,end)); }
@@ -142,7 +142,7 @@ public sealed interface Info{
     }
     private <T> List<T> seq(Span start, char close, String what, Supplier<T> item){
       var items= new ArrayList<T>();
-      while(true){
+      while (true){
         ws();
         if (!more()){ throw err(from(start),"This "+what+" is never closed with a matching "+close+"."); }
         if (peek() == close && items.isEmpty()){ return items; }
@@ -155,12 +155,12 @@ public sealed interface Info{
       }
     }
     private void ws(){
-      while(more()){
+      while (more()){
         var c= peek();
         if (c == ' ' || c == '\n'){ advance(); continue; }
         var comment= c == '/' && i+1 < text.length() && text.charAt(i+1) == '/';
         if (!comment){ return; }
-        while(more() && peek() != '\n'){ advance(); }
+        while (more() && peek() != '\n'){ advance(); }
       }
     }
     private boolean more(){ return i < text.length(); }
@@ -168,8 +168,9 @@ public sealed interface Info{
     private char advance(){
       var c= text.charAt(i);
       if (Fs.allowed.indexOf(c) < 0){ throw err(here(),"The character "+Message.displayChar(c)+" is outside the safe character set of Fearless: letters, digits, space, newline and common punctuation."); }
-      i+= 1;
-      if (c == '\n'){ line+= 1; col= 1; } else { col+= 1; }
+      i += 1;
+      if (c == '\n'){ line += 1; col= 1; }
+      else{ col += 1; }
       return c;
     }
     private Span here(){ return new Span(uri,line,col,line,col); }

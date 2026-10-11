@@ -1,5 +1,7 @@
 package fileSupport;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.nio.ByteBuffer;
@@ -7,7 +9,6 @@ import java.nio.CharBuffer;
 import java.nio.charset.CharacterCodingException;
 import java.nio.charset.CoderResult;
 import java.nio.charset.CodingErrorAction;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.HexFormat;
 import java.util.function.BiConsumer;
@@ -16,13 +17,13 @@ import fileSupport.ByteFiles.Op;
 import metaParser.Message;
 import utils.Bug;
 
-public final class StringFiles {
+public final class StringFiles{
   public static String read(Path path, BiConsumer<String,String> onError){
-    byte[] bytes= ByteFiles.read(path,(k,c)->
+    var bytes= ByteFiles.read(path,(k,c)->
       fail(onError,requiresReport(k),FailureText.explain(Op.Read,k,path),c));
     var input= ByteBuffer.wrap(bytes);
     var output= CharBuffer.allocate(bytes.length);
-    var decoder= StandardCharsets.UTF_8.newDecoder()
+    var decoder= UTF_8.newDecoder()
       .onMalformedInput(CodingErrorAction.REPORT)
       .onUnmappableCharacter(CodingErrorAction.REPORT);
     var result= decoder.decode(input,output,true);
@@ -50,8 +51,8 @@ public final class StringFiles {
   //an unencodable String reaching this point is a bug on the Fearless side, so it
   //propagates as an Error, like the other observed-bug throws.
   private static byte[] utf8(String text){
-    try {
-      var buffer= StandardCharsets.UTF_8.newEncoder()
+    try{
+      var buffer= UTF_8.newEncoder()
         .onMalformedInput(CodingErrorAction.REPORT)
         .onUnmappableCharacter(CodingErrorAction.REPORT)
         .encode(CharBuffer.wrap(text));
@@ -84,7 +85,7 @@ public final class StringFiles {
     if (!report && explanation.suppressed().isEmpty()){ onError.accept(outAction,""); throw Bug.unreachable(); }
     var outReport= new StringBuilder(report ? explanation.text() : "")
       .append("\nOriginal failure:\n").append(stackTrace(cause));
-    for (var i= 0; i < explanation.suppressed().size(); i++){ outReport
+    for (var i= 0; i < explanation.suppressed().size(); i += 1){ outReport
       .append("\nSuppressed error ").append(i).append(":\n")
       .append(stackTrace(explanation.suppressed().get(i)));
     }
@@ -117,7 +118,7 @@ Nearby bytes:  %s
     return new Explanation(text,suppressed.toList());
   }
   private static CharacterCodingException codingException(CoderResult result){
-    try { result.throwException(); throw Bug.unreachable(); }
+    try{ result.throwException(); throw Bug.unreachable(); }
     catch(CharacterCodingException e){ return e; }
   }
   private static Location location(String prefix){
@@ -126,8 +127,8 @@ Nearby bytes:  %s
     for (var i= 0; i < prefix.length();){
       var c= prefix.charAt(i++);
       if (c != '\r' && c != '\n'){ continue; }
-      if (c == '\r' && i < prefix.length() && prefix.charAt(i) == '\n'){ i++; }
-      line++;
+      if (c == '\r' && i < prefix.length() && prefix.charAt(i) == '\n'){ i += 1; }
+      line += 1;
       start= i;
     }
     return new Location(line,prefix.codePointCount(start,prefix.length())+1,prefix.substring(start));

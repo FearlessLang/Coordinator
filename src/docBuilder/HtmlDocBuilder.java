@@ -1,7 +1,5 @@
 package docBuilder;
 
-import static offensiveUtils.Require.*;
-
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -9,15 +7,21 @@ import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import core.*;
-import core.E.*;
+import core.E.Literal;
+import core.M;
+import core.OtherPackages;
+import core.Src;
+import core.T;
+import core.TName;
 import metaParser.Frame;
 import metaParser.Message;
 import metaParser.Span;
+import offensiveUtils.Require;
 import tools.Fs;
 import tools.SourceOracle;
 import userMessages.Report;
@@ -25,7 +29,7 @@ import utils.Bug;
 
 public final class HtmlDocBuilder{
   public HtmlDocBuilder(SourceOracle oracle, OtherPackages other, List<Literal> core, Optional<Path> baseDocLocation){
-    assert nonNull(oracle,other,core,baseDocLocation);
+    assert Require.nonNull(oracle,other,core,baseDocLocation);
     this.oracle= oracle;
     this.other= other;
     this.core= core;
@@ -45,12 +49,12 @@ public final class HtmlDocBuilder{
   Path testPath;
   Map<String,String> uses= Map.of();
 
-  final List<TypeDoc> types= new ArrayList<>();
+  final ArrayList<TypeDoc> types= new ArrayList<>();
   final IdentityHashMap<Src,TypeDoc> typeBySrc= new IdentityHashMap<>();
-  final Map<URI,SourceDocs> sources= new HashMap<>();
+  final HashMap<URI,SourceDocs> sources= new HashMap<>();
 
   public void packageLocation(String pkgName, Path htmlPath, Path testPath){
-    assert nonNull(pkgName,htmlPath,testPath);
+    assert Require.nonNull(pkgName,htmlPath,testPath);
     assert this.pkgName == null;
     this.pkgName= pkgName;
     this.htmlPath= htmlPath;
@@ -60,7 +64,7 @@ public final class HtmlDocBuilder{
   }
 
   public void visitLiteral(Literal l){
-    assert nonNull(l);
+    assert Require.nonNull(l);
     var t= typeBySrc.get(l.src());
     if (t == null){
       t= new TypeDoc(l,docsForLiteral(l));
@@ -68,14 +72,14 @@ public final class HtmlDocBuilder{
       types.add(t);
     }
     else{ t.addVariant(l); }
-    for (var m:l.ms()){
+    for (var m: l.ms()){
       if (m.sig().origin().equals(l.name())){ t.declared(m.sig().span().pos(),m,methodDocAt(l,m),inheritedMethods(l,m)); }
       else{ t.imported(m,inheritedMethods(l,m)); }
     }
   }
 
   public void complete(){
-    assert nonNull(pkgName,htmlPath);
+    assert Require.nonNull(pkgName,htmlPath);
     var resolver= new DocResolver(pkgName,types,other);
     var spans= new IdentityHashMap<DocOcc,List<ResolvedSpan>>();
     var problems= new ArrayList<String>();
@@ -110,15 +114,15 @@ public final class HtmlDocBuilder{
     return Message.of(oracle::loadString, List.of(new Frame("the documentation of package "+pkgName, span)), msg);
   }
 
-  void linkType(DocResolver resolver, TypeDoc t, Map<DocOcc,List<ResolvedSpan>> spans, List<String> problems){
+  void linkType(DocResolver resolver, TypeDoc t, IdentityHashMap<DocOcc,List<ResolvedSpan>> spans, ArrayList<String> problems){
     linkGroup(resolver,Scope.of(t.main()),t.docs,spans,problems);
     t.methods.forEach(m->linkGroup(resolver,Scope.of(t.main(),m.main()),m.docs,spans,problems));
   }
 
   //one group per declaration, carrying the scope its comment is written in: a fenced
   //``` ... ``` block never spans declarations, so "inside a fence" resets per group.
-  void linkGroup(DocResolver resolver, Scope scope, List<DocOcc> docs, Map<DocOcc,List<ResolvedSpan>> spans,
-      List<String> problems){
+  void linkGroup(DocResolver resolver, Scope scope, List<DocOcc> docs, IdentityHashMap<DocOcc,List<ResolvedSpan>> spans,
+      ArrayList<String> problems){
     var inFence= false;
     for (var occ: docs){
       if (occ.text().strip().equals("```")){ inFence= !inFence; continue; }
@@ -130,7 +134,7 @@ public final class HtmlDocBuilder{
   }
 
   void link(DocResolver resolver, DocOcc occ, Scope scope,
-      Map<DocOcc,List<ResolvedSpan>> spans, List<String> problems){
+      IdentityHashMap<DocOcc,List<ResolvedSpan>> spans, ArrayList<String> problems){
     var found= DocRefScanner.refSpans(occ.text());
     if (found.isEmpty()){ return; }
     var res= new ArrayList<ResolvedSpan>();
@@ -179,11 +183,7 @@ public final class HtmlDocBuilder{
       occ.line(), occ.textColumn()+sp.end()-1), msg);
   }
 
-  TypeDoc type(Literal l){
-    var res= typeBySrc.get(l.src());
-    assert res != null: "Literal not registered: "+l.pos()+" "+l.name();
-    return res;
-  }
+  TypeDoc type(Literal l){ return Objects.requireNonNull(typeBySrc.get(l.src())); }
 
   //owner.cs() is fully flattened, so an overridden ancestor still gets its own entry here:
   //by design, "From:" shows every provider along the chain, shadowed ones included.

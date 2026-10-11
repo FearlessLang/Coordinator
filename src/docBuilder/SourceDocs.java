@@ -1,7 +1,15 @@
 package docBuilder;
 
 import java.net.URI;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.IdentityHashMap;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 
 import utils.Pos;
 
@@ -14,10 +22,10 @@ final class SourceDocs{
 
   final URI uri;
   final List<String> lines;
-  final Map<Integer,List<DocOcc>> docsByLine= new HashMap<>();
-  final Map<Integer,int[]> depthByLine= new HashMap<>();
+  final HashMap<Integer,List<DocOcc>> docsByLine= new HashMap<>();
+  final HashMap<Integer,int[]> depthByLine= new HashMap<>();
   final Set<DocOcc> attached= Collections.newSetFromMap(new IdentityHashMap<>());
-  final Map<DocOcc,Integer> inlineClaimedFromColumn= new IdentityHashMap<>();
+  final IdentityHashMap<DocOcc,Integer> inlineClaimedFromColumn= new IdentityHashMap<>();
   final Set<DocOcc> ambiguousInline= Collections.newSetFromMap(new IdentityHashMap<>());
 
   List<DocOcc> docsAt(Pos pos, boolean includeBefore){
@@ -62,7 +70,7 @@ final class SourceDocs{
   //it, so it ends a paragraph without ending the block. The ones at either end of the
   //block separate nothing and are dropped. Anything else ends the block, and whatever
   //documentation is left above it is then attached to nothing, which is an error.
-  void collectBefore(int line, List<DocOcc> res){
+  void collectBefore(int line, ArrayList<DocOcc> res){
     var before= new ArrayList<DocOcc>();
     for (int l= line-1; l >= 1; l -= 1){
       var pure= pureDocs(l);
@@ -140,7 +148,7 @@ final class SourceDocs{
   //its carets under the offending characters: past the "///" and the space clean drops.
   void add(int line, int column, String text, boolean pureLine, boolean example, boolean testOnly){
     var clean= text.startsWith(" ") ? text.substring(1) : text;
-    docsByLine.computeIfAbsent(line,_ -> new ArrayList<>())
+    docsByLine.computeIfAbsent(line,_->new ArrayList<>())
       .add(new DocOcc(uri,line,column,column+3+(text.length()-clean.length()),clean,pureLine,example,testOnly));
   }
 

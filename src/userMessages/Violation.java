@@ -1,5 +1,8 @@
 package userMessages;
 
+import static userMessages.UserError.die;
+import static userMessages.UserError.path;
+
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -11,18 +14,13 @@ import fileAssociations.LinuxAssociations;
 import metaParser.Message;
 import utils.Join;
 
-import static userMessages.UserError.die;
-import static userMessages.UserError.path;
-
 /// Violation: Fearless can no longer do its safe job.
 /// Not necessarily a bad actor. An operating system that does not offer a service we
 /// need, a folder we cannot own, a packaged runtime that fails, and our own generated
 /// files changed under us are all the same thing from here: we cannot keep the
 /// promise, so we stop rather than continue on an unknown footing.
 /// The counterpart is Report, for what the user gave us and can change.
-public final class Violation {
-  private Violation(){}
-
+public final class Violation{
   //-- the pieces of text that more than one message needs, written once
   public static String reported(Throwable cause){ return "Reported reason:\n"+cause.getMessage(); }
   private static Supplier<List<String>> running= List::of;

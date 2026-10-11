@@ -17,11 +17,10 @@ import tools.Fs;
 /// A Fearless unit test log rendered as JUnit XML. `write` is for the Eclipse plugin
 /// (FearlessLang/Controllers), which polls that file into the JUnit view.
 public final class JUnitReport{
-  private JUnitReport(){}
   private static final Pattern disabled= Pattern.compile("(?m)^PLAN\\|DISABLED\\|([^|\\r\\n]*)\\|([^|\\r\\n]*)\\|([^|\\r\\n]*)\\|([^|\\r\\n]*)$");
   public static Path file(Path reports){ return reports.resolve("report.xml"); }
   public static void write(Path reports, Path folder, String name, Instant since){
-    while(true){
+    while (true){
       try{ newest(folder).filter(e->e.when().isAfter(since)).ifPresent(e->Fs.writeUtf8(file(reports), document(suiteOf(name, e.path())))); return; }
       catch(UncheckedIOException e){ if (!(e.getCause() instanceof NoSuchFileException)){ throw e; } }
     }
@@ -51,11 +50,11 @@ public final class JUnitReport{
   private static String complete(Path log){
     var bytes= Fs.of(()->Files.readAllBytes(log));
     var end= bytes.length;
-    while(end > 0 && bytes[end-1] != '\n'){ end-= 1; }
+    while (end > 0 && bytes[end-1] != '\n'){ end -= 1; }
     var whole= ByteBuffer.wrap(bytes, 0, end);
     var text= Fs.of(()->UTF_8.newDecoder().decode(whole).toString());
     var done= 0;
-    while(done < text.length()){
+    while (done < text.length()){
       var close= text.startsWith("<testcase ", done) ? text.indexOf("</testcase>\n", done) : done;
       if (close < 0){ return text.substring(0, done); }
       done= text.indexOf('\n', close)+1;

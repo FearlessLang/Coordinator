@@ -1,5 +1,7 @@
 package treeErrorTests;
 
+import static org.junit.jupiter.api.Assertions.fail;
+
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.List;
@@ -18,7 +20,7 @@ import userMessages.Report;
 /// them and no temporary folder is needed.
 /// mapConflict is the one exception: it needs the rank files to be parsed, so its two
 /// files carry real "map .. as .. in ..;" directives.
-public class ProjectTreeErrorTest {
+final class ProjectTreeErrorTest{
   static{ utils.Err.setUp(AssertionFailedError.class, Assertions::assertEquals, Assertions::assertTrue); }
 
   static final Path fakeRoot= Path.of("unused","project","root");
@@ -28,24 +30,24 @@ public class ProjectTreeErrorTest {
   static String errMsg(String... pathThenContent){
     assert pathThenContent.length % 2 == 0;
     var b= SourceOracle.debugBuilder();
-    for(int i=0; i<pathThenContent.length; i+=2){
+    for (int i= 0; i < pathThenContent.length; i += 2){
       b.putURI(URI.create(SourceOracle.root+pathThenContent[i]), pathThenContent[i+1]);
     }
     var oracle= b.build();
     var c= new Coordinator(){
       @Override public SourceOracle sourceOracle(Path path){ return oracle; }
     };
-    try { c.main(fakeRoot, oracle); }
+    try{ c.main(fakeRoot, oracle); }
     catch(RuntimeException e){ return e.getMessage(); }
     catch(InterruptedException e){ throw new AssertionError(e); }
-    return Assertions.fail("Expected an error, but the project was accepted");
+    return fail("Expected an error, but the project was accepted");
   }
   static void runErr(String expected, String... pathThenContent){
     utils.Err.strCmp(expected, errMsg(pathThenContent));
   }
 
   @Test void emptyProject(){ runErr("""
-The fearless project folder contains no *.fear files
+This project folder contains no ".fear" files.
 Folder:
   %s
 """.formatted(fakeRoot),
@@ -239,7 +241,7 @@ Package name: "rank"
     SourceOracle.Ref file= new FakeRef("fear:/src/x/y/bar.fear"); // deliberately unrelated to the candidates below
     var candidates= List.of("_zzcandidateone","_zzcandidatetwo");
     var msg= Report.projectAmbiguousPackageSegment(file, candidates).getMessage();
-    Assertions.assertTrue(msg.contains("_zzcandidateone"), msg);
-    Assertions.assertTrue(msg.contains("_zzcandidatetwo"), msg);
+    utils.Err.strCmp("[###]_zzcandidateone[###]", msg);
+    utils.Err.strCmp("[###]_zzcandidatetwo[###]", msg);
   }
 }

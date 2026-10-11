@@ -1,10 +1,13 @@
 package fsTests;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import org.junit.jupiter.api.Test;
+
 import tools.Fs;
 
-public class FsExtSegTest{
+final class FsExtSegTest{
   private static void ok(String s){ assertTrue(Fs.isExtSeg(s)); }
   private static void ko(String s){ assertFalse(Fs.isExtSeg(s)); }
   @Test void oneChar(){ ok("a"); }

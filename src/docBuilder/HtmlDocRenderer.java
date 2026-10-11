@@ -1,8 +1,7 @@
 package docBuilder;
 
-import static offensiveUtils.Require.*;
-
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -13,15 +12,21 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import core.*;
-import core.E.*;
+import core.B;
+import core.E.Literal;
+import core.ExportedToStr;
+import core.M;
+import core.OtherPackages;
+import core.T;
+import core.TName;
+import offensiveUtils.Require;
 import utils.Pos;
 import utils.Range;
 
 final class HtmlDocRenderer{
   HtmlDocRenderer(String pkgName, Map<String,String> uses, List<TypeDoc> types, OtherPackages other,
       Map<DocOcc,List<ResolvedSpan>> spans, Optional<Path> baseDocLocation){
-    assert nonNull(pkgName,uses,types,other,spans,baseDocLocation);
+    assert Require.nonNull(pkgName,uses,types,other,spans,baseDocLocation);
     this.pkgName= pkgName;
     this.uses= uses;
     this.types= types;
@@ -40,7 +45,7 @@ final class HtmlDocRenderer{
   final Optional<Path> baseDocLocation;
   //filled by href() as links are emitted, so every ambiguous link that reaches the
   //page also gets its landing section; rendered after all types, when it is complete.
-  final Map<DocLink.Ambiguous,String> pages= new LinkedHashMap<>();
+  final LinkedHashMap<DocLink.Ambiguous,String> pages= new LinkedHashMap<>();
   final ExportedToStr toStr;
   final DocResolver resolver;
 
@@ -350,7 +355,7 @@ code{
 
   Map<DocOcc,Object> inlineClaims(List<TypeDoc> shown){
     var res= new HashMap<DocOcc,Object>();
-    for (var t:shown){
+    for (var t: shown){
       t.docs.stream().filter(DocOcc::inline).forEach(c->res.put(c,t));
       visibleMethods(t).forEach(m->
         m.docs.stream().filter(DocOcc::inline).forEach(c->res.put(c,m)));
@@ -462,7 +467,7 @@ code{
   //of them are one paragraph, kept on their own lines so that a list stays a list and
   //an indented line stays indented (the doc block is rendered with pre-wrap).
   void renderProse(StringBuilder sb, List<DocOcc> prose){
-    var para= new java.util.ArrayList<DocOcc>();
+    var para= new ArrayList<DocOcc>();
     for (var occ: prose){
       if (occ.text().isBlank()){ endParagraph(sb,para); continue; }
       para.add(occ);
@@ -470,7 +475,7 @@ code{
     endParagraph(sb,para);
   }
 
-  void endParagraph(StringBuilder sb, List<DocOcc> para){
+  void endParagraph(StringBuilder sb, ArrayList<DocOcc> para){
     if (para.isEmpty()){ return; }
     sb.append("<p>")
       .append(para.stream().map(this::renderText).collect(Collectors.joining("\n")))
@@ -497,7 +502,7 @@ code{
   String renderCode(String text, DocRefScanner.CodeSpan cs, List<ResolvedSpan> linked){
     var body= h(text.substring(cs.start(),cs.end()));
     return linked.stream()
-      .filter(sp->sp.start()==cs.start() && sp.end()==cs.end())
+      .filter(sp->sp.start() == cs.start() && sp.end() == cs.end())
       .filter(sp->!(sp.link() instanceof DocLink.NoLink))
       .findFirst()
       .map(sp->"<a href=\""+h(href(sp.link()))+"\">"+body+"</a>")

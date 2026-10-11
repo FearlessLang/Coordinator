@@ -2,6 +2,7 @@ package userMessages;
 
 import java.awt.Dialog;
 import java.awt.HeadlessException;
+import java.awt.Window;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.reflect.InvocationTargetException;
@@ -67,8 +68,8 @@ public final class UserError extends RuntimeException{
   private static boolean managerOwner= false;
   public static void becameManagerOwner(){ managerOwner= true; }
 
-  private static java.awt.Window owner= null;
-  public static void owner(java.awt.Window w){ owner= w; }
+  private static Window owner= null;
+  public static void owner(Window w){ owner= w; }
 
   //-- building
   static UserError die(String first, String... more){
@@ -99,12 +100,12 @@ public final class UserError extends RuntimeException{
   public static String showZipRel(Path diskZip, List<String> steps, String entryName){
     assert diskZip.isAbsolute();
     diskZip= root.relativize(diskZip);
-    String zipPath= diskZip.toString().replace("\\","/");
-    if (!steps.isEmpty()){ zipPath+="/"+String.join("/", steps); }
+    var zipPath= diskZip.toString().replace("\\","/");
+    if (!steps.isEmpty()){ zipPath += "/"+String.join("/", steps); }
     return showRelText(zipPath)+printEntryName(entryName)+"\n";
   }
   private static String printEntryName(String entryName){
-    var simple= entryName.codePoints().allMatch(cp -> cp < 128 && Fs.allowed.indexOf((char)cp) >= 0);
+    var simple= entryName.codePoints().allMatch(cp->cp < 128 && Fs.allowed.indexOf((char)cp) >= 0);
     if (simple){ return "Entry: "+disp(entryName); }
     return "Entry contains non-standard characters.\nShown as: "+disp(entryName);
   }
@@ -135,12 +136,12 @@ Details:
     return res+"\nIt will also terminate these Fearless user processes:\n"+programs;
   }
   public void display() throws InterruptedException{
-    try { displayGui(); }
+    try{ displayGui(); }
     catch(HeadlessException e){ displayStderr(e); }
   }
   private void displayGui() throws InterruptedException{
     if (SwingUtilities.isEventDispatchThread()){ displayNow(); return; }
-    try { SwingUtilities.invokeAndWait(this::displayNow); }
+    try{ SwingUtilities.invokeAndWait(this::displayNow); }
     catch(InvocationTargetException e){ displayStderr(e.getCause()); }//Rare, could be a memory overflow or other JVM stuff?
   }
   private void displayNow(){

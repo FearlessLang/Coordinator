@@ -1,15 +1,21 @@
 package naiveBackend;
 
-import core.*;
-import core.E.*;
+import core.E;
+import core.E.Call;
+import core.E.Literal;
+import core.E.Type;
+import core.E.X;
+import core.LiteralDeclarations;
+import core.M;
+import core.T;
 import utils.Range;
 import utils.Streams;
 
 record ProduceBody(BytecodeLineFix sb, Backend b, String iface, String thisName, M m){
   public void emitBody(){
-    if (!"_".equals(thisName)){ sb.a("    var ").a(thisName).a("$= this;\n"); }
+    if (!thisName.equals("_")){ sb.a("    var ").a(thisName).a("$= this;\n"); }
     Streams.zipI(m.xs(), m.sig().ts())
-      .filter((_,x,_)->!"_".equals(x))
+      .filter((_,x,_)->!x.equals("_"))
       .forEach((i,x,t)->sb
         .a("    var ").a(b.encodeTrailingPrimes(x))
         .a("$= ").a(optCast(t)).a("p"+i+";\n"));
@@ -17,20 +23,20 @@ record ProduceBody(BytecodeLineFix sb, Backend b, String iface, String thisName,
     emitE(m.e().get());
     sb.a(";\n  }\n");
   }
-  private String optCast(core.T t){
-    if (!(t instanceof core.T.RCC rcc)){ return ""; }
+  private String optCast(T t){
+    if (!(t instanceof T.RCC rcc)){ return ""; }
     var n= rcc.c().name();
     var lit= n.pkgName().equals("base") && LiteralDeclarations.isPrimitiveLiteral(n.simpleName());
     return "("+b.typeName(lit ? LiteralDeclarations.superLiteral(n) : n)+")";
   }
-  void emitE(core.E e){ switch(e){
+  void emitE(E e){ switch(e){
     case X x -> emitX(x);
     case Type t -> emitType(t);
     case Call c -> emitCall(c);
     case Literal lit -> emitLit(lit);
   };}
   private void emitX(X x){
-    assert !"_".equals(x.name());
+    assert !x.name().equals("_");
     sb.a(b.encodeTrailingPrimes(x.name())+"$");
   }
   private void emitType(Type t){
@@ -41,7 +47,7 @@ record ProduceBody(BytecodeLineFix sb, Backend b, String iface, String thisName,
     sb.a(sl+"Instance.instance("+LiteralDeclarations.toJavaLiteral(n.simpleName())+")");
   }
   private void emitCall(Call c){
-    String cast= castedReceiverExpr(c.e());
+    var cast= castedReceiverExpr(c.e());
     if (!cast.isEmpty()){ sb.a("("+cast); }
     emitE(c.e());
     if (!cast.isEmpty()){ sb.a(")"); }
@@ -50,11 +56,11 @@ record ProduceBody(BytecodeLineFix sb, Backend b, String iface, String thisName,
     sb.a("(\n");
     for (int i : Range.of(c.es())){
       emitE(c.es().get(i));
-      if (i != c.es().size() - 1){ sb.a(",\n"); }
+      if (i != c.es().size()-1){ sb.a(",\n"); }
     }
     sb.a(")");//CHECK THIS: I think this is enough to make sure that there is never two fearless method calls on the same java line (possibly even overkill?)
   }
-  private String castedReceiverExpr(core.E recv){ return recv instanceof Call c ? optCast(c.expectedRes().inner) : ""; }
+  private String castedReceiverExpr(E recv){ return recv instanceof Call c ? optCast(c.expectedRes().inner) : ""; }
   private void emitLit(Literal lit){
     b.tools.docs().visitLiteral(lit);
     if (LiteralDeclarations.has(lit.cs(),LiteralDeclarations.captureFree)){
@@ -64,7 +70,7 @@ record ProduceBody(BytecodeLineFix sb, Backend b, String iface, String thisName,
     }
     if (!lit.infName() || lit.onlyImmCapture().inner){ b.generateInterface(lit, true); }
     var base= b.ifaceNameFor(lit);
-      sb.a("new ").a(base).a("(){");
+    sb.a("new ").a(base).a("(){");
     if (b.isRepr(lit)){
       sb.a("""
         volatile java.util.concurrent.ConcurrentHashMap<Object,Entry> _reprCache;
@@ -79,7 +85,7 @@ record ProduceBody(BytecodeLineFix sb, Backend b, String iface, String thisName,
         public void _reprCacheFlush(){ var m= _reprCache; if (m != null){ m.clear(); } }
         """);
     }
-    for (var m:lit.ms()){
+    for (var m: lit.ms()){
       if (!m.sig().origin().equals(lit.name())){ continue; }
       assert m.e().isPresent();
       var jName= b.mangledMethodName(m.sig().rc(), m.sig().m());

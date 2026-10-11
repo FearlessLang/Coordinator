@@ -3,11 +3,12 @@ package scripts;
 
 import java.nio.file.Files;
 import java.util.List;
+
 import resources.ResolveResource;
 import tools.Fs;
 import tools.JavaTool;
 
-public class DeployZeroToHeroPages{
+public final class DeployZeroToHeroPages{
   public static void main(String[] args) throws InterruptedException{
     var prefix= ResolveResource.commonsSrc.getParent().getParent();
     var fearlessTourSrc= prefix.resolve("FearlessTour","src");

@@ -7,11 +7,12 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+
 import resources.ResolveResource;
 import tools.Fs;
 import tools.JavaTool;
 
-public class RunBenchmarks{
+public final class RunBenchmarks{
   public static void main(String[] args) throws InterruptedException{
     ModularBuild.commons();
     ModularBuild.frontendMain();

@@ -3,20 +3,19 @@ package naiveBackend;
 import java.nio.file.Path;
 import java.util.HashSet;
 import java.util.Optional;
-import java.util.Set;
 
-import core.TName;
-import core.M;
 import core.E.Call;
 import core.E.Literal;
 import core.E.Type;
+import core.M;
+import core.TName;
 import tools.NativeOverrides;
 import utils.Pos;
 
 public final class MagicConsistency{
   private static final TName magicName= new TName("base._Magic", 0,Pos.unknown);
   private final Optional<NativeOverrides> natives;
-  private final Set<String> magicPairs= new HashSet<>();
+  private final HashSet<String> magicPairs= new HashSet<>();
   MagicConsistency(String pkgName, Path rtPath){
     this.natives= pkgName.equals("base") ? Optional.of(NativeOverrides.scan(rtPath)) : Optional.empty();
   }

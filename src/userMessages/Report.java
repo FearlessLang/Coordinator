@@ -1,5 +1,10 @@
 package userMessages;
 
+import static userMessages.UserError.disp;
+import static userMessages.UserError.path;
+import static userMessages.UserError.showRel;
+import static userMessages.UserError.showZipRel;
+
 import java.nio.file.Path;
 import java.util.Collections;
 import java.util.LinkedHashSet;
@@ -7,10 +12,10 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import core.E.Literal;
 import core.LiteralDeclarations;
 import core.T;
 import core.TName;
-import core.E.Literal;
 import metaParser.Frame;
 import metaParser.Message;
 import tools.Fs;
@@ -20,28 +25,21 @@ import tools.SourceOracle.RefParent;
 import utils.Join;
 import utils.Pop;
 
-import static userMessages.UserError.disp;
-import static userMessages.UserError.showRel;
-import static userMessages.UserError.showZipRel;
-import static userMessages.UserError.path;
-
 /// Report: the user gave us something we cannot accept, and can fix it by changing
 /// what they gave us. Their file and folder names, their zips, their project layout,
 /// their Fearless source.
 /// The counterpart is Violation, for when we can no longer do our safe job.
-public final class Report {
-  private Report(){}
-
+public final class Report{
   //-- the shape of a project-scan message: what is wrong, how to fix it, then the rules
   private static UserError fail(String rel, String wentWrong, String howToFix){
-    String msg= "Invalid path in this project folder.\n\n"
+    var msg= "Invalid path in this project folder.\n\n"
       + rel
-      + "\nWhat went wrong\n" + wentWrong
-      + "\n\nHow to fix\n" + howToFix+"\n\n" + rulesWall();
+      + "\nWhat went wrong\n"+wentWrong
+      + "\n\nHow to fix\n"+howToFix+"\n\n"+rulesWall();
     return new UserError(msg);
   }
   private static UserError directFail(String rel, String msg){
-    return new UserError(rel+"\n"+msg+"\n\n" + rulesWall());
+    return new UserError(rel+"\n"+msg+"\n\n"+rulesWall());
   }
   public static final Set<String> allowedNoExtFiles= """
 readme
@@ -140,11 +138,12 @@ Start Fearless on an existing project folder, or on a file inside one.
   }
   public static UserError emptyDirectory(Path kid){
     return directFail(showRel(kid),"""
-This directory is empty.
-Different systems handle empty directories differently,
+This folder is empty.
+Different systems handle empty folders differently,
 and they may not be supported by compression tools (zip)
 or version control systems (git).
-""");}
+""");
+  }
 
   //-- visible names
   public static UserError pathTooLong(RefParent kid){
@@ -229,7 +228,7 @@ or version control systems (git).
       "- The file extension contains an unsupported character: "+Message.displayChar(c)+".\n"
     + "  Extensions may use only lowercase letters (a-z) and digits (0-9).",
       "- Rename the file to use an extension made only of lowercase letters and digits.\n"
-    + "  Examples: \".txt\", \".fear\", \".md\", \".tar.gz\""
+    + "  Examples: \".txt\", \".fear\", \".md\", \".tar.gz\"."
     );
   }
   public static UserError extensionlessMaskExtension(RefParent kid, RefParent noExtKid){
@@ -268,7 +267,7 @@ or version control systems (git).
     return fail(showRel(kid),
       "- A protected name segment ends with a dot or a space.\n"
     + "  Some systems/tools trim these, which causes collisions.\n"
-    + "  Bad segment: "+disp(name)+"",
+    + "  Bad segment: "+disp(name),
       "- Rename the segment so it does not end with '.' or space."
     );
   }
@@ -282,10 +281,11 @@ or version control systems (git).
   public static UserError invisibleNoControlChars(RefParent kid, int cp, String name){
     return fail(showRel(kid),
       "- A protected name segment contains a control character.\n"
-     + "  Character: " + Message.displayChar(cp)+"\n"
-     + "  Segment: " + disp(name) + "",
+    + "  Character: "+Message.displayChar(cp)+"\n"
+    + "  Segment: "+disp(name),
       "- Rename the segment to remove the control character."
-    );}
+    );
+  }
   public static UserError invisibleNoWindowsBadChars(RefParent kid, char bad, String name){
     return fail(showRel(kid),
       "- A protected name segment contains a character that Windows forbids.\n"
@@ -298,7 +298,7 @@ or version control systems (git).
   public static UserError invisibleWindowsReservedDeviceName(RefParent kid, String base, String name){
     return fail(showRel(kid),
       "- A protected name segment uses a Windows reserved device name.\n"
-    + "  Bad base: "+disp(base)+" in segment: "+disp(name)+"",
+    + "  Bad base: "+disp(base)+" in segment: "+disp(name),
       "- Rename it so the base name is not a Windows device name.\n"
     + "  Reserved device name: \"con\", \"prn\", \"aux\", \"nul\", \"com1\"..\"com9\", \"lpt1\"..\"lpt9\"."
     );
@@ -390,7 +390,8 @@ Too many layers of nested zips.
 We explored %s layers and there was still more.
 Different systems handle very nested zips differently; overall if
 recursively unzipped, it would clearly go over the OS path length limit.
-""".formatted(depth));}
+""".formatted(depth));
+  }
   //Reached when reading THIS ONE entry exhausted the memory of the whole program,
   //so the size we could report is exactly the size we could not measure.
   public static UserError zipEntryTooBig(Path diskZip, List<String> steps, String entryName){
@@ -400,12 +401,14 @@ Fearless ran out of memory while unpacking this single entry.
 A zip entry can be much bigger unpacked than it looks inside the zip,
 sometimes thousands of times bigger, and we can only check content we can hold.
 Remove this entry from the zip, or store its content as normal files instead.
-""");}
+""");
+  }
   public static UserError zipNoEntries(Path diskZip, List<String> steps){
     return directFail(showZip(diskZip, steps),"""
 This zip file contains no entries.
 This is most likely a mistake.
-""");}
+""");
+  }
   public static UserError zipNotAZip(Path diskZip, List<String> steps){
     return directFail(showZip(diskZip, steps),"""
 This file is named as a zip file, but its content is not a zip file.
@@ -413,7 +416,8 @@ A zip file starts with its first entry, or with the zip end record if it has no 
 Other kinds of files renamed to ".zip", files saved from a web page, and self extracting
 archives with a program in front of the zip are not zip files.
 Fearless expands each zip file into a folder: rename this file if it is not meant to be a zip.
-""");}
+""");
+  }
   private static String showZip(Path diskZip, List<String> steps){
     if (steps.isEmpty()){ return showRel(UserError.root.relativize(diskZip)); }
     return showZipRel(diskZip, Pop.right(steps), steps.getLast());
@@ -421,13 +425,13 @@ Fearless expands each zip file into a folder: rename this file if it is not mean
   public static UserError zipEmptyDirectoryEntry(Path diskZip, List<String> steps, String entryName){
     return directFail(showZipRel(diskZip, steps, entryName),
       "This zip contains a folder entry called "+disp(entryName)+", but it is empty.\n"
-     +"Different systems handle empty directories differently, and they may not be\n"
+     +"Different systems handle empty folders differently, and they may not be\n"
      +"supported by compression tools (zip) or version control systems (git).");
   }
 
   //-- project layout: which folder defines a package, and the rank file of each package
   public static UserError projectEmpty(Path root){ return new UserError("""
-The fearless project folder contains no *.fear files
+This project folder contains no ".fear" files.
 Folder:
 %s
 """.formatted(path(root.toString())));
@@ -586,7 +590,7 @@ File:
   }
   private static UserError claim(SourceOracle src, Literal l, String msg){
     var owner= owner(l);
-    return new UserError(Message.of(src::loadString,List.of(new Frame(owner,l.span().inner)),owner.substring(0,1).toUpperCase()+owner.substring(1)+msg));
+    return new UserError(Message.of(src::loadString,List.of(new Frame(owner,l.span().inner)),Character.toUpperCase(owner.charAt(0))+owner.substring(1)+msg));
   }
   private static UserError claim(SourceOracle src, Literal l, T.C c, String msg){ return claim(src,l," implements "+disp(repr(c))+".\n"+msg); }
   private static String withArity(TName n){ return n.s()+Join.of(Collections.nCopies(n.arity(),"_"),"[",",","]",""); }
