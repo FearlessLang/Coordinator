@@ -171,7 +171,7 @@ final class Helper{
       int base= (i+1)*1000;
       if (stem.equals(pref)){ return base+999; } // shortcut: _rank_app.fear == _rank_app999.fear
       if (!stem.startsWith(pref)){ continue; }
-      if (stem.length()!=pref.length()+3){ throw Report.projectMalformedRankFileName(u); }
+      if (stem.length() != pref.length()+3){ throw Report.projectMalformedRankFileName(u); }
       var digits= stem.substring(pref.length());
       if (!digits.chars().allMatch(Character::isDigit)){ throw Report.projectMalformedRankFileName(u); }
       return base+Integer.parseInt(digits);

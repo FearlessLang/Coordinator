@@ -36,7 +36,7 @@ final class DocRefScanner{
   }
 
   static List<CodeSpan> refSpans(String text){
-    return codeSpans(text).stream().filter(sp->sp.fence()==1).toList();
+    return codeSpans(text).stream().filter(sp->sp.fence() == 1).toList();
   }
 
   private static int runLength(String text, int at){

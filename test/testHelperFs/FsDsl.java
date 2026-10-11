@@ -140,7 +140,7 @@ public final class FsDsl{
 
   private static void putDir(ZipOutputStream zos, String name){
     try{
-      zos.putNextEntry(new ZipEntry(name.endsWith("/") ? name : name + "/"));
+      zos.putNextEntry(new ZipEntry(name.endsWith("/") ? name : name+"/"));
       zos.closeEntry();
     }
     catch(Exception ex){ throw new AssertionError(ex); }

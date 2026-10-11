@@ -282,7 +282,7 @@ final class DocBuilderTest{
     var refs= builder.inheritedMethods(sub, subMut);
 
     assertEquals(1, refs.size());
-    assertTrue(refs.getFirst().method()==supMut);
+    assertTrue(refs.getFirst().method() == supMut);
   }
 
   @Test void inheritedMethodsListsEveryProviderAlongAnOverrideChainEvenTheShadowedOne(){
@@ -300,8 +300,8 @@ final class DocBuilderTest{
     var refs= builder.inheritedMethods(top, midSame);
 
     assertEquals(2, refs.size());
-    assertTrue(refs.stream().anyMatch(r->r.method()==midSame));
-    assertTrue(refs.stream().anyMatch(r->r.method()==baseSame));
+    assertTrue(refs.stream().anyMatch(r->r.method() == midSame));
+    assertTrue(refs.stream().anyMatch(r->r.method() == baseSame));
   }
 
   @Test void aSingleDeclarationWithNoExplicitRcIsDuplicatedPerRequiredRcAndEachVariantMatchesItsOwnSupertypeCounterpart(){
@@ -324,8 +324,8 @@ final class DocBuilderTest{
     assertEquals(1, builder.type(sub).methods.size());
     assertEquals(2, doc.variants.size());
     assertEquals(2, doc.inheritedFrom.size());
-    assertTrue(doc.inheritedFrom.stream().anyMatch(r->r.method()==supMut));
-    assertTrue(doc.inheritedFrom.stream().anyMatch(r->r.method()==supImm));
+    assertTrue(doc.inheritedFrom.stream().anyMatch(r->r.method() == supMut));
+    assertTrue(doc.inheritedFrom.stream().anyMatch(r->r.method() == supImm));
   }
 
   @Test void aBareTypeNameThatMatchesTwoLocalArityVariantsIsAmbiguous(){

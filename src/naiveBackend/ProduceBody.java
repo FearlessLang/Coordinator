@@ -56,7 +56,7 @@ record ProduceBody(BytecodeLineFix sb, Backend b, String iface, String thisName,
     sb.a("(\n");
     for (int i : Range.of(c.es())){
       emitE(c.es().get(i));
-      if (i != c.es().size() - 1){ sb.a(",\n"); }
+      if (i != c.es().size()-1){ sb.a(",\n"); }
     }
     sb.a(")");//CHECK THIS: I think this is enough to make sure that there is never two fearless method calls on the same java line (possibly even overkill?)
   }

@@ -79,7 +79,7 @@ final class DocResolver{
   private List<TName> matching(Stream<TName> names, DocRef.TypeName ref){
     return names
       .filter(n->n.simpleName().equals(ref.simpleName()))
-      .filter(n->ref.arity().isEmpty() || n.arity()==ref.arity().getAsInt())
+      .filter(n->ref.arity().isEmpty() || n.arity() == ref.arity().getAsInt())
       .toList();
   }
 
@@ -108,7 +108,7 @@ final class DocResolver{
       return local.get().methods.stream()
         .filter(MethodDoc::visible)
         .filter(m->m.main().sig().m().s().equals(selector))
-        .filter(m->arity.isEmpty() || m.main().sig().m().arity()==arity.getAsInt())
+        .filter(m->arity.isEmpty() || m.main().sig().m().arity() == arity.getAsInt())
         .gather(DistinctBy.<MethodDoc,String>of(m->HtmlDocRenderer.methodId(owner,m.main())))
         .map(m->Candidate.ofLocalMethod(owner,m))
         .toList();
@@ -141,7 +141,7 @@ final class DocResolver{
       .flatMap(t->t.methods.stream()
         .filter(MethodDoc::visible)
         .filter(m->m.main().sig().m().s().equals(selector))
-        .filter(m->arity.isEmpty() || m.main().sig().m().arity()==arity.getAsInt())
+        .filter(m->arity.isEmpty() || m.main().sig().m().arity() == arity.getAsInt())
         .map(m->Candidate.ofLocalMethod(t.main().name(),m)));
     var foreignCands= other.dom().stream()
       .flatMap(n->foreignCandidates(n,selector,arity));
@@ -156,7 +156,7 @@ final class DocResolver{
   private Stream<Candidate> foreignCandidates(TName owner, List<M> ms, String selector, OptionalInt arity){
     return ms.stream()
       .filter(m->m.sig().m().s().equals(selector))
-      .filter(m->arity.isEmpty() || m.sig().m().arity()==arity.getAsInt())
+      .filter(m->arity.isEmpty() || m.sig().m().arity() == arity.getAsInt())
       .gather(DistinctBy.<M,Integer>of(m->m.sig().m().arity()))
       .map(m->Candidate.ofForeignMethod(owner,selector,m.sig().m().arity()));
   }

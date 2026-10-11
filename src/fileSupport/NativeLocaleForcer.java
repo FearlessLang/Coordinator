@@ -99,7 +99,7 @@ public final class NativeLocaleForcer{
     var languages= arena.allocateFrom(enUs+"\0", StandardCharsets.UTF_16LE);
     var count= arena.allocate(JAVA_INT);
     int ok= (int) set.invokeExact(callState, 8/*MUI_LANGUAGE_NAME*/, languages, count);
-    if (ok == 0){ throw Violation.couldNotForceEnglish("Windows rejected the process UI language call (GetLastError=" + lastError(callState) + ")"); }
+    if (ok == 0){ throw Violation.couldNotForceEnglish("Windows rejected the process UI language call (GetLastError="+lastError(callState)+")"); }
     if (count.get(JAVA_INT, 0) != 1){ throw Violation.couldNotForceEnglish("Windows accepted process UI language call but did not set exactly one language"); }
   }
   private static void verifyUiLanguage(MethodHandle get, Arena arena, MemorySegment callState) throws Throwable{
@@ -109,11 +109,11 @@ public final class NativeLocaleForcer{
     bufferChars.set(JAVA_INT, 0, maxProcessUiLanguageChars);
     int ok= (int) get.invokeExact(callState, 8/*MUI_LANGUAGE_NAME*/, count, buffer, bufferChars);
     if (ok == 0){
-      throw Violation.couldNotForceEnglish("Windows process UI language read failed (GetLastError=" + lastError(callState) + ")");
+      throw Violation.couldNotForceEnglish("Windows process UI language read failed (GetLastError="+lastError(callState)+")");
     }
     var languages= parseDoubleNullTerminatedUtf16(buffer);
     if (languages.size() == 1 && enUs.equals(languages.get(0))){ return; }
-    throw Violation.couldNotForceEnglish("Fearless set the Windows process UI language to en-US, but Windows reported the language as " + languages + " instead");
+    throw Violation.couldNotForceEnglish("Fearless set the Windows process UI language to en-US, but Windows reported the language as "+languages+" instead");
   }
   private static int lastError(MemorySegment callState){
     VarHandle h= Linker.Option.captureStateLayout()

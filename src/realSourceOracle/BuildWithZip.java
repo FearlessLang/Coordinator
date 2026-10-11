@@ -50,7 +50,7 @@ record Tree(
       : Report.onlyRegularFilesAndDirs(abs);
     }
     if (zip && !BuildWithZip.isInvisible(pe)){ reqNoSiblingForZipName(rel); collectBodyDiskZip(root, rel); return; }
-    for (RefParent p= pe; p.parent()!=p; p= p.parent()){ addKid(p); }
+    for (RefParent p= pe; p.parent() != p; p= p.parent()){ addKid(p); }
     if (isRegularFile(abs) && !BuildWithZip.isInvisible(pe)){ visibleFiles.add(pe); }
   }
   private void reqNoSiblingForZipName(Path rel){
@@ -77,7 +77,7 @@ record Tree(
   private void collectBodyDiskZip(Path root, Path rel){
     for (var e: ZipWellFormedness.allEntryPaths(root, rel)){
       if (e.segments().getLast().endsWith(".zip")){ continue; }//expanded
-      for (RefParent p= e; p.parent()!=p; p= p.parent()){ addKid(p); }
+      for (RefParent p= e; p.parent() != p; p= p.parent()){ addKid(p); }
       if (!BuildWithZip.isInvisible(e)){ visibleFiles.add(e); }
     }
   }
@@ -88,7 +88,7 @@ record Tree(
     m.computeIfAbsent(dir, _->new LinkedHashSet<>()).add(kid);
   }
   private static boolean isDiskZip(Path abs, Path rel){ return isRegularFile(abs) && rel.getFileName().toString().endsWith(".zip"); }
-  private static Path parentOrEmpty(Path p){ return p.getParent()==null ? Path.of("") : p.getParent(); }
+  private static Path parentOrEmpty(Path p){ return p.getParent() == null ? Path.of("") : p.getParent(); }
 }
 public final class BuildWithZip{
   public static boolean isInvisible(RefParent r){
@@ -108,7 +108,7 @@ public final class BuildWithZip{
     });
     return t.visibleFiles().stream().sorted(Comparator.comparing(Ref::fearPath)).toList();
   }
-  static void checkTooLong(RefParent kid){ if (kid.fearPath().length() > 200 + SourceOracle.root.length()){ throw Report.pathTooLong(kid); } }
+  static void checkTooLong(RefParent kid){ if (kid.fearPath().length() > 200+SourceOracle.root.length()){ throw Report.pathTooLong(kid); } }
   public static void checkIndividualVisibleSegment(RefParent kid){
     checkTooLong(kid);
     var name= Fs.fileNameWithExtension(kid.fearPath());
@@ -120,7 +120,7 @@ public final class BuildWithZip{
       return;
     }
     checkVisibleAtom(kid, name.substring(0, d0));
-    checkExt(kid, name.substring(d0 + 1, name.length()));
+    checkExt(kid, name.substring(d0+1, name.length()));
   }
   private static void checkVisibleAtom(RefParent kid, String atom){
     char c0= atom.charAt(0);

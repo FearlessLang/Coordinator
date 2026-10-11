@@ -502,7 +502,7 @@ code{
   String renderCode(String text, DocRefScanner.CodeSpan cs, List<ResolvedSpan> linked){
     var body= h(text.substring(cs.start(),cs.end()));
     return linked.stream()
-      .filter(sp->sp.start()==cs.start() && sp.end()==cs.end())
+      .filter(sp->sp.start() == cs.start() && sp.end() == cs.end())
       .filter(sp->!(sp.link() instanceof DocLink.NoLink))
       .findFirst()
       .map(sp->"<a href=\""+h(href(sp.link()))+"\">"+body+"</a>")

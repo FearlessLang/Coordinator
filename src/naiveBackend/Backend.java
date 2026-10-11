@@ -117,11 +117,11 @@ public final class Backend{
   }
   String encodeTrailingPrimes(String s){
     int k= 0;
-    while (k < s.length() && s.charAt(s.length() - 1 - k) == '\''){ k++; }
+    while (k < s.length() && s.charAt(s.length()-1-k) == '\''){ k++; }
     if (k == 0){ return s; }
-    var head= s.substring(0, s.length() - k);
-    assert head.indexOf('\'')==-1: "prime (') must be trailing only: "+s;
-    return head + "$p" + k;
+    var head= s.substring(0, s.length()-k);
+    assert head.indexOf('\'') == -1: "prime (') must be trailing only: "+s;
+    return head+"$p"+k;
   }
   String decTypeName(TName n){ return encodeTrailingPrimes(n.simpleName())+"$"+caseTag(n.simpleName())+"$"+n.arity(); }
   String typeName(TName n){ return "_"+encodeTrailingPrimes(n.s())+"$"+caseTag(n.simpleName())+"$"+n.arity(); }
@@ -138,7 +138,7 @@ public final class Backend{
   String methodBaseName(MName m){
     var s= m.s();
     if (s.startsWith(".")){ return encodeTrailingPrimes(s.substring(1)); }
-    return "$" + mangleOp(s);
+    return "$"+mangleOp(s);
   }
   final TreeMap<String,String> mains= new TreeMap<>();
   void writeMainJava(){

@@ -29,8 +29,8 @@ public record AutoloadHandler(Predicate<String> matches, String baseType){
   static String standardTypeName(String pkgName,SourceOracle.Ref ref,String path){
     var all= components(path);
     int i= all.indexOf(pkgName);
-    assert i >= 0 && i + 1 < all.size();
-    var cs= all.subList(i + 1, all.size());
+    assert i >= 0 && i+1 < all.size();
+    var cs= all.subList(i+1, all.size());
     var res= Pop.right(cs).stream()
       .map(AutoloadHandler::capFirst)
       .collect(Collectors.joining())

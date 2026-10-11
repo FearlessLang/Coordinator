@@ -20,7 +20,7 @@ public final class ApiJson{
   static String cJ(T.C c){ return arr(Stream.concat(Stream.of(q(c.name().s())), c.ts().stream().map(ApiJson::tJ))); }
   static String mJ(Sig s){ return arr(Stream.of(
     q(s.m().s()), q(s.rc().name()), bsJ(s.bs()), arr(s.ts().stream().map(ApiJson::tJ)), tJ(s.ret()),
-    q(s.origin().s()), q(""+s.origin().arity()), q(s.abs() ?"abs":"concrete"))); }
+    q(s.origin().s()), q(""+s.origin().arity()), q(s.abs() ? "abs" : "concrete"))); }
   static String tJ(T t){
     var es= switch(t){
       case T.X(var n,_) -> Stream.of(q("x"), q(n));
