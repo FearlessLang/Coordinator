@@ -117,7 +117,7 @@ public final class Backend{
   }
   String encodeTrailingPrimes(String s){
     int k= 0;
-    while (k < s.length() && s.charAt(s.length()-1-k) == '\''){ k++; }
+    while (k < s.length() && s.charAt(s.length()-1-k) == '\''){ k += 1; }
     if (k == 0){ return s; }
     var head= s.substring(0, s.length()-k);
     assert head.indexOf('\'') == -1: "prime (') must be trailing only: "+s;

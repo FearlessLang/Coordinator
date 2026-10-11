@@ -200,7 +200,7 @@ final class CommonInfo{
         if (depth >= maxLinkFollowed){ return out.append("\nChain exceeds ").append(maxLinkFollowed).append(" links; not followed further.\n").toString(); }
         if (!visited.add(current)){ return out.append("\nChain loops back to ").append(Message.displayString(current.toString())).append(".\n").toString(); }
         current= current.getParent().resolve(Files.readSymbolicLink(current)).normalize();//read to advance; relative to the link's own dir; current is absolute and a root cannot be a symlink, so getParent()!=null
-        depth++;
+        depth += 1;
         out.append("\n  ").append(located(current, suppressed)).append("\n");//either last is final location or a dedicated message is present
       }
     }

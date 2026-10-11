@@ -148,12 +148,12 @@ final class LimitedJsonParser{
   }
   private TSpan dummySpan(){ return TSpan.fromPos(Pos.unknown, 1); }
 
-  void ws(){ for (; i < s.length() && (s.charAt(i) == ' ' || s.charAt(i) == '\n'); i++); }
+  void ws(){ for (; i < s.length() && (s.charAt(i) == ' ' || s.charAt(i) == '\n'); i += 1); }
   private void req(char c){ if (!eat(c)){ throw err("Expected '"+c+"'"); } }
   private boolean eat(char c){
     ws();
     if (i >= s.length() || s.charAt(i) != c){ return false; }
-    i++; return true;
+    i += 1; return true;
   }
   private RuntimeException err(String msg){
     return Violation.cacheInvalidFile(forErr,msg+" at "+i);

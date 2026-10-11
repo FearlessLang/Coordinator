@@ -84,7 +84,7 @@ public final class StringFiles{
     if (!report && explanation.suppressed().isEmpty()){ onError.accept(outAction,""); throw Bug.unreachable(); }
     var outReport= new StringBuilder(report ? explanation.text() : "")
       .append("\nOriginal failure:\n").append(stackTrace(cause));
-    for (var i= 0; i < explanation.suppressed().size(); i++){ outReport
+    for (var i= 0; i < explanation.suppressed().size(); i += 1){ outReport
       .append("\nSuppressed error ").append(i).append(":\n")
       .append(stackTrace(explanation.suppressed().get(i)));
     }
@@ -126,8 +126,8 @@ Nearby bytes:  %s
     for (var i= 0; i < prefix.length();){
       var c= prefix.charAt(i++);
       if (c != '\r' && c != '\n'){ continue; }
-      if (c == '\r' && i < prefix.length() && prefix.charAt(i) == '\n'){ i++; }
-      line++;
+      if (c == '\r' && i < prefix.length() && prefix.charAt(i) == '\n'){ i += 1; }
+      line += 1;
       start= i;
     }
     return new Location(line,prefix.codePointCount(start,prefix.length())+1,prefix.substring(start));

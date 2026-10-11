@@ -42,7 +42,7 @@ public final class FsDsl{
   private static void addItem(ArrayList<Item> out, ArrayList<String> lines){
     if (lines.isEmpty()){ return; }
     int i= 0;
-    for (; i < lines.size(); i++){ if (lines.get(i).equals("iii")){ break; } }
+    for (; i < lines.size(); i += 1){ if (lines.get(i).equals("iii")){ break; } }
     assert i < lines.size() : "Missing iii separator";
     String name= String.join("\n", lines.subList(0, i));
     String content= String.join("\n", lines.subList(i+1, lines.size()));
@@ -70,7 +70,7 @@ public final class FsDsl{
     if (zi < 0){ emitDisk(root, segs, isDir, it.content()); return; }
 
     Path diskZip= root;
-    for (int i= 0; i <= zi; i++){ diskZip= diskZip.resolve(segs[i]); }
+    for (int i= 0; i <= zi; i += 1){ diskZip= diskZip.resolve(segs[i]); }
 
     var node= zips.computeIfAbsent(diskZip, _->new ZipNode());
     var after= List.of(segs).subList(zi+1, segs.length);
@@ -78,7 +78,7 @@ public final class FsDsl{
   }
 
   private static int firstZipSeg(String[] segs){
-    for (int i= 0; i < segs.length; i++){
+    for (int i= 0; i < segs.length; i += 1){
       if (segs[i].endsWith(".zip")){ return i; }
     }
     return -1;
@@ -111,7 +111,7 @@ public final class FsDsl{
   }
 
   private static int nextZipIndex(List<String> segs, int from){
-    for (int i= from; i < segs.size(); i++){
+    for (int i= from; i < segs.size(); i += 1){
       if (segs.get(i).endsWith(".zip")){ return i; }
     }
     return -1;
