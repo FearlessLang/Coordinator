@@ -23,19 +23,15 @@ final class HtmlDocRenderer{
       Map<DocOcc,List<ResolvedSpan>> spans, Optional<Path> baseDocLocation){
     assert nonNull(pkgName,uses,types,other,spans,baseDocLocation);
     this.pkgName= pkgName;
-    this.uses= uses;
     this.types= types;
     this.spans= spans;
     this.baseDocLocation= baseDocLocation;
-    this.other= other;
     this.toStr= new ExportedToStr(pkgName, uses);
     this.resolver= new DocResolver(pkgName, types, other);
   }
 
   final String pkgName;
-  final Map<String,String> uses;
   final List<TypeDoc> types;
-  final OtherPackages other;
   final Map<DocOcc,List<ResolvedSpan>> spans;
   final Optional<Path> baseDocLocation;
   //filled by href() as links are emitted, so every ambiguous link that reaches the
@@ -94,27 +90,17 @@ final class HtmlDocRenderer{
   String renderTest(){
     var shown= testableTypes();
     var names= testNames();
-    var aliases= new LinkedHashMap<String,String>();
-    types.stream().filter(t->!t.main().infName() && t.main().name().isPublic())
-      .forEach(t->aliases.putIfAbsent(t.main().name().simpleName(), pkgName+"."+t.main().name().simpleName()));
-    uses.forEach((full,alias)->aliases.putIfAbsent(alias,full));
-    other.dom().stream().filter(n->n.pkgName().equals("base") && n.isPublic())
-      .forEach(n->aliases.putIfAbsent(n.simpleName(), "base."+n.simpleName()));
-    aliases.putIfAbsent("Test","base.Test");
-    aliases.putIfAbsent("UnitTests","base.UnitTests");
-    var sb= new StringBuilder(4_000);
-    aliases.forEach((alias,full)->sb.append("use ").append(full).append(" as ").append(alias).append(";\n"));
-    sb.append('\n');
+    var sb= new StringBuilder(4_000).append(HtmlDocBuilder.generatedMark).append(pkgName).append("; any edit is overwritten\n\n");
     for (int i : Range.of(shown)){
-      sb.append(names.perType().get(i)).append(": Test {::\n");
+      sb.append(names.perType().get(i)).append(": base.Test {::\n");
       for (var m: visibleMethods(shown.get(i))){
         var examples= m.docs.stream().filter(d->d.example() || d.testOnly()).map(DocOcc::text).toList();
         if (examples.isEmpty()){ continue; }
-        sb.append("  .test Test{::\n").append(String.join("\n",examples)).append("\n  }\n");
+        sb.append("  .test base.Test{::\n").append(String.join("\n",examples)).append("\n  }\n");
       }
       sb.append("  }\n\n");
     }
-    sb.append(names.top()).append(": UnitTests {::\n");
+    sb.append(names.top()).append(": base.UnitTests {::\n");
     names.perType().forEach(n->sb.append("  .test ").append(n).append('\n'));
     sb.append("  }\n");
     return sb.toString();

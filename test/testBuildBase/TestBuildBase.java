@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -25,8 +26,7 @@ class TestBuildBase {
   Coordinator c= new Coordinator(){
     @Override public Path modsPath(){  return ResolveResource.coordinatorJars; }
     @Override public BackendTools backendTools(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, CapabilityEnvironment capabilities){
-      var testFileDest= ResolveResource.stLibDebugOut.resolve("_baseTestOut","base_test.fear");
-      return BackendTools.of(pkgName, oracle, other, core, ResolveResource.stLibDebugOut, baseCachePath(), testFileDest, ResolveResource.stLibRTPath, capabilities);
+      return BackendTools.of(pkgName, oracle, other, core, ResolveResource.stLibDebugOut, baseCachePath(), Optional.of(ResolveResource.stLibPath), ResolveResource.stLibRTPath, capabilities);
     }
 
     @Override public String main(Path path, SourceOracle stLib) throws InterruptedException{
@@ -34,8 +34,9 @@ class TestBuildBase {
       var pkgName= "base";
       var other= OtherPackages.empty();
       var rich= SourceOracleWithAutoload.ofBase(stLib);
-      List<Literal> core= frontend(pkgName,rich.sources(stLib.allFiles()),rich.oracle(),other,Map.of());
-      backend(pkgName,core,rich.oracle(),other,new CapabilityEnvironment(rich.autoloadedAssets()));
+      var capabilities= new CapabilityEnvironment(rich.autoloadedAssets());
+      List<Literal> core= frontend(pkgName,rich.sources(stLib.allFiles()),rich.oracle(),other,Map.of(),capabilities);
+      backend(pkgName,core,rich.oracle(),other,capabilities);
       var jars= Push.of(out.rootDir().resolve("gen_java"),sharedClasspath());
       var runOut= JavaTool.runMainFromJars(Coordinator.runData(out.rootDir().getParent(),ResolveResource.stLibPath),jars,"_"+pkgName+".Main");
       assertEquals("", runOut);

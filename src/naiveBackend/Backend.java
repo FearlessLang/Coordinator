@@ -30,7 +30,7 @@ public class Backend{
   public List<Consumer<Path>> produceJavaCode(){
     Fs.ensureDir(out);
     Fs.cleanDirContents(out);
-    tools.decs().forEach(d->{tools.docs().visitLiteral(d); generateInterface(d,false); tools.checks().checkFileReplacement(d, decTypeName(d.name()));});
+    tools.decs().forEach(d->{generateInterface(d,false); tools.checks().checkFileReplacement(d, decTypeName(d.name()));});
     tools.checks().checkMagicFulfilled();
     writeMainJava();
     return List.copyOf(fixers);
