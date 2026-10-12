@@ -29,6 +29,7 @@ import core.T;
 import core.TName;
 import core.TSpan;
 import realSourceOracle.PathEntry;
+import tools.Fs;
 import tools.SourceOracle;
 import userMessages.UserError;
 import utils.Pos;
@@ -735,6 +736,43 @@ Holder
     assertFalse(Files.exists(testPath), "a type matching the top-level generated name must suppress generation entirely");
   }
 
+  private void writeSuppressed(Path tmp){
+    var holderName= new TName("pkg.Holder",0,Pos.unknown);
+    var bar= namedMethod(".bar", holderName);
+    var holder= namedType("pkg.Holder", List.of(), List.of());
+    var suppressor= namedType("pkg.AllAutoTests_pkg", List.of(), List.of());
+    SourceOracle oracle= List::of;
+    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(holder,suppressor), Optional.empty());
+    builder.visitLiteral(holder);
+    builder.visitLiteral(suppressor);
+    builder.type(holder).declared(Pos.of(file,9,1), bar, List.of(
+      new DocOcc(file,9,1,4,".check{bar.assertOk}",true,true,false)
+    ), List.of());
+    builder.packageLocation("pkg", tmp.resolve("pkg.html"), Optional.of(tmp));
+    var renderer= new HtmlDocRenderer("pkg", Map.of(), builder.types, OtherPackages.empty(), Map.of(), Optional.empty());
+    builder.writeTest(renderer,new PathEntry(tmp,Path.of("auto_tests","pkg_test.fear")));
+  }
+  @Test void aGeneratedFileNoLongerNeededIsRemovedWithTheFolderItLeavesEmpty(@TempDir Path tmp){
+    var testPath= tmp.resolve("auto_tests","pkg_test.fear");
+    Fs.writeUtf8(testPath, HtmlDocBuilder.generatedMark+"pkg; any edit is overwritten\n");
+    writeSuppressed(tmp);
+    assertFalse(Files.exists(testPath.getParent()));
+  }
+  @Test void removingAGeneratedFileKeepsTheOtherFilesOfItsFolder(@TempDir Path tmp){
+    var testPath= tmp.resolve("auto_tests","pkg_test.fear");
+    var notes= tmp.resolve("auto_tests","notes.txt");
+    Fs.writeUtf8(testPath, HtmlDocBuilder.generatedMark+"pkg; any edit is overwritten\n");
+    Fs.writeUtf8(notes, "mine\n");
+    writeSuppressed(tmp);
+    assertFalse(Files.exists(testPath));
+    assertEquals("mine\n", Fs.readUtf8(notes));
+  }
+  @Test void withNothingGeneratedTheOtherFilesOfTheFolderAreLeftAlone(@TempDir Path tmp){
+    var notes= tmp.resolve("auto_tests","notes.txt");
+    Fs.writeUtf8(notes, "mine\n");
+    writeSuppressed(tmp);
+    assertEquals("mine\n", Fs.readUtf8(notes));
+  }
   @Test void aTypeNamedLikeAPerTypeSuiteIsAHardErrorNamingTheConvention(@TempDir Path tmp){
     var holderName= new TName("pkg.Holder",0,Pos.unknown);
     var bar= namedMethod(".bar", holderName);
