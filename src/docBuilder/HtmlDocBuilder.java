@@ -104,7 +104,7 @@ public final class HtmlDocBuilder{
     if (!generated(old)){ return Optional.empty(); }
     var names= renderer.testNames();
     var declared= types.stream().map(t->t.main().name().simpleName()).collect(Collectors.toUnmodifiableSet());
-    if (names.perType().isEmpty() || declared.contains(names.top())){ Fs.rmTree(path.getParent()); return Optional.empty(); }
+    if (names.perType().isEmpty() || declared.contains(names.top())){ remove(path); return Optional.empty(); }
     var collided= names.perType().stream().filter(declared::contains).findFirst();
     if (collided.isPresent()){ throw Report.generatedTestNameReserved(reservedNameProblem(collided.get()),names.top()); }
     var test= renderer.renderTest();
@@ -112,6 +112,12 @@ public final class HtmlDocBuilder{
     return Optional.of(tests);
   }
 
+  private static void remove(Path file){
+    if (!Files.exists(file)){ return; }
+    Fs.ofV(()->Files.delete(file));
+    var empty= Fs.of(()->{ try(var s= Files.list(file.getParent())){ return s.findAny().isEmpty(); } });
+    if (empty){ Fs.ofV(()->Files.delete(file.getParent())); }
+  }
   String reservedNameProblem(String name){
     var owner= types.stream().filter(t->t.main().name().simpleName().equals(name)).findFirst()
       .orElseThrow(Bug::unreachable).main();
