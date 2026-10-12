@@ -8,6 +8,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.AccessDeniedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.FileTime;
 import java.util.List;
 import java.util.function.Function;
 import java.util.stream.Stream;
@@ -137,6 +138,104 @@ A
 T:{}
 
 """); }
+  private static Path dated(Path tmp, String spec, String file, long t){
+    Path root= tmp.resolve("root").toAbsolutePath().normalize();
+    UserError.root= root;
+    FsDsl.materialize(root, spec);
+    Fs.ofV(()->Files.setLastModifiedTime(root.resolve(file), FileTime.fromMillis(t)));
+    return root;
+  }
+  private static final String aFear= """
+_pkg/a.fear
+iii
+A
+""";
+  @Test void err_file_dated_in_the_future(@TempDir Path tmp){
+    var root= dated(tmp, aFear, "_pkg/a.fear", System.currentTimeMillis()+3_600_000);
+    var ex= assertThrows(UserError.class, ()->new RealSourceOracleWithZip(root));
+    utils.Err.strCmp("""
+Root: [###]
+Path: "_pkg/a.fear"
+
+This file is dated [###],
+[###]h [###]m [###]s after the current time of this computer, [###].
+Fearless decides what needs compiling by comparing the modification dates of the files,
+so a file dated in the future would make the later edits look older than the last compile.
+This usually comes from a computer whose clock is wrong, from a shared or network folder
+whose clock is ahead, or from unpacking an archive made in another time zone.
+Save the file again, or correct the clock of this computer.
+""", FsDsl.dumpErr(root, ex));
+  }
+  @Test void ok_file_dated_a_few_seconds_in_the_future(@TempDir Path tmp){
+    var root= dated(tmp, aFear, "_pkg/a.fear", System.currentTimeMillis()+2_000);
+    assertEquals(1, new RealSourceOracleWithZip(root).allFiles().size());
+  }
+  @Test void ok_invisible_file_dated_in_the_future(@TempDir Path tmp){
+    var root= dated(tmp, aFear+"jjj\n_pkg/.cache/b.txt\niii\nB\n", "_pkg/.cache/b.txt", System.currentTimeMillis()+3_600_000);
+    assertEquals(1, new RealSourceOracleWithZip(root).allFiles().size());
+  }
+  @Test void err_file_dated_at_the_start_of_1970(@TempDir Path tmp){
+    var root= dated(tmp, aFear, "_pkg/a.fear", 0);
+    var ex= assertThrows(UserError.class, ()->new RealSourceOracleWithZip(root));
+    utils.Err.strCmp("""
+Root: [###]
+Path: "_pkg/a.fear"
+
+This file is dated 19[###].
+Fearless uses dates at or before the start of 1970 to mean "no date"
+when deciding what needs compiling, so such a date can not be trusted.
+Save the file again, so that it gets the current date.
+""", FsDsl.dumpErr(root, ex));
+  }
+  @Test void err_zip_file_dated_in_the_future(@TempDir Path tmp){
+    var root= dated(tmp, "_pkg/z.zip/a.fear\niii\nA\n", "_pkg/z.zip", System.currentTimeMillis()+3_600_000);
+    var ex= assertThrows(UserError.class, ()->new RealSourceOracleWithZip(root));
+    utils.Err.strCmp("""
+Root: [###]
+Path: "_pkg/z.zip"
+
+This file is dated [###]""", FsDsl.dumpErr(root, ex));
+  }
+  private static Path zipWithEntryAt(Path tmp, String entry, long t){
+    Path root= tmp.resolve("root").toAbsolutePath().normalize();
+    UserError.root= root;
+    Fs.ensureDir(root.resolve("_pkg"));
+    var bytes= new ByteArrayOutputStream();
+    Fs.ofV(()->{
+      try(var zip= new ZipOutputStream(bytes)){
+        var e= new java.util.zip.ZipEntry(entry);
+        e.setTime(t);
+        zip.putNextEntry(e);
+        zip.write("A".getBytes(StandardCharsets.UTF_8));
+        zip.closeEntry();
+      }
+    });
+    Fs.ofV(()->Files.write(root.resolve("_pkg/z.zip"), bytes.toByteArray()));
+    return root;
+  }
+  @Test void err_zip_entry_dated_in_the_future(@TempDir Path tmp){
+    var root= zipWithEntryAt(tmp, "a.fear", System.currentTimeMillis()+3_600_000);
+    var ex= assertThrows(UserError.class, ()->new RealSourceOracleWithZip(root));
+    utils.Err.strCmp("""
+Root: [###]
+Path: "_pkg/z.zip"
+Entry: "a.fear"
+
+This zip entry is dated [###],
+[###]h [###]m [###]s after the current time of this computer, [###].
+Fearless decides what needs compiling by comparing the modification dates of the files,
+and the entries of a zip count as the files they unpack to:
+a file dated in the future would make the later edits look older than the last compile.
+This usually comes from a computer whose clock was wrong when the zip was made,
+or from a zip made in another time zone.
+Make the zip again from files with the correct dates, or correct the clock of this computer.
+""", FsDsl.dumpErr(root, ex));
+  }
+  @Test void ok_invisible_zip_entry_dated_in_the_future(@TempDir Path tmp){
+    var root= zipWithEntryAt(tmp, ".cache/a.txt", System.currentTimeMillis()+3_600_000);
+    Fs.writeUtf8(root.resolve("_pkg/b.fear"), "B");
+    assertEquals(1, new RealSourceOracleWithZip(root).allFiles().size());
+  }
   @Test void ok_two_disk_files(@TempDir Path tmp){ testOk(tmp, """
 _pkg/a.fear
 iii
