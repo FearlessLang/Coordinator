@@ -65,10 +65,11 @@ public interface Coordinator {
     var res= new LinkedHashMap<String,Boolean>();
     for (var r: ranks){
       var pkg= Helper.pkgName(r);
-      var below= ranks.stream().filter(d->Helper.rankNumber(d) < Helper.rankNumber(r)).mapToLong(d->out.pkgApiStamp(Helper.pkgName(d)));
+      var lower= ranks.stream().filter(d->Helper.rankNumber(d) < Helper.rankNumber(r)).map(Helper::pkgName).toList();
+      var below= lower.stream().mapToLong(out::pkgApiStamp);
       var own= map.get(pkg).stream().mapToLong(Ref::lastModified);
       var maxIn= LongStream.concat(LongStream.concat(own,below),LongStream.of(out.mapStamp())).max().getAsLong();
-      res.put(pkg,out.stillBuilt(pkg,map.get(pkg),maxIn) && (listed || Helper.rankNumber(r) != top));
+      res.put(pkg,out.stillBuilt(pkg,map.get(pkg),Push.of(lower,"base"),maxIn) && (listed || Helper.rankNumber(r) != top));
     }
     return Collections.unmodifiableMap(res);
   }
@@ -129,6 +130,7 @@ class Helper{
     SourceOracle o= coordinator.sourceOracle(project);
     var out= out(project);
     Layer l= layerOf(coordinator,o,project,out,stLib);
+    out.forgetAllBut(l.pkgNames());
     l.compile(o, out);
     Fs.writeUtf8(out.mainsPath(), out.mains(l.pkgs().keySet()).located(o,stLib).print());
     return List.copyOf(l.pkgs().keySet());//by design: only the highest rank number's packages have their Main run
