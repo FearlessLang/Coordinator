@@ -31,11 +31,21 @@ public interface OutputOracle{
   private Path builtPath(String pkg){ return rootDir().resolve(pkg+".built"); }
   default long mapStamp(){ return Fs.lastModified(mapPath()); }
   default long pkgApiStamp(String pkg){ return Fs.lastModified(pkgApiPath(pkg)); }
-  default boolean stillBuilt(String pkg, List<Ref> files, long minMillis){
-    return Fs.lastModified(builtPath(pkg)) >= minMillis && Fs.readUtf8(builtPath(pkg)).equals(OutputHelper.fileList(files)) && Files.exists(mainsPath(pkg));
+  default boolean stillBuilt(String pkg, List<Ref> files, List<String> below, long minMillis){
+    return Fs.lastModified(builtPath(pkg)) >= minMillis && Fs.readUtf8(builtPath(pkg)).equals(OutputHelper.built(files,below)) && Files.exists(mainsPath(pkg));
   }
-  default void commitBuilt(String pkg, List<Ref> files, long minExclusiveMillis){
-    Fs.writeUtf8(builtPath(pkg), OutputHelper.fileList(files), minExclusiveMillis);
+  default void commitBuilt(String pkg, List<Ref> files, List<String> below, long minExclusiveMillis){
+    Fs.writeUtf8(builtPath(pkg), OutputHelper.built(files,below), minExclusiveMillis);
+  }
+  default void forgetAllBut(List<String> pkgs){
+    if (!Files.isDirectory(rootDir())){ return; }
+    var gone= Fs.walk(rootDir(), s->s.map(Path::getFileName).map(Path::toString)
+      .filter(n->n.endsWith(".built")).map(n->n.substring(0,n.length()-6)).filter(p->!pkgs.contains(p)).toList());
+    gone.forEach(this::forget);
+  }
+  private void forget(String pkg){
+    var gen= rootDir().resolve("gen_java");
+    List.of(builtPath(pkg),pkgApiPath(pkg),mainsPath(pkg),gen.resolve(pkg+".jar"),gen.resolve(pkg+".html"),gen.resolve(pkg+".txt")).forEach(Fs::rmTree);
   }
   default OtherPackages addCachedPkgApi(OtherPackages other, String pkg){
     return other.mergeWith(OutputHelper.cachedPkgApi(pkgApiPath(pkg)), Math.max(other.stamp(), pkgApiStamp(pkg)));
@@ -62,7 +72,9 @@ public interface OutputOracle{
 }
 
 class OutputHelper{
-  static String fileList(List<Ref> files){ return Join.of(files.stream().map(Ref::fearPath).sorted(),"","\n",""); }
+  static String built(List<Ref> files, List<String> below){
+    return Join.of(files.stream().map(Ref::fearPath).sorted(),"","\n","")+Join.of(below.stream().sorted(),"\n---\n","\n","","\n---");
+  }
   static String toJSon(Map<String,Map<String,String>> map){
     if (map.isEmpty()){ return "{}"; }
     return obj(map, m->obj(m, s->"\""+s+"\""));

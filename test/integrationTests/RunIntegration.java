@@ -266,6 +266,27 @@ In file: fear:/_p/auto_tests/p_test.fear
     utils.Err.strCmp("hi\n", main(root, List.of()));
     Assertions.assertFalse(Files.exists(generatedTests(root)));
   }
+  @Test void aDeletedLowerPackageIsNoticedByThePackagesBuiltOnIt(@TempDir Path tmp){
+    var root= tmp.resolve("root");
+    UserError.root= root;
+    FsDsl.materialize(root, """
+_lib/_rank_core.fear
+iii
+Lib:{}
+jjj
+_app/_rank_app.fear
+iii
+use base.Main as Main;
+App:Main, lib.Lib{s->base.Debug#(`app`)}
+""");
+    utils.Err.strCmp("app\n", main(root, List.of()));
+    Fs.rmTree(root.resolve("_lib"));
+    Assertions.assertEquals(Map.of("app",false), Coordinator.pkgsBuilt(root));
+    var ex= Assertions.assertThrows(UserError.class, ()->main(root, List.of()));
+    utils.Err.strCmp("[###]lib.Lib[###]", ex.getMessage());
+    Assertions.assertFalse(Files.exists(root.resolve(".fearless_out","gen_java","lib.jar")));
+    Assertions.assertFalse(Files.exists(root.resolve(".fearless_out","lib.built")));
+  }
   @Test void onlyImmCapture(@TempDir Path tmp){
     var root= tmp.resolve("root");
     UserError.root= root;

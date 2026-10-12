@@ -5,6 +5,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import core.AllLs;
 import core.E.Literal;
@@ -17,6 +18,7 @@ import userMessages.Violation;
 
 public interface Layer{
   default LinkedHashMap<String,List<Ref>> pkgs(){ return new LinkedHashMap<>();}
+  default List<String> pkgNames(){ return List.of("base"); }
   OtherPackages compile(SourceOracle src, OutputOracle out);
   Coordinator coordinator();
   SourceOracle stLib();
@@ -24,6 +26,7 @@ public interface Layer{
 record MiddleLayer(Coordinator coordinator, Layer next, LinkedHashMap<String,List<Ref>> pkgs) implements Layer{
   MiddleLayer{ assert !pkgs.isEmpty(); }
   @Override public SourceOracle stLib(){ return next.stLib(); }
+  @Override public List<String> pkgNames(){ return Stream.concat(next.pkgNames().stream(), pkgs.keySet().stream()).toList(); }
   @Override public OtherPackages compile(SourceOracle src, OutputOracle out){
     OtherPackages other= next.compile(src, out);
     var res= new Object(){
@@ -31,7 +34,7 @@ record MiddleLayer(Coordinator coordinator, Layer next, LinkedHashMap<String,Lis
       private void compilePkg(String pkg, List<Ref> files){
         long maxSrc= files.stream().mapToLong(Ref::lastModified).max().getAsLong();
         long maxIn= Math.max(maxSrc, other.stamp());//out.mapStamp() must be <= then other.watermark() since it comes from next
-        if (out.stillBuilt(pkg, files, maxIn)){ nextOther = out.addCachedPkgApi(nextOther, pkg); return; }
+        if (out.stillBuilt(pkg, files, next.pkgNames(), maxIn)){ nextOther = out.addCachedPkgApi(nextOther, pkg); return; }
         var rich= SourceOracleWithAutoload.of(src, "_"+pkg);
         var capabilities= new CapabilityEnvironment(rich.autoloadedAssets());
         List<Literal> core= coordinator.frontend(pkg, rich.sources(files), rich.oracle(), other,other.virtualizationMap().getOrDefault(pkg,Map.of()), capabilities);
@@ -39,7 +42,7 @@ record MiddleLayer(Coordinator coordinator, Layer next, LinkedHashMap<String,Lis
         coordinator.backend(pkg, core, rich.oracle(), other, capabilities);
         long newStamp= out.commitPkgApi(pkg, core, maxIn); // newStamp will be the old api file mtime if there was no reason to commit.
         out.commitMains(pkg, mains);
-        out.commitBuilt(pkg, files, maxIn);
+        out.commitBuilt(pkg, files, next.pkgNames(), maxIn);
         var map= AllLs.of(core).values().stream().collect(Collectors.toUnmodifiableMap (Literal::name, d->d));
         nextOther = nextOther.mergeWith(map,Math.max(nextOther.stamp(),newStamp));
       }};
@@ -54,14 +57,14 @@ record BaseLayer(Coordinator coordinator, Map<String,Map<String,String>> map, lo
     if (cacheDir.isPresent()){ return deployedBaseApi(cacheDir.get(), pkgName); }
     var other= OtherPackages.empty();
     long maxIn= stLib.allFiles().stream().mapToLong(Ref::lastModified).max().getAsLong();
-    if (out.stillBuilt(pkgName, stLib.allFiles(), maxIn)){ return out.startCachedPkgApi(pkgName,map,Math.max(baseStamp,out.pkgApiStamp(pkgName))); }
+    if (out.stillBuilt(pkgName, stLib.allFiles(), List.of(), maxIn)){ return out.startCachedPkgApi(pkgName,map,Math.max(baseStamp,out.pkgApiStamp(pkgName))); }
     var rich= SourceOracleWithAutoload.ofBase(stLib);
     var capabilities= new CapabilityEnvironment(rich.autoloadedAssets());
     List<Literal> core= coordinator.frontend(pkgName,rich.sources(stLib.allFiles()),rich.oracle(),other,Map.of(),capabilities);
     coordinator.backend(pkgName,core,rich.oracle(),other,capabilities);
     long newStamp= out.commitPkgApi(pkgName, core, maxIn);
     out.commitMains(pkgName, Map.of());
-    out.commitBuilt(pkgName, stLib.allFiles(), maxIn);
+    out.commitBuilt(pkgName, stLib.allFiles(), List.of(), maxIn);
     return OtherPackages.start(map, AllLs.of(core).values(), Math.max(baseStamp,newStamp));
   }
   private OtherPackages deployedBaseApi(Path cacheDir, String pkgName){
