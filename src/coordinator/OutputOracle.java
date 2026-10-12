@@ -2,6 +2,7 @@ package coordinator;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.FileTime;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Optional;
@@ -34,8 +35,9 @@ public interface OutputOracle{
   default boolean stillBuilt(String pkg, List<Ref> files, List<String> below, long minMillis){
     return Fs.lastModified(builtPath(pkg)) >= minMillis && Fs.readUtf8(builtPath(pkg)).equals(OutputHelper.built(files,below)) && Files.exists(mainsPath(pkg));
   }
-  default void commitBuilt(String pkg, List<Ref> files, List<String> below, long minExclusiveMillis){
-    Fs.writeUtf8(builtPath(pkg), OutputHelper.built(files,below), minExclusiveMillis);
+  default void commitBuilt(String pkg, List<Ref> files, List<String> below, long inputsStamp){
+    Fs.writeUtf8(builtPath(pkg), OutputHelper.built(files,below));
+    Fs.ofV(()->Files.setLastModifiedTime(builtPath(pkg), FileTime.fromMillis(inputsStamp)));
   }
   default void forgetAllBut(List<String> pkgs){
     if (!Files.isDirectory(rootDir())){ return; }
