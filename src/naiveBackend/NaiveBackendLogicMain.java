@@ -25,7 +25,6 @@ public final class NaiveBackendLogicMain{
     Runnable post= ()->fixers.forEach(f->f.accept(pkgPath));
     var javacOut= Fs.of(()->JavacTool.compileTree(outPath, classes,post,genJava.resolve(tools.pkgName()+".jar"),extraClasspathDirs));
     assert javacOut.isEmpty(): javacOut;
-    tools.docs().complete();
     Fs.rmTree(outPath); Fs.rmTree(classes);//comment out this line to keep the generated .java and .class files for debugging
   }
   private static boolean foldDistinct(Path dir){

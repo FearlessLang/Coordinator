@@ -1,5 +1,6 @@
 package coordinator;
 
+import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -21,6 +22,7 @@ import core.FearlessException;
 import core.OtherPackages;
 import core.TName;
 import core.E.Literal;
+import docBuilder.HtmlDocBuilder;
 import main.FrontendLogicMain;
 import naiveBackend.BackendTools;
 import naiveBackend.NaiveBackendLogicMain;
@@ -31,6 +33,7 @@ import tools.JavaTool;
 import tools.JavacTool;
 import tools.SourceOracle;
 import tools.SourceOracle.Ref;
+import utils.OneOr;
 import utils.Push;
 import utils.Range;
 
@@ -51,6 +54,10 @@ public interface Coordinator {
       "-DfearlessUser.dir="+project,
       "-DfearlessBase.dir="+base);
   }
+  static URI testsUri(String pkg, List<Ref> files){ return OneOr.of("One rank file per package", files.stream().filter(Helper::hasReservedRankPrefix)).fearURI().resolve("auto_tests/"+pkg+"_test.fear"); }
+  static List<Ref> withoutGeneratedTests(String pkg, List<Ref> files){
+    return files.stream().filter(f->!f.fearPath().endsWith("/auto_tests/"+pkg+"_test.fear") || !HtmlDocBuilder.generated(f.loadString())).toList();
+  }
   default SourceOracle sourceOracle(Path path){ return new RealSourceOracleWithZip(path); }
   static Map<String,Boolean> pkgsBuilt(Path path){
     var o= new RealSourceOracleWithZip(path);
@@ -63,9 +70,10 @@ public interface Coordinator {
     for (var r: ranks){
       var pkg= Helper.pkgName(r);
       var below= ranks.stream().filter(d->Helper.rankNumber(d) < Helper.rankNumber(r)).mapToLong(d->out.pkgApiStamp(Helper.pkgName(d)));
-      var own= map.get(pkg).stream().mapToLong(Ref::lastModified);
+      var files= withoutGeneratedTests(pkg,map.get(pkg));
+      var own= files.stream().mapToLong(Ref::lastModified);
       var maxIn= LongStream.concat(LongStream.concat(own,below),LongStream.of(out.mapStamp())).max().getAsLong();
-      res.put(pkg,out.stillBuilt(pkg,map.get(pkg),maxIn) && (listed || Helper.rankNumber(r) != top));
+      res.put(pkg,out.stillBuilt(pkg,files,maxIn) && (listed || Helper.rankNumber(r) != top));
     }
     return Collections.unmodifiableMap(res);
   }
@@ -79,9 +87,21 @@ public interface Coordinator {
   static Path genJava(Path project){ return project.resolve(outDir).resolve("gen_java"); }
   String outDir= ".fearless_out";
   
-  default List<Literal> frontend(String pkgName, List<Ref> files, SourceOracle oracle, OtherPackages other,Map<String,String> vres){
-    try{ return new FrontendLogicMain().of(pkgName,vres, files, other); }
-    catch(FearlessException fe){ throw Report.sourceError(fe.render(oracle)); }
+  default List<Literal> frontend(String pkgName, List<Ref> files, SourceOracle oracle, OtherPackages other,Map<String,String> vres, CapabilityEnvironment capabilities){
+    var tests= new ArrayList<Ref>();
+    try{ return new FrontendLogicMain().of(pkgName,vres, files, other, core->docs(pkgName,testsUri(pkgName,files),oracle,other,core,capabilities,tests)); }
+    catch(FearlessException fe){ throw Report.sourceError(fe.render(withTests(oracle,tests))); }
+  }
+  private static SourceOracle withTests(SourceOracle oracle, List<Ref> tests){
+    var uris= tests.stream().map(Ref::fearURI).toList();
+    return ()->Push.of(oracle.allFiles().stream().filter(f->!uris.contains(f.fearURI())).toList(), tests);
+  }
+  private Optional<Ref> docs(String pkgName, URI testsUri, SourceOracle oracle, OtherPackages other, List<Literal> core, CapabilityEnvironment capabilities, ArrayList<Ref> tests){
+    var docs= backendTools(pkgName,oracle,other,core,capabilities).docs();
+    core.forEach(docs::visitAll);
+    var res= docs.complete(testsUri);
+    res.ifPresent(tests::add);
+    return res;
   }
   default void backend(String pkgName, List<Literal> core, SourceOracle oracle, OtherPackages other, CapabilityEnvironment capabilities){
     var tools= backendTools(pkgName,oracle,other,core,capabilities);
@@ -89,7 +109,7 @@ public interface Coordinator {
   }
   default BackendTools backendTools(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, CapabilityEnvironment capabilities){
     var unused= Path.of("unused");
-    return BackendTools.of(pkgName, oracle, other, core, unused, baseCachePath(), unused, unused, capabilities);
+    return BackendTools.of(pkgName, oracle, other, core, unused, baseCachePath(), Optional.empty(), unused, capabilities);
   }
   default Path modsPath(){
     var path= JavacTool.reqAppDir(Violation::mustUseLauncher).resolve(JavacTool.deployedModsDirName);
@@ -210,7 +230,7 @@ record NoCompile(Coordinator inner) implements Coordinator{
   @Override public Path modsPath(){ return inner.modsPath(); }
   @Override public Optional<Path> baseCachePath(){ return inner.baseCachePath(); }
   @Override public SourceOracle sourceOracle(Path path){ return inner.sourceOracle(path); }
-  @Override public List<Literal> frontend(String pkgName, List<Ref> files, SourceOracle oracle, OtherPackages other, Map<String,String> vres){ throw new WouldCompile(); }
+  @Override public List<Literal> frontend(String pkgName, List<Ref> files, SourceOracle oracle, OtherPackages other, Map<String,String> vres, CapabilityEnvironment capabilities){ throw new WouldCompile(); }
   @Override public void backend(String pkgName, List<Literal> core, SourceOracle oracle, OtherPackages other, CapabilityEnvironment capabilities){ throw new WouldCompile(); }
 }
 record NoCommit(Path rootDir) implements OutputOracle{
