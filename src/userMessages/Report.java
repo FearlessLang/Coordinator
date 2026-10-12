@@ -1,6 +1,10 @@
 package userMessages;
 
 import java.nio.file.Path;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -145,6 +149,38 @@ Different systems handle empty directories differently,
 and they may not be supported by compression tools (zip)
 or version control systems (git).
 """);}
+
+  public static UserError dateInTheFuture(Path kid, long t, long now){
+    return new UserError(showRel(kid)+"\nThis file is dated "+future(t,now)+"""
+Fearless decides what needs compiling by comparing the modification dates of the files,
+so a file dated in the future would make the later edits look older than the last compile.
+This usually comes from a computer whose clock is wrong, from a shared or network folder
+whose clock is ahead, or from unpacking an archive made in another time zone.
+Save the file again, or correct the clock of this computer.
+""");}
+  public static UserError dateUnset(Path kid, long t){
+    return new UserError(showRel(kid)+"\nThis file is dated "+dateOf(t)+"."+unset+"Save the file again, so that it gets the current date.\n");}
+  public static UserError zipEntryDateInTheFuture(Path diskZip, List<String> steps, String entryName, long t, long now){
+    return new UserError(showZipRel(diskZip, steps, entryName)+"\nThis zip entry is dated "+future(t,now)+"""
+Fearless decides what needs compiling by comparing the modification dates of the files,
+and the entries of a zip count as the files they unpack to:
+a file dated in the future would make the later edits look older than the last compile.
+This usually comes from a computer whose clock was wrong when the zip was made,
+or from a zip made in another time zone.
+Make the zip again from files with the correct dates, or correct the clock of this computer.
+""");}
+  public static UserError zipEntryDateUnset(Path diskZip, List<String> steps, String entryName, long t){
+    return new UserError(showZipRel(diskZip, steps, entryName)+"\nThis zip entry is dated "+dateOf(t)+"."+unset+"Make the zip again from files with real dates.\n");}
+  private static final String unset= """
+
+Fearless uses dates at or before the start of 1970 to mean "no date"
+when deciding what needs compiling, so such a date can not be trusted.
+""";
+  private static String future(long t, long now){
+    var ahead= Duration.ofMillis(t-now);
+    return dateOf(t)+",\n"+ahead.toHours()+"h "+ahead.toMinutesPart()+"m "+ahead.toSecondsPart()+"s after the current time of this computer, "+dateOf(now)+".\n";
+  }
+  private static String dateOf(long t){ return DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").format(Instant.ofEpochMilli(t).atZone(ZoneId.systemDefault())); }
 
   //-- visible names
   public static UserError pathTooLong(RefParent kid){

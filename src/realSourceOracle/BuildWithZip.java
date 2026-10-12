@@ -14,8 +14,11 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.function.LongFunction;
+import java.util.function.Supplier;
 import docBuilder.HtmlDocBuilder;
 import userMessages.Report;
+import userMessages.UserError;
 import tools.Fs;
 import tools.SourceOracle;
 import tools.SourceOracle.Ref;
@@ -44,6 +47,7 @@ record Tree(
       throw Report.symlinkForbidden(abs);
     }
     if (isGeneratedTests(abs)){ return; }
+    if (!BuildWithZip.isInvisible(pe) && isRegularFile(abs)){ reqTime(abs, rel); }
     var zip= isDiskZip(abs, rel);
     if (!isRegularFile(abs) && !zip){ throw BuildWithZip.isInvisible(pe)
       ? Report.invisibleOnlyRegularFilesAndDirs(abs)
@@ -73,6 +77,10 @@ record Tree(
     for (var d: dirs){ if (!nonEmpty.contains(d)){ throw Report.emptyDirectory(d); } }
   }
   private boolean isDirectory(Path abs){ return Files.isDirectory(abs, LinkOption.NOFOLLOW_LINKS); }
+  private static void reqTime(Path abs, Path rel){
+    var t= Fs.lastModified(abs);
+    BuildWithZip.reqTime(t, ()->Report.dateUnset(rel, t), now->Report.dateInTheFuture(rel, t, now));
+  }
   private static boolean isGeneratedTests(Path abs){
     var shape= abs.getParent().getFileName().toString().equals("auto_tests") && abs.getFileName().toString().endsWith("_test.fear");
     return shape && isRegularFile(abs) && HtmlDocBuilder.generated(Fs.readUtf8(abs));
@@ -97,6 +105,12 @@ record Tree(
 public final class BuildWithZip{
   public static boolean isInvisible(RefParent r){
     return AutoloadHandler.components(r.fearPath()).stream().anyMatch(s->s.startsWith("."));
+  }
+  static final long futureTolerance= 5_000;
+  static void reqTime(long t, Supplier<UserError> unset, LongFunction<UserError> future){
+    if (t <= 0){ throw unset.get(); }
+    var now= System.currentTimeMillis();
+    if (t > now+futureTolerance){ throw future.apply(now); }
   }
   private final Tree t;
   BuildWithZip(Path root){ t= new Tree(root.toAbsolutePath().normalize(), new ArrayList<>(), new LinkedHashMap<>(), new LinkedHashMap<>()); }

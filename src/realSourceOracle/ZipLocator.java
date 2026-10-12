@@ -10,10 +10,14 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
+import java.util.function.LongFunction;
+import java.util.function.Supplier;
+import java.util.stream.Stream;
 import java.util.zip.ZipInputStream;
 
 import userMessages.Violation;
 import userMessages.Report;
+import userMessages.UserError;
 import tools.Fs;
 import tools.ReadZip;
 import utils.Range;
@@ -45,8 +49,13 @@ public final class ZipLocator{
       n->Report.zipBadEntryName(diskZip, steps, n),
       a->Report.zipDuplicateEntryName(diskZip, steps, a),
       n->Report.zipEntryTooBig(diskZip, steps, n),
-      n->Report.zipEmptyDirectoryEntry(diskZip, steps, n)
+      n->Report.zipEmptyDirectoryEntry(diskZip, steps, n),
+      (n,t)->reqTime(n, t, ()->Report.zipEntryDateUnset(diskZip, steps, n, t), now->Report.zipEntryDateInTheFuture(diskZip, steps, n, t, now))
     );
+  }
+  private static void reqTime(String name, long t, Supplier<UserError> unset, LongFunction<UserError> future){
+    if (Stream.of(name.split("/")).anyMatch(s->s.startsWith("."))){ return; }
+    BuildWithZip.reqTime(t, unset, future);
   }
   private static ZipInputStream zipStream(Path diskZip, byte[] bytes) throws IOException{
     return bytes==null
