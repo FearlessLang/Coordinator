@@ -23,7 +23,7 @@ public class TestAgentTools{
     var select= args.length==5 ? "--select-class=agentTools."+args[2] : "--select-package=agentTools";
     var properties= List.of("-ea","-Ddesk="+args[0],"-Dagent="+args[1],"-DchannelFolder="+channel,"-DfilesIOFolder="+args[args.length-1]);
     Fs.cleanDir(channel);
-    try{ JavaTool.runMain(properties, classes, ModularBuild.mods, "org.junit.platform.console.ConsoleLauncher", "execute", "--class-path", classes.toString(), select, "--details=summary", "--disable-ansi-colors"); }
+    try{ JavaTool.runMain(properties, classes, ModularBuild.mods, "org.junit.platform.console.ConsoleLauncher", "execute", "--class-path", classes.toString(), select, "--fail-fast", "--details=summary", "--disable-ansi-colors"); }
     finally{ Fs.cleanDir(channel); }
   }
   static boolean stale(Path app){
