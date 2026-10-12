@@ -22,7 +22,6 @@ import core.FearlessException;
 import core.OtherPackages;
 import core.TName;
 import core.E.Literal;
-import docBuilder.HtmlDocBuilder;
 import main.FrontendLogicMain;
 import naiveBackend.BackendTools;
 import naiveBackend.NaiveBackendLogicMain;
@@ -55,9 +54,6 @@ public interface Coordinator {
       "-DfearlessBase.dir="+base);
   }
   static URI testsUri(String pkg, List<Ref> files){ return OneOr.of("One rank file per package", files.stream().filter(Helper::hasReservedRankPrefix)).fearURI().resolve("auto_tests/"+pkg+"_test.fear"); }
-  static List<Ref> withoutGeneratedTests(String pkg, List<Ref> files){
-    return files.stream().filter(f->!f.fearPath().endsWith("/auto_tests/"+pkg+"_test.fear") || !HtmlDocBuilder.generated(f.loadString())).toList();
-  }
   default SourceOracle sourceOracle(Path path){ return new RealSourceOracleWithZip(path); }
   static Map<String,Boolean> pkgsBuilt(Path path){
     var o= new RealSourceOracleWithZip(path);
@@ -70,10 +66,9 @@ public interface Coordinator {
     for (var r: ranks){
       var pkg= Helper.pkgName(r);
       var below= ranks.stream().filter(d->Helper.rankNumber(d) < Helper.rankNumber(r)).mapToLong(d->out.pkgApiStamp(Helper.pkgName(d)));
-      var files= withoutGeneratedTests(pkg,map.get(pkg));
-      var own= files.stream().mapToLong(Ref::lastModified);
+      var own= map.get(pkg).stream().mapToLong(Ref::lastModified);
       var maxIn= LongStream.concat(LongStream.concat(own,below),LongStream.of(out.mapStamp())).max().getAsLong();
-      res.put(pkg,out.stillBuilt(pkg,files,maxIn) && (listed || Helper.rankNumber(r) != top));
+      res.put(pkg,out.stillBuilt(pkg,map.get(pkg),maxIn) && (listed || Helper.rankNumber(r) != top));
     }
     return Collections.unmodifiableMap(res);
   }
@@ -90,11 +85,7 @@ public interface Coordinator {
   default List<Literal> frontend(String pkgName, List<Ref> files, SourceOracle oracle, OtherPackages other,Map<String,String> vres, CapabilityEnvironment capabilities){
     var tests= new ArrayList<Ref>();
     try{ return new FrontendLogicMain().of(pkgName,vres, files, other, core->docs(pkgName,testsUri(pkgName,files),oracle,other,core,capabilities,tests)); }
-    catch(FearlessException fe){ throw Report.sourceError(fe.render(withTests(oracle,tests))); }
-  }
-  private static SourceOracle withTests(SourceOracle oracle, List<Ref> tests){
-    var uris= tests.stream().map(Ref::fearURI).toList();
-    return ()->Push.of(oracle.allFiles().stream().filter(f->!uris.contains(f.fearURI())).toList(), tests);
+    catch(FearlessException fe){ throw Report.sourceError(fe.render(oracle.withFallback(()->tests))); }
   }
   private Optional<Ref> docs(String pkgName, URI testsUri, SourceOracle oracle, OtherPackages other, List<Literal> core, CapabilityEnvironment capabilities, ArrayList<Ref> tests){
     var docs= backendTools(pkgName,oracle,other,core,capabilities).docs();

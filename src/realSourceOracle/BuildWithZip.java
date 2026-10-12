@@ -14,6 +14,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import docBuilder.HtmlDocBuilder;
 import userMessages.Report;
 import tools.Fs;
 import tools.SourceOracle;
@@ -42,6 +43,7 @@ record Tree(
       if (BuildWithZip.isInvisible(pe)){ return; }
       throw Report.symlinkForbidden(abs);
     }
+    if (isGeneratedTests(abs)){ return; }
     var zip= isDiskZip(abs, rel);
     if (!isRegularFile(abs) && !zip){ throw BuildWithZip.isInvisible(pe)
       ? Report.invisibleOnlyRegularFilesAndDirs(abs)
@@ -71,6 +73,10 @@ record Tree(
     for (var d: dirs){ if (!nonEmpty.contains(d)){ throw Report.emptyDirectory(d); } }
   }
   private boolean isDirectory(Path abs){ return Files.isDirectory(abs, LinkOption.NOFOLLOW_LINKS); }
+  private static boolean isGeneratedTests(Path abs){
+    var shape= abs.getParent().getFileName().toString().equals("auto_tests") && abs.getFileName().toString().endsWith("_test.fear");
+    return shape && isRegularFile(abs) && HtmlDocBuilder.generated(Fs.readUtf8(abs));
+  }
   private static boolean isRegularFile(Path abs){ return Files.isRegularFile(abs, LinkOption.NOFOLLOW_LINKS); }
   private void collectBodyDiskZip(Path root, Path rel){
     for (var e: ZipWellFormedness.allEntryPaths(root, rel)){

@@ -28,8 +28,7 @@ record MiddleLayer(Coordinator coordinator, Layer next, LinkedHashMap<String,Lis
     OtherPackages other= next.compile(src, out);
     var res= new Object(){
       OtherPackages nextOther= other;
-      private void compilePkg(String pkg, List<Ref> all){
-        var files= Coordinator.withoutGeneratedTests(pkg, all);
+      private void compilePkg(String pkg, List<Ref> files){
         long maxSrc= files.stream().mapToLong(Ref::lastModified).max().getAsLong();
         long maxIn= Math.max(maxSrc, other.stamp());//out.mapStamp() must be <= then other.watermark() since it comes from next
         if (out.stillBuilt(pkg, files, maxIn)){ nextOther = out.addCachedPkgApi(nextOther, pkg); return; }
@@ -54,16 +53,15 @@ record BaseLayer(Coordinator coordinator, Map<String,Map<String,String>> map, lo
     var cacheDir= coordinator.baseCachePath();
     if (cacheDir.isPresent()){ return deployedBaseApi(cacheDir.get(), pkgName); }
     var other= OtherPackages.empty();
-    var files= Coordinator.withoutGeneratedTests(pkgName, stLib.allFiles());
-    long maxIn= files.stream().mapToLong(Ref::lastModified).max().getAsLong();
-    if (out.stillBuilt(pkgName, files, maxIn)){ return out.startCachedPkgApi(pkgName,map,Math.max(baseStamp,out.pkgApiStamp(pkgName))); }
+    long maxIn= stLib.allFiles().stream().mapToLong(Ref::lastModified).max().getAsLong();
+    if (out.stillBuilt(pkgName, stLib.allFiles(), maxIn)){ return out.startCachedPkgApi(pkgName,map,Math.max(baseStamp,out.pkgApiStamp(pkgName))); }
     var rich= SourceOracleWithAutoload.ofBase(stLib);
     var capabilities= new CapabilityEnvironment(rich.autoloadedAssets());
-    List<Literal> core= coordinator.frontend(pkgName,rich.sources(files),rich.oracle(),other,Map.of(),capabilities);
+    List<Literal> core= coordinator.frontend(pkgName,rich.sources(stLib.allFiles()),rich.oracle(),other,Map.of(),capabilities);
     coordinator.backend(pkgName,core,rich.oracle(),other,capabilities);
     long newStamp= out.commitPkgApi(pkgName, core, maxIn);
     out.commitMains(pkgName, Map.of());
-    out.commitBuilt(pkgName, files, maxIn);
+    out.commitBuilt(pkgName, stLib.allFiles(), maxIn);
     return OtherPackages.start(map, AllLs.of(core).values(), Math.max(baseStamp,newStamp));
   }
   private OtherPackages deployedBaseApi(Path cacheDir, String pkgName){
