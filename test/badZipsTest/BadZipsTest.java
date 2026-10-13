@@ -18,7 +18,7 @@ public final class BadZipsTest {
   public static void runErrIOE(String in, String expected){
     Path input= root.resolve(in);
     UserError.root = root;
-    var ex= assertThrows(UserError.class, ()->new RealSourceOracleWithZip(input));
+    var ex= assertThrows(UserError.class, () -> new RealSourceOracleWithZip(input));
     String res= FsDsl.dumpErr(input,ex);
     utils.Err.strCmp(expected, res);
   }

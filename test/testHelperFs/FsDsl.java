@@ -53,7 +53,7 @@ public final class FsDsl{
     try{
       var zips= new LinkedHashMap<Path,ZipNode>();
       for (var it: parse(spec)){ emit(root, zips, it); }
-      zips.forEach((diskZip, node)-> writeDiskZip(diskZip, node));
+      zips.forEach((diskZip, node) -> writeDiskZip(diskZip, node));
     }
     catch (InvalidPathException e){
       Assumptions.abort("OS forbids creating this path on disk: "+e.getMessage());
@@ -72,7 +72,7 @@ public final class FsDsl{
     Path diskZip= root;
     for (int i= 0; i <= zi; i++){ diskZip = diskZip.resolve(segs[i]); }
 
-    var node= zips.computeIfAbsent(diskZip, _->new ZipNode());
+    var node= zips.computeIfAbsent(diskZip, _ -> new ZipNode());
     var after= List.of(segs).subList(zi+1, segs.length);
     emitZip(node, after, isDir, it.content());
   }
@@ -102,7 +102,7 @@ public final class FsDsl{
       int next= nextZipIndex(after, from);
       if (next < 0){ break; }
       String step= String.join("/", after.subList(from, next+1));
-      root = root.nested.computeIfAbsent(step, _->new ZipNode());
+      root = root.nested.computeIfAbsent(step, _ -> new ZipNode());
       from = next+1;
     }
     String entry= String.join("/", after.subList(from, after.size()));
@@ -125,7 +125,7 @@ public final class FsDsl{
   private static byte[] buildZip(ZipNode node){
     var bout= new ByteArrayOutputStream();
     try(var zos= new ZipOutputStream(bout, UTF_8)){
-      node.nested.forEach((name, child)->{
+      node.nested.forEach((name, child) -> {
         var bytes= buildZip(child);
         putFile(zos, name, bytes);
       });
@@ -201,7 +201,7 @@ public final class FsDsl{
     UserError.root = root;
     mkdirs(root);
     materialize(root, spec);
-    var ex= assertThrows(UserError.class, ()->new RealSourceOracleWithZip(root));
+    var ex= assertThrows(UserError.class, () -> new RealSourceOracleWithZip(root));
     String res= dumpErr(root, ex);
     utils.Err.strCmp(expected, res);
   }  

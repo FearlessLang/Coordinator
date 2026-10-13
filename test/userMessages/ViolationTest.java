@@ -107,7 +107,7 @@ The only way to clear it is Settings, Apps, Default apps, Reset - which
 resets every app default on your machine, not only this one.
 
 What is locked:
-.fearless""", Violation.associationUserLocked(List.of(".fearless"), e->"").getMessage());
+.fearless""", Violation.associationUserLocked(List.of(".fearless"), e -> "").getMessage());
   }
   @Test void associationUserLockedSeveralClaimed(){
     utils.Err.strCmp("""
@@ -135,7 +135,7 @@ Another program already answers for these kinds of file. Fearless
 stopped before touching anything: your system is exactly as it was.
 
 What stood in the way:
-.fearless -> fearlessBin0_003""", Violation.associationNotOurs(Map.of(".fearless",List.of("fearlessBin0_003")), e->"").getMessage());
+.fearless -> fearlessBin0_003""", Violation.associationNotOurs(Map.of(".fearless",List.of("fearlessBin0_003")), e -> "").getMessage());
   }
   @Test void associationNotOursSeveral(){
     var held= new LinkedHashMap<String,List<String>>();
@@ -151,7 +151,7 @@ stopped before touching anything: your system is exactly as it was.
 What stood in the way:
 .ffile042 -> org.gnome.TextEditor
 .ffile042 -> text/plain
-.fearless -> OtherApp.fearless""", Violation.associationNotOurs(held, e->"").getMessage());
+.fearless -> OtherApp.fearless""", Violation.associationNotOurs(held, e -> "").getMessage());
   }
   @Test void associationNotOursSeveralClaimed(){
     var held= new LinkedHashMap<String,List<String>>();
@@ -183,7 +183,7 @@ Removing the line of that type from the section, or choosing Fearless
 for these files, clears the choice.
 
 What is locked:
-.htm -> application/x-fearless-htm""", Violation.associationChosenDefault(List.of(".htm"), e->"").getMessage());
+.htm -> application/x-fearless-htm""", Violation.associationChosenDefault(List.of(".htm"), e -> "").getMessage());
   }
   @Test void associationChosenDefaultSeveralClaimed(){
     utils.Err.strCmp("""

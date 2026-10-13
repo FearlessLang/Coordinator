@@ -230,7 +230,7 @@ final class Holders{
     catch(IOException e){ return "\n<reading programs holding this file open failed>"+suppressed.mark(e)+"\n"; }
     if (holders.isEmpty()){ return whenNone; }
     return intro+holders.size()+(holders.size() == 1 ? " program" : " programs")+" currently holding this file open:\n\n"
-      +holders.stream().map(h->"  "+h+"\n").collect(Collectors.joining())+outro;
+      +holders.stream().map(h -> "  "+h+"\n").collect(Collectors.joining())+outro;
   }
   private static final String exampleWord= """
 Microsoft Word

@@ -33,7 +33,7 @@ public final class HtmlDocBuilder{
     this.other= other;
     this.core= core;
     this.baseDocLocation= baseDocLocation;
-    this.currentByName= core.stream().collect(Collectors.toUnmodifiableMap(Literal::name,l->l));
+    this.currentByName= core.stream().collect(Collectors.toUnmodifiableMap(Literal::name,l -> l));
   }
   final Optional<Path> baseDocLocation;
 
@@ -88,14 +88,14 @@ public final class HtmlDocBuilder{
     var resolver= new DocResolver(pkgName,types,other);
     var spans= new IdentityHashMap<DocOcc,List<ResolvedSpan>>();
     var problems= new ArrayList<String>();
-    sources.values().stream().flatMap(s->s.orphanRuns().stream()).map(this::orphan).forEach(problems::add);
-    sources.values().stream().flatMap(s->s.ambiguousInlineDocs().stream()).map(this::ambiguousInline).forEach(problems::add);
-    types.forEach(t->linkType(resolver,t,spans,problems));
+    sources.values().stream().flatMap(s -> s.orphanRuns().stream()).map(this::orphan).forEach(problems::add);
+    sources.values().stream().flatMap(s -> s.ambiguousInlineDocs().stream()).map(this::ambiguousInline).forEach(problems::add);
+    types.forEach(t -> linkType(resolver,t,spans,problems));
     if (!problems.isEmpty()){ throw Report.docReferences(problems); }
     var renderer= new HtmlDocRenderer(pkgName,uses,types,other,spans,baseDocLocation);
     Fs.writeUtf8(htmlPath,renderer.render());
     Fs.writeUtf8(textPath,renderer.renderText());
-    return testsRoot.flatMap(r->writeTest(renderer,new PathEntry(r,Path.of(testsUri.getPath().substring(1)))));
+    return testsRoot.flatMap(r -> writeTest(renderer,new PathEntry(r,Path.of(testsUri.getPath().substring(1)))));
   }
 
   Optional<Ref> writeTest(HtmlDocRenderer renderer, PathEntry tests){
@@ -103,7 +103,7 @@ public final class HtmlDocBuilder{
     var old= Files.exists(path) ? Fs.readUtf8(path) : generatedMark;
     if (!generated(old)){ return Optional.empty(); }
     var names= renderer.testNames();
-    var declared= types.stream().map(t->t.main().name().simpleName()).collect(Collectors.toUnmodifiableSet());
+    var declared= types.stream().map(t -> t.main().name().simpleName()).collect(Collectors.toUnmodifiableSet());
     if (names.perType().isEmpty() || declared.contains(names.top())){ remove(path); return Optional.empty(); }
     var collided= names.perType().stream().filter(declared::contains).findFirst();
     if (collided.isPresent()){ throw Report.generatedTestNameReserved(reservedNameProblem(collided.get()),names.top()); }
@@ -114,12 +114,12 @@ public final class HtmlDocBuilder{
 
   private static void remove(Path file){
     if (!Files.exists(file)){ return; }
-    Fs.ofV(()->Files.delete(file));
-    var empty= Fs.of(()->{ try(var s= Files.list(file.getParent())){ return s.findAny().isEmpty(); } });
-    if (empty){ Fs.ofV(()->Files.delete(file.getParent())); }
+    Fs.ofV(() -> Files.delete(file));
+    var empty= Fs.of(() -> { try(var s= Files.list(file.getParent())){ return s.findAny().isEmpty(); } });
+    if (empty){ Fs.ofV(() -> Files.delete(file.getParent())); }
   }
   String reservedNameProblem(String name){
-    var owner= types.stream().filter(t->t.main().name().simpleName().equals(name)).findFirst()
+    var owner= types.stream().filter(t -> t.main().name().simpleName().equals(name)).findFirst()
       .orElseThrow(Bug::unreachable).main();
     var p= owner.pos();
     return message(new Span(p.fileName(),p.line(),p.column(),p.line(),p.column()+name.length()-1), "This name is reserved for an auto-generated test suite.");
@@ -130,7 +130,7 @@ public final class HtmlDocBuilder{
 
   void linkType(DocResolver resolver, TypeDoc t, Map<DocOcc,List<ResolvedSpan>> spans, List<String> problems){
     linkGroup(resolver,Scope.of(t.main()),t.docs,spans,problems);
-    t.methods.forEach(m->linkGroup(resolver,Scope.of(t.main(),m.main()),m.docs,spans,problems));
+    t.methods.forEach(m -> linkGroup(resolver,Scope.of(t.main(),m.main()),m.docs,spans,problems));
   }
 
   //one group per declaration, carrying the scope its comment is written in: a fenced
@@ -207,18 +207,18 @@ public final class HtmlDocBuilder{
   //by design, "From:" shows every provider along the chain, shadowed ones included.
   List<MethodRef> inheritedMethods(Literal owner, M m){
     return owner.cs().stream()
-      .flatMap(c->literal(c.name()).stream().flatMap(sup->matchingMethods(c,sup,m)))
+      .flatMap(c -> literal(c.name()).stream().flatMap(sup -> matchingMethods(c,sup,m)))
       .toList();
   }
 
   Stream<MethodRef> matchingMethods(T.C provider, Literal sup, M m){
     return sup.ms().stream()
-      .filter(sm->sm.sig().rc() == m.sig().rc() && sm.sig().m().equals(m.sig().m()))
-      .map(sm->MethodRef.provider(provider,sm));
+      .filter(sm -> sm.sig().rc() == m.sig().rc() && sm.sig().m().equals(m.sig().m()))
+      .map(sm -> MethodRef.provider(provider,sm));
   }
 
   Optional<Literal> literal(TName n){
-    return Optional.ofNullable(currentByName.get(n)).or(()->Optional.ofNullable(other.__of(n)));
+    return Optional.ofNullable(currentByName.get(n)).or(() -> Optional.ofNullable(other.__of(n)));
   }
 
   List<DocOcc> docsForLiteral(Literal l){
@@ -233,6 +233,6 @@ public final class HtmlDocBuilder{
   }
 
   SourceDocs source(URI uri){
-    return sources.computeIfAbsent(uri,u->new SourceDocs(u,oracle.loadString(u)));
+    return sources.computeIfAbsent(uri,u -> new SourceDocs(u,oracle.loadString(u)));
   }
 }

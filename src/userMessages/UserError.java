@@ -72,13 +72,13 @@ public final class UserError extends RuntimeException{
 
   //-- building
   static UserError die(String first, String... more){
-    return new UserError("Error: "+first+"\n"+Stream.of(more).map(s->"  "+s+"\n").collect(Collectors.joining()));
+    return new UserError("Error: "+first+"\n"+Stream.of(more).map(s -> "  "+s+"\n").collect(Collectors.joining()));
   }
   //Handler for StringFiles.read/writeNew. StringFiles hands over (actionTxt, reportTxt);
   //their emptiness encodes the three outcomes below. A file operation we delegated
   //failing is always a Violation: it is our own housekeeping, not the user's input.
   public static BiConsumer<String,String> onFileError(){
-    return (actionTxt,reportTxt)->{ throw fileError(actionTxt, reportTxt); };
+    return (actionTxt,reportTxt) -> { throw fileError(actionTxt, reportTxt); };
   }
   private static UserError fileError(String actionTxt, String reportTxt){
     if (reportTxt.isEmpty()){ return new UserError(actionTxt); }//fully explained failure, nothing to report
@@ -149,7 +149,7 @@ Details:
     var dialog= new JDialog(owner, "Fearless", Dialog.ModalityType.APPLICATION_MODAL);
     dialog.setUndecorated(bare);
     dialog.setContentPane(pane);
-    pane.addPropertyChangeListener(JOptionPane.VALUE_PROPERTY, _->dialog.dispose());
+    pane.addPropertyChangeListener(JOptionPane.VALUE_PROPERTY, _ -> dialog.dispose());
     dialog.pack();
     dialog.setLocationRelativeTo(owner);
     dialog.setVisible(true);

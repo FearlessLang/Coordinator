@@ -22,10 +22,10 @@ public final class DeployZeroToHeroPages{
     //an automatic module (flexmark has no module-info) pulls every other automatic
     //module into the graph, so this shaded jar's bundled junit classes collide
     //with the real org.junit.jupiter.api module also sitting in mods
-    Fs.walk(ModularBuild.mods, s->s
-      .filter(p->p.getFileName().toString().startsWith("junit-platform-console-standalone"))
+    Fs.walk(ModularBuild.mods, s -> s
+      .filter(p -> p.getFileName().toString().startsWith("junit-platform-console-standalone"))
       .toList())
-      .forEach(p->Fs.ofV(()->Files.delete(p)));
+      .forEach(p -> Fs.ofV(() -> Files.delete(p)));
 
     var automaticModuleReqs= List.of("-requires-automatic");
     ModularBuild.buildJar("FearlessTour", List.of(fearlessTourSrc, ModularBuild.resources), automaticModuleReqs);

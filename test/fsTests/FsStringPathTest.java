@@ -23,10 +23,10 @@ public final class FsStringPathTest{
 
   // -------- fileNameWithExtension : assertion failures --------
 
-  @Test void fneA1(){ assertThrows(AssertionError.class,()->Fs.fileNameWithExtension("abc")); }
-  @Test void fneA2(){ assertThrows(AssertionError.class,()->Fs.fileNameWithExtension("a/b/")); }
-  @Test void fneA3(){ assertThrows(AssertionError.class,()->Fs.fileNameWithExtension("/")); }
-  @Test void fneA4(){ assertThrows(AssertionError.class,()->Fs.fileNameWithExtension("")); }
+  @Test void fneA1(){ assertThrows(AssertionError.class,() -> Fs.fileNameWithExtension("abc")); }
+  @Test void fneA2(){ assertThrows(AssertionError.class,() -> Fs.fileNameWithExtension("a/b/")); }
+  @Test void fneA3(){ assertThrows(AssertionError.class,() -> Fs.fileNameWithExtension("/")); }
+  @Test void fneA4(){ assertThrows(AssertionError.class,() -> Fs.fileNameWithExtension("")); }
 
   // -------- removeFileNameAllowTop : success --------
 
@@ -48,10 +48,10 @@ public final class FsStringPathTest{
 
   // -------- fileNameWithoutExtension : assertion failures --------
 
-  @Test void fneA01(){ assertThrows(AssertionError.class,()->Fs.fileNameWithoutExtension("a/b/c")); }
-  @Test void fneA02(){ assertThrows(AssertionError.class,()->Fs.fileNameWithoutExtension("a/b/.gitignore")); }
-  @Test void fneA03(){ assertThrows(AssertionError.class,()->Fs.fileNameWithoutExtension("a/b/.a.b")); }
-  @Test void fneA04(){ assertThrows(AssertionError.class,()->Fs.fileNameWithoutExtension("a/b/c.")); }
-  @Test void fneA05(){ assertThrows(AssertionError.class,()->Fs.fileNameWithoutExtension("a/b/")); }
-  @Test void fneA06(){ assertThrows(AssertionError.class,()->Fs.fileNameWithoutExtension("abc")); }
+  @Test void fneA01(){ assertThrows(AssertionError.class,() -> Fs.fileNameWithoutExtension("a/b/c")); }
+  @Test void fneA02(){ assertThrows(AssertionError.class,() -> Fs.fileNameWithoutExtension("a/b/.gitignore")); }
+  @Test void fneA03(){ assertThrows(AssertionError.class,() -> Fs.fileNameWithoutExtension("a/b/.a.b")); }
+  @Test void fneA04(){ assertThrows(AssertionError.class,() -> Fs.fileNameWithoutExtension("a/b/c.")); }
+  @Test void fneA05(){ assertThrows(AssertionError.class,() -> Fs.fileNameWithoutExtension("a/b/")); }
+  @Test void fneA06(){ assertThrows(AssertionError.class,() -> Fs.fileNameWithoutExtension("abc")); }
 }

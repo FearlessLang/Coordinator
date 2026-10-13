@@ -45,7 +45,7 @@ final class MainsInfoTest{
   "hello.Beer": ["_hello/beer.fear", [["hello.IconsBar", "_hello/icons/bar.png", "", ""]], []]
 }
 """);
-    var ex= assertThrows(UserError.class, ()->MainsInfo.read(project));
+    var ex= assertThrows(UserError.class, () -> MainsInfo.read(project));
     utils.Err.strCmp("""
 In file: [###]mains.info
 

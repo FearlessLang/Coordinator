@@ -30,12 +30,12 @@ public record MainsInfo(Map<String,Main> mains){
   public record Claim(String icon, String diskPath, String zipSteps, String zipEntry, String extension){}
   public static Optional<MainsInfo> read(Path project){ return Helper.out(project).mainsInfo(); }
   public String print(){
-    var fields= mains.entrySet().stream().map(e->new Info.Obj.Field(e.getKey(),Info.noSpan,info(e.getValue()))).toList();
+    var fields= mains.entrySet().stream().map(e -> new Info.Obj.Field(e.getKey(),Info.noSpan,info(e.getValue()))).toList();
     return Info.print(new Info.Obj(fields,Info.noSpan));
   }
   MainsInfo located(SourceOracle src, SourceOracle stLib){
     var of= new Of(src,stLib);
-    return new MainsInfo(mains.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey,e->of.located(e.getValue()))));
+    return new MainsInfo(mains.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey,e -> of.located(e.getValue()))));
   }
   private static Info info(Main m){ return lst(List.of(str(m.file()),claims(m.shortcuts()),claims(m.openWiths()))); }
   private static Info claims(List<Claim> cs){ return lst(cs.stream().map(MainsInfo::info).toList()); }
@@ -49,7 +49,7 @@ public record MainsInfo(Map<String,Main> mains){
   private record Shape(String text){
     MainsInfo all(Info i){
       if (!(i instanceof Info.Obj o)){ throw err(i,"an object {...} mapping each main to [file, [shortcut claims], [openWith claims]]"); }
-      return new MainsInfo(o.fields().stream().collect(Collectors.toMap(Info.Obj.Field::key,f->main(f.value()))));
+      return new MainsInfo(o.fields().stream().collect(Collectors.toMap(Info.Obj.Field::key,f -> main(f.value()))));
     }
     Main main(Info i){
       var l= lst(i,3,"a main as [file, [shortcut claims], [openWith claims]]");
@@ -80,18 +80,18 @@ public record MainsInfo(Map<String,Main> mains){
   static Map<String,Main> of(List<Literal> core, SourceOracle src, SourceOracle stLib){
     var all= AllLs.of(core).values();
     var of= new Of(src,stLib);
-    all.stream().sorted(Comparator.comparingInt((Literal l)->l.cs().size()).thenComparing(l->l.name().s())).forEach(of::check);
-    var nested= all.stream().filter(l->LiteralDeclarations.has(l.cs(),LiteralDeclarations.captureFree));
+    all.stream().sorted(Comparator.comparingInt((Literal l) -> l.cs().size()).thenComparing(l -> l.name().s())).forEach(of::check);
+    var nested= all.stream().filter(l -> LiteralDeclarations.has(l.cs(),LiteralDeclarations.captureFree));
     return Stream.concat(core.stream(),nested).filter(MainsInfo::isMain).distinct()
-      .collect(Collectors.toUnmodifiableMap(l->l.name().s(),of::main));
+      .collect(Collectors.toUnmodifiableMap(l -> l.name().s(),of::main));
   }
   private static boolean isMain(Literal l){
     return LiteralDeclarations.has(l.cs(),main)
-      && l.ms().stream().noneMatch(m->m.sig().abs());
+      && l.ms().stream().noneMatch(m -> m.sig().abs());
   }
   private record Of(SourceOracle src, SourceOracle stLib){
     void check(Literal l){
-      var cs= l.cs().stream().filter(c->claims.contains(c.name())).toList();
+      var cs= l.cs().stream().filter(c -> claims.contains(c.name())).toList();
       if (cs.isEmpty()){ return; }
       if (!LiteralDeclarations.has(l.cs(),main)){ throw Report.claimNotMain(src,l,cs.getFirst().name()); }
       var exts= new HashMap<String,T.C>();
@@ -119,7 +119,7 @@ public record MainsInfo(Map<String,Main> mains){
     }
     List<Claim> claims(Literal l, String kind){
       return l.cs().stream()
-        .filter(c->claims.contains(c.name()) && c.name().simpleName().equals(kind))
+        .filter(c -> claims.contains(c.name()) && c.name().simpleName().equals(kind))
         .map(this::claim).toList();
     }
     Claim claim(T.C c){
@@ -127,10 +127,10 @@ public record MainsInfo(Map<String,Main> mains){
       return claim(name(c.ts().getFirst()),lit.isEmpty() ? "" : lit.substring(1,lit.length()-1)).orElseThrow();
     }
     Optional<Claim> claim(TName icon, String ext){
-      return SourceOracleWithAutoload.imageAsset(src,stLib,icon).map(t->new Claim(icon.s(),t.diskPath(),t.zipSteps(),t.zipEntry(),ext));
+      return SourceOracleWithAutoload.imageAsset(src,stLib,icon).map(t -> new Claim(icon.s(),t.diskPath(),t.zipSteps(),t.zipEntry(),ext));
     }
     Main located(Main m){ return new Main(m.file(),located(m.shortcuts()),located(m.openWiths())); }
-    List<Claim> located(List<Claim> cs){ return cs.stream().map(c->claim(new TName(c.icon(),0,Pos.unknown),c.extension()).orElseThrow()).toList(); }
+    List<Claim> located(List<Claim> cs){ return cs.stream().map(c -> claim(new TName(c.icon(),0,Pos.unknown),c.extension()).orElseThrow()).toList(); }
     static TName name(T t){ return ((T.RCC)t).c().name(); }
   }
 }

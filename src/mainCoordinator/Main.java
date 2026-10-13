@@ -73,7 +73,7 @@ public final class Main{
     };
     c.main(project, c.sourceOracle(base));
   }
-  private static final Predicate<String> belongsToFamily= s->s.contains("earless");
+  private static final Predicate<String> belongsToFamily= s -> s.contains("earless");
   private static void offerAssociation(Path appDir){
     if (Fs.isMac()){ return; }
     var launcher= ProcessHandle.current().info().command().map(Path::of);
@@ -83,10 +83,10 @@ public final class Main{
     if (!belongsToFamily.test(identity)){ return; }
     var icon= appDir.resolve("icon.png");
     FileAssociations.reconcile(identity, belongsToFamily, l, List.of(new Icon(".fearless", l, icon)), l, icon,
-      reported->Violation.associationsAmbiguous(reported).withRecovery(
-        "Remove all Fearless registrations", ()->FileAssociations.eradicateAll(belongsToFamily, Violation::associationLeftHalfDone)),
-      locked->Violation.associationUserLocked(locked, e->""),
-      held->Violation.associationNotOurs(held, e->""),
+      reported -> Violation.associationsAmbiguous(reported).withRecovery(
+        "Remove all Fearless registrations", () -> FileAssociations.eradicateAll(belongsToFamily, Violation::associationLeftHalfDone)),
+      locked -> Violation.associationUserLocked(locked, e -> ""),
+      held -> Violation.associationNotOurs(held, e -> ""),
       Violation::associationNotWritable,
       Violation::associationLeftHalfDone);
   }
@@ -96,11 +96,11 @@ public final class Main{
     return dot < 0 ? file : file.substring(0, dot);
   }
   private static void registerMacSpawnHandler(Path appDir){
-    Desktop.getDesktop().setOpenFileHandler(e->e.getFiles().forEach(f->spawnMac(appDir, f.toPath())));
+    Desktop.getDesktop().setOpenFileHandler(e -> e.getFiles().forEach(f -> spawnMac(appDir, f.toPath())));
   }
   private static void spawnMac(Path appDir, Path file){
     var bundle= appDir.getParent().getParent();
-    Fs.ofV(()->{
+    Fs.ofV(() -> {
       var pb= new ProcessBuilder("open","-n","-a",bundle.toString(),"--args",file.toString());
       pb.environment().remove("_JPACKAGE_LAUNCHER");
       pb.start();
@@ -121,7 +121,7 @@ public final class Main{
     area.setEditable(false);
     area.setFont(new Font(Font.MONOSPACED, Font.BOLD, 18));
     var frame= new JFrame("Fearless output");
-    Fs.ofV(()->{
+    Fs.ofV(() -> {
       var icon= ImageIO.read(JavacTool.reqAppDir(Violation::mustUseLauncher).resolve("icon.png").toFile());
       frame.setIconImage(icon);
       if (Taskbar.isTaskbarSupported()){
@@ -136,7 +136,7 @@ public final class Main{
     var pref= frame.getSize();
     frame.setSize(Math.min(pref.width, screen.width), Math.min(pref.height, screen.height));
     frame.setLocationRelativeTo(null);
-    return s->SwingUtilities.invokeLater(()->{
+    return s -> SwingUtilities.invokeLater(() -> {
       if (!frame.isVisible()){ frame.setVisible(true); }
       area.append(s);
     });
@@ -144,7 +144,7 @@ public final class Main{
   private static boolean hasConsoleFlag(){ return JavacTool.consoleKey.equals(System.getProperty(JavacTool.launcherKey)); }
   private static Optional<Path> launchPath(String[] args){
     return Stream.of(args)
-      .filter(a->!a.startsWith("-psn_"))
+      .filter(a -> !a.startsWith("-psn_"))
       .findFirst().map(Main::normalize);
   }
   private static Path normalize(String s){

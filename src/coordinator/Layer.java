@@ -43,7 +43,7 @@ record MiddleLayer(Coordinator coordinator, Layer next, LinkedHashMap<String,Lis
         long newStamp= out.commitPkgApi(pkg, core, maxIn); // newStamp will be the old api file mtime if there was no reason to commit.
         out.commitMains(pkg, mains);
         out.commitBuilt(pkg, files, next.pkgNames(), maxIn);
-        var map= AllLs.of(core).values().stream().collect(Collectors.toUnmodifiableMap (Literal::name, d->d));
+        var map= AllLs.of(core).values().stream().collect(Collectors.toUnmodifiableMap (Literal::name, d -> d));
         nextOther = nextOther.mergeWith(map,Math.max(nextOther.stamp(),newStamp));
       }};
     pkgs.forEach(res::compilePkg);
@@ -69,7 +69,7 @@ record BaseLayer(Coordinator coordinator, Map<String,Map<String,String>> map, lo
   }
   private OtherPackages deployedBaseApi(Path cacheDir, String pkgName){
     var json= cacheDir.resolve(pkgName+".json");
-    var api= OutputHelper.pkgApiFromJSon(json).orElseThrow(()->Violation.cacheMissingBaseApiFile(json));
+    var api= OutputHelper.pkgApiFromJSon(json).orElseThrow(() -> Violation.cacheMissingBaseApiFile(json));
     return OtherPackages.start(map, api, Math.max(baseStamp, Fs.lastModified(json)));
   }
 }

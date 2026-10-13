@@ -13,10 +13,10 @@ public final class TestFearlessTour{
     DeployPortableFearless.main(args);
     ModularBuild.coordinatorMain();
     Fs.copyTreeFlat(tour.resolve("externalJars"), ModularBuild.mods);
-    var standalone= OneOr.of("Expected exactly one junit console jar in "+ModularBuild.mods, Fs.walk(ModularBuild.mods, s->s
-      .filter(p->p.getFileName().toString().startsWith("junit-platform-console-standalone"))
+    var standalone= OneOr.of("Expected exactly one junit console jar in "+ModularBuild.mods, Fs.walk(ModularBuild.mods, s -> s
+      .filter(p -> p.getFileName().toString().startsWith("junit-platform-console-standalone"))
       .toList()).stream());
-    Fs.ofV(()->Files.delete(standalone));
+    Fs.ofV(() -> Files.delete(standalone));
     ModularBuild.buildJar("FearlessTour", List.of(tour.resolve("src"), ModularBuild.resources), List.of("-requires-automatic"));
     Fs.copyTreeFlat(ResolveResource.coordinatorTestJars, ModularBuild.mods);
     ModularBuild.runJUnit(ModularBuild.out.resolve("FearlessTour"));

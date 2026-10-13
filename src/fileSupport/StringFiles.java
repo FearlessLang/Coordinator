@@ -18,7 +18,7 @@ import utils.Bug;
 
 public final class StringFiles {
   public static String read(Path path, BiConsumer<String,String> onError){
-    byte[] bytes= ByteFiles.read(path,(k,c)->
+    byte[] bytes= ByteFiles.read(path,(k,c) ->
       fail(onError,requiresReport(k),FailureText.explain(Op.Read,k,path),c));
     var input= ByteBuffer.wrap(bytes);
     var output= CharBuffer.allocate(bytes.length);
@@ -40,7 +40,7 @@ public final class StringFiles {
   }
   //Whole-file create with UTF-8 content: refuses to touch anything already at the location.
   public static void writeNew(Path path, String text, BiConsumer<String,String> onError){
-    ByteFiles.writeNew(path,utf8(text),(k,c)->
+    ByteFiles.writeNew(path,utf8(text),(k,c) ->
       fail(onError,requiresReport(k),FailureText.explain(Op.Write,k,path),c));
   }
   //Strict, mirroring the strict decode in read: String.getBytes(UTF_8) would silently

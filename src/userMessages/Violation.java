@@ -25,7 +25,7 @@ public final class Violation {
   public static String reported(Throwable cause){ return "Reported reason:\n"+cause.getMessage(); }
   private static Supplier<List<String>> running= List::of;
   public static void running(Supplier<List<String>> live){ running = live; }
-  static String associatedPrograms(){ return Join.of(running.get().stream().map(s->"  "+s),"","\n","",""); }
+  static String associatedPrograms(){ return Join.of(running.get().stream().map(s -> "  "+s),"","\n","",""); }
   public static String freshCopyThenReport(){ return """
     Replace this Fearless folder with a fresh copy.
     If this keeps happening, report the problem.
@@ -110,11 +110,11 @@ public final class Violation {
       resets every app default on your machine, not only this one.
 
       What is locked:
-      %s""".formatted(String.join("\n", locked.stream().map(e->e+claimedBy.apply(e)).toList())));
+      %s""".formatted(String.join("\n", locked.stream().map(e -> e+claimedBy.apply(e)).toList())));
   }
   public static UserError associationNotOurs(Map<String,List<String>> held, Function<String,String> claimedBy){
     var lines= new ArrayList<String>();
-    held.forEach((e,cs)->cs.forEach(c->lines.add(e+claimedBy.apply(e)+" -> "+c)));
+    held.forEach((e,cs) -> cs.forEach(c -> lines.add(e+claimedBy.apply(e)+" -> "+c)));
     return new UserError("""
       Fearless cannot become the program that opens the kinds of file listed
       below.
@@ -139,7 +139,7 @@ public final class Violation {
       for these files, clears the choice.
 
       What is locked:
-      %s""".formatted(String.join("\n", locked.stream().map(e->e+claimedBy.apply(e)+" -> "+LinuxAssociations.typeOf(e)).toList())));
+      %s""".formatted(String.join("\n", locked.stream().map(e -> e+claimedBy.apply(e)+" -> "+LinuxAssociations.typeOf(e)).toList())));
   }
   public static UserError associationNotWritable(String reported){
     return new UserError("""

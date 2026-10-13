@@ -42,7 +42,7 @@ public interface Coordinator {
   }
   static String runMains(List<String> jvmArgs, List<Path> jarDirs, String mainClass) throws InterruptedException{
     var sb= new StringBuilder();
-    var jvm= JavaTool.startMainFromJars(jvmArgs, jarDirs, mainClass, s->{ sb.append(s); System.out.print(s); });
+    var jvm= JavaTool.startMainFromJars(jvmArgs, jarDirs, mainClass, s -> { sb.append(s); System.out.print(s); });
     var ec= jvm.await();
     Require.check(ec == 0 || ec == 1, "Exit code "+ec+" from\n"+String.join("\n",jvm.cmd())+"\nOutput:\n"+sb);
     return sb.toString();
@@ -58,14 +58,14 @@ public interface Coordinator {
   static Map<String,Boolean> pkgsBuilt(Path path){
     var o= new RealSourceOracleWithZip(path);
     var map= Helper.pkgMap(o,path);
-    var ranks= map.values().stream().map(u->Helper.okPkgContent(u,path)).toList();
+    var ranks= map.values().stream().map(u -> Helper.okPkgContent(u,path)).toList();
     var out= Helper.out(path);
     var top= ranks.stream().mapToInt(Helper::rankNumber).max().getAsInt();
     var listed= Files.exists(out.mainsPath());
     var res= new LinkedHashMap<String,Boolean>();
     for (var r: ranks){
       var pkg= Helper.pkgName(r);
-      var lower= ranks.stream().filter(d->Helper.rankNumber(d) < Helper.rankNumber(r)).map(Helper::pkgName).toList();
+      var lower= ranks.stream().filter(d -> Helper.rankNumber(d) < Helper.rankNumber(r)).map(Helper::pkgName).toList();
       var below= lower.stream().mapToLong(out::pkgApiStamp);
       var own= map.get(pkg).stream().mapToLong(Ref::lastModified);
       var maxIn= LongStream.concat(LongStream.concat(own,below),LongStream.of(out.mapStamp())).max().getAsLong();
@@ -85,8 +85,8 @@ public interface Coordinator {
   
   default List<Literal> frontend(String pkgName, List<Ref> files, SourceOracle oracle, OtherPackages other,Map<String,String> vres, CapabilityEnvironment capabilities){
     var tests= new ArrayList<Ref>();
-    try{ return new FrontendLogicMain().of(pkgName,vres, files, other, core->docs(pkgName,testsUri(pkgName,files),oracle,other,core,capabilities,tests)); }
-    catch(FearlessException fe){ throw Report.sourceError(fe.render(oracle.withFallback(()->tests))); }
+    try{ return new FrontendLogicMain().of(pkgName,vres, files, other, core -> docs(pkgName,testsUri(pkgName,files),oracle,other,core,capabilities,tests)); }
+    catch(FearlessException fe){ throw Report.sourceError(fe.render(oracle.withFallback(() -> tests))); }
   }
   private Optional<Ref> docs(String pkgName, URI testsUri, SourceOracle oracle, OtherPackages other, List<Literal> core, CapabilityEnvironment capabilities, ArrayList<Ref> tests){
     var docs= backendTools(pkgName,oracle,other,core,capabilities).docs();
@@ -117,11 +117,11 @@ public interface Coordinator {
 final class Helper{
   static boolean isFear(Ref u){ return u.fearPath().endsWith(".fear"); }
   static OutputOracle out(Path path){
-    return ()->path.resolve(Coordinator.outDir);
+    return () -> path.resolve(Coordinator.outDir);
   }
   static Layer layerOf(Coordinator coordinator, SourceOracle o, Path project, OutputOracle out, SourceOracle stLib){
     var map= pkgMap(o,project);
-    List<Ref> allRanks= map.values().stream().map(u->okPkgContent(u,project)).toList();
+    List<Ref> allRanks= map.values().stream().map(u -> okPkgContent(u,project)).toList();
     Layer l= mapFromRanks(coordinator,allRanks,o,out,stLib);
     return layers(coordinator,map,l,allRanks.stream()
       .sorted(Comparator.comparingInt(Helper::rankNumber).thenComparing(Ref::fearPath)).toList());
@@ -149,14 +149,14 @@ final class Helper{
     try{ l= layerOf(c,o,project,out,stLib); l.compile(o,out); }
     catch(WouldCompile _){ return Optional.empty(); }
     var res= new TreeMap<String,String>();
-    out.mains(l.pkgs().keySet()).mains().forEach((k,v)->res.put(k,v.file()));
+    out.mains(l.pkgs().keySet()).mains().forEach((k,v) -> res.put(k,v.file()));
     return Optional.of(Collections.unmodifiableMap(res));
   }
   static LinkedHashMap<String,List<Ref>> pkgMap(SourceOracle o, Path path){
     if (o.allFiles().stream().noneMatch(Helper::isFear)){ throw Report.projectEmpty(path); }
     o.allFiles().stream().filter(Helper::isFear).forEach(Helper::pkgName);//err if not under a pkg
     var map= new LinkedHashMap<String,List<Ref>>();
-    for (Ref u:o.allFiles()){ pkgNameOpt(u).ifPresent(pn->map.computeIfAbsent(pn,_->new ArrayList<>()).add(u)); }
+    for (Ref u:o.allFiles()){ pkgNameOpt(u).ifPresent(pn -> map.computeIfAbsent(pn,_ -> new ArrayList<>()).add(u)); }
     return map;
   }
   static Layer layers(Coordinator coordinator, Map<String,List<Ref>> map, Layer l, List<Ref> ranks){
@@ -202,12 +202,12 @@ final class Helper{
     if (reserved.size() > 1){ throw Report.projectMultipleRankFiles(pkg, reserved); }
     return reserved.getFirst();
   }
-  static String pkgName(Ref u){ return pkgNameOpt(u).orElseThrow(()->Report.projectNoPackageSegment(u)); }
+  static String pkgName(Ref u){ return pkgNameOpt(u).orElseThrow(() -> Report.projectNoPackageSegment(u)); }
 
   private static final Set<String> reservedPkgNames= Set.of("base","rank");
   static Optional<String> pkgNameOpt(Ref u){
     var candidates= Stream.of(u.fearPath().split("/"))
-      .filter(s->s.startsWith("_") && !s.contains("."))
+      .filter(s -> s.startsWith("_") && !s.contains("."))
       .toList();
     if (candidates.isEmpty()){ return Optional.empty(); }
     if (candidates.size() != 1){ throw Report.projectAmbiguousPackageSegment(u, candidates); }

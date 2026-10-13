@@ -27,7 +27,7 @@ public final class BaseCacheBuilder{
     buildInto(modsDir, stdLib, Optional.empty());
   }
   private static Path singleDirNamed(Path root, String name){
-    var found= Fs.walk(root, s->s.filter(Files::isDirectory).filter(p->p.getFileName().toString().equals(name)).toList());
+    var found= Fs.walk(root, s -> s.filter(Files::isDirectory).filter(p -> p.getFileName().toString().equals(name)).toList());
     return OneOr.of("Expected exactly one '"+name+"' dir under "+root, found.stream());
   }
   public static void buildInto(Path modsDir, Path stdLibDir, Optional<Path> testsRoot){
@@ -41,7 +41,7 @@ public final class BaseCacheBuilder{
           return BackendTools.of(pkgName, oracle, other, core, scratch, baseCachePath(), testsRoot, ResolveResource.stLibRTPath, capabilities);
         }
       };
-      OutputOracle out= ()->scratch;
+      OutputOracle out= () -> scratch;
       var other= OtherPackages.empty();
       SourceOracle o= c.sourceOracle(ResolveResource.stLibPath);
       var rich= SourceOracleWithAutoload.ofBase(o);

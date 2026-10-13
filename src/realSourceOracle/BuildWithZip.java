@@ -33,9 +33,9 @@ record Tree(
   Tree{ assert root.equals(root.toAbsolutePath().normalize()); }
   public void collect(){    
     reqNoEmptyDirs();
-    Fs.walkV(root, s->s
-      .filter(p->!p.equals(root))
-      .filter(p->!Files.isDirectory(p, LinkOption.NOFOLLOW_LINKS))
+    Fs.walkV(root, s -> s
+      .filter(p -> !p.equals(root))
+      .filter(p -> !Files.isDirectory(p, LinkOption.NOFOLLOW_LINKS))
       .forEach(this::collectFile)
     );
   }
@@ -68,7 +68,7 @@ record Tree(
     var dirs= new LinkedHashSet<Path>();
     var nonEmpty= new LinkedHashSet<Path>();
     dirs.add(Path.of(""));
-    Fs.walkV(root, s->s.filter(p->!p.equals(root)).forEach(abs->{
+    Fs.walkV(root, s -> s.filter(p -> !p.equals(root)).forEach(abs -> {
       var rel= root.relativize(abs);
       nonEmpty.add(parentOrEmpty(rel));
       if (BuildWithZip.isInvisible(new PathEntry(root, rel))){ return; }
@@ -79,7 +79,7 @@ record Tree(
   private boolean isDirectory(Path abs){ return Files.isDirectory(abs, LinkOption.NOFOLLOW_LINKS); }
   private static void reqTime(Path abs, Path rel){
     var t= Fs.lastModified(abs);
-    BuildWithZip.reqTime(t, ()->Report.dateUnset(rel, t), now->Report.dateInTheFuture(rel, t, now));
+    BuildWithZip.reqTime(t, () -> Report.dateUnset(rel, t), now -> Report.dateInTheFuture(rel, t, now));
   }
   private static boolean isGeneratedTests(Path abs){
     var shape= abs.getParent().getFileName().toString().equals("auto_tests") && abs.getFileName().toString().endsWith("_test.fear");
@@ -97,14 +97,14 @@ record Tree(
     var dir= kid.parent();
     if (dir == kid){ return; } // root
     var m= BuildWithZip.isInvisible(dir) ? dotKidsByDir : visKidsByDir;
-    m.computeIfAbsent(dir, _->new LinkedHashSet<>()).add(kid);
+    m.computeIfAbsent(dir, _ -> new LinkedHashSet<>()).add(kid);
   }
   private static boolean isDiskZip(Path abs, Path rel){ return isRegularFile(abs) && rel.getFileName().toString().endsWith(".zip"); }
   private static Path parentOrEmpty(Path p){ return p.getParent()==null ? Path.of("") : p.getParent(); }
 }
 public final class BuildWithZip{
   public static boolean isInvisible(RefParent r){
-    return AutoloadHandler.components(r.fearPath()).stream().anyMatch(s->s.startsWith("."));
+    return AutoloadHandler.components(r.fearPath()).stream().anyMatch(s -> s.startsWith("."));
   }
   static final long futureTolerance= 5_000;
   static void reqTime(long t, Supplier<UserError> unset, LongFunction<UserError> future){
@@ -116,11 +116,11 @@ public final class BuildWithZip{
   BuildWithZip(Path root){ t= new Tree(root.toAbsolutePath().normalize(), new ArrayList<>(), new LinkedHashMap<>(), new LinkedHashMap<>()); }
   List<Ref> build(){
     t.collect();
-    t.visKidsByDir().forEach((_,kids)->{
+    t.visKidsByDir().forEach((_,kids) -> {
       kids.forEach(BuildWithZip::checkIndividualVisibleSegment);
       checkCollectiveVisible(kids);
     });
-    t.dotKidsByDir().forEach((_,kids)->{
+    t.dotKidsByDir().forEach((_,kids) -> {
       kids.forEach(BuildWithZip::checkIndividualInvisibleSegment);
       checkCollectiveInvisible(kids);
     });

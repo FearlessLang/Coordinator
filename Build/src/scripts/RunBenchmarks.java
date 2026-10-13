@@ -22,9 +22,9 @@ public final class RunBenchmarks{
     var bench= ResolveResource.controllerSrc.getParent().resolve("benchmarks","src");
     var classes= ModularBuild.out.resolve("benchmarks");
     Fs.cleanDir(classes); Fs.ensureDir(classes);
-    var jars= Fs.walk(ModularBuild.mods, s->s.filter(p->p.toString().endsWith(".jar")).map(Path::toString).sorted().collect(Collectors.joining(File.pathSeparator)));
+    var jars= Fs.walk(ModularBuild.mods, s -> s.filter(p -> p.toString().endsWith(".jar")).map(Path::toString).sorted().collect(Collectors.joining(File.pathSeparator)));
     var javac= new ArrayList<>(List.of("-encoding","UTF-8","-proc:full","-d",classes.toString(),"-s",classes.toString(),"-cp",jars));
-    List.of(bench, ModularBuild.resources).forEach(src->Fs.walkV(src, s->s.filter(p->p.toString().endsWith(".java")).forEach(p->javac.add(p.toString()))));
+    List.of(bench, ModularBuild.resources).forEach(src -> Fs.walkV(src, s -> s.filter(p -> p.toString().endsWith(".java")).forEach(p -> javac.add(p.toString()))));
     Fs.runTool("javac", javac);
     var jvmArgs= new ArrayList<>(List.of("-ea"));
     if (!stlibs.isEmpty()){ jvmArgs.add("-D"+"fearless.benchmarks.stlibs="+String.join(";",stlibs)); }

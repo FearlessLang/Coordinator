@@ -9,8 +9,8 @@ record ProduceBody(BytecodeLineFix sb, Backend b, String iface, String thisName,
   public void emitBody(){
     if (!"_".equals(thisName)){ sb.a("    var ").a(thisName).a("$= this;\n"); }
     Streams.zipI(m.xs(), m.sig().ts())
-      .filter((_,x,_)->!"_".equals(x))
-      .forEach((i,x,t)->sb
+      .filter((_,x,_) -> !"_".equals(x))
+      .forEach((i,x,t) -> sb
         .a("    var ").a(b.encodeTrailingPrimes(x))
         .a("$= ").a(optCast(t)).a("p"+i+";\n"));
     sb.a("    return ");

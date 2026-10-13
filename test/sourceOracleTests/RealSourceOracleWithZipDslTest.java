@@ -45,7 +45,7 @@ final class RealSourceOracleWithZipDslTest{
     UserError.root = root;
     FsDsl.materialize(root, spec);
     var base= new RealSourceOracleWithZip(root);
-    var ex= assertThrows(UserError.class, ()->SourceOracleWithAutoload.of(base, pkgName));
+    var ex= assertThrows(UserError.class, () -> SourceOracleWithAutoload.of(base, pkgName));
     utils.Err.strCmp(expected, ex.getMessage());
   }
   //ZipOutputStream refuses to write two entries with the same name (ZipException: duplicate
@@ -55,8 +55,8 @@ final class RealSourceOracleWithZipDslTest{
     Path root= tmp.resolve("root").toAbsolutePath().normalize();
     UserError.root = root;
     Fs.ensureDir(root.resolve("_pkg"));
-    Fs.ofV(()->Files.write(root.resolve("_pkg/z.zip"), rawDuplicateEntryZip("a.fear","1","2")));
-    var ex= assertThrows(UserError.class, ()->new RealSourceOracleWithZip(root));
+    Fs.ofV(() -> Files.write(root.resolve("_pkg/z.zip"), rawDuplicateEntryZip("a.fear","1","2")));
+    var ex= assertThrows(UserError.class, () -> new RealSourceOracleWithZip(root));
     utils.Err.strCmp("""
 Root: [###]
 Path: "_pkg/z.zip"
@@ -142,7 +142,7 @@ T:{}
     Path root= tmp.resolve("root").toAbsolutePath().normalize();
     UserError.root = root;
     FsDsl.materialize(root, spec);
-    Fs.ofV(()->Files.setLastModifiedTime(root.resolve(file), FileTime.fromMillis(t)));
+    Fs.ofV(() -> Files.setLastModifiedTime(root.resolve(file), FileTime.fromMillis(t)));
     return root;
   }
   private static final String aFear= """
@@ -152,7 +152,7 @@ A
 """;
   @Test void err_file_dated_in_the_future(@TempDir Path tmp){
     var root= dated(tmp, aFear, "_pkg/a.fear", System.currentTimeMillis()+3_600_000);
-    var ex= assertThrows(UserError.class, ()->new RealSourceOracleWithZip(root));
+    var ex= assertThrows(UserError.class, () -> new RealSourceOracleWithZip(root));
     utils.Err.strCmp("""
 Root: [###]
 Path: "_pkg/a.fear"
@@ -176,7 +176,7 @@ Save the file again, or correct the clock of this computer.
   }
   @Test void err_file_dated_at_the_start_of_1970(@TempDir Path tmp){
     var root= dated(tmp, aFear, "_pkg/a.fear", 0);
-    var ex= assertThrows(UserError.class, ()->new RealSourceOracleWithZip(root));
+    var ex= assertThrows(UserError.class, () -> new RealSourceOracleWithZip(root));
     utils.Err.strCmp("""
 Root: [###]
 Path: "_pkg/a.fear"
@@ -189,7 +189,7 @@ Save the file again, so that it gets the current date.
   }
   @Test void err_zip_file_dated_in_the_future(@TempDir Path tmp){
     var root= dated(tmp, "_pkg/z.zip/a.fear\niii\nA\n", "_pkg/z.zip", System.currentTimeMillis()+3_600_000);
-    var ex= assertThrows(UserError.class, ()->new RealSourceOracleWithZip(root));
+    var ex= assertThrows(UserError.class, () -> new RealSourceOracleWithZip(root));
     utils.Err.strCmp("""
 Root: [###]
 Path: "_pkg/z.zip"
@@ -201,7 +201,7 @@ This file is dated [###]""", FsDsl.dumpErr(root, ex));
     UserError.root = root;
     Fs.ensureDir(root.resolve("_pkg"));
     var bytes= new ByteArrayOutputStream();
-    Fs.ofV(()->{
+    Fs.ofV(() -> {
       try(var zip= new ZipOutputStream(bytes)){
         var e= new java.util.zip.ZipEntry(entry);
         e.setTime(t);
@@ -210,12 +210,12 @@ This file is dated [###]""", FsDsl.dumpErr(root, ex));
         zip.closeEntry();
       }
     });
-    Fs.ofV(()->Files.write(root.resolve("_pkg/z.zip"), bytes.toByteArray()));
+    Fs.ofV(() -> Files.write(root.resolve("_pkg/z.zip"), bytes.toByteArray()));
     return root;
   }
   @Test void err_zip_entry_dated_in_the_future(@TempDir Path tmp){
     var root= zipWithEntryAt(tmp, "a.fear", System.currentTimeMillis()+3_600_000);
-    var ex= assertThrows(UserError.class, ()->new RealSourceOracleWithZip(root));
+    var ex= assertThrows(UserError.class, () -> new RealSourceOracleWithZip(root));
     utils.Err.strCmp("""
 Root: [###]
 Path: "_pkg/z.zip"
@@ -471,7 +471,7 @@ We check this so that you[###]
       zos.closeEntry();
     }
     Files.write(root.resolve("_pkg/o.zip"), bytes.toByteArray());
-    var ex= assertThrows(UserError.class, ()->new RealSourceOracleWithZip(root));
+    var ex= assertThrows(UserError.class, () -> new RealSourceOracleWithZip(root));
     utils.Err.strCmp("""
 Root: [###]
 Path: "_pkg/o.zip"
@@ -1306,7 +1306,7 @@ We check this so that you[###]
     UserError.root = root;
     Files.createDirectories(root.resolve("_pkg"));
     createSymbolicLinkOrSkip(root.resolve("_pkg/link.fear"), root.resolve("_pkg/missing.fear"));
-    var ex= assertThrows(UserError.class, ()->new RealSourceOracleWithZip(root));
+    var ex= assertThrows(UserError.class, () -> new RealSourceOracleWithZip(root));
     utils.Err.strCmp("""
 Invalid path in this project folder.
 
@@ -1588,7 +1588,7 @@ iii
 IconsFoo Triple[diskPath=_pkg/icons/foo.png, zipSteps=, zipEntry=]
 Notes Triple[diskPath=_pkg/notes.txt, zipSteps=, zipEntry=]
 ZInBar Triple[diskPath=_pkg/z.zip, zipSteps=, zipEntry=in/bar.png]
-""", Join.of(res.autoloadedAssets().entrySet().stream().map(e->e.getKey()+" "+e.getValue()),"","\n","\n",""));
+""", Join.of(res.autoloadedAssets().entrySet().stream().map(e -> e.getKey()+" "+e.getValue()),"","\n","\n",""));
   }
   @Test void ok_image_asset_by_type_name(@TempDir Path tmp){
     Path root= tmp.resolve("root");
@@ -1622,7 +1622,7 @@ iii
 """);
     var src= new RealSourceOracleWithZip(root);
     var stLib= new RealSourceOracleWithZip(std);
-    Function<String,String> asset= n->""+SourceOracleWithAutoload.imageAsset(src, stLib, new TName(n, 0, Pos.unknown));
+    Function<String,String> asset= n -> ""+SourceOracleWithAutoload.imageAsset(src, stLib, new TName(n, 0, Pos.unknown));
     utils.Err.strCmp("""
 Optional[Triple[diskPath=_a/icons/foo.png, zipSteps=, zipEntry=]]
 Optional[Triple[diskPath=_b/x.zip, zipSteps=y.zip, zipEntry=bar.png]]
@@ -1647,7 +1647,7 @@ Optional.empty
     Files.createDirectories(diskRoot.resolve("_pkg"));
     Files.write(diskRoot.resolve("_pkg/a.fear"), bad);
     var diskRef= new RealSourceOracleWithZip(diskRoot).allFiles().stream()
-      .filter(r->r.fearPath().equals("fear:/_pkg/a.fear")).findFirst().get();
+      .filter(r -> r.fearPath().equals("fear:/_pkg/a.fear")).findFirst().get();
     assertThrows(UncheckedIOException.class, diskRef::loadString);
 
     Path zipRoot= tmp.resolve("zip").toAbsolutePath().normalize();
@@ -1659,7 +1659,7 @@ Optional.empty
       zos.closeEntry();
     }
     var zipRef= new RealSourceOracleWithZip(zipRoot).allFiles().stream()
-      .filter(r->r.fearPath().equals("fear:/_pkg/z/a.fear")).findFirst().get();
+      .filter(r -> r.fearPath().equals("fear:/_pkg/z/a.fear")).findFirst().get();
     assertThrows(UncheckedIOException.class, zipRef::loadString);
   }
 }

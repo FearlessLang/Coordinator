@@ -21,12 +21,12 @@ public final class JUnitReport{
   public static Path file(Path reports){ return reports.resolve("report.xml"); }
   public static void write(Path reports, Path folder, String name, Instant since){
     while(true){
-      try{ newest(folder).filter(e->e.when().isAfter(since)).ifPresent(e->Fs.writeUtf8(file(reports), document(suiteOf(name, e.path())))); return; }
+      try{ newest(folder).filter(e -> e.when().isAfter(since)).ifPresent(e -> Fs.writeUtf8(file(reports), document(suiteOf(name, e.path())))); return; }
       catch(UncheckedIOException e){ if (!(e.getCause() instanceof NoSuchFileException)){ throw e; } }
     }
   }
   public static String suite(String name, Path folder){
-    return newest(folder).map(e->suiteOf(name, e.path())).orElse("");
+    return newest(folder).map(e -> suiteOf(name, e.path())).orElse("");
   }
   public static String document(String suites){ return """
 <?xml version="1.0" encoding="UTF-8"?>
@@ -36,7 +36,7 @@ public final class JUnitReport{
   }
   private static Optional<LogFiles.Entry> newest(Path folder){
     return LogFiles.list(folder).stream()
-      .filter(e->e.path().getFileName().toString().startsWith("unit_test_log"))
+      .filter(e -> e.path().getFileName().toString().startsWith("unit_test_log"))
       .findFirst();
   }
   private static String suiteOf(String name, Path log){
@@ -48,11 +48,11 @@ public final class JUnitReport{
 """.formatted(name, count(body,"<testcase "), count(body,"<failure>"), body);
   }
   private static String complete(Path log){
-    var bytes= Fs.of(()->Files.readAllBytes(log));
+    var bytes= Fs.of(() -> Files.readAllBytes(log));
     var end= bytes.length;
     while(end > 0 && bytes[end-1] != '\n'){ end -= 1; }
     var whole= ByteBuffer.wrap(bytes, 0, end);
-    var text= Fs.of(()->UTF_8.newDecoder().decode(whole).toString());
+    var text= Fs.of(() -> UTF_8.newDecoder().decode(whole).toString());
     var done= 0;
     while(done < text.length()){
       var close= text.startsWith("<testcase ", done) ? text.indexOf("</testcase>\n", done) : done;

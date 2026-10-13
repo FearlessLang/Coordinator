@@ -64,8 +64,8 @@ Assertion failure.
     writeLog(project,"20260904_012117_731Z",log);
     var file= project.resolve(".out").resolve("logs").resolve("_base").resolve("unit_test_log$20260904_012117_731Z.log");
     var open= "<testcase classname=\"Last\" name=\"Last at line: 11\" file=\"_hello/_rank_app.fear\" line=\"11\">\n<failure>\nAssertion ";
-    Fs.ofV(()->Files.writeString(file,open,StandardOpenOption.APPEND));
-    Fs.ofV(()->Files.write(file,new byte[]{(byte)0xC3},StandardOpenOption.APPEND));
+    Fs.ofV(() -> Files.writeString(file,open,StandardOpenOption.APPEND));
+    Fs.ofV(() -> Files.write(file,new byte[]{(byte)0xC3},StandardOpenOption.APPEND));
     utils.Err.strCmp("""
 <testsuite name="demo" tests="3" failures="1" errors="0">
 <testcase classname="Later" name="Later at line: 9" file="_hello/_rank_app.fear" line="9"><skipped/></testcase>

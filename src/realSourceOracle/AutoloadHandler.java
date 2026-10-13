@@ -43,12 +43,12 @@ public record AutoloadHandler(Predicate<String> matches, String baseType){
   public static String capFirst(String s){
     var m= leading.matcher(s);
     var head= m.find() ? m.end() : 0;
-    return s.substring(0,head).toUpperCase(Locale.ROOT)+inner.matcher(s.substring(head)).replaceAll(r->r.group(1).toUpperCase(Locale.ROOT));
+    return s.substring(0,head).toUpperCase(Locale.ROOT)+inner.matcher(s.substring(head)).replaceAll(r -> r.group(1).toUpperCase(Locale.ROOT));
   }
   static final Pattern upper= Pattern.compile("[A-Z]");
   static final Pattern visibleAtom= Pattern.compile("[a-z_][a-z0-9_]*");
   public static Optional<String> fileName(String type){
-    var res= upper.matcher(type).replaceAll(r->"_"+r.group().toLowerCase(Locale.ROOT)).substring(1);
-    return Optional.of(res).filter(r->visibleAtom.matcher(r).matches() && capFirst(r).equals(type));
+    var res= upper.matcher(type).replaceAll(r -> "_"+r.group().toLowerCase(Locale.ROOT)).substring(1);
+    return Optional.of(res).filter(r -> visibleAtom.matcher(r).matches() && capFirst(r).equals(type));
   }
 }

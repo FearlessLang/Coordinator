@@ -34,7 +34,7 @@ final class DocRefScanner{
   }
 
   static List<CodeSpan> refSpans(String text){
-    return codeSpans(text).stream().filter(sp->sp.fence()==1).toList();
+    return codeSpans(text).stream().filter(sp -> sp.fence()==1).toList();
   }
 
   private static int runLength(String text, int at){
@@ -67,8 +67,8 @@ final class DocRefScanner{
   //"ieeeEq" from being read as ending in the type "Eq".
   static List<Found> signatureTypes(String text){
     return word.matcher(text).results()
-      .filter(w->TName.isTypeName(w.group()))
-      .map(w->new Found(w.start(), w.end(), new DocRef.TypeName(Optional.empty(), w.group(), OptionalInt.empty())))
+      .filter(w -> TName.isTypeName(w.group()))
+      .map(w -> new Found(w.start(), w.end(), new DocRef.TypeName(Optional.empty(), w.group(), OptionalInt.empty())))
       .toList();
   }
   private static final Pattern word= Pattern.compile("[\\p{L}\\p{Nd}_']+");
@@ -92,7 +92,7 @@ final class DocRefScanner{
       if (!ok){ return Optional.empty(); }
       var sel= selector();
       if (!ok){ return Optional.empty(); }
-      if (sel.isEmpty()){ return receiver.map(r->(DocRef)r); }
+      if (sel.isEmpty()){ return receiver.map(r -> (DocRef)r); }
       return Optional.of(new DocRef.MethodName(receiver, sel.get(), arity('(',')')));
     }
 

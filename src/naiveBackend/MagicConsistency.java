@@ -24,7 +24,7 @@ public final class MagicConsistency{
     return m.e().get() instanceof Call c && c.e() instanceof Type t && t.type().c().name().equals(magicName);
   }
   private boolean hasRealBody(Literal l){
-    return l.ms().stream().anyMatch(m->m.sig().origin().equals(l.name()) && !m.sig().abs() && !isMagicBody(m));
+    return l.ms().stream().anyMatch(m -> m.sig().origin().equals(l.name()) && !m.sig().abs() && !isMagicBody(m));
   }
   void checkTopMethod(M m, String typeName, String jName, boolean hasInstance){
     if (natives.isEmpty()){ return; }

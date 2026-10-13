@@ -30,7 +30,7 @@ public final class Backend{
   public List<Consumer<Path>> produceJavaCode(){
     Fs.ensureDir(out);
     Fs.cleanDirContents(out);
-    tools.decs().forEach(d->{generateInterface(d,false); tools.checks().checkFileReplacement(d, decTypeName(d.name()));});
+    tools.decs().forEach(d -> {generateInterface(d,false); tools.checks().checkFileReplacement(d, decTypeName(d.name()));});
     tools.checks().checkMagicFulfilled();
     writeMainJava();
     return List.copyOf(fixers);
@@ -75,15 +75,15 @@ public final class Backend{
   private boolean hasInstance(Literal l, boolean abstractOnly) {
     if (abstractOnly){ return false; } 
     assert !l.thisName().isEmpty() || LiteralDeclarations.has(l.cs(),LiteralDeclarations.captureFree);
-    return l.ms().stream().noneMatch(m->m.sig().abs());
+    return l.ms().stream().noneMatch(m -> m.sig().abs());
   }
 
   String extendsClause(Literal lit){ return Join.of(
-    Stream.concat(lit.cs().stream().map(c->typeName(c.name())).distinct(), lit.onlyImmCapture().inner ? Stream.of("_base.OnlyImmCapture") : Stream.of()),
+    Stream.concat(lit.cs().stream().map(c -> typeName(c.name())).distinct(), lit.onlyImmCapture().inner ? Stream.of("_base.OnlyImmCapture") : Stream.of()),
     " extends ",", ","",""
   );}
   String paramsSig(M m){ return Join.of(
-    IntStream.range(0, m.xs().size()).mapToObj(i->"Object p"+i),
+    IntStream.range(0, m.xs().size()).mapToObj(i -> "Object p"+i),
     "(",", ",")","()"
   );}
   void emitTopMethod(BytecodeLineFix sb, Literal l, M m, boolean abstractOnly){
@@ -135,7 +135,7 @@ public final class Backend{
   }
   final Map<String,String> mains= new TreeMap<>();
   void writeMainJava(){
-    var all= Join.of(mains.keySet().stream().map(n->"\""+n+"\""),"{",",","}","{}");
+    var all= Join.of(mains.keySet().stream().map(n -> "\""+n+"\""),"{",",","}","{}");
     var assets= Join.of(tools.capabilities().autoloadedAssets().values().stream().map(Backend::assetLiteral),"{",",","}","{}");
     var sb= new StringBuilder(8_000)
       .append("package _").append(tools.pkgName()).append(";\n\n")
@@ -145,7 +145,7 @@ public final class Backend{
       .append("  public static final String[][] autoloadedAssets= ").append(assets).append(";\n")
       .append("  public static void main(String[] args){ var ok= true; for (String n: args.length == 0 ? all : args){ ok&= run(n); } if (!ok){ System.exit(1); } }\n")
       .append("  static boolean run(String n){\n");
-    mains.forEach((n,iface)->sb
+    mains.forEach((n,iface) -> sb
       .append("    if (n.equals(\"").append(n).append("\")){ return _base.Util.topLevel(()->")
       .append(iface).append(".instance.imm$main$1(new ").append(typeName(new TName("base._System",0,Pos.unknown))).append("())); }\n"));
     sb.append("    throw new AssertionError(\"No main called \"+n+\" in package ").append(tools.pkgName()).append("\");\n  }\n}\n");
@@ -158,7 +158,7 @@ public final class Backend{
     assert s.indexOf('"') < 0 && s.indexOf('\\') < 0 && s.indexOf('\n') < 0 && s.indexOf('\r') < 0;
     return "\""+s+"\"";
   }
-  String mangleOp(String op){ return op.chars().mapToObj(c->opTok((char)c)).collect(Collectors.joining("_")); }
+  String mangleOp(String op){ return op.chars().mapToObj(c -> opTok((char)c)).collect(Collectors.joining("_")); }
   static String opTok(char c){ return switch(c){
     case '+' -> "plus";
     case '-' -> "dash";

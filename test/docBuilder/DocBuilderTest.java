@@ -298,8 +298,8 @@ final class DocBuilderTest{
     var refs= builder.inheritedMethods(top, midSame);
 
     assertEquals(2, refs.size());
-    assertTrue(refs.stream().anyMatch(r->r.method()==midSame));
-    assertTrue(refs.stream().anyMatch(r->r.method()==baseSame));
+    assertTrue(refs.stream().anyMatch(r -> r.method()==midSame));
+    assertTrue(refs.stream().anyMatch(r -> r.method()==baseSame));
   }
 
   @Test void aSingleDeclarationWithNoExplicitRcIsDuplicatedPerRequiredRcAndEachVariantMatchesItsOwnSupertypeCounterpart(){
@@ -322,8 +322,8 @@ final class DocBuilderTest{
     assertEquals(1, builder.type(sub).methods.size());
     assertEquals(2, doc.variants.size());
     assertEquals(2, doc.inheritedFrom.size());
-    assertTrue(doc.inheritedFrom.stream().anyMatch(r->r.method()==supMut));
-    assertTrue(doc.inheritedFrom.stream().anyMatch(r->r.method()==supImm));
+    assertTrue(doc.inheritedFrom.stream().anyMatch(r -> r.method()==supMut));
+    assertTrue(doc.inheritedFrom.stream().anyMatch(r -> r.method()==supImm));
   }
 
   @Test void aBareTypeNameThatMatchesTwoLocalArityVariantsIsAmbiguous(){
@@ -521,7 +521,7 @@ final class DocBuilderTest{
     var linked= idsIn(html, "href=\"#");
     var ids= idsIn(html, "id=\"");
     assertFalse(linked.isEmpty(), "this fixture must actually produce in-page links");
-    assertEquals(List.of(), linked.stream().distinct().filter(l->!ids.contains(l)).toList(),
+    assertEquals(List.of(), linked.stream().distinct().filter(l -> !ids.contains(l)).toList(),
       "every in-page link must have a matching id");
   }
 
@@ -794,7 +794,7 @@ Holder
     builder.packageLocation("pkg", tmp.resolve("pkg.html"), Optional.of(tmp));
 
     var renderer= new HtmlDocRenderer("pkg", Map.of(), builder.types, OtherPackages.empty(), Map.of(), Optional.empty());
-    var ex= assertThrows(UserError.class, ()->builder.writeTest(renderer,new PathEntry(tmp,Path.of("auto_tests","pkg_test.fear"))));
+    var ex= assertThrows(UserError.class, () -> builder.writeTest(renderer,new PathEntry(tmp,Path.of("auto_tests","pkg_test.fear"))));
 
     assertTrue(ex.getMessage().contains("_Holder_Examples"), ex.getMessage());
     assertTrue(ex.getMessage().contains("AllAutoTests_pkg"), ex.getMessage());
@@ -828,7 +828,7 @@ Holder
     builder.visitLiteral(owner);
     builder.packageLocation("pkg", tmp.resolve("pkg.html"), Optional.of(tmp));
 
-    var ex= assertThrows(UserError.class, ()->builder.complete(tests));
+    var ex= assertThrows(UserError.class, () -> builder.complete(tests));
 
     assertTrue(ex.getMessage().contains("more than one declaration on the same line"), ex.getMessage());
   }
@@ -844,7 +844,7 @@ Holder
     builder.visitLiteral(owner);
     builder.packageLocation("pkg", tmp.resolve("pkg.html"), Optional.of(tmp));
 
-    assertThrows(UserError.class, ()->builder.complete(tests));
+    assertThrows(UserError.class, () -> builder.complete(tests));
   }
 
   @Test void aTrailingTestOnlyLineSharedByTwoDeclarationsOnOneLineIsAnAmbiguousReferenceError(@TempDir Path tmp){
@@ -857,7 +857,7 @@ Holder
     builder.visitLiteral(owner);
     builder.packageLocation("pkg", tmp.resolve("pkg.html"), Optional.of(tmp));
 
-    var ex= assertThrows(UserError.class, ()->builder.complete(tests));
+    var ex= assertThrows(UserError.class, () -> builder.complete(tests));
 
     assertTrue(ex.getMessage().contains("more than one declaration on the same line"), ex.getMessage());
   }
@@ -885,7 +885,7 @@ Holder
     builder.visitLiteral(owner);
     builder.packageLocation("pkg", tmp.resolve("pkg.html"), Optional.of(tmp));
 
-    assertThrows(UserError.class, ()->builder.complete(tests));
+    assertThrows(UserError.class, () -> builder.complete(tests));
   }
 
   @Test void aTrailingDocAfterTheLastOfTwoDeclarationsOnSeparateLinesIsNotAmbiguous(@TempDir Path tmp){

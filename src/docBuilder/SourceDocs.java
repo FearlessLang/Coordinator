@@ -25,8 +25,8 @@ final class SourceDocs{
     var res= new ArrayList<DocOcc>();
     if (includeBefore){ collectBefore(pos.line(),res); }
     inlineAfter(pos.line(),pos.column())
-      .filter(occ->depthAt(occ.line(),occ.column()) >= depthAt(pos.line(),pos.column()))
-      .ifPresent(occ->{
+      .filter(occ -> depthAt(occ.line(),occ.column()) >= depthAt(pos.line(),pos.column()))
+      .ifPresent(occ -> {
         var firstColumn= inlineClaimedFromColumn.putIfAbsent(occ, pos.column());
         if (firstColumn != null && firstColumn != pos.column()){ ambiguousInline.add(occ); }
         res.add(occ);
@@ -46,7 +46,7 @@ final class SourceDocs{
   List<List<DocOcc>> orphanRuns(){
     var lost= docsByLine.values().stream()
       .flatMap(List::stream)
-      .filter(d->!attached.contains(d))
+      .filter(d -> !attached.contains(d))
       .sorted(Comparator.comparingInt(DocOcc::line).thenComparingInt(DocOcc::column))
       .toList();
     var res= new ArrayList<List<DocOcc>>();
@@ -95,7 +95,7 @@ final class SourceDocs{
 
   Optional<DocOcc> inlineAfter(int line, int column){
     return docsByLine.getOrDefault(line,List.of()).stream()
-      .filter(c->!c.pureLine() && c.column() >= column)
+      .filter(c -> !c.pureLine() && c.column() >= column)
       .findFirst();
   }
 

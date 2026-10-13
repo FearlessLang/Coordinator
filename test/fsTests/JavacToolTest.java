@@ -20,7 +20,7 @@ public final class JavacToolTest{
     Fs.ensureDir(classes);
     var jar= tmp.resolve(folder).resolve("out").resolve("A.jar");
     Fs.ensureDir(jar.getParent());
-    JavacTool.compileTree(src, classes, ()->{}, jar, List.of());
+    JavacTool.compileTree(src, classes, () -> {}, jar, List.of());
     assertTrue(Files.isRegularFile(classes.resolve("A.class")));
   }
   @Test void apostropheInProjectFolder(@TempDir Path tmp){ compiles(tmp, "it's"); }

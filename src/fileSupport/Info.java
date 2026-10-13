@@ -21,12 +21,12 @@ public sealed interface Info{
   record Lst(List<Info> items, Span span) implements Info{}
   record Obj(List<Field> fields, Span span) implements Info{
     public record Field(String key, Span keySpan, Info value){}
-    public Optional<Field> field(String key){ return OneOr.opt("key "+key, fields.stream().filter(f->f.key().equals(key))); }
+    public Optional<Field> field(String key){ return OneOr.opt("key "+key, fields.stream().filter(f -> f.key().equals(key))); }
   }
   Span noSpan= new Span(URI.create("info:synthetic"),1,1,1,1);
   static Info parse(String text, URI uri){ return new Parser(text,uri).all(); }
   static UserError err(String source, Span span, String msg){
-    return new UserError(Message.of(_->source,List.of(new Frame("",span)),msg));
+    return new UserError(Message.of(_ -> source,List.of(new Frame("",span)),msg));
   }
   static String print(Info info){
     var sb= new StringBuilder();
@@ -126,7 +126,7 @@ public sealed interface Info{
       var start= here();
       advance();
       var seen= new HashSet<String>();
-      var fields= seq(start,'}',"object",()->field(seen));
+      var fields= seq(start,'}',"object",() -> field(seen));
       var end= here();
       advance();
       return new Obj(fields,between(start,end));

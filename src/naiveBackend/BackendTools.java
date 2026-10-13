@@ -23,7 +23,7 @@ public record BackendTools(String pkgName, List<Literal> decs, Path rootDir, Htm
     return of(pkgName, oracle, other, core, rootDir, baseCachePath, Optional.of(rootDir.getParent()), rtPath, capabilities);
   }
   public static BackendTools of(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, Path rootDir, Optional<Path> baseCachePath, Optional<Path> testsRoot, Path rtPath, CapabilityEnvironment capabilities){
-    var docs= new HtmlDocBuilder(oracle,other,core,baseCachePath.map(p->p.resolve("base.html")));
+    var docs= new HtmlDocBuilder(oracle,other,core,baseCachePath.map(p -> p.resolve("base.html")));
     docs.packageLocation(pkgName, rootDir.resolve("gen_java",pkgName+".html"), testsRoot);
     return new BackendTools(pkgName, core, rootDir, docs, new MagicConsistency(pkgName, rtPath), capabilities, rtPath);
   }

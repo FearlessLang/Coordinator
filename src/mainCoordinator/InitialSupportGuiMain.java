@@ -104,7 +104,7 @@ public final class InitialSupportGuiMain{
 
   private JComponent footer(){
     var p= new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
-    var info= addBtn(p, "Info", "About Fearless", _->showHtml(aboutHtml, "About Fearless"));
+    var info= addBtn(p, "Info", "About Fearless", _ -> showHtml(aboutHtml, "About Fearless"));
     info.setFont(uiFont.deriveFont(uiFont.getSize2D() - 2f));
     info.setMargin(new Insets(2,8,2,8));
     return p;
@@ -156,7 +156,7 @@ public final class InitialSupportGuiMain{
     p.putClientProperty(JEditorPane.HONOR_DISPLAY_PROPERTIES, Boolean.TRUE);
     p.setFont(uiFont);
     p.setBorder(new EmptyBorder(10,10,10,10));
-    p.addHyperlinkListener(e->{
+    p.addHyperlinkListener(e -> {
       if (e.getEventType() == HyperlinkEvent.EventType.ACTIVATED){ openUri(e.getURL() != null ? e.getURL().toString() : e.getDescription()); }
     });
     return p;
@@ -172,13 +172,13 @@ public final class InitialSupportGuiMain{
     b.setAlignmentX(Component.CENTER_ALIGNMENT);
     b.setMaximumSize(new Dimension(Integer.MAX_VALUE, b.getPreferredSize().height + 6));
     b.setToolTipText(tooltip);
-    b.addActionListener(_->c.accept(b));
+    b.addActionListener(_ -> c.accept(b));
     parent.add(b);
     parent.add(Box.createVerticalStrut(8));
     return b;
   }
   private static JButton addBtn(Container parent, String text){
-    var b= addBtn(parent, text, comingSoon, _->{});
+    var b= addBtn(parent, text, comingSoon, _ -> {});
     b.setEnabled(false);
     return b;
   }

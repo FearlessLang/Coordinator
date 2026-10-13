@@ -28,7 +28,7 @@ final class TypeDoc{
   }
 
   void addVariant(Literal l){
-    assert variants.stream().noneMatch(v->v.name().equals(l.name())):
+    assert variants.stream().noneMatch(v -> v.name().equals(l.name())):
       "Repeated literal source with same name: "+l.pos()+" "+l.name();
     variants.add(l);
   }
@@ -74,7 +74,7 @@ final class MethodDoc{
   void add(M m){ variants.add(m); }
 
   void addInheritedFrom(List<MethodRef> refs){
-    refs.forEach(r->{
+    refs.forEach(r -> {
       if (inheritedKeys.add(MethodRefKey.of(r))){ inheritedFrom.add(r); }
     });
   }

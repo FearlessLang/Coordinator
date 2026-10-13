@@ -77,7 +77,7 @@ min.js
 min.css
 """.lines().collect(Collectors.toCollection(LinkedHashSet::new));
 
-  private static String tickList(Set<String> xs){ return Join.of(xs.stream().map(x->"`"+x+"`"),"",", ",""); }
+  private static String tickList(Set<String> xs){ return Join.of(xs.stream().map(x -> "`"+x+"`"),"",", ",""); }
 
   private static String rulesWall(){ return """
 We check this so that you do not get surprises later.
@@ -601,7 +601,7 @@ Rank files:
   %s
 
 Each package must contain exactly one rank file.
-""".formatted(disp(pkg), Join.of(rankFiles.stream().map(f->disp(f.fearPath())), "",", ","")));
+""".formatted(disp(pkg), Join.of(rankFiles.stream().map(f -> disp(f.fearPath())), "",", ","")));
   }
   public static UserError projectMalformedRankFileName(Ref rankFile){ return new UserError("""
 Malformed rank file name.

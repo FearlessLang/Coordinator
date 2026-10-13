@@ -52,8 +52,8 @@ final class HtmlDocRenderer{
     renderToc(sb,shown);
     sb.append("<main>\n");
     renderHeader(sb,shown);
-    shown.forEach(t->renderType(sb,t,claims));
-    pages.forEach((p,id)->renderPage(sb,p,id));
+    shown.forEach(t -> renderType(sb,t,claims));
+    pages.forEach((p,id) -> renderPage(sb,p,id));
     sb.append(router());
     return sb.append("</main>\n</div>\n</body>\n</html>\n").toString();
   }
@@ -62,7 +62,7 @@ final class HtmlDocRenderer{
     var shown= visibleTypes();
     var claims= inlineClaims(shown);
     var sb= new StringBuilder(4_000).append("package ").append(pkgName).append("\n\n");
-    shown.forEach(t->renderTypeText(sb,t,claims));
+    shown.forEach(t -> renderTypeText(sb,t,claims));
     return sb.toString();
   }
 
@@ -70,20 +70,20 @@ final class HtmlDocRenderer{
 
   List<TypeDoc> testableTypes(){
     return visibleTypes().stream()
-      .filter(t->!t.main().infName())
-      .filter(t->visibleMethods(t).stream().anyMatch(this::hasTestContent))
+      .filter(t -> !t.main().infName())
+      .filter(t -> visibleMethods(t).stream().anyMatch(this::hasTestContent))
       .toList();
   }
 
   boolean hasTestContent(MethodDoc m){
-    return m.docs.stream().anyMatch(d->d.example() || d.testOnly());
+    return m.docs.stream().anyMatch(d -> d.example() || d.testOnly());
   }
 
   GeneratedTestNames testNames(){
     var shown= testableTypes();
     return new GeneratedTestNames(
       "AllAutoTests_"+pkgName,
-      shown.stream().map(t->"_"+t.main().name().simpleName()+"_Examples").toList()
+      shown.stream().map(t -> "_"+t.main().name().simpleName()+"_Examples").toList()
     );
   }
 
@@ -94,14 +94,14 @@ final class HtmlDocRenderer{
     for (int i : Range.of(shown)){
       sb.append(names.perType().get(i)).append(": base.Test {::\n");
       for (var m: visibleMethods(shown.get(i))){
-        var examples= m.docs.stream().filter(d->d.example() || d.testOnly()).map(DocOcc::text).toList();
+        var examples= m.docs.stream().filter(d -> d.example() || d.testOnly()).map(DocOcc::text).toList();
         if (examples.isEmpty()){ continue; }
         sb.append("  .test base.Test{::\n").append(String.join("\n",examples)).append("\n  }\n");
       }
       sb.append("  }\n\n");
     }
     sb.append(names.top()).append(": base.UnitTests {::\n");
-    names.perType().forEach(n->sb.append("  .test ").append(n).append('\n'));
+    names.perType().forEach(n -> sb.append("  .test ").append(n).append('\n'));
     sb.append("  }\n");
     return sb.toString();
   }
@@ -113,7 +113,7 @@ final class HtmlDocRenderer{
     }
     sb.append('\n');
     renderDocText(sb,"  ",t,t.docs,claims);
-    visibleMethods(t).forEach(m->renderMethodText(sb,m,claims));
+    visibleMethods(t).forEach(m -> renderMethodText(sb,m,claims));
     sb.append('\n');
   }
 
@@ -126,22 +126,22 @@ final class HtmlDocRenderer{
     var refs= fromRefs(m);
     if (refs.isEmpty()){ return; }
     sb.append("    from: ").append(refs.stream()
-      .map(r->refName(r)+r.method().sig().m())
+      .map(r -> refName(r)+r.method().sig().m())
       .collect(Collectors.joining(", "))).append('\n');
   }
 
   static List<DocOcc> visibleDocs(Object owner, List<DocOcc> docs, Map<DocOcc,Object> claims){
-    return docs.stream().filter(c->!c.inline() || claims.get(c) == owner).filter(c->!c.testOnly()).toList();
+    return docs.stream().filter(c -> !c.inline() || claims.get(c) == owner).filter(c -> !c.testOnly()).toList();
   }
 
   void renderDocText(StringBuilder sb, String indent, Object owner, List<DocOcc> docs, Map<DocOcc,Object> claims){
     var visible= visibleDocs(owner,docs,claims);
     if (visible.isEmpty()){ return; }
-    visible.stream().filter(c->!c.example()).forEach(c->appendIndented(sb,indent,c.text()));
+    visible.stream().filter(c -> !c.example()).forEach(c -> appendIndented(sb,indent,c.text()));
     var examples= visible.stream().filter(DocOcc::example).map(DocOcc::text).toList();
     if (examples.isEmpty()){ return; }
     sb.append(indent).append("example:\n");
-    examples.forEach(e->appendIndented(sb,indent+"  ",e));
+    examples.forEach(e -> appendIndented(sb,indent+"  ",e));
   }
 
   static void appendIndented(StringBuilder sb, String indent, String line){
@@ -318,7 +318,7 @@ code{
   List<TypeDoc> visibleTypes(){
     return types.stream()
       .filter(TypeDoc::visible)
-      .sorted(Comparator.comparing(t->(t.main().infName() ? "1:" : "0:")+typeTitle(t)))
+      .sorted(Comparator.comparing(t -> (t.main().infName() ? "1:" : "0:")+typeTitle(t)))
       .toList();
   }
 
@@ -337,9 +337,9 @@ code{
   Map<DocOcc,Object> inlineClaims(List<TypeDoc> shown){
     var res= new HashMap<DocOcc,Object>();
     for (var t:shown){
-      t.docs.stream().filter(DocOcc::inline).forEach(c->res.put(c,t));
-      visibleMethods(t).forEach(m->
-        m.docs.stream().filter(DocOcc::inline).forEach(c->res.put(c,m)));
+      t.docs.stream().filter(DocOcc::inline).forEach(c -> res.put(c,t));
+      visibleMethods(t).forEach(m ->
+        m.docs.stream().filter(DocOcc::inline).forEach(c -> res.put(c,m)));
     }
     return res;
   }
@@ -348,7 +348,7 @@ code{
     sb.append("<nav class=\"toc\">\n")
       .append("<input id=\"filter\" type=\"search\" placeholder=\"Filter types\" autocomplete=\"off\">\n")
       .append("<ul id=\"toclist\">\n");
-    shown.forEach(t->sb.append("<li><a href=\"#")
+    shown.forEach(t -> sb.append("<li><a href=\"#")
       .append(typeId(t)).append("\">")
       .append(h(shortTitle(t))).append("</a></li>\n"));
     sb.append("</ul>\n</nav>\n");
@@ -367,7 +367,7 @@ code{
     }
     renderVariants(sb,"Typed literal variants",t.variants,toStr::lit);
     sb.append("<h3>Methods</h3>\n");
-    visibleMethods(t).forEach(m->renderMethod(sb,m,claims));
+    visibleMethods(t).forEach(m -> renderMethod(sb,m,claims));
     sb.append("</section>\n");
   }
   void renderMethod(StringBuilder sb, MethodDoc m, Map<DocOcc,Object> claims){
@@ -376,7 +376,7 @@ code{
       .append(renderSig(m)).append("</span></summary>\n");
     if (m.declared){ renderDoc(sb,m,m.docs,claims); }
     renderFrom(sb,m);
-    renderVariants(sb,"Typed method variants",m.variants,v->toStr.sig(v.sig()));
+    renderVariants(sb,"Typed method variants",m.variants,v -> toStr.sig(v.sig()));
     sb.append("</details>\n");
   }
   void renderFrom(StringBuilder sb, MethodDoc m){
@@ -397,7 +397,7 @@ code{
   }
 
   String refName(MethodRef r){
-    return r.provider().map(toStr::typeName).orElseGet(()->toStr.typeNameWithArity(r.owner()));
+    return r.provider().map(toStr::typeName).orElseGet(() -> toStr.typeNameWithArity(r.owner()));
   }
 
   //only the types a signature mentions become links: its own selector would just point
@@ -428,7 +428,7 @@ code{
       sb.append("<p class=\"doc missing\">No documentation yet.</p>\n");
       return;
     }
-    var prose= visible.stream().filter(c->!c.example()).toList();
+    var prose= visible.stream().filter(c -> !c.example()).toList();
     if (!prose.isEmpty()){
       sb.append("<div class=\"doc\">\n");
       renderProse(sb,prose);
@@ -483,17 +483,17 @@ code{
   String renderCode(String text, DocRefScanner.CodeSpan cs, List<ResolvedSpan> linked){
     var body= h(text.substring(cs.start(),cs.end()));
     return linked.stream()
-      .filter(sp->sp.start()==cs.start() && sp.end()==cs.end())
-      .filter(sp->!(sp.link() instanceof DocLink.NoLink))
+      .filter(sp -> sp.start()==cs.start() && sp.end()==cs.end())
+      .filter(sp -> !(sp.link() instanceof DocLink.NoLink))
       .findFirst()
-      .map(sp->"<a href=\""+h(href(sp.link()))+"\">"+body+"</a>")
+      .map(sp -> "<a href=\""+h(href(sp.link()))+"\">"+body+"</a>")
       .orElse(body);
   }
 
   void renderPage(StringBuilder sb, DocLink.Ambiguous p, String anchor){
     sb.append("<section class=\"type disambig\" id=\"").append(anchor).append("\">\n")
       .append("<h2>Several match ").append(h(p.title())).append("</h2>\n<ul class=\"options\">\n");
-    p.options().forEach(c->sb.append("<li>").append(renderCandidate(c)).append("</li>\n"));
+    p.options().forEach(c -> sb.append("<li>").append(renderCandidate(c)).append("</li>\n"));
     sb.append("</ul>\n</section>\n");
   }
 
@@ -504,14 +504,14 @@ code{
       sb.append(h(c.selector().get())).append(h(DocResolver.shape(c.arity(),"(",")")));
     }
     sb.append("</a>");
-    c.localMethod().ifPresent(m->m.docs.stream().filter(d->!d.example() && !d.testOnly()).findFirst()
-      .ifPresent(d->sb.append(" <span class=\"opt-doc\">\u2014 ").append(h(d.text())).append("</span>")));
+    c.localMethod().ifPresent(m -> m.docs.stream().filter(d -> !d.example() && !d.testOnly()).findFirst()
+      .ifPresent(d -> sb.append(" <span class=\"opt-doc\">\u2014 ").append(h(d.text())).append("</span>")));
     return sb.toString();
   }
 
   String href(DocLink link){
     if (link instanceof DocLink.Ambiguous a){
-      return "#"+pages.computeIfAbsent(a,_->"disambig-"+id(a.title())+"-"+pages.size());
+      return "#"+pages.computeIfAbsent(a,_ -> "disambig-"+id(a.title())+"-"+pages.size());
     }
     return candidateHref(((DocLink.Resolved)link).hit());
   }
@@ -525,7 +525,7 @@ code{
     if (variants.size() <= 1){ return; }
     sb.append("<details class=\"variants\"><summary>")
       .append(h(title)).append(": ").append(variants.size()).append("</summary>\n");
-    variants.forEach(v->sb.append("<pre class=\"variant\">").append(h(show.apply(v))).append("</pre>\n"));
+    variants.forEach(v -> sb.append("<pre class=\"variant\">").append(h(show.apply(v))).append("</pre>\n"));
     sb.append("</details>\n");
   }
 
@@ -563,7 +563,7 @@ code{
 
   String prefix(String pkg){
     if (pkg.equals(pkgName)){ return ""; }
-    if (pkg.equals("base")){ return baseDocLocation.map(p->p.toUri().toString()).orElse("base.html"); }
+    if (pkg.equals("base")){ return baseDocLocation.map(p -> p.toUri().toString()).orElse("base.html"); }
     return pkg+".html";
   }
 

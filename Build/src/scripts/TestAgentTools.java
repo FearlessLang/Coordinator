@@ -28,7 +28,7 @@ public final class TestAgentTools{
   static boolean stale(Path app){
     var name= app.getFileName().toString();
     var built= Fs.lastModified(Fs.isWindows() ? app.resolve(name+".exe") : app.resolve("bin").resolve(name));
-    return sources.stream().anyMatch(s->Fs.walk(s,ps->ps.anyMatch(p->Fs.lastModified(p)>built)));
+    return sources.stream().anyMatch(s -> Fs.walk(s,ps -> ps.anyMatch(p -> Fs.lastModified(p)>built)));
   }
   static final List<Path> sources= List.of(ResolveResource.commonsSrc, ResolveResource.frontendSrc, ResolveResource.frontendSrcModule,
     ResolveResource.coordinatorSrc, ResolveResource.coordinatorSrcModule, ResolveResource.controllerSrc, ResolveResource.controllerSrcModule,

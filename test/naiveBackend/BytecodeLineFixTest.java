@@ -56,7 +56,7 @@ final class BytecodeLineFixTest{
       var cls= Class.forName("generated.Greet", true, loader);
       var instance= cls.getField("instance").get(null);
       var run= cls.getMethod("run", Object.class);
-      var thrown= assertThrows(InvocationTargetException.class, ()->run.invoke(instance, 5));
+      var thrown= assertThrows(InvocationTargetException.class, () -> run.invoke(instance, 5));
       var cause= (ClassCastException)thrown.getCause();
       return cause.getStackTrace()[0].getLineNumber();
     }

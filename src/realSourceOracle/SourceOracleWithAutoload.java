@@ -20,22 +20,22 @@ public record SourceOracleWithAutoload(SourceOracle base, Ref autoload, URI auto
    * triple base.AssetBytesRead.checkAutoloaded validates a runtime asset read against. */
   public record Triple(String diskPath, String zipSteps, String zipEntry){}
   public record Res(SourceOracle oracle, List<Ref> newRefs, Map<String,Triple> autoloadedAssets){
-    public List<Ref> sources(List<Ref> files){ return Push.of(files.stream().filter(f->f.fearPath().endsWith(".fear")).toList(), newRefs); }
+    public List<Ref> sources(List<Ref> files){ return Push.of(files.stream().filter(f -> f.fearPath().endsWith(".fear")).toList(), newRefs); }
   }
   public static final String autoloadFileSuffix= "/autoloaded_assets.fear";
-  static final AutoloadHandler image= new AutoloadHandler(p->p.endsWith(".png")||p.endsWith(".jpg")||p.endsWith(".jpeg")||p.endsWith(".gif")||p.endsWith(".bmp"), "base.ImageFile");
-  public static final List<AutoloadHandler> handlers= List.of(new AutoloadHandler(p->p.endsWith(".txt"), "base.TxtFile"), image);
+  static final AutoloadHandler image= new AutoloadHandler(p -> p.endsWith(".png")||p.endsWith(".jpg")||p.endsWith(".jpeg")||p.endsWith(".gif")||p.endsWith(".bmp"), "base.ImageFile");
+  public static final List<AutoloadHandler> handlers= List.of(new AutoloadHandler(p -> p.endsWith(".txt"), "base.TxtFile"), image);
   private record Generated(String text, Map<String,Triple> autoloadedAssets){}
   public static Res of(SourceOracle base, String pkgName){ return of(base, pkgName, Ref::fearPath); }
   public static Res ofBase(SourceOracle stLib){
-    return of(stLib, "_base", r->SourceOracle.root+"_base/"+r.fearPath().substring(SourceOracle.root.length()));
+    return of(stLib, "_base", r -> SourceOracle.root+"_base/"+r.fearPath().substring(SourceOracle.root.length()));
   }
   public static Optional<Triple> imageAsset(SourceOracle src, SourceOracle stLib, TName type){
     assert type.arity() == 0;
     var pkg= type.pkgName();
     var res= pkg.equals("base") ? ofBase(stLib) : of(src, "_"+pkg);
     return Optional.ofNullable(res.autoloadedAssets().get(type.simpleName()))
-      .filter(t->image.matches().test(t.zipEntry().isEmpty() ? t.diskPath() : t.zipEntry()));
+      .filter(t -> image.matches().test(t.zipEntry().isEmpty() ? t.diskPath() : t.zipEntry()));
   }
   private static Res of(SourceOracle base, String pkgName, Function<Ref,String> path){
     if (suppressed(base, pkgName, path)){ return new Res(base, List.of(), Map.of()); }
@@ -54,7 +54,7 @@ public record SourceOracleWithAutoload(SourceOracle base, Ref autoload, URI auto
     return base.loadString(uri);
   }
   private static boolean suppressed(SourceOracle base, String pkgName, Function<Ref,String> path){
-    return base.allFiles().stream().map(path).anyMatch(n->n.endsWith(autoloadFileSuffix) && n.contains("/"+pkgName+"/"));
+    return base.allFiles().stream().map(path).anyMatch(n -> n.endsWith(autoloadFileSuffix) && n.contains("/"+pkgName+"/"));
   }
   private static Generated generate(SourceOracle base, String pkgName, Function<Ref,String> path){
     var out= new StringBuilder();

@@ -30,7 +30,7 @@ final class TestBuildBase {
     }
 
     @Override public String main(Path path, SourceOracle stLib) throws InterruptedException{
-      OutputOracle out= ()->ResolveResource.stLibDebugOut;
+      OutputOracle out= () -> ResolveResource.stLibDebugOut;
       var pkgName= "base";
       var other= OtherPackages.empty();
       var rich= SourceOracleWithAutoload.ofBase(stLib);

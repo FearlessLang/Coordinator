@@ -137,19 +137,19 @@ final class DocRefScannerTest{
     assertEquals(
       List.of(new DocRef.TypeName(Optional.empty(),"Foo",OptionalInt.empty()),
               new DocRef.TypeName(Optional.empty(),"Bar",OptionalInt.empty())),
-      spans.stream().map(sp->DocRefScanner.wholeRef(text,sp).get()).toList());
+      spans.stream().map(sp -> DocRefScanner.wholeRef(text,sp).get()).toList());
   }
 
   //a signature is generated code, so every type in it is offered and nothing in it
   //can be an error.
   @Test void aSignatureOffersEveryTypeNameItContains(){
     var names= DocRefScanner.signatureTypes("read .foo(read Bar):Baz").stream()
-      .map(f->((DocRef.TypeName)f.ref()).simpleName()).toList();
+      .map(f -> ((DocRef.TypeName)f.ref()).simpleName()).toList();
     assertEquals(List.of("Bar","Baz"), names);
   }
 
   @Test void aSignatureDoesNotSeeATypeInsideALongerWord(){
     assertTrue(DocRefScanner.signatureTypes("read .ieeeEq(x)").stream()
-      .noneMatch(f->((DocRef.TypeName)f.ref()).simpleName().equals("Eq")));
+      .noneMatch(f -> ((DocRef.TypeName)f.ref()).simpleName().equals("Eq")));
   }
 }

@@ -35,7 +35,7 @@ public final class ZipWellFormedness{
   }
   private static void reqNoFileUsedAsDirectory(List<ZipEntry> out){
     for (var e: out){
-      var nested= out.stream().filter(o->isProperPrefix(e.segments(), o.segments())).findFirst();
+      var nested= out.stream().filter(o -> isProperPrefix(e.segments(), o.segments())).findFirst();
       if (nested.isEmpty()){ continue; }
       var extra= nested.get().segments().subList(e.segments().size(), nested.get().segments().size());
       var nestedDisplay= e.lastZips()+"/"+String.join("/", extra);
@@ -47,8 +47,8 @@ public final class ZipWellFormedness{
       if (!e.lastZips().endsWith(".zip")){ continue; }
       var folder= dropZipExt(e.segments());
       var inFolder= out.stream()
-        .filter(o->o.zips().equals(e.zips()))
-        .filter(o->isProperPrefix(folder, o.segments()))
+        .filter(o -> o.zips().equals(e.zips()))
+        .filter(o -> isProperPrefix(folder, o.segments()))
         .findFirst();
       if (inFolder.isEmpty()){ continue; }
       throw Report.zipNameClashesWithFolder(e.root().resolve(e.local()), e.zips(), e.lastZips(), inFolder.get().lastZips());
@@ -58,9 +58,9 @@ public final class ZipWellFormedness{
     return full.size() > prefix.size() && full.subList(0, prefix.size()).equals(prefix);
   }
   private static List<String> zipsToSegments(List<String> steps, String name){
-    assert steps.stream().allMatch(e->e.endsWith(".zip"));
+    assert steps.stream().allMatch(e -> e.endsWith(".zip"));
     return Stream.concat(
-      steps.stream().flatMap(e->dropZipExt(List.of(e.split("/"))).stream()),
+      steps.stream().flatMap(e -> dropZipExt(List.of(e.split("/"))).stream()),
       Stream.of(name.split("/"))
     ).toList();
   }

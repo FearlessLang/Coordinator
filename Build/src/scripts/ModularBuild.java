@@ -68,7 +68,7 @@ public final class ModularBuild{
   }
 
   static void deployEclipsePlugin(Path appRoot){
-    var found= Fs.walk(appRoot, s->s.filter(Files::isDirectory).filter(p->p.getFileName().toString().equals("mods")).toList());
+    var found= Fs.walk(appRoot, s -> s.filter(Files::isDirectory).filter(p -> p.getFileName().toString().equals("mods")).toList());
     var appDir= OneOr.of("Expected exactly one 'mods' dir under "+appRoot, found.stream()).getParent();
     Fs.copyFresh(buildEclipsePlugin(), appDir.resolve("eclipsePlugin"));
   }
@@ -81,13 +81,13 @@ public final class ModularBuild{
     var classes= out.resolve("eclipsePluginClasses");
     Fs.cleanDir(classes); Fs.ensureDir(classes);
     var plugins= ResolveResource.eclipsePlugins;
-    var bundles= Fs.walk(plugins, s->s.filter(p->p.getParent().equals(plugins) && p.toString().endsWith(".jar")).map(Path::toString).sorted().toList());
+    var bundles= Fs.walk(plugins, s -> s.filter(p -> p.getParent().equals(plugins) && p.toString().endsWith(".jar")).map(Path::toString).sorted().toList());
     var args= new ArrayList<>(JavacTool.javacArgs);
     args.addAll(List.of("--release", ResolveResource.eclipseJavaVersion, "-Xlint:-path",
       "-d", classes.toString(),
       "-cp", String.join(File.pathSeparator, bundles)));
-    List.of(plugin.resolve("src"), ResolveResource.controllerSrc.resolve("suggest")).forEach(src->
-      Fs.walkV(src, s->s.filter(p->p.toString().endsWith(".java")).forEach(p->args.add(p.toString()))));
+    List.of(plugin.resolve("src"), ResolveResource.controllerSrc.resolve("suggest")).forEach(src ->
+      Fs.walkV(src, s -> s.filter(p -> p.toString().endsWith(".java")).forEach(p -> args.add(p.toString()))));
     Fs.runTool("javac", args);
     var res= out.resolve("eclipsePlugin");
     Fs.cleanDir(res); Fs.ensureDir(res);
@@ -106,7 +106,7 @@ public final class ModularBuild{
     return manifestValue(lines, "Bundle-SymbolicName").split(";")[0]+"_"+manifestValue(lines, "Bundle-Version")+".jar";
   }
   static String manifestValue(List<String> lines, String key){
-    var found= lines.stream().filter(l->l.startsWith(key+": "));
+    var found= lines.stream().filter(l -> l.startsWith(key+": "));
     return OneOr.of("Expected exactly one "+key+" in the plugin manifest", found).substring(key.length()+2).strip();
   }
 }
