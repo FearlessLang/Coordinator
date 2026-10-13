@@ -66,7 +66,7 @@ final class LimitedJsonParser{
     var cs= asArr(a.get(3)).stream().map(x->cFrom(asArr(x))).toList();
     var ms= asArr(a.get(4)).stream().map(x->mFrom(asArr(x))).toList();
     //Non-public types are kept too: needed for subtyping reasoning.
-    return new Literal(rc, tn, bs, cs, asStr(a.get(5)), ms, Src.syntetic, false);
+    return new Literal(rc, tn, bs, cs, asStr(a.get(5)), ms, Src.synthetic, false);
   }
   private M mFrom(List<Object> a){
     if (a.size() != 8){ throw err("Bad M"); }
