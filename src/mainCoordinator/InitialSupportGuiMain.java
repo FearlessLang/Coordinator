@@ -306,17 +306,6 @@ public final class InitialSupportGuiMain{
       Inside it, you will find <b>start.fearless</b>.
     </p>
 
-    <h3>One-time setup: register the .fearless file type</h3>
-    <ol>
-      <li>In the Fearless installation folder, find the file <b>fearless-mime.xml</b>.</li>
-      <li>Copy/drag-and-drop it to:
-        <pre style='margin-top:0;'>~/.local/share/mime/packages/</pre>
-      </li>
-      <li>Click on Open a terminal here and run this single command:
-        <pre style='margin-top:0;'>update-mime-database ~/.local/share/mime</pre>
-      </li>
-    </ol>
-
     <h3>Associate .fearless files with Fearless</h3>
     <ol>
       <li>Right-click <b>start.fearless</b>.</li>
@@ -325,10 +314,6 @@ public final class InitialSupportGuiMain{
       <li>Choose <b>Always</b> / <b>Remember</b> / <b>Set as default</b>.</li>
       <li>The first time you run fearless on a new project, it may take a while.</li>
     </ol>
-    <p>
-      Tip: if after the MIME step the file still looks like plain text, close and reopen the file manager (or log out/in)
-      and then do the <b>Open With</b> step again.
-    </p>
   </body>
 </html>
 """;
