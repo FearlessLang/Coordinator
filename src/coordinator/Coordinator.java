@@ -86,7 +86,7 @@ public interface Coordinator {
   default List<Literal> frontend(String pkgName, List<Ref> files, SourceOracle oracle, OtherPackages other,Map<String,String> vres, CapabilityEnvironment capabilities){
     var tests= new ArrayList<Ref>();
     try{ return new FrontendLogicMain().of(pkgName,vres, files, other, core -> docs(pkgName,testsUri(pkgName,files),oracle,other,core,capabilities,tests)); }
-    catch(FearlessException fe){ throw Report.sourceError(fe.render(oracle.withFallback(() -> tests))); }
+    catch (FearlessException fe){ throw Report.sourceError(fe.render(oracle.withFallback(() -> tests))); }
   }
   private Optional<Ref> docs(String pkgName, URI testsUri, SourceOracle oracle, OtherPackages other, List<Literal> core, CapabilityEnvironment capabilities, ArrayList<Ref> tests){
     var docs= backendTools(pkgName,oracle,other,core,capabilities).docs();
@@ -147,7 +147,7 @@ final class Helper{
     var out= new NoCommit(out(project).rootDir());
     Layer l;
     try{ l= layerOf(c,o,project,out,stLib); l.compile(o,out); }
-    catch(WouldCompile _){ return Optional.empty(); }
+    catch (WouldCompile _){ return Optional.empty(); }
     var res= new TreeMap<String,String>();
     out.mains(l.pkgs().keySet()).mains().forEach((k,v) -> res.put(k,v.file()));
     return Optional.of(Collections.unmodifiableMap(res));
@@ -171,7 +171,7 @@ final class Helper{
   static Layer mapFromRanks(Coordinator coordinator, List<Ref> allRanks, SourceOracle o, OutputOracle out, SourceOracle stLib){
     Map<String,Map<String,String>> res; try {res= new FrontendLogicMain()
       .parseRankFiles(allRanks, Comparator.comparingInt(Helper::rankNumber), Push.of(allRanks.stream().map(Helper::pkgName).toList(), "base"));}
-    catch(FearlessException fe){ throw Report.sourceError(fe.render(o)); }
+    catch (FearlessException fe){ throw Report.sourceError(fe.render(o)); }
     long baseStamp= out.commitMap(res, allRanks.stream().mapToLong(Ref::lastModified).max().getAsLong());
     return new BaseLayer(coordinator,res,baseStamp,stLib);
   }

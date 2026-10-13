@@ -124,7 +124,7 @@ public final class FsDsl{
 
   private static byte[] buildZip(ZipNode node){
     var bout= new ByteArrayOutputStream();
-    try(var zos= new ZipOutputStream(bout, UTF_8)){
+    try (var zos= new ZipOutputStream(bout, UTF_8)){
       node.nested.forEach((name, child) -> {
         var bytes= buildZip(child);
         putFile(zos, name, bytes);

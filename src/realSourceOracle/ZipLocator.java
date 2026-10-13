@@ -31,7 +31,7 @@ public final class ZipLocator{
   }
   private static List<String> reqEntries(Path diskZip, List<String> steps, byte[] bytes, List<String> names){
     if (!names.isEmpty()){ return names; }
-    var head= bytes != null ? bytes : Fs.of(() -> { try(var in= Files.newInputStream(diskZip)){ return in.readNBytes(4); } });
+    var head= bytes != null ? bytes : Fs.of(() -> { try (var in= Files.newInputStream(diskZip)){ return in.readNBytes(4); } });
     var empty= head.length >= 4 && Arrays.equals(head, 0, 4, emptyZipSignature, 0, 4);
     throw empty ? Report.zipNoEntries(diskZip, steps) : Report.zipNotAZip(diskZip, steps);
   }

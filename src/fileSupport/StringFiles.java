@@ -59,10 +59,10 @@ public final class StringFiles {
       buffer.get(bytes);
       return bytes;
     }
-    catch(CharacterCodingException e){ throw new Error("The text to write is not valid UTF-16, so it cannot be encoded as UTF-8",e); }
+    catch (CharacterCodingException e){ throw new Error("The text to write is not valid UTF-16, so it cannot be encoded as UTF-8",e); }
   }
   private static boolean requiresReport(ByteFiles.Kind kind){
-    return switch(kind){
+    return switch (kind){
       case UnknownFailureAfterSuccessfulOpen,
            InvalidHandleOrDescriptor,
            InvalidOperationOrParameter_InvalidArgument,
@@ -118,7 +118,7 @@ Nearby bytes:  %s
   }
   private static CharacterCodingException codingException(CoderResult result){
     try { result.throwException(); throw Bug.unreachable(); }
-    catch(CharacterCodingException e){ return e; }
+    catch (CharacterCodingException e){ return e; }
   }
   private static Location location(String prefix){
     var line= 1;

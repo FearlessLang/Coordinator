@@ -88,7 +88,7 @@ We check this so that you[###]
     out.writeBytes(data);
   }
   private static void writeShort(ByteArrayOutputStream out, int v){ out.write(v & 0xff); out.write((v>>8) & 0xff); }
-  private static void writeInt(ByteArrayOutputStream out, long v){ for(int i= 0; i < 4; i++){ out.write((int)((v>>(8*i)) & 0xff)); } }
+  private static void writeInt(ByteArrayOutputStream out, long v){ for (int i= 0; i < 4; i++){ out.write((int)((v>>(8*i)) & 0xff)); } }
 
 @Test void err_zip_duplicate_entry_name2(@TempDir Path tmp){ runErrIOE(tmp, """
 _pkg/z.zip/a.fear
@@ -202,7 +202,7 @@ This file is dated [###]""", FsDsl.dumpErr(root, ex));
     Fs.ensureDir(root.resolve("_pkg"));
     var bytes= new ByteArrayOutputStream();
     Fs.ofV(() -> {
-      try(var zip= new ZipOutputStream(bytes)){
+      try (var zip= new ZipOutputStream(bytes)){
         var e= new java.util.zip.ZipEntry(entry);
         e.setTime(t);
         zip.putNextEntry(e);
@@ -462,7 +462,7 @@ We check this so that you[###]
     Files.createDirectories(root.resolve("_pkg"));
     Files.writeString(root.resolve("_pkg/a.fear"), "A");
     var bytes= new ByteArrayOutputStream();
-    try(var zos= new ZipOutputStream(bytes, StandardCharsets.UTF_8)){
+    try (var zos= new ZipOutputStream(bytes, StandardCharsets.UTF_8)){
       zos.putNextEntry(new java.util.zip.ZipEntry("notes.zip"));
       zos.write("plain text, not a zip".getBytes(StandardCharsets.UTF_8));
       zos.closeEntry();
@@ -1298,7 +1298,7 @@ We check this so that you[###]
 
   private static void createSymbolicLinkOrSkip(Path link, Path target) throws Exception{
     try { Files.createSymbolicLink(link, target); }
-    catch(AccessDeniedException e){ Assumptions.abort("OS denies creating symbolic links here"); }
+    catch (AccessDeniedException e){ Assumptions.abort("OS denies creating symbolic links here"); }
   }
 
   @Test void err_visible_symlink_forbidden(@TempDir Path tmp) throws Exception{

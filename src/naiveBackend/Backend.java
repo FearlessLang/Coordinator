@@ -159,7 +159,7 @@ public final class Backend{
     return "\""+s+"\"";
   }
   String mangleOp(String op){ return op.chars().mapToObj(c -> opTok((char)c)).collect(Collectors.joining("_")); }
-  static String opTok(char c){ return switch(c){
+  static String opTok(char c){ return switch (c){
     case '+' -> "plus";
     case '-' -> "dash";
     case '*' -> "star";

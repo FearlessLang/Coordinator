@@ -34,7 +34,7 @@ public sealed interface Info{
     return sb.append('\n').toString();
   }
   private static void write(Info info, int indent, StringBuilder sb){
-    switch(info){
+    switch (info){
       case Str s -> quote(s.value(),sb);
       case Lst l -> { sb.append('['); join(l.items(),sb); sb.append(']'); }
       case Obj o -> writeObj(o,indent,sb);
@@ -81,7 +81,7 @@ public sealed interface Info{
       if (!more()){ throw err(here(),"The text ends here, but a value (a string \"...\", a list [...] or an object {...}) was expected."); }
       if (depth == 100){ throw err(here(),"Lists and objects nest at most 100 deep, and this value is inside 100 of them."); }
       depth += 1;
-      var res= switch(peek()){
+      var res= switch (peek()){
         case '"' -> str();
         case '[' -> list();
         case '{' -> obj();
@@ -94,7 +94,7 @@ public sealed interface Info{
       var start= here();
       advance();
       var sb= new StringBuilder();
-      while(true){
+      while (true){
         if (!more()){ throw err(from(start),"This string is never closed with a matching \"."); }
         var c= peek();
         if (c == '"'){ var end= here(); advance(); return new Str(sb.toString(),between(start,end)); }
@@ -107,7 +107,7 @@ public sealed interface Info{
       if (!more()){ throw err(here(),"The text ends right after a \\: an escape needs a character after it."); }
       var at= here();
       var c= advance();
-      return switch(c){
+      return switch (c){
         case '"' -> '"';
         case '\\' -> '\\';
         case 'n' -> '\n';
@@ -142,7 +142,7 @@ public sealed interface Info{
     }
     private <T> List<T> seq(Span start, char close, String what, Supplier<T> item){
       var items= new ArrayList<T>();
-      while(true){
+      while (true){
         ws();
         if (!more()){ throw err(from(start),"This "+what+" is never closed with a matching "+close+"."); }
         if (peek() == close && items.isEmpty()){ return items; }
@@ -155,12 +155,12 @@ public sealed interface Info{
       }
     }
     private void ws(){
-      while(more()){
+      while (more()){
         var c= peek();
         if (c == ' ' || c == '\n'){ advance(); continue; }
         var comment= c == '/' && i+1 < text.length() && text.charAt(i+1) == '/';
         if (!comment){ return; }
-        while(more() && peek() != '\n'){ advance(); }
+        while (more() && peek() != '\n'){ advance(); }
       }
     }
     private boolean more(){ return i < text.length(); }

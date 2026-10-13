@@ -136,12 +136,12 @@ Details:
   }
   public void display() throws InterruptedException{
     try { displayGui(); }
-    catch(HeadlessException e){ displayStderr(e); }
+    catch (HeadlessException e){ displayStderr(e); }
   }
   private void displayGui() throws InterruptedException{
     if (SwingUtilities.isEventDispatchThread()){ displayNow(); return; }
     try { SwingUtilities.invokeAndWait(this::displayNow); }
-    catch(InvocationTargetException e){ displayStderr(e.getCause()); }//Rare, could be a memory overflow or other JVM stuff?
+    catch (InvocationTargetException e){ displayStderr(e.getCause()); }//Rare, could be a memory overflow or other JVM stuff?
   }
   private void displayNow(){
     var options= recovery == null ? null : new Object[]{"OK", recoveryLabel};

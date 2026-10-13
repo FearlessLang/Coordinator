@@ -43,7 +43,7 @@ import utils.Bug;
 public final class InitialSupportGuiMain{
   public static void main(String[] args){
     try{ UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName()); }
-    catch(Exception _){ throw Bug.unreachable(); }
+    catch (Exception _){ throw Bug.unreachable(); }
     setUiFont(uiFont);
     SwingUtilities.invokeLater(InitialSupportGuiMain::new);
   }
@@ -127,7 +127,7 @@ public final class InitialSupportGuiMain{
     try{
       var browse= Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE);
       if (browse){ Desktop.getDesktop().browse(URI.create(s)); return; }
-    }catch(Exception _){}
+    }catch (Exception _){}
     Toolkit.getDefaultToolkit().beep();
   }
   private void selectFile(JButton b){

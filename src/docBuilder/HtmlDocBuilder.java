@@ -115,7 +115,7 @@ public final class HtmlDocBuilder{
   private static void remove(Path file){
     if (!Files.exists(file)){ return; }
     Fs.ofV(() -> Files.delete(file));
-    var empty= Fs.of(() -> { try(var s= Files.list(file.getParent())){ return s.findAny().isEmpty(); } });
+    var empty= Fs.of(() -> { try (var s= Files.list(file.getParent())){ return s.findAny().isEmpty(); } });
     if (empty){ Fs.ofV(() -> Files.delete(file.getParent())); }
   }
   String reservedNameProblem(String name){

@@ -73,7 +73,7 @@ final class FailureText {
     // In the code we control, non-default file systems should never reach these explainers.
     if (!path.getFileSystem().equals(FileSystems.getDefault())){ throw Bug.unreachable(); }
     var suppressed= new Suppressed();
-    var text= CommonInfo.of(op, path, suppressed)+switch(kind){
+    var text= CommonInfo.of(op, path, suppressed)+switch (kind){
       case UnknownFailureAfterSuccessfulOpen -> UnknownFailureAfterSuccessfulOpen.of(path, suppressed);
 
       case FileBusy_WindowsSharingViolation -> FileBusyWindowsSharingViolation.of(path, suppressed);
@@ -188,7 +188,7 @@ final class CommonInfo{
       var store= Files.getFileStore(path);
       return Message.displayString(store.name())+"  "+Message.displayString(store.type());
     }
-    catch(IOException e){ return "<reading volume failed>"+suppressed.mark(e); }//documented: getFileStore throws when the file/volume cannot be read
+    catch (IOException e){ return "<reading volume failed>"+suppressed.mark(e); }//documented: getFileStore throws when the file/volume cannot be read
   }
   private static String chain(Path path, Suppressed suppressed){
     var visited= new HashSet<Path>();
@@ -204,7 +204,7 @@ final class CommonInfo{
         out.append("\n  ").append(located(current, suppressed)).append("\n");//either last is final location or a dedicated message is present
       }
     }
-    catch(IOException e){ return out.append("\n<reading next failed>").append(suppressed.mark(e)).append("\n").toString(); }
+    catch (IOException e){ return out.append("\n<reading next failed>").append(suppressed.mark(e)).append("\n").toString(); }
     if (depth > PortableLinkDepth){ out.append("\nWarning: ").append(depth).append(" links deep; some systems may cap it at 8.\n"); }
     return out.toString();
   }
@@ -227,7 +227,7 @@ final class Holders{
   static String section(Path path, Suppressed suppressed, String intro, String whenNone, String outro){
     List<String> holders;
     try{ holders= enumerate(path,suppressed); }
-    catch(IOException e){ return "\n<reading programs holding this file open failed>"+suppressed.mark(e)+"\n"; }
+    catch (IOException e){ return "\n<reading programs holding this file open failed>"+suppressed.mark(e)+"\n"; }
     if (holders.isEmpty()){ return whenNone; }
     return intro+holders.size()+(holders.size() == 1 ? " program" : " programs")+" currently holding this file open:\n\n"
       +holders.stream().map(h -> "  "+h+"\n").collect(Collectors.joining())+outro;
@@ -718,7 +718,7 @@ final class FileTooLargeForByteArray{
   static String of(Path path, Suppressed suppressed){
     String size;
     try{ size= String.format("%,d bytes", Files.size(path)); }
-    catch(IOException e){ size = "<reading the size failed>"+suppressed.mark(e); }//documented: Files.size throws when the file cannot be read
+    catch (IOException e){ size = "<reading the size failed>"+suppressed.mark(e); }//documented: Files.size throws when the file cannot be read
     return "This file is "+size+" long. Fearless reads a file into one block of memory, and\n"
       +"one block can hold at most 2,147,483,647 bytes (about 2 GB).\n";
   }

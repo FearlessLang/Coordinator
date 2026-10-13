@@ -46,8 +46,8 @@ public final class Main{
   public static void main(String[] args){
     JavacTool.reqAppDir(Violation::mustUseLauncher);
     try{ if (!hasConsoleFlag()){ hookStd(); } run(args); }
-    catch(UserError e){ System.err.print(e.getMessage()); }
-    catch(Throwable t){ System.err.print(UserError.crash(t)); }
+    catch (UserError e){ System.err.print(e.getMessage()); }
+    catch (Throwable t){ System.err.print(UserError.crash(t)); }
   }
   private static void run(String[] args) throws InvocationTargetException, InterruptedException, ExecutionException{
     var appDir= JavacTool.reqAppDir(Violation::mustUseLauncher);
@@ -150,7 +150,7 @@ public final class Main{
   private static Path normalize(String s){
     assert !s.isEmpty();
     Path p; try{ p= s.startsWith("file:")?Path.of(URI.create(s)):Path.of(s); }
-    catch(RuntimeException ex){ throw Violation.badLaunchArg(s, hasConsoleFlag()); }
+    catch (RuntimeException ex){ throw Violation.badLaunchArg(s, hasConsoleFlag()); }
     return p.toAbsolutePath().normalize();
   }
 }

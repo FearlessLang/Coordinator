@@ -28,7 +28,7 @@ public final class ProjectTreeErrorTest {
   static String errMsg(String... pathThenContent){
     assert pathThenContent.length % 2 == 0;
     var b= SourceOracle.debugBuilder();
-    for(int i= 0; i<pathThenContent.length; i += 2){
+    for (int i= 0; i<pathThenContent.length; i += 2){
       b.putURI(URI.create(SourceOracle.root+pathThenContent[i]), pathThenContent[i+1]);
     }
     var oracle= b.build();
@@ -36,8 +36,8 @@ public final class ProjectTreeErrorTest {
       @Override public SourceOracle sourceOracle(Path path){ return oracle; }
     };
     try { c.main(fakeRoot, oracle); }
-    catch(RuntimeException e){ return e.getMessage(); }
-    catch(InterruptedException e){ throw new AssertionError(e); }
+    catch (RuntimeException e){ return e.getMessage(); }
+    catch (InterruptedException e){ throw new AssertionError(e); }
     return Assertions.fail("Expected an error, but the project was accepted");
   }
   static void runErr(String expected, String... pathThenContent){

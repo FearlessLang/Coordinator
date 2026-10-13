@@ -107,7 +107,7 @@ final class SourceDocs{
       var arr= new int[s.length()];
       for (int i= 0; i < s.length();){
         var start= i;
-        switch(mode){
+        switch (mode){
           case Normal -> {
             if (s.startsWith("//",i)){
               var k= s.length() > i+2 ? s.charAt(i+2) : ' ';

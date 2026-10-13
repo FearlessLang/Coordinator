@@ -20,8 +20,8 @@ public record ProgrammaticMain(StringBuilder out, StringBuilder err,String fName
     var oldOut= System.out;
     var oldErr= System.err;
     try{ _runFearless(); }
-    catch(UserError e){ System.err.print(e.getMessage()); }
-    catch(Throwable t){ System.err.print(UserError.crash(t)); }
+    catch (UserError e){ System.err.print(e.getMessage()); }
+    catch (Throwable t){ System.err.print(UserError.crash(t)); }
     finally{
       System.setOut(oldOut);
       System.setErr(oldErr);

@@ -23,7 +23,7 @@ record ProduceBody(BytecodeLineFix sb, Backend b, String iface, String thisName,
     var lit= n.pkgName().equals("base") && LiteralDeclarations.isPrimitiveLiteral(n.simpleName());
     return "("+b.typeName(lit ? LiteralDeclarations.superLiteral(n) : n)+")";
   }
-  void emitE(core.E e){ switch(e){
+  void emitE(core.E e){ switch (e){
     case X x -> emitX(x);
     case Type t -> emitType(t);
     case Call c -> emitCall(c);
