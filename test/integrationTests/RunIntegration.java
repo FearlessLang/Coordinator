@@ -67,13 +67,13 @@ public final class RunIntegration {
     System.setProperty(JavacTool.appDirKey,ResolveResource.stLibPath.getParent()
       .resolve("fearlessArtefact","fearless","app").toString());
     return new Coordinator(){
-      public Path modsPath(){  return ResolveResource.coordinatorJars; }
-      public Optional<Path> baseCachePath(){ return Optional.of(baseCache); }
-      public Path stdLibBase(){ return ResolveResource.stLibPath; }
-      public BackendTools backendTools(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, CapabilityEnvironment capabilities){
+      @Override public Path modsPath(){  return ResolveResource.coordinatorJars; }
+      @Override public Optional<Path> baseCachePath(){ return Optional.of(baseCache); }
+      @Override public Path stdLibBase(){ return ResolveResource.stLibPath; }
+      @Override public BackendTools backendTools(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, CapabilityEnvironment capabilities){
         return BackendTools.of(pkgName, oracle, other, core, project.resolve(Coordinator.outDir), baseCachePath(), ResolveResource.stLibRTPath, capabilities);
       }
-      public String runAllMains(String pkgName, OutputOracle out) throws InterruptedException{
+      @Override public String runAllMains(String pkgName, OutputOracle out) throws InterruptedException{
         return Coordinator.runMains(Push.of(Coordinator.runData(out.rootDir().getParent(),stdLibBase()),jvmArgs), Push.of(out.rootDir().resolve("gen_java"),sharedClasspath()), "_"+pkgName+".Main");
       }
     };
@@ -183,13 +183,13 @@ App:Main{s->Debug#("hi")}
   Coordinator counting(Path root, ArrayList<String> frontends){
     var base= coordinator(root);
     return new Coordinator(){
-      public Path modsPath(){ return base.modsPath(); }
-      public Optional<Path> baseCachePath(){ return base.baseCachePath(); }
-      public Path stdLibBase(){ return base.stdLibBase(); }
-      public BackendTools backendTools(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, CapabilityEnvironment capabilities){
+      @Override public Path modsPath(){ return base.modsPath(); }
+      @Override public Optional<Path> baseCachePath(){ return base.baseCachePath(); }
+      @Override public Path stdLibBase(){ return base.stdLibBase(); }
+      @Override public BackendTools backendTools(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, CapabilityEnvironment capabilities){
         return base.backendTools(pkgName, oracle, other, core, capabilities);
       }
-      public List<Literal> frontend(String pkgName, List<Ref> files, SourceOracle oracle, OtherPackages other, Map<String,String> vres, CapabilityEnvironment capabilities){
+      @Override public List<Literal> frontend(String pkgName, List<Ref> files, SourceOracle oracle, OtherPackages other, Map<String,String> vres, CapabilityEnvironment capabilities){
         frontends.add(pkgName);
         return Coordinator.super.frontend(pkgName, files, oracle, other, vres, capabilities);
       }
@@ -317,13 +317,13 @@ App:Main, lib.Lib{s->base.Debug#(`app`)}
     var genJava= tmp.resolve("genJava");
     var base= coordinator(root);
     new Coordinator(){
-      public Path modsPath(){ return base.modsPath(); }
-      public Optional<Path> baseCachePath(){ return base.baseCachePath(); }
-      public Path stdLibBase(){ return base.stdLibBase(); }
-      public BackendTools backendTools(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, CapabilityEnvironment capabilities){
+      @Override public Path modsPath(){ return base.modsPath(); }
+      @Override public Optional<Path> baseCachePath(){ return base.baseCachePath(); }
+      @Override public Path stdLibBase(){ return base.stdLibBase(); }
+      @Override public BackendTools backendTools(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, CapabilityEnvironment capabilities){
         return base.backendTools(pkgName, oracle, other, core, capabilities);
       }
-      public void backend(String pkgName, List<Literal> core, SourceOracle oracle, OtherPackages other, CapabilityEnvironment capabilities){
+      @Override public void backend(String pkgName, List<Literal> core, SourceOracle oracle, OtherPackages other, CapabilityEnvironment capabilities){
         new Backend(genJava, base.backendTools(pkgName, oracle, other, core, capabilities)).produceJavaCode();
       }
     }.compile(root, stLib);
