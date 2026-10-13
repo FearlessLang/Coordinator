@@ -33,37 +33,37 @@ public interface OutputOracle{
   default long mapStamp(){ return Fs.lastModified(mapPath()); }
   default long pkgApiStamp(String pkg){ return Fs.lastModified(pkgApiPath(pkg)); }
   default boolean stillBuilt(String pkg, List<Ref> files, List<String> below, long minMillis){
-    return Fs.lastModified(builtPath(pkg)) >= minMillis && Fs.readUtf8(builtPath(pkg)).equals(OutputHelper.built(files,below)) && Files.exists(mainsPath(pkg));
+    return Fs.lastModified(builtPath(pkg)) >= minMillis && Fs.readUtf8(builtPath(pkg)).equals(OutputHelper.built(files, below)) && Files.exists(mainsPath(pkg));
   }
   default void commitBuilt(String pkg, List<Ref> files, List<String> below, long inputsStamp){
-    Fs.writeUtf8(builtPath(pkg), OutputHelper.built(files,below));
-    Fs.ofV(()->Files.setLastModifiedTime(builtPath(pkg), FileTime.fromMillis(inputsStamp)));
+    Fs.writeUtf8(builtPath(pkg), OutputHelper.built(files, below));
+    Fs.ofV(() -> Files.setLastModifiedTime(builtPath(pkg), FileTime.fromMillis(inputsStamp)));
   }
   default void forgetAllBut(List<String> pkgs){
     if (!Files.isDirectory(rootDir())){ return; }
-    var gone= Fs.walk(rootDir(), s->s.map(Path::getFileName).map(Path::toString)
-      .filter(n->n.endsWith(".built")).map(n->n.substring(0,n.length()-6)).filter(p->!pkgs.contains(p)).toList());
+    var gone= Fs.walk(rootDir(), s -> s.map(Path::getFileName).map(Path::toString)
+      .filter(n -> n.endsWith(".built")).map(n -> n.substring(0, n.length()-6)).filter(p -> !pkgs.contains(p)).toList());
     gone.forEach(this::forget);
   }
   private void forget(String pkg){
     var gen= rootDir().resolve("gen_java");
-    List.of(builtPath(pkg),pkgApiPath(pkg),mainsPath(pkg),gen.resolve(pkg+".jar"),gen.resolve(pkg+".html"),gen.resolve(pkg+".txt")).forEach(Fs::rmTree);
+    List.of(builtPath(pkg), pkgApiPath(pkg), mainsPath(pkg), gen.resolve(pkg+".jar"), gen.resolve(pkg+".html"), gen.resolve(pkg+".txt")).forEach(Fs::rmTree);
   }
   default OtherPackages addCachedPkgApi(OtherPackages other, String pkg){
     return other.mergeWith(OutputHelper.cachedPkgApi(pkgApiPath(pkg)), Math.max(other.stamp(), pkgApiStamp(pkg)));
   }//READS the pkg info and adds to other; Does not update the disk. Just reads info
-  default OtherPackages startCachedPkgApi(String pkg,Map<String,Map<String,String>> map,long stamp){
-    return OtherPackages.start(map,OutputHelper.cachedPkgApi(pkgApiPath(pkg)),stamp);
+  default OtherPackages startCachedPkgApi(String pkg, Map<String,Map<String,String>> map, long stamp){
+    return OtherPackages.start(map, OutputHelper.cachedPkgApi(pkgApiPath(pkg)), stamp);
   }
   default long commitPkgApi(String pkg, List<Literal> core, long minExclusiveMillis){
     var res= OutputHelper.pkgApiFromJSon(pkgApiPath(pkg));
-    if (res.isPresent() && OutputHelper.consistent(res.get(),core)){ return pkgApiStamp(pkg); }
+    if (res.isPresent() && OutputHelper.consistent(res.get(), core)){ return pkgApiStamp(pkg); }
     return Fs.writeUtf8(pkgApiPath(pkg), ApiJson.toJSon(core), res.isEmpty() ? -1 : minExclusiveMillis);
   }
   default Optional<MainsInfo> mainsInfo(){ return Optional.of(mainsPath()).filter(Files::exists).map(MainsInfo::parse); }
   default void commitMains(String pkg, Map<String,MainsInfo.Main> mains){ Fs.writeUtf8(mainsPath(pkg), new MainsInfo(mains).print()); }
   default MainsInfo mains(Collection<String> pkgs){
-    return new MainsInfo(pkgs.stream().flatMap(p->MainsInfo.parse(mainsPath(p)).mains().entrySet().stream()).collect(Collectors.toMap(Map.Entry::getKey,Map.Entry::getValue)));
+    return new MainsInfo(pkgs.stream().flatMap(p -> MainsInfo.parse(mainsPath(p)).mains().entrySet().stream()).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
   }
   default long commitMap(Map<String,Map<String,String>> map, long minExclusiveMillis){
     var res= OutputHelper.mapFromJSon(mapPath());
@@ -73,33 +73,33 @@ public interface OutputOracle{
   //commitMap only write if different from the old, and in that case it will bumps mtime strictly above minExclusiveMillis
 }
 
-class OutputHelper{
+final class OutputHelper{
   static String built(List<Ref> files, List<String> below){
-    return Join.of(files.stream().map(Ref::fearPath).sorted(),"","\n","")+Join.of(below.stream().sorted(),"\n---\n","\n","","\n---");
+    return Join.of(files.stream().map(Ref::fearPath).sorted(), "", "\n", "")+Join.of(below.stream().sorted(), "\n---\n", "\n", "", "\n---");
   }
   static String toJSon(Map<String,Map<String,String>> map){
     if (map.isEmpty()){ return "{}"; }
-    return obj(map, m->obj(m, s->"\""+s+"\""));
+    return obj(map, m -> obj(m, s -> "\""+s+"\""));
   }
-  static Optional<Map<TName,Literal>> pkgApiFromJSon(Path p){ return readAllowed(p).map(s->new LimitedJsonParser(s, p).apiJsonToMap()); }
-  static Map<TName,Literal> cachedPkgApi(Path p){ return pkgApiFromJSon(p).orElseThrow(()->Violation.cacheMissingPkgApiFile(p)); }
+  static Optional<Map<TName,Literal>> pkgApiFromJSon(Path p){ return readAllowed(p).map(s -> new LimitedJsonParser(s, p).apiJsonToMap()); }
+  static Map<TName,Literal> cachedPkgApi(Path p){ return pkgApiFromJSon(p).orElseThrow(() -> Violation.cacheMissingPkgApiFile(p)); }
   private static <T> String obj(Map<String,T> m, Function<T,String> v){
     return Join.of(m.entrySet().stream()
-      .map(e->"\""+e.getKey()+"\":"+v.apply(e.getValue())),
-      "{",",\n","}\n");//correctly throw for empty
+      .map(e -> "\""+e.getKey()+"\":"+v.apply(e.getValue())),
+      "{", ",\n", "}\n");//correctly throw for empty
   }
-  static Optional<Map<String,Map<String,String>>> mapFromJSon(Path p){ return readAllowed(p).map(s->new LimitedJsonParser(s,p).obj2()); }
+  static Optional<Map<String,Map<String,String>>> mapFromJSon(Path p){ return readAllowed(p).map(s -> new LimitedJsonParser(s, p).obj2()); }
   private static Optional<String> readAllowed(Path p){
     if (!Files.exists(p)){ return Optional.empty(); }
     var s= Fs.readUtf8(p);
-    var bad= IntStream.range(0,s.length()).filter(i->Fs.allowed.indexOf(s.charAt(i)) < 0).findFirst();
+    var bad= IntStream.range(0, s.length()).filter(i -> Fs.allowed.indexOf(s.charAt(i)) < 0).findFirst();
     if (bad.isPresent()){ throw Violation.cacheInvalidFile(p, "Unexpected character "+Message.displayChar(s.charAt(bad.getAsInt()))+" at "+bad.getAsInt()); }
     return Optional.of(s);
   }
   static boolean consistent(Map<TName,Literal> map, List<Literal> core){
     var allCore= AllLs.of(core).values();
     //Not filtered to public-only: privates can still be mentioned in meth parameters and ret types.
-    return map.size() == allCore.size() && allCore.stream().allMatch(l->map.containsKey(l.name()) && eqApi(l, map.get(l.name())));
+    return map.size() == allCore.size() && allCore.stream().allMatch(l -> map.containsKey(l.name()) && eqApi(l, map.get(l.name())));
   }
   private static boolean eqApi(Literal a, Literal b){
     return a.rc() == b.rc() && a.name().equals(b.name()) && a.thisName().equals(b.thisName())

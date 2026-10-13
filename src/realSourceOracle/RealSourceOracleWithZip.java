@@ -16,7 +16,7 @@ public final class RealSourceOracleWithZip implements SourceOracle{
   public RealSourceOracleWithZip(Path root){
     if (!Files.isDirectory(root)){ throw Report.rootNotDirectory(); }
     allFiles= new BuildWithZip(root).build();
-    byUri= allFiles.stream().collect(Collectors.toUnmodifiableMap(r->r.fearURI().normalize(), r->r));
+    byUri= allFiles.stream().collect(Collectors.toUnmodifiableMap(r -> r.fearURI().normalize(), r -> r));
   }
   @Override public List<Ref> allFiles(){ return allFiles; }
   @Override public String loadString(URI uri){ return byUri.get(uri).loadString(); }

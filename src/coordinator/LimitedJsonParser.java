@@ -28,7 +28,7 @@ final class LimitedJsonParser{
   private int i= 0;
   Path forErr;
   LimitedJsonParser(String s, Path forErr){ this.s= s; this.forErr= forErr; }
-  Map<String,Map<String,String>> obj2(){ return end(obj(()->obj(this::name))); }
+  Map<String,Map<String,String>> obj2(){ return end(obj(() -> obj(this::name))); }
   private <R> R end(R res){
     ws();
     if (i != s.length()){ throw err("Trailing junk"); }
@@ -61,10 +61,10 @@ final class LimitedJsonParser{
     if (a.size() != 6){ throw err("Bad type record size"); }
     var nameS= asStr(a.get(0));
     var rc= RC.valueOf(asStr(a.get(1)));
-    var bs= asArr(a.get(2)).stream().map(x->bFrom(asArr(x))).toList();
+    var bs= asArr(a.get(2)).stream().map(x -> bFrom(asArr(x))).toList();
     var tn= new TName(nameS, bs.size(), Pos.unknown);
-    var cs= asArr(a.get(3)).stream().map(x->cFrom(asArr(x))).toList();
-    var ms= asArr(a.get(4)).stream().map(x->mFrom(asArr(x))).toList();
+    var cs= asArr(a.get(3)).stream().map(x -> cFrom(asArr(x))).toList();
+    var ms= asArr(a.get(4)).stream().map(x -> mFrom(asArr(x))).toList();
     //Non-public types are kept too: needed for subtyping reasoning.
     return new Literal(rc, tn, bs, cs, asStr(a.get(5)), ms, Src.synthetic, false);
   }
@@ -72,8 +72,8 @@ final class LimitedJsonParser{
     if (a.size() != 8){ throw err("Bad M"); }
     var nameS= asStr(a.get(0));
     var rc= RC.valueOf(asStr(a.get(1)));
-    var bs= asArr(a.get(2)).stream().map(x->bFrom(asArr(x))).toList();
-    var ts= asArr(a.get(3)).stream().map(x->tFrom(asArr(x))).toList();
+    var bs= asArr(a.get(2)).stream().map(x -> bFrom(asArr(x))).toList();
+    var ts= asArr(a.get(3)).stream().map(x -> tFrom(asArr(x))).toList();
     var ret= tFrom(asArr(a.get(4)));
     var originS= asStr(a.get(5));
     int originA= nat(a.get(6));
@@ -82,21 +82,21 @@ final class LimitedJsonParser{
     if (!abs && !tag.equals("concrete")){ throw err("Bad abs/concrete tag"); }
     var sig= new Sig(rc, new MName(nameS, ts.size()), bs, ts, ret,
       new TName(originS, originA, Pos.unknown), abs, dummySpan());
-    var xs= IntStream.range(0, ts.size()).mapToObj(j->"x"+j).toList();
+    var xs= IntStream.range(0, ts.size()).mapToObj(j -> "x"+j).toList();
     return new M(sig, xs, Optional.empty());
   }
   private int nat(Object o){
     try{ return Integer.parseInt("+"+asStr(o)); }//to reject negatives
-    catch(NumberFormatException nfe){ throw err("Expected unsigned int"); }
+    catch (NumberFormatException nfe){ throw err("Expected unsigned int"); }
   }
   private B bFrom(List<Object> a){
     if (a.size() < 2){ throw err("Bad B"); }
-    return new B(asStr(a.get(0)), EnumSet.copyOf(a.stream().skip(1).map(o->RC.valueOf(asStr(o))).toList()));
+    return new B(asStr(a.get(0)), EnumSet.copyOf(a.stream().skip(1).map(o -> RC.valueOf(asStr(o))).toList()));
   }
   private T.C cFrom(List<Object> a){
     if (a.isEmpty()){ throw err("Bad C"); }
     var nameS= asStr(a.get(0));
-    var ts= a.stream().skip(1).map(ai->tFrom(asArr(ai))).toList();
+    var ts= a.stream().skip(1).map(ai -> tFrom(asArr(ai))).toList();
     return new T.C(new TName(nameS, ts.size(), Pos.unknown), ts);
   }
   private T tFrom(List<Object> a){
@@ -155,6 +155,6 @@ final class LimitedJsonParser{
     i++; return true;
   }
   private RuntimeException err(String msg){
-    return Violation.cacheInvalidFile(forErr,msg+" at "+i);
+    return Violation.cacheInvalidFile(forErr, msg+" at "+i);
   }
 }

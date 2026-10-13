@@ -9,8 +9,8 @@ record ProduceBody(BytecodeLineFix sb, Backend b, String iface, String thisName,
   public void emitBody(){
     if (!"_".equals(thisName)){ sb.a("    var ").a(thisName).a("$= this;\n"); }
     Streams.zipI(m.xs(), m.sig().ts())
-      .filter((_,x,_)->!"_".equals(x))
-      .forEach((i,x,t)->sb
+      .filter((_,x,_) -> !"_".equals(x))
+      .forEach((i,x,t) -> sb
         .a("    var ").a(b.encodeTrailingPrimes(x))
         .a("$= ").a(optCast(t)).a("p"+i+";\n"));
     sb.a("    return ");
@@ -23,7 +23,7 @@ record ProduceBody(BytecodeLineFix sb, Backend b, String iface, String thisName,
     var lit= n.pkgName().equals("base") && LiteralDeclarations.isPrimitiveLiteral(n.simpleName());
     return "("+b.typeName(lit ? LiteralDeclarations.superLiteral(n) : n)+")";
   }
-  void emitE(core.E e){ switch(e){
+  void emitE(core.E e){ switch (e){
     case X x -> emitX(x);
     case Type t -> emitType(t);
     case Call c -> emitCall(c);
@@ -45,7 +45,7 @@ record ProduceBody(BytecodeLineFix sb, Backend b, String iface, String thisName,
     if (!cast.isEmpty()){ sb.a("("+cast); }
     emitE(c.e());
     if (!cast.isEmpty()){ sb.a(")"); }
-    sb.a(".").a(b.mangledMethodName(c.rc(), c.name()),c.pos());//Is this the right point? the line with the method name?
+    sb.a(".").a(b.mangledMethodName(c.rc(), c.name()), c.pos());//Is this the right point? the line with the method name?
     //What exactly counts as 'the line of the method call' in Java? we can have a method call spanning many lines!
     sb.a("(\n");
     for (int i : Range.of(c.es())){
@@ -56,7 +56,7 @@ record ProduceBody(BytecodeLineFix sb, Backend b, String iface, String thisName,
   }
   private String castedReceiverExpr(core.E recv){ return recv instanceof Call c ? optCast(c.expectedRes().inner) : ""; }
   private void emitLit(Literal lit){
-    if (LiteralDeclarations.has(lit.cs(),LiteralDeclarations.captureFree)){
+    if (LiteralDeclarations.has(lit.cs(), LiteralDeclarations.captureFree)){
       b.generateInterface(lit, false);
       sb.a(b.decTypeName(lit.name())).a(".instance");
       return;
@@ -83,7 +83,7 @@ record ProduceBody(BytecodeLineFix sb, Backend b, String iface, String thisName,
       assert m.e().isPresent();
       var jName= b.mangledMethodName(m.sig().rc(), m.sig().m());
       sb.a("\n    public Object "+jName+b.paramsSig(m)+"{\n");
-      new ProduceBody(sb,b, base, lit.thisName(), m).emitBody();
+      new ProduceBody(sb, b, base, lit.thisName(), m).emitBody();
     }
     sb.a("\n}");
   }

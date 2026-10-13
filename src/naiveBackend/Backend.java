@@ -17,20 +17,20 @@ import utils.Join;
 import utils.Pos;
 import utils.Range;
 
-public class Backend{
+public final class Backend{
   public Backend(Path out, BackendTools tools){
-    assert nonNull(out,tools);
+    assert nonNull(out, tools);
     this.out= out;
     this.tools= tools;
   }
   Path out;
   BackendTools tools;
   List<Consumer<Path>> fixers= new ArrayList<>();
-  boolean isRepr(Literal l){ return l.name().equals(new TName("base.Repr",1,Pos.unknown)); }
+  boolean isRepr(Literal l){ return l.name().equals(new TName("base.Repr", 1, Pos.unknown)); }
   public List<Consumer<Path>> produceJavaCode(){
     Fs.ensureDir(out);
     Fs.cleanDirContents(out);
-    tools.decs().forEach(d->{generateInterface(d,false); tools.checks().checkFileReplacement(d, decTypeName(d.name()));});
+    tools.decs().forEach(d -> {generateInterface(d, false); tools.checks().checkFileReplacement(d, decTypeName(d.name()));});
     tools.checks().checkMagicFulfilled();
     writeMainJava();
     return List.copyOf(fixers);
@@ -42,16 +42,16 @@ public class Backend{
       .a("public interface "+iface+extendsClause(l)+"{\n");
     for (var m:l.ms()){ emitTopMethod(sb, l, m, abstractOnly); }
     var hasInstance= hasInstance(l, abstractOnly);
-    if (hasInstance && implementsType(l,"base.InMemoryLog",1)){
+    if (hasInstance && implementsType(l, "base.InMemoryLog", 1)){
       sb.a("  java.util.ArrayList<Object> _logStore= new java.util.ArrayList<>();\n");
       sb.a("  default java.util.ArrayList<Object> _log(){ return _logStore; }\n");
     }
-    if (hasInstance && implementsType(l,"base.FileLog",0)){
+    if (hasInstance && implementsType(l, "base.FileLog", 0)){
       if (l.name().arity() == 0){
         var name= l.name().simpleName();
         sb.a("  _base.AppLog _appLog= _base.AppLog.open(java.nio.file.Path.of(\".out\",\"logs\",\""+tools.pkgName()+"\",\""+name+".log\"), false);\n");
         sb.a("  default _base.AppLog _log(){ return _appLog; }\n");
-      } else {
+      } else{
         sb.a("  default _base.AppLog _log(){ return null; }\n");
       }
     }
@@ -61,34 +61,34 @@ public class Backend{
     }
     if (hasInstance){ sb.a("  "+iface+" instance= new "+iface+"(){};"+cacheField(l)); }
     Fs.writeUtf8(out.resolve(iface+".java"), sb.a("}").toString());
-    if (hasInstance && implementsType(l,"base.Main",0)){ mains.put(l.name().s(), iface); }
+    if (hasInstance && implementsType(l, "base.Main", 0)){ mains.put(l.name().s(), iface); }
     fixers.add(sb);
   }
-  private static boolean implementsType(Literal l, String name, int arity){ return LiteralDeclarations.has(l.cs(), new TName(name,arity,Pos.unknown)); }
+  private static boolean implementsType(Literal l, String name, int arity){ return LiteralDeclarations.has(l.cs(), new TName(name, arity, Pos.unknown)); }
   private static String cacheField(Literal l){
-    for (int shape : Range.of(0,3)){
+    for (int shape : Range.of(0, 3)){
       var t= "_base.Cache"+shape;
-      if (implementsType(l,"base.CacheF",shape+1) || implementsType(l,"base.CacheMemo",shape+1)){ return "  "+t+" _cache= new "+t+"(1, instance);\n  default "+t+" _cache"+shape+"(){ return _cache; }\n"; }
+      if (implementsType(l, "base.CacheF", shape+1) || implementsType(l, "base.CacheMemo", shape+1)){ return "  "+t+" _cache= new "+t+"(1, instance);\n  default "+t+" _cache"+shape+"(){ return _cache; }\n"; }
     }
     return "";
   }
-  private boolean hasInstance(Literal l, boolean abstractOnly) {
+  private boolean hasInstance(Literal l, boolean abstractOnly){
     if (abstractOnly){ return false; } 
-    assert !l.thisName().isEmpty() || LiteralDeclarations.has(l.cs(),LiteralDeclarations.captureFree);
-    return l.ms().stream().noneMatch(m->m.sig().abs());
+    assert !l.thisName().isEmpty() || LiteralDeclarations.has(l.cs(), LiteralDeclarations.captureFree);
+    return l.ms().stream().noneMatch(m -> m.sig().abs());
   }
 
   String extendsClause(Literal lit){ return Join.of(
-    Stream.concat(lit.cs().stream().map(c->typeName(c.name())).distinct(), lit.onlyImmCapture().inner ? Stream.of("_base.OnlyImmCapture") : Stream.of()),
-    " extends ",", ","",""
+    Stream.concat(lit.cs().stream().map(c -> typeName(c.name())).distinct(), lit.onlyImmCapture().inner ? Stream.of("_base.OnlyImmCapture") : Stream.of()),
+    " extends ", ", ", "", ""
   );}
   String paramsSig(M m){ return Join.of(
-    IntStream.range(0, m.xs().size()).mapToObj(i->"Object p"+i),
-    "(",", ",")","()"
+    IntStream.range(0, m.xs().size()).mapToObj(i -> "Object p"+i),
+    "(", ", ", ")", "()"
   );}
   void emitTopMethod(BytecodeLineFix sb, Literal l, M m, boolean abstractOnly){
     if (!m.sig().origin().equals(l.name())){ return ; }
-    String iface=ifaceNameFor(l);
+    String iface= ifaceNameFor(l);
     var jName= mangledMethodName(m.sig().rc(), m.sig().m());
     if (abstractOnly || m.sig().abs()){
       sb.a("  default Object ").a(jName).a(paramsSig(m)).a("{\n")
@@ -101,7 +101,7 @@ public class Backend{
     //TODO: an imm method with no parameters and an imm result, of a type with an instance (a singleton, like Directions.map),
     //always returns the same value: cache it, so that the body runs only one time.
     sb.a("  default Object "+jName+paramsSig(m)+"{\n");
-    new ProduceBody(sb,this, iface, l.thisName(), m).emitBody();
+    new ProduceBody(sb, this, iface, l.thisName(), m).emitBody();
   }
   String ifaceNameFor(Literal l){
     if (!l.infName() || l.onlyImmCapture().inner){ return decTypeName(l.name()); }
@@ -120,12 +120,12 @@ public class Backend{
   String typeName(TName n){ return "_"+encodeTrailingPrimes(n.s())+"$"+caseTag(n.simpleName())+"$"+n.arity(); }
   static String caseTag(String s){
     var bits= new StringBuilder("1");
-    for (int i : Range.of(0,s.length())){
+    for (int i : Range.of(0, s.length())){
       char c= s.charAt(i);
       if ('A' <= c && c <= 'Z'){ bits.append('1'); }
       if ('a' <= c && c <= 'z'){ bits.append('0'); }
     }
-    return new BigInteger(bits.toString(),2).toString(36);
+    return new BigInteger(bits.toString(), 2).toString(36);
   }
   String mangledMethodName(RC rc, MName m){ return rc.name()+"$"+methodBaseName(m)+"$"+m.arity(); }
   String methodBaseName(MName m){
@@ -135,8 +135,8 @@ public class Backend{
   }
   final Map<String,String> mains= new TreeMap<>();
   void writeMainJava(){
-    var all= Join.of(mains.keySet().stream().map(n->"\""+n+"\""),"{",",","}","{}");
-    var assets= Join.of(tools.capabilities().autoloadedAssets().values().stream().map(Backend::assetLiteral),"{",",","}","{}");
+    var all= Join.of(mains.keySet().stream().map(n -> "\""+n+"\""), "{", ",", "}", "{}");
+    var assets= Join.of(tools.capabilities().autoloadedAssets().values().stream().map(Backend::assetLiteral), "{", ",", "}", "{}");
     var sb= new StringBuilder(8_000)
       .append("package _").append(tools.pkgName()).append(";\n\n")
       .append("public final class Main{\n")
@@ -145,9 +145,9 @@ public class Backend{
       .append("  public static final String[][] autoloadedAssets= ").append(assets).append(";\n")
       .append("  public static void main(String[] args){ var ok= true; for (String n: args.length == 0 ? all : args){ ok&= run(n); } if (!ok){ System.exit(1); } }\n")
       .append("  static boolean run(String n){\n");
-    mains.forEach((n,iface)->sb
+    mains.forEach((n,iface) -> sb
       .append("    if (n.equals(\"").append(n).append("\")){ return _base.Util.topLevel(()->")
-      .append(iface).append(".instance.imm$main$1(new ").append(typeName(new TName("base._System",0,Pos.unknown))).append("())); }\n"));
+      .append(iface).append(".instance.imm$main$1(new ").append(typeName(new TName("base._System", 0, Pos.unknown))).append("())); }\n"));
     sb.append("    throw new AssertionError(\"No main called \"+n+\" in package ").append(tools.pkgName()).append("\");\n  }\n}\n");
     Fs.writeUtf8(out.resolve("Main.java"), sb.toString());
   }
@@ -158,8 +158,8 @@ public class Backend{
     assert s.indexOf('"') < 0 && s.indexOf('\\') < 0 && s.indexOf('\n') < 0 && s.indexOf('\r') < 0;
     return "\""+s+"\"";
   }
-  String mangleOp(String op){ return op.chars().mapToObj(c->opTok((char)c)).collect(Collectors.joining("_")); }
-  static String opTok(char c){ return switch(c){
+  String mangleOp(String op){ return op.chars().mapToObj(c -> opTok((char)c)).collect(Collectors.joining("_")); }
+  static String opTok(char c){ return switch (c){
     case '+' -> "plus";
     case '-' -> "dash";
     case '*' -> "star";

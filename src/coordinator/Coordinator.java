@@ -36,15 +36,15 @@ import utils.OneOr;
 import utils.Push;
 import utils.Range;
 
-public interface Coordinator {
-  default String runAllMains(String pkgName,OutputOracle out) throws InterruptedException{
-    return runMains(runData(out.rootDir().getParent(),stdLibBase()), Push.of(out.rootDir().resolve("gen_java"),sharedClasspath()), "_"+pkgName+".Main");
+public interface Coordinator{
+  default String runAllMains(String pkgName, OutputOracle out) throws InterruptedException{
+    return runMains(runData(out.rootDir().getParent(), stdLibBase()), Push.of(out.rootDir().resolve("gen_java"), sharedClasspath()), "_"+pkgName+".Main");
   }
   static String runMains(List<String> jvmArgs, List<Path> jarDirs, String mainClass) throws InterruptedException{
     var sb= new StringBuilder();
-    var jvm= JavaTool.startMainFromJars(jvmArgs, jarDirs, mainClass, s->{ sb.append(s); System.out.print(s); });
+    var jvm= JavaTool.startMainFromJars(jvmArgs, jarDirs, mainClass, s -> { sb.append(s); System.out.print(s); });
     var ec= jvm.await();
-    Require.check(ec == 0 || ec == 1, "Exit code "+ec+" from\n"+String.join("\n",jvm.cmd())+"\nOutput:\n"+sb);
+    Require.check(ec == 0 || ec == 1, "Exit code "+ec+" from\n"+String.join("\n", jvm.cmd())+"\nOutput:\n"+sb);
     return sb.toString();
   }
   static List<String> runData(Path project, Path base){
@@ -57,19 +57,19 @@ public interface Coordinator {
   default SourceOracle sourceOracle(Path path){ return new RealSourceOracleWithZip(path); }
   static Map<String,Boolean> pkgsBuilt(Path path){
     var o= new RealSourceOracleWithZip(path);
-    var map= Helper.pkgMap(o,path);
-    var ranks= map.values().stream().map(u->Helper.okPkgContent(u,path)).toList();
+    var map= Helper.pkgMap(o, path);
+    var ranks= map.values().stream().map(u -> Helper.okPkgContent(u, path)).toList();
     var out= Helper.out(path);
     var top= ranks.stream().mapToInt(Helper::rankNumber).max().getAsInt();
     var listed= Files.exists(out.mainsPath());
     var res= new LinkedHashMap<String,Boolean>();
     for (var r: ranks){
       var pkg= Helper.pkgName(r);
-      var lower= ranks.stream().filter(d->Helper.rankNumber(d) < Helper.rankNumber(r)).map(Helper::pkgName).toList();
+      var lower= ranks.stream().filter(d -> Helper.rankNumber(d) < Helper.rankNumber(r)).map(Helper::pkgName).toList();
       var below= lower.stream().mapToLong(out::pkgApiStamp);
       var own= map.get(pkg).stream().mapToLong(Ref::lastModified);
-      var maxIn= LongStream.concat(LongStream.concat(own,below),LongStream.of(out.mapStamp())).max().getAsLong();
-      res.put(pkg,out.stillBuilt(pkg,map.get(pkg),Push.of(lower,"base"),maxIn) && (listed || Helper.rankNumber(r) != top));
+      var maxIn= LongStream.concat(LongStream.concat(own, below), LongStream.of(out.mapStamp())).max().getAsLong();
+      res.put(pkg, out.stillBuilt(pkg, map.get(pkg), Push.of(lower, "base"), maxIn) && (listed || Helper.rankNumber(r) != top));
     }
     return Collections.unmodifiableMap(res);
   }
@@ -78,26 +78,26 @@ public interface Coordinator {
   default Optional<Map<String,String>> mains(Path project, SourceOracle stLib){ return Helper.mains(this, project, stLib); }
   static ChildJvm startMain(Path project, Path base, String main, List<Path> sharedClasspath, java.util.function.Consumer<String> out){
     var pkg= main.substring(0, main.indexOf('.'));
-    return JavaTool.startMainFromJars(runData(project,base),Push.of(genJava(project),sharedClasspath), "_"+pkg+".Main", out, main);
+    return JavaTool.startMainFromJars(runData(project, base), Push.of(genJava(project), sharedClasspath), "_"+pkg+".Main", out, main);
   }
   static Path genJava(Path project){ return project.resolve(outDir).resolve("gen_java"); }
   String outDir= ".fearless_out";
   
-  default List<Literal> frontend(String pkgName, List<Ref> files, SourceOracle oracle, OtherPackages other,Map<String,String> vres, CapabilityEnvironment capabilities){
+  default List<Literal> frontend(String pkgName, List<Ref> files, SourceOracle oracle, OtherPackages other, Map<String,String> vres, CapabilityEnvironment capabilities){
     var tests= new ArrayList<Ref>();
-    try{ return new FrontendLogicMain().of(pkgName,vres, files, other, core->docs(pkgName,testsUri(pkgName,files),oracle,other,core,capabilities,tests)); }
-    catch(FearlessException fe){ throw Report.sourceError(fe.render(oracle.withFallback(()->tests))); }
+    try{ return new FrontendLogicMain().of(pkgName, vres, files, other, core -> docs(pkgName, testsUri(pkgName, files), oracle, other, core, capabilities, tests)); }
+    catch (FearlessException fe){ throw Report.sourceError(fe.render(oracle.withFallback(() -> tests))); }
   }
   private Optional<Ref> docs(String pkgName, URI testsUri, SourceOracle oracle, OtherPackages other, List<Literal> core, CapabilityEnvironment capabilities, ArrayList<Ref> tests){
-    var docs= backendTools(pkgName,oracle,other,core,capabilities).docs();
+    var docs= backendTools(pkgName, oracle, other, core, capabilities).docs();
     core.forEach(docs::visitAll);
     var res= docs.complete(testsUri);
     res.ifPresent(tests::add);
     return res;
   }
   default void backend(String pkgName, List<Literal> core, SourceOracle oracle, OtherPackages other, CapabilityEnvironment capabilities){
-    var tools= backendTools(pkgName,oracle,other,core,capabilities);
-    new NaiveBackendLogicMain().of(tools,sharedClasspath());
+    var tools= backendTools(pkgName, oracle, other, core, capabilities);
+    new NaiveBackendLogicMain().of(tools, sharedClasspath());
   }
   default BackendTools backendTools(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, CapabilityEnvironment capabilities){
     var unused= Path.of("unused");
@@ -114,31 +114,31 @@ public interface Coordinator {
     return Stream.concat(Stream.of(modsPath()), baseCachePath().stream()).toList();
   }
 }
-class Helper{
+final class Helper{
   static boolean isFear(Ref u){ return u.fearPath().endsWith(".fear"); }
   static OutputOracle out(Path path){
-    return ()->path.resolve(Coordinator.outDir);
+    return () -> path.resolve(Coordinator.outDir);
   }
   static Layer layerOf(Coordinator coordinator, SourceOracle o, Path project, OutputOracle out, SourceOracle stLib){
-    var map= pkgMap(o,project);
-    List<Ref> allRanks= map.values().stream().map(u->okPkgContent(u,project)).toList();
-    Layer l= mapFromRanks(coordinator,allRanks,o,out,stLib);
-    return layers(coordinator,map,l,allRanks.stream()
+    var map= pkgMap(o, project);
+    List<Ref> allRanks= map.values().stream().map(u -> okPkgContent(u, project)).toList();
+    Layer l= mapFromRanks(coordinator, allRanks, o, out, stLib);
+    return layers(coordinator, map, l, allRanks.stream()
       .sorted(Comparator.comparingInt(Helper::rankNumber).thenComparing(Ref::fearPath)).toList());
   }
   static List<String> compile(Coordinator coordinator, Path project, SourceOracle stLib){
     SourceOracle o= coordinator.sourceOracle(project);
     var out= out(project);
-    Layer l= layerOf(coordinator,o,project,out,stLib);
+    Layer l= layerOf(coordinator, o, project, out, stLib);
     out.forgetAllBut(l.pkgNames());
     l.compile(o, out);
-    Fs.writeUtf8(out.mainsPath(), out.mains(l.pkgs().keySet()).located(o,stLib).print());
+    Fs.writeUtf8(out.mainsPath(), out.mains(l.pkgs().keySet()).located(o, stLib).print());
     return List.copyOf(l.pkgs().keySet());//by design: only the highest rank number's packages have their Main run
   }
   static String main(Coordinator coordinator, Path project, SourceOracle stLib) throws InterruptedException{
     var out= out(project);
     var sb= new StringBuilder();
-    for (var p: compile(coordinator,project,stLib)){ sb.append(coordinator.runAllMains(p,out)); }
+    for (var p: compile(coordinator, project, stLib)){ sb.append(coordinator.runAllMains(p, out)); }
     return sb.toString();
   }
   static Optional<Map<String,String>> mains(Coordinator coordinator, Path project, SourceOracle stLib){
@@ -146,34 +146,34 @@ class Helper{
     SourceOracle o= c.sourceOracle(project);
     var out= new NoCommit(out(project).rootDir());
     Layer l;
-    try{ l= layerOf(c,o,project,out,stLib); l.compile(o,out); }
-    catch(WouldCompile _){ return Optional.empty(); }
+    try{ l= layerOf(c, o, project, out, stLib); l.compile(o, out); }
+    catch (WouldCompile _){ return Optional.empty(); }
     var res= new TreeMap<String,String>();
-    out.mains(l.pkgs().keySet()).mains().forEach((k,v)->res.put(k,v.file()));
+    out.mains(l.pkgs().keySet()).mains().forEach((k,v) -> res.put(k, v.file()));
     return Optional.of(Collections.unmodifiableMap(res));
   }
   static LinkedHashMap<String,List<Ref>> pkgMap(SourceOracle o, Path path){
     if (o.allFiles().stream().noneMatch(Helper::isFear)){ throw Report.projectEmpty(path); }
     o.allFiles().stream().filter(Helper::isFear).forEach(Helper::pkgName);//err if not under a pkg
     var map= new LinkedHashMap<String,List<Ref>>();
-    for (Ref u:o.allFiles()){ pkgNameOpt(u).ifPresent(pn->map.computeIfAbsent(pn,_->new ArrayList<>()).add(u)); }
+    for (Ref u:o.allFiles()){ pkgNameOpt(u).ifPresent(pn -> map.computeIfAbsent(pn, _ -> new ArrayList<>()).add(u)); }
     return map;
   }
   static Layer layers(Coordinator coordinator, Map<String,List<Ref>> map, Layer l, List<Ref> ranks){
     int lastNum= rankNumber(ranks.getFirst());
-    var pkgs= new LinkedHashMap<String, List<Ref>>();
+    var pkgs= new LinkedHashMap<String,List<Ref>>();
     for (Ref u:ranks){
-      if (rankNumber(u) != lastNum){ l= new MiddleLayer(coordinator,l,pkgs); pkgs= new LinkedHashMap<>(); lastNum= rankNumber(u); }
-      pkgs.put(pkgName(u),map.get(pkgName(u)));
+      if (rankNumber(u) != lastNum){ l = new MiddleLayer(coordinator, l, pkgs); pkgs = new LinkedHashMap<>(); lastNum = rankNumber(u); }
+      pkgs.put(pkgName(u), map.get(pkgName(u)));
     }
-    return new MiddleLayer(coordinator,l,pkgs);
+    return new MiddleLayer(coordinator, l, pkgs);
   }
   static Layer mapFromRanks(Coordinator coordinator, List<Ref> allRanks, SourceOracle o, OutputOracle out, SourceOracle stLib){
-    Map<String,Map<String,String>> res; try {res= new FrontendLogicMain()
+    Map<String,Map<String,String>> res; try{res= new FrontendLogicMain()
       .parseRankFiles(allRanks, Comparator.comparingInt(Helper::rankNumber), Push.of(allRanks.stream().map(Helper::pkgName).toList(), "base"));}
-    catch(FearlessException fe){ throw Report.sourceError(fe.render(o)); }
+    catch (FearlessException fe){ throw Report.sourceError(fe.render(o)); }
     long baseStamp= out.commitMap(res, allRanks.stream().mapToLong(Ref::lastModified).max().getAsLong());
-    return new BaseLayer(coordinator,res,baseStamp,stLib);
+    return new BaseLayer(coordinator, res, baseStamp, stLib);
   }
   static int rankNumber(Ref u){
     if (!isFear(u)){ throw Report.projectMalformedRankFileName(u); }
@@ -191,7 +191,7 @@ class Helper{
     throw Report.projectMalformedRankFileName(u);
   }
   private static final List<String> ranks= List.of(
-    "_rank_base","_rank_core","_rank_driver","_rank_worker","_rank_framework","_rank_accumulator","_rank_tool","_rank_app");
+    "_rank_base", "_rank_core", "_rank_driver", "_rank_worker", "_rank_framework", "_rank_accumulator", "_rank_tool", "_rank_app");
 
   static boolean hasReservedRankPrefix(Ref u){ return Fs.fileNameWithExtension(u.fearPath()).startsWith("_rank_"); }
   static Ref okPkgContent(List<Ref> u, Path root){
@@ -202,12 +202,12 @@ class Helper{
     if (reserved.size() > 1){ throw Report.projectMultipleRankFiles(pkg, reserved); }
     return reserved.getFirst();
   }
-  static String pkgName(Ref u){ return pkgNameOpt(u).orElseThrow(()->Report.projectNoPackageSegment(u)); }
+  static String pkgName(Ref u){ return pkgNameOpt(u).orElseThrow(() -> Report.projectNoPackageSegment(u)); }
 
-  private static final Set<String> reservedPkgNames= Set.of("base","rank");
+  private static final Set<String> reservedPkgNames= Set.of("base", "rank");
   static Optional<String> pkgNameOpt(Ref u){
     var candidates= Stream.of(u.fearPath().split("/"))
-      .filter(s->s.startsWith("_") && !s.contains("."))
+      .filter(s -> s.startsWith("_") && !s.contains("."))
       .toList();
     if (candidates.isEmpty()){ return Optional.empty(); }
     if (candidates.size() != 1){ throw Report.projectAmbiguousPackageSegment(u, candidates); }
@@ -216,7 +216,7 @@ class Helper{
     if (reservedPkgNames.contains(pkg)){ throw Report.projectReservedPackageName(u, candidates.getFirst()); }
     return Optional.of(pkg);
   }
-}class WouldCompile extends RuntimeException{
+}final class WouldCompile extends RuntimeException{
   private static final long serialVersionUID= 1L;
 }
 record NoCompile(Coordinator inner) implements Coordinator{

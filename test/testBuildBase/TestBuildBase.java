@@ -22,7 +22,7 @@ import tools.JavaTool;
 import tools.SourceOracle;
 import utils.Push;
 
-class TestBuildBase {
+final class TestBuildBase{
   Coordinator c= new Coordinator(){
     @Override public Path modsPath(){  return ResolveResource.coordinatorJars; }
     @Override public BackendTools backendTools(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, CapabilityEnvironment capabilities){
@@ -30,21 +30,21 @@ class TestBuildBase {
     }
 
     @Override public String main(Path path, SourceOracle stLib) throws InterruptedException{
-      OutputOracle out= ()->ResolveResource.stLibDebugOut;
+      OutputOracle out= () -> ResolveResource.stLibDebugOut;
       var pkgName= "base";
       var other= OtherPackages.empty();
       var rich= SourceOracleWithAutoload.ofBase(stLib);
       var capabilities= new CapabilityEnvironment(rich.autoloadedAssets());
-      List<Literal> core= frontend(pkgName,rich.sources(stLib.allFiles()),rich.oracle(),other,Map.of(),capabilities);
-      backend(pkgName,core,rich.oracle(),other,capabilities);
-      var jars= Push.of(out.rootDir().resolve("gen_java"),sharedClasspath());
-      var runOut= JavaTool.runMainFromJars(Coordinator.runData(out.rootDir().getParent(),ResolveResource.stLibPath),jars,"_"+pkgName+".Main");
+      List<Literal> core= frontend(pkgName, rich.sources(stLib.allFiles()), rich.oracle(), other, Map.of(), capabilities);
+      backend(pkgName, core, rich.oracle(), other, capabilities);
+      var jars= Push.of(out.rootDir().resolve("gen_java"), sharedClasspath());
+      var runOut= JavaTool.runMainFromJars(Coordinator.runData(out.rootDir().getParent(), ResolveResource.stLibPath), jars, "_"+pkgName+".Main");
       assertEquals("", runOut);
       return runOut;
     }
   };
   @Test void test(){
-    try { c.main(ResolveResource.stLibPath, c.sourceOracle(ResolveResource.stLibPath));}
+    try{ c.main(ResolveResource.stLibPath, c.sourceOracle(ResolveResource.stLibPath));}
     catch (InterruptedException e){ Assertions.fail(e);}
   }
 }

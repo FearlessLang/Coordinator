@@ -23,10 +23,10 @@ final class SourceDocs{
   List<DocOcc> docsAt(Pos pos, boolean includeBefore){
     assert pos.line() > 0 && pos.line() <= lines.size(): pos;
     var res= new ArrayList<DocOcc>();
-    if (includeBefore){ collectBefore(pos.line(),res); }
-    inlineAfter(pos.line(),pos.column())
-      .filter(occ->depthAt(occ.line(),occ.column()) >= depthAt(pos.line(),pos.column()))
-      .ifPresent(occ->{
+    if (includeBefore){ collectBefore(pos.line(), res); }
+    inlineAfter(pos.line(), pos.column())
+      .filter(occ -> depthAt(occ.line(), occ.column()) >= depthAt(pos.line(), pos.column()))
+      .ifPresent(occ -> {
         var firstColumn= inlineClaimedFromColumn.putIfAbsent(occ, pos.column());
         if (firstColumn != null && firstColumn != pos.column()){ ambiguousInline.add(occ); }
         res.add(occ);
@@ -46,7 +46,7 @@ final class SourceDocs{
   List<List<DocOcc>> orphanRuns(){
     var lost= docsByLine.values().stream()
       .flatMap(List::stream)
-      .filter(d->!attached.contains(d))
+      .filter(d -> !attached.contains(d))
       .sorted(Comparator.comparingInt(DocOcc::line).thenComparingInt(DocOcc::column))
       .toList();
     var res= new ArrayList<List<DocOcc>>();
@@ -70,7 +70,7 @@ final class SourceDocs{
       if (!lines.get(l-1).isBlank()){ break; }
       //the line just below the empty one, which is the last one collected walking up
       var below= !before.isEmpty();
-      before.add(new DocOcc(uri,l,1,1,"",true,below && before.getLast().example(),below && before.getLast().testOnly()));
+      before.add(new DocOcc(uri, l, 1, 1, "", true, below && before.getLast().example(), below && before.getLast().testOnly()));
     }
     Collections.reverse(before);
     //everything collected is attached, including an empty line trimmed off the end:
@@ -84,18 +84,18 @@ final class SourceDocs{
     int to= ds.size();
     while (from < to && ds.get(from).text().isBlank()){ from += 1; }
     while (to > from && ds.get(to-1).text().isBlank()){ to -= 1; }
-    return ds.subList(from,to);
+    return ds.subList(from, to);
   }
 
   List<DocOcc> pureDocs(int line){
-    return docsByLine.getOrDefault(line,List.of()).stream()
+    return docsByLine.getOrDefault(line, List.of()).stream()
       .filter(DocOcc::pureLine)
       .toList();
   }
 
   Optional<DocOcc> inlineAfter(int line, int column){
-    return docsByLine.getOrDefault(line,List.of()).stream()
-      .filter(c->!c.pureLine() && c.column() >= column)
+    return docsByLine.getOrDefault(line, List.of()).stream()
+      .filter(c -> !c.pureLine() && c.column() >= column)
       .findFirst();
   }
 
@@ -107,32 +107,32 @@ final class SourceDocs{
       var arr= new int[s.length()];
       for (int i= 0; i < s.length();){
         var start= i;
-        switch(mode){
+        switch (mode){
           case Normal -> {
-            if (s.startsWith("//",i)){
+            if (s.startsWith("//", i)){
               var k= s.length() > i+2 ? s.charAt(i+2) : ' ';
-              if (k == '/' || k == '>' || k == '-'){ add(l,i+1,s.substring(i+3),s.substring(0,i).isBlank(),k == '>',k == '-'); }
-              i= s.length();
+              if (k == '/' || k == '>' || k == '-'){ add(l, i+1, s.substring(i+3), s.substring(0, i).isBlank(), k == '>', k == '-'); }
+              i = s.length();
             }
-            else if (s.startsWith("/*",i)){ mode= Mode.Block; i += 2; }
-            else if (s.charAt(i) == '"'){ mode= Mode.DoubleString; i += 1; }
-            else if (s.charAt(i) == '`'){ mode= Mode.BacktickString; i += 1; }
+            else if (s.startsWith("/*", i)){ mode = Mode.Block; i += 2; }
+            else if (s.charAt(i) == '"'){ mode = Mode.DoubleString; i += 1; }
+            else if (s.charAt(i) == '`'){ mode = Mode.BacktickString; i += 1; }
             else if (s.charAt(i) == '{'){ depth += 1; i += 1; }
             else if (s.charAt(i) == '}'){ depth -= 1; i += 1; }
             else{ i += 1; }
           }
           case DoubleString, BacktickString -> {
-            if (s.charAt(i) == (mode == Mode.DoubleString ? '"' : '`')){ mode= Mode.Normal; }
+            if (s.charAt(i) == (mode == Mode.DoubleString ? '"' : '`')){ mode = Mode.Normal; }
             i += 1;
           }
           case Block -> {
-            if (s.startsWith("*/",i)){ mode= Mode.Normal; i += 2; }
+            if (s.startsWith("*/", i)){ mode = Mode.Normal; i += 2; }
             else{ i += 1; }
           }
         }
-        Arrays.fill(arr,start,i,depth);
+        Arrays.fill(arr, start, i, depth);
       }
-      depthByLine.put(l,arr);
+      depthByLine.put(l, arr);
     }
   }
 
@@ -140,8 +140,8 @@ final class SourceDocs{
   //its carets under the offending characters: past the "///" and the space clean drops.
   void add(int line, int column, String text, boolean pureLine, boolean example, boolean testOnly){
     var clean= text.startsWith(" ") ? text.substring(1) : text;
-    docsByLine.computeIfAbsent(line,_ -> new ArrayList<>())
-      .add(new DocOcc(uri,line,column,column+3+(text.length()-clean.length()),clean,pureLine,example,testOnly));
+    docsByLine.computeIfAbsent(line, _ -> new ArrayList<>())
+      .add(new DocOcc(uri, line, column, column+3+(text.length()-clean.length()), clean, pureLine, example, testOnly));
   }
 
   enum Mode{ Normal, DoubleString, BacktickString, Block }

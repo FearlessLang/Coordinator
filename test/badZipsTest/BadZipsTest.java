@@ -12,17 +12,17 @@ import resources.ResolveResource;
 import realSourceOracle.RealSourceOracleWithZip;
 import testHelperFs.FsDsl;
 
-public class BadZipsTest {
+public final class BadZipsTest{
   static{ utils.Err.setUp(AssertionFailedError.class, Assertions::assertEquals, Assertions::assertTrue); }
   static Path root= ResolveResource.badZipCorpous;
   public static void runErrIOE(String in, String expected){
     Path input= root.resolve(in);
-    UserError.root= root;
-    var ex= assertThrows(UserError.class, ()->new RealSourceOracleWithZip(input));
-    String res= FsDsl.dumpErr(input,ex);
+    UserError.root = root;
+    var ex= assertThrows(UserError.class, () -> new RealSourceOracleWithZip(input));
+    String res= FsDsl.dumpErr(input, ex);
     utils.Err.strCmp(expected, res);
   }
-@Test void zip1(){ runErrIOE("zip1","""
+@Test void zip1(){ runErrIOE("zip1", """
 Root: [###]
 Path: "zip1/unzip_bad_lzma_1.zip"
 
@@ -35,7 +35,7 @@ Fearless expands each zip file into a folder: rename this file if it is not mean
 
 We check this so that you[###]
 """); }
-@Test void zip2(){ runErrIOE("zip2","""
+@Test void zip2(){ runErrIOE("zip2", """
 Root: [###]
 Path: "zip2/unzip_bad_lzma_2.zip"
 
@@ -48,7 +48,7 @@ Fearless expands each zip file into a folder: rename this file if it is not mean
 
 We check this so that you[###]
 """); }
-@Test void zip3(){ runErrIOE("zip3","""
+@Test void zip3(){ runErrIOE("zip3", """
 Root: [###]
 Path: "zip3/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip/r/r.zip"
 Entry: "r/r.zip"
@@ -61,7 +61,7 @@ recursively unzipped, it would clearly go over the OS path length limit.
 
 We check this so that you[###]
 """); }
-@Test void zip4(){ runErrIOE("zip4","""
+@Test void zip4(){ runErrIOE("zip4", """
 Root: [###]
 Path: "zip4/file_used_as_folder.zip"
 Entry: "readme"

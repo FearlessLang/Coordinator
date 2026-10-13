@@ -21,14 +21,14 @@ final class StringFilesTest{
   @Test void invalidUtf8MessageStaysWithinWhitelistAndUsesPlainDots(@TempDir Path tmp) throws Exception{
     var prefix= "x".repeat(120).getBytes(StandardCharsets.UTF_8);
     var bytes= Arrays.copyOf(prefix, prefix.length+1);
-    bytes[prefix.length]= (byte)0xFF;
+    bytes[prefix.length] = (byte)0xFF;
     var file= tmp.resolve("bad.fear");
     Files.write(file, bytes);
     var captured= new Box<String>(null);
-    assertThrows(Marker.class, ()->
-      StringFiles.read(file, (actionTxt,_)-> { captured.set(actionTxt); throw new Marker(); }));
+    assertThrows(Marker.class, () ->
+      StringFiles.read(file, (actionTxt,_) -> { captured.set(actionTxt); throw new Marker(); }));
     var msg= captured.get();
     assertTrue(msg.contains("..."), msg);
-    assertTrue(msg.codePoints().allMatch(cp-> cp < 128 && Fs.allowed.indexOf((char)cp) >= 0), msg);
+    assertTrue(msg.codePoints().allMatch(cp -> cp < 128 && Fs.allowed.indexOf((char)cp) >= 0), msg);
   }
 }

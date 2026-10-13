@@ -14,7 +14,7 @@ import tools.NativeOverrides;
 import utils.Pos;
 
 public final class MagicConsistency{
-  private static final TName magicName= new TName("base._Magic", 0,Pos.unknown);
+  private static final TName magicName= new TName("base._Magic", 0, Pos.unknown);
   private final Optional<NativeOverrides> natives;
   private final Set<String> magicPairs= new HashSet<>();
   MagicConsistency(String pkgName, Path rtPath){
@@ -24,7 +24,7 @@ public final class MagicConsistency{
     return m.e().get() instanceof Call c && c.e() instanceof Type t && t.type().c().name().equals(magicName);
   }
   private boolean hasRealBody(Literal l){
-    return l.ms().stream().anyMatch(m->m.sig().origin().equals(l.name()) && !m.sig().abs() && !isMagicBody(m));
+    return l.ms().stream().anyMatch(m -> m.sig().origin().equals(l.name()) && !m.sig().abs() && !isMagicBody(m));
   }
   void checkTopMethod(M m, String typeName, String jName, boolean hasInstance){
     if (natives.isEmpty()){ return; }

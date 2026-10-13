@@ -12,7 +12,7 @@ import org.junit.jupiter.api.io.TempDir;
 import tools.Fs;
 import tools.JavacTool;
 
-public class JavacToolTest{
+public final class JavacToolTest{
   private static void compiles(Path tmp, String folder){
     var src= tmp.resolve(folder).resolve("src");
     Fs.writeUtf8(src.resolve("A.java"), "class A{}\n");
@@ -20,7 +20,7 @@ public class JavacToolTest{
     Fs.ensureDir(classes);
     var jar= tmp.resolve(folder).resolve("out").resolve("A.jar");
     Fs.ensureDir(jar.getParent());
-    JavacTool.compileTree(src, classes, ()->{}, jar, List.of());
+    JavacTool.compileTree(src, classes, () -> {}, jar, List.of());
     assertTrue(Files.isRegularFile(classes.resolve("A.class")));
   }
   @Test void apostropheInProjectFolder(@TempDir Path tmp){ compiles(tmp, "it's"); }

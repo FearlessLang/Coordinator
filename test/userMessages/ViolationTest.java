@@ -39,7 +39,7 @@ Error: fearless received a broken path for the input file.
 """, Violation.badLaunchArg("not a real path", false).getMessage());
   }
   @Test void unsupportedOperatingSystem(){
-    var osName= System.getProperty("os.name","<not reported>");
+    var osName= System.getProperty("os.name", "<not reported>");
     utils.Err.strCmp("""
 Fearless does not know this operating system.
 
@@ -107,7 +107,7 @@ The only way to clear it is Settings, Apps, Default apps, Reset - which
 resets every app default on your machine, not only this one.
 
 What is locked:
-.fearless""", Violation.associationUserLocked(List.of(".fearless"), e->"").getMessage());
+.fearless""", Violation.associationUserLocked(List.of(".fearless"), e -> "").getMessage());
   }
   @Test void associationUserLockedSeveralClaimed(){
     utils.Err.strCmp("""
@@ -124,7 +124,7 @@ resets every app default on your machine, not only this one.
 
 What is locked:
 .foo claimed by "hello.Foo" of project "demo"
-.fapp042 claimed by "hello.Bar" of project "demo\"""", Violation.associationUserLocked(List.of(".foo",".fapp042"), ViolationTest::claimedBy).getMessage());
+.fapp042 claimed by "hello.Bar" of project "demo\"""", Violation.associationUserLocked(List.of(".foo", ".fapp042"), ViolationTest::claimedBy).getMessage());
   }
   @Test void associationNotOurs(){
     utils.Err.strCmp("""
@@ -135,11 +135,11 @@ Another program already answers for these kinds of file. Fearless
 stopped before touching anything: your system is exactly as it was.
 
 What stood in the way:
-.fearless -> fearlessBin0_003""", Violation.associationNotOurs(Map.of(".fearless",List.of("fearlessBin0_003")), e->"").getMessage());
+.fearless -> fearlessBin0_003""", Violation.associationNotOurs(Map.of(".fearless", List.of("fearlessBin0_003")), e -> "").getMessage());
   }
   @Test void associationNotOursSeveral(){
     var held= new LinkedHashMap<String,List<String>>();
-    held.put(".ffile042", List.of("org.gnome.TextEditor","text/plain"));
+    held.put(".ffile042", List.of("org.gnome.TextEditor", "text/plain"));
     held.put(".fearless", List.of("OtherApp.fearless"));
     utils.Err.strCmp("""
 Fearless cannot become the program that opens the kinds of file listed
@@ -151,11 +151,11 @@ stopped before touching anything: your system is exactly as it was.
 What stood in the way:
 .ffile042 -> org.gnome.TextEditor
 .ffile042 -> text/plain
-.fearless -> OtherApp.fearless""", Violation.associationNotOurs(held, e->"").getMessage());
+.fearless -> OtherApp.fearless""", Violation.associationNotOurs(held, e -> "").getMessage());
   }
   @Test void associationNotOursSeveralClaimed(){
     var held= new LinkedHashMap<String,List<String>>();
-    held.put(".ffile001", List.of("org.gnome.TextEditor","vim"));
+    held.put(".ffile001", List.of("org.gnome.TextEditor", "vim"));
     held.put(".fapp042", List.of("OtherApp.fapp042"));
     utils.Err.strCmp("""
 Fearless cannot become the program that opens the kinds of file listed
@@ -183,7 +183,7 @@ Removing the line of that type from the section, or choosing Fearless
 for these files, clears the choice.
 
 What is locked:
-.htm -> application/x-fearless-htm""", Violation.associationChosenDefault(List.of(".htm"), e->"").getMessage());
+.htm -> application/x-fearless-htm""", Violation.associationChosenDefault(List.of(".htm"), e -> "").getMessage());
   }
   @Test void associationChosenDefaultSeveralClaimed(){
     utils.Err.strCmp("""
@@ -200,9 +200,9 @@ for these files, clears the choice.
 
 What is locked:
 .foo claimed by "hello.Foo" of project "demo" -> application/x-fearless-foo
-.pdf claimed by "hello.Bar" of project "demo" -> application/x-fearless-pdf""", Violation.associationChosenDefault(List.of(".foo",".pdf"), ViolationTest::claimedBy).getMessage());
+.pdf claimed by "hello.Bar" of project "demo" -> application/x-fearless-pdf""", Violation.associationChosenDefault(List.of(".foo", ".pdf"), ViolationTest::claimedBy).getMessage());
   }
-  private static String claimedBy(String ext){ return " claimed by \"hello."+(List.of(".foo",".ffile001").contains(ext) ? "Foo" : "Bar")+"\" of project \"demo\""; }
+  private static String claimedBy(String ext){ return " claimed by \"hello."+(List.of(".foo", ".ffile001").contains(ext) ? "Foo" : "Bar")+"\" of project \"demo\""; }
   @Test void associationNotWritable(){
     var registered= "HKEY_CLASSES_ROOT\\.fearless (write denied: not running as the owning user)";
     utils.Err.strCmp("""

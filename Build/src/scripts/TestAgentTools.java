@@ -8,9 +8,9 @@ import resources.ResolveResource;
 import tools.Fs;
 import tools.JavaTool;
 
-public class TestAgentTools{
+public final class TestAgentTools{
   public static void main(String[] args) throws InterruptedException{
-    assert (args.length==4 || args.length==5) && List.of("true","false").contains(args[1]);
+    assert (args.length==4 || args.length==5) && List.of("true", "false").contains(args[1]);
     var channel= Path.of(args[args.length-2]);
     var app= ResolveResource.managedFolderOut.resolve("fearlessManaged"+ResolveResource.versionId);
     if (stale(app)){ DeployManagedFearless.main(args); }
@@ -20,7 +20,7 @@ public class TestAgentTools{
     ModularBuild.controllerTest();
     var classes= ModularBuild.out.resolve("controller-test");
     var select= args.length==5 ? "--select-class=agentTools."+args[2] : "--select-package=agentTools";
-    var properties= List.of("-ea","-Ddesk="+args[0],"-Dagent="+args[1],"-DchannelFolder="+channel,"-DfilesIOFolder="+args[args.length-1]);
+    var properties= List.of("-ea", "-Ddesk="+args[0], "-Dagent="+args[1], "-DchannelFolder="+channel, "-DfilesIOFolder="+args[args.length-1]);
     Fs.cleanDir(channel);
     try{ JavaTool.runMain(properties, classes, ModularBuild.mods, "org.junit.platform.console.ConsoleLauncher", "execute", "--class-path", classes.toString(), select, "--fail-fast", "--details=summary", "--disable-ansi-colors"); }
     finally{ Fs.cleanDir(channel); }
@@ -28,7 +28,7 @@ public class TestAgentTools{
   static boolean stale(Path app){
     var name= app.getFileName().toString();
     var built= Fs.lastModified(Fs.isWindows() ? app.resolve(name+".exe") : app.resolve("bin").resolve(name));
-    return sources.stream().anyMatch(s->Fs.walk(s,ps->ps.anyMatch(p->Fs.lastModified(p)>built)));
+    return sources.stream().anyMatch(s -> Fs.walk(s, ps -> ps.anyMatch(p -> Fs.lastModified(p)>built)));
   }
   static final List<Path> sources= List.of(ResolveResource.commonsSrc, ResolveResource.frontendSrc, ResolveResource.frontendSrcModule,
     ResolveResource.coordinatorSrc, ResolveResource.coordinatorSrcModule, ResolveResource.controllerSrc, ResolveResource.controllerSrcModule,

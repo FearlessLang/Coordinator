@@ -7,8 +7,6 @@ import tools.SourceOracle;
 import utils.Bug;
 
 final class AssetAutoload{
-  private AssetAutoload(){}
-
   static String descriptorMethods(SourceOracleWithAutoload.Triple t, String path){
     return ""
       +"  .path: base.Str -> \""+path+"\";\n"
@@ -18,7 +16,7 @@ final class AssetAutoload{
       +"  .originalFileName: base.Str -> \""+AutoloadHandler.components(path).getLast()+"\";\n";
   }
 
-  static SourceOracleWithAutoload.Triple triple(SourceOracle.Ref ref){ return switch(ref){
+  static SourceOracleWithAutoload.Triple triple(SourceOracle.Ref ref){ return switch (ref){
     case PathEntry p -> new SourceOracleWithAutoload.Triple(localPath(p.local()), "", "");
     case ZipEntry z -> new SourceOracleWithAutoload.Triple(localPath(z.local()),
       z.zips().stream().map(AssetAutoload::portableZipPath).collect(Collectors.joining(";")),

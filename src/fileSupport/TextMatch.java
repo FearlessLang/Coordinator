@@ -5,7 +5,7 @@ import java.util.Arrays;
 
 import fileSupport.ByteFiles.Kind;
 
-enum TextMatch {
+enum TextMatch{
     MFileTooLargeForByteArray(FileTooLargeForByteArray,
       // OpenJDK jdk-26+26 FileInputStream.java
       // String.format("Required array size too large for %s: %d = %d - %d", ...)
@@ -617,6 +617,6 @@ enum TextMatch {
     TextMatch(Kind kind, String... needles){ this.kind= kind; this.needles= needles; }
     boolean has(String text){ return Arrays.stream(needles).anyMatch(text::contains); }
     static Kind match(String text){
-      return Arrays.stream(values()).filter(v->v.has(text)).findFirst().map(v->v.kind).orElse(UnknownFailureAfterSuccessfulOpen);
+      return Arrays.stream(values()).filter(v -> v.has(text)).findFirst().map(v -> v.kind).orElse(UnknownFailureAfterSuccessfulOpen);
     }
   }

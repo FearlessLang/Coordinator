@@ -16,8 +16,6 @@ import core.TName;
 /// What counts as a name is asked of core (TName.isTypeName, TName.isPkgName,
 /// MName.isMethodName), so this never grows its own idea of the grammar.
 final class DocRefScanner{
-  private DocRefScanner(){}
-
   record Found(int start, int end, DocRef ref){}
   record CodeSpan(int start, int end, int fence){}
 
@@ -26,17 +24,17 @@ final class DocRefScanner{
     int i= 0;
     while (i < text.length()){
       if (text.charAt(i) != '`'){ i += 1; continue; }
-      int fence= runLength(text,i);
+      int fence= runLength(text, i);
       int close= closingFence(text, i+fence, fence);
       if (close < 0){ i += fence; continue; }
       res.add(new CodeSpan(i+fence, close, fence));
-      i= close+fence;
+      i = close+fence;
     }
     return res;
   }
 
   static List<CodeSpan> refSpans(String text){
-    return codeSpans(text).stream().filter(sp->sp.fence()==1).toList();
+    return codeSpans(text).stream().filter(sp -> sp.fence()==1).toList();
   }
 
   private static int runLength(String text, int at){
@@ -49,7 +47,7 @@ final class DocRefScanner{
     int i= from;
     while (i < text.length()){
       if (text.charAt(i) != '`'){ i += 1; continue; }
-      int n= runLength(text,i);
+      int n= runLength(text, i);
       if (n == fence){ return i; }
       i += n;
     }
@@ -69,8 +67,8 @@ final class DocRefScanner{
   //"ieeeEq" from being read as ending in the type "Eq".
   static List<Found> signatureTypes(String text){
     return word.matcher(text).results()
-      .filter(w->TName.isTypeName(w.group()))
-      .map(w->new Found(w.start(), w.end(), new DocRef.TypeName(Optional.empty(), w.group(), OptionalInt.empty())))
+      .filter(w -> TName.isTypeName(w.group()))
+      .map(w -> new Found(w.start(), w.end(), new DocRef.TypeName(Optional.empty(), w.group(), OptionalInt.empty())))
       .toList();
   }
   private static final Pattern word= Pattern.compile("[\\p{L}\\p{Nd}_']+");
@@ -94,8 +92,8 @@ final class DocRefScanner{
       if (!ok){ return Optional.empty(); }
       var sel= selector();
       if (!ok){ return Optional.empty(); }
-      if (sel.isEmpty()){ return receiver.map(r->(DocRef)r); }
-      return Optional.of(new DocRef.MethodName(receiver, sel.get(), arity('(',')')));
+      if (sel.isEmpty()){ return receiver.map(r -> (DocRef)r); }
+      return Optional.of(new DocRef.MethodName(receiver, sel.get(), arity('(', ')')));
     }
 
     boolean startsSelector(){ return i < s.length() && (s.charAt(i) == '.' || opChar(i)); }
@@ -105,7 +103,7 @@ final class DocRefScanner{
     Optional<String> selector(){
       if (!startsSelector()){ return Optional.empty(); }
       var sel= s.charAt(i) == '.' ? "."+word(i+1) : ops(i);
-      if (!MName.isMethodName(sel)){ ok= false; return Optional.empty(); }
+      if (!MName.isMethodName(sel)){ ok = false; return Optional.empty(); }
       i += sel.length();
       return Optional.of(sel);
     }
@@ -125,24 +123,24 @@ final class DocRefScanner{
     //a type, possibly package qualified, or a name bound where the comment is written
     Optional<DocRef.Receiver> receiver(){
       var first= word(i);
-      if (first.isEmpty()){ ok= false; return Optional.empty(); }
+      if (first.isEmpty()){ ok = false; return Optional.empty(); }
       i += first.length();
       if (TName.isTypeName(first)){ return Optional.of(type(Optional.empty(), first)); }
       var second= i < s.length() && s.charAt(i) == '.' ? word(i+1) : "";
       if (!TName.isTypeName(second)){ return Optional.of(new DocRef.LocalName(first)); }
-      if (!TName.isPkgName(first)){ ok= false; return Optional.empty(); }
+      if (!TName.isPkgName(first)){ ok = false; return Optional.empty(); }
       i += 1+second.length();
       return Optional.of(type(Optional.of(first), second));
     }
 
     DocRef.Receiver type(Optional<String> pkg, String name){
-      return new DocRef.TypeName(pkg, name, arity('[',']'));
+      return new DocRef.TypeName(pkg, name, arity('[', ']'));
     }
 
     String word(int from){
       int end= from;
       while (end < s.length() && isWordChar(s.charAt(end))){ end += 1; }
-      return s.substring(Math.min(from,s.length()), end);
+      return s.substring(Math.min(from, s.length()), end);
     }
 
     //"[_,_]" or "()" only: a real argument list like "[Int]" is not an arity marker,
@@ -156,7 +154,7 @@ final class DocRefScanner{
         if (at >= s.length() || s.charAt(at) != '_'){ return OptionalInt.empty(); }
         count += 1;
         at += 1;
-        if (at < s.length() && s.charAt(at) == close){ i= at+1; return OptionalInt.of(count); }
+        if (at < s.length() && s.charAt(at) == close){ i = at+1; return OptionalInt.of(count); }
         if (at >= s.length() || s.charAt(at) != ','){ return OptionalInt.empty(); }
         at += 1;
       }

@@ -21,8 +21,8 @@ import realSourceOracle.RealSourceOracleWithZip;
 import tools.SourceOracle;
 
 public final class FsDsl{
-  record Item(String name,String content){}
-  private record Leaf(String name,String content,boolean isDir){}
+  record Item(String name, String content){}
+  private record Leaf(String name, String content, boolean isDir){}
   private static final class ZipNode{
     final LinkedHashMap<String,ZipNode> nested= new LinkedHashMap<>();
     final ArrayList<Leaf> leafs= new ArrayList<>();
@@ -31,7 +31,7 @@ public final class FsDsl{
   static List<Item> parse(String spec){
     var items= new ArrayList<Item>();
     var cur= new ArrayList<String>();
-    for (var line: spec.split("\n",-1)){
+    for (var line: spec.split("\n", -1)){
       if (line.equals("jjj")){ addItem(items, cur); cur.clear(); continue; }
       cur.add(line);
     }
@@ -53,7 +53,7 @@ public final class FsDsl{
     try{
       var zips= new LinkedHashMap<Path,ZipNode>();
       for (var it: parse(spec)){ emit(root, zips, it); }
-      zips.forEach((diskZip, node)-> writeDiskZip(diskZip, node));
+      zips.forEach((diskZip, node) -> writeDiskZip(diskZip, node));
     }
     catch (InvalidPathException e){
       Assumptions.abort("OS forbids creating this path on disk: "+e.getMessage());
@@ -63,16 +63,16 @@ public final class FsDsl{
   private static void emit(Path root, LinkedHashMap<Path,ZipNode> zips, Item it){
     String name= it.name();
     boolean isDir= name.endsWith("/");
-    if (isDir){ name= name.substring(0, name.length()-1); }
+    if (isDir){ name = name.substring(0, name.length()-1); }
     var segs= name.split("/", -1);
 
     int zi= firstZipSeg(segs);
     if (zi < 0){ emitDisk(root, segs, isDir, it.content()); return; }
 
     Path diskZip= root;
-    for (int i= 0; i <= zi; i++){ diskZip= diskZip.resolve(segs[i]); }
+    for (int i= 0; i <= zi; i++){ diskZip = diskZip.resolve(segs[i]); }
 
-    var node= zips.computeIfAbsent(diskZip, _->new ZipNode());
+    var node= zips.computeIfAbsent(diskZip, _ -> new ZipNode());
     var after= List.of(segs).subList(zi+1, segs.length);
     emitZip(node, after, isDir, it.content());
   }
@@ -86,7 +86,7 @@ public final class FsDsl{
 
   private static void emitDisk(Path root, String[] segs, boolean isDir, String content){
     Path p= root;
-    for (var s: segs){ p= p.resolve(s); }
+    for (var s: segs){ p = p.resolve(s); }
     if (isDir){ mkdirs(p); return; }
     mkdirs(p.getParent());
     writeString(p, content);
@@ -102,8 +102,8 @@ public final class FsDsl{
       int next= nextZipIndex(after, from);
       if (next < 0){ break; }
       String step= String.join("/", after.subList(from, next+1));
-      root= root.nested.computeIfAbsent(step, _->new ZipNode());
-      from= next+1;
+      root = root.nested.computeIfAbsent(step, _ -> new ZipNode());
+      from = next+1;
     }
     String entry= String.join("/", after.subList(from, after.size()));
     if (entry.isEmpty()){ return; } // declaration only at this zip level
@@ -124,8 +124,8 @@ public final class FsDsl{
 
   private static byte[] buildZip(ZipNode node){
     var bout= new ByteArrayOutputStream();
-    try(var zos= new ZipOutputStream(bout, UTF_8)){
-      node.nested.forEach((name, child)->{
+    try (var zos= new ZipOutputStream(bout, UTF_8)){
+      node.nested.forEach((name, child) -> {
         var bytes= buildZip(child);
         putFile(zos, name, bytes);
       });
@@ -169,7 +169,7 @@ public final class FsDsl{
   public static String dumpErr(Path root, RuntimeException ex){
     String msg= String.valueOf(ex.getMessage());
     var abs= root.toAbsolutePath().normalize().toString();
-    var absSl= abs.replace('\\','/');
+    var absSl= abs.replace('\\', '/');
     var uri= root.toUri().normalize().toString();
     return msg.replace(abs, "<root>").replace(absSl, "<root>").replace(uri, "<root-uri>");
   }
@@ -191,20 +191,19 @@ public final class FsDsl{
   }
   public static String runOk(Path tmp, String spec){
     Path root= tmp.resolve("root");
-    UserError.root= root;
+    UserError.root = root;
     mkdirs(root);
     materialize(root, spec);
     return dump(new RealSourceOracleWithZip(root));
   }
   public static void runErrIOE(Path tmp, String spec, String expected){
     Path root= tmp.resolve("root").toAbsolutePath().normalize();
-    UserError.root= root;
+    UserError.root = root;
     mkdirs(root);
     materialize(root, spec);
-    var ex= assertThrows(UserError.class, ()->new RealSourceOracleWithZip(root));
+    var ex= assertThrows(UserError.class, () -> new RealSourceOracleWithZip(root));
     String res= dumpErr(root, ex);
     utils.Err.strCmp(expected, res);
   }  
   
-  private FsDsl(){}
 }

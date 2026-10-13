@@ -50,11 +50,11 @@ public final class UserError extends RuntimeException{
   private Runnable recovery;
   private boolean bare;
   public UserError withRecovery(String label, Runnable action){
-    recoveryLabel= label; recovery= action;
+    recoveryLabel = label; recovery = action;
     return this;
   }
-  public UserError bare(){ bare= true; return this; }
-  public UserError followedBy(String more){ var res= new UserError(getMessage()+more,this); res.bare= bare; return res; }
+  public UserError bare(){ bare = true; return this; }
+  public UserError followedBy(String more){ var res= new UserError(getMessage()+more, this); res.bare = bare; return res; }
 
   //The project root this run actually used, so that a message always shows the folder
   //that was really involved. Tests set it to whatever fake root they use; a real run
@@ -65,20 +65,20 @@ public final class UserError extends RuntimeException{
   //owner. Read only when a message is displayed: what this process is about to do is
   //known then, and is not a property of what went wrong.
   private static boolean managerOwner= false;
-  public static void becameManagerOwner(){ managerOwner= true; }
+  public static void becameManagerOwner(){ managerOwner = true; }
 
   private static java.awt.Window owner= null;
-  public static void owner(java.awt.Window w){ owner= w; }
+  public static void owner(java.awt.Window w){ owner = w; }
 
   //-- building
   static UserError die(String first, String... more){
-    return new UserError("Error: "+first+"\n"+Stream.of(more).map(s->"  "+s+"\n").collect(Collectors.joining()));
+    return new UserError("Error: "+first+"\n"+Stream.of(more).map(s -> "  "+s+"\n").collect(Collectors.joining()));
   }
   //Handler for StringFiles.read/writeNew. StringFiles hands over (actionTxt, reportTxt);
   //their emptiness encodes the three outcomes below. A file operation we delegated
   //failing is always a Violation: it is our own housekeeping, not the user's input.
   public static BiConsumer<String,String> onFileError(){
-    return (actionTxt,reportTxt)->{ throw fileError(actionTxt, reportTxt); };
+    return (actionTxt,reportTxt) -> { throw fileError(actionTxt, reportTxt); };
   }
   private static UserError fileError(String actionTxt, String reportTxt){
     if (reportTxt.isEmpty()){ return new UserError(actionTxt); }//fully explained failure, nothing to report
@@ -89,7 +89,7 @@ public final class UserError extends RuntimeException{
 
   //-- path rendering, shared by both message files
   public static String disp(String s){ return Message.displayString(s); }
-  public static String showRel(Path rel){ return showRelText(rel.toString().replace("\\","/")); }
+  public static String showRel(Path rel){ return showRelText(rel.toString().replace("\\", "/")); }
   public static String showRel(RefParent rel){
     var s= rel.fearPath();
     assert s.startsWith(SourceOracle.root);
@@ -98,9 +98,9 @@ public final class UserError extends RuntimeException{
   private static String showRelText(String p){ return "Root: "+PrettyFileName.displayFileName(root.toUri())+"\nPath: "+disp(p)+"\n"; }
   public static String showZipRel(Path diskZip, List<String> steps, String entryName){
     assert diskZip.isAbsolute();
-    diskZip= root.relativize(diskZip);
-    String zipPath= diskZip.toString().replace("\\","/");
-    if (!steps.isEmpty()){ zipPath+="/"+String.join("/", steps); }
+    diskZip = root.relativize(diskZip);
+    String zipPath= diskZip.toString().replace("\\", "/");
+    if (!steps.isEmpty()){ zipPath += "/"+String.join("/", steps); }
     return showRelText(zipPath)+printEntryName(entryName)+"\n";
   }
   private static String printEntryName(String entryName){
@@ -135,13 +135,13 @@ Details:
     return res+"\nIt will also terminate these Fearless user processes:\n"+programs;
   }
   public void display() throws InterruptedException{
-    try { displayGui(); }
-    catch(HeadlessException e){ displayStderr(e); }
+    try{ displayGui(); }
+    catch (HeadlessException e){ displayStderr(e); }
   }
   private void displayGui() throws InterruptedException{
     if (SwingUtilities.isEventDispatchThread()){ displayNow(); return; }
-    try { SwingUtilities.invokeAndWait(this::displayNow); }
-    catch(InvocationTargetException e){ displayStderr(e.getCause()); }//Rare, could be a memory overflow or other JVM stuff?
+    try{ SwingUtilities.invokeAndWait(this::displayNow); }
+    catch (InvocationTargetException e){ displayStderr(e.getCause()); }//Rare, could be a memory overflow or other JVM stuff?
   }
   private void displayNow(){
     var options= recovery == null ? null : new Object[]{"OK", recoveryLabel};
@@ -149,7 +149,7 @@ Details:
     var dialog= new JDialog(owner, "Fearless", Dialog.ModalityType.APPLICATION_MODAL);
     dialog.setUndecorated(bare);
     dialog.setContentPane(pane);
-    pane.addPropertyChangeListener(JOptionPane.VALUE_PROPERTY, _->dialog.dispose());
+    pane.addPropertyChangeListener(JOptionPane.VALUE_PROPERTY, _ -> dialog.dispose());
     dialog.pack();
     dialog.setLocationRelativeTo(owner);
     dialog.setVisible(true);

@@ -28,15 +28,15 @@ final class MainsInfoTest{
 """;
   @Test void printsSortedAndReadsBack(@TempDir Path project){
     var info= new MainsInfo(Map.of(
-      "hello.Beer",new Main("_hello/beer.fear",List.of(),List.of()),
-      "hello.Bar",new Main("_hello/bar.fear",
-        List.of(new Claim("hello.IconsBar","_hello/icons/bar.png","","","bar")),
-        List.of(new Claim("base.IconsConflict","icons/conflict.png","","",""),new Claim("hello.ZInFoo","_hello/z.zip","y.zip","in/foo.png","ffile042")))));
+      "hello.Beer", new Main("_hello/beer.fear", List.of(), List.of()),
+      "hello.Bar", new Main("_hello/bar.fear",
+        List.of(new Claim("hello.IconsBar", "_hello/icons/bar.png", "", "", "bar")),
+        List.of(new Claim("base.IconsConflict", "icons/conflict.png", "", "", ""), new Claim("hello.ZInFoo", "_hello/z.zip", "y.zip", "in/foo.png", "ffile042")))));
     utils.Err.strCmp(text, info.print());
     Fs.writeUtf8(project.resolve(Coordinator.outDir).resolve("mains.info"), info.print());
     var back= MainsInfo.read(project).orElseThrow();
     assertEquals(info, back);
-    assertEquals(List.of("hello.Bar","hello.Beer"), List.copyOf(back.mains().keySet()));
+    assertEquals(List.of("hello.Bar", "hello.Beer"), List.copyOf(back.mains().keySet()));
   }
   @Test void aMissingFileReadsAsEmpty(@TempDir Path project){ assertEquals(Optional.empty(), MainsInfo.read(project)); }
   @Test void aClaimWithFourStringsIsRefused(@TempDir Path project){
@@ -45,7 +45,7 @@ final class MainsInfoTest{
   "hello.Beer": ["_hello/beer.fear", [["hello.IconsBar", "_hello/icons/bar.png", "", ""]], []]
 }
 """);
-    var ex= assertThrows(UserError.class, ()->MainsInfo.read(project));
+    var ex= assertThrows(UserError.class, () -> MainsInfo.read(project));
     utils.Err.strCmp("""
 In file: [###]mains.info
 

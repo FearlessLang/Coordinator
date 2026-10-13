@@ -22,16 +22,16 @@ final class BytecodeLineFix implements Consumer<Path>{
   private final String sourceFile;
   private final TreeMap<Integer,Integer> lineMap= new TreeMap<>();
   private int javaLine= 1;
-  BytecodeLineFix(String base,URI sourceFile){ this(base,sourceFile.toString().substring("fear:/".length())); }
-  BytecodeLineFix(String base,String sourceFile){
-    assert nonNull(base,sourceFile);
+  BytecodeLineFix(String base, URI sourceFile){ this(base, sourceFile.toString().substring("fear:/".length())); }
+  BytecodeLineFix(String base, String sourceFile){
+    assert nonNull(base, sourceFile);
     this.base= base;
     this.sourceFile= sourceFile;
   }
   @Override public String toString(){ return sb.toString(); }
   BytecodeLineFix a(String s){ //this call == s does not contain any method call
     sb.append(s);
-    javaLine += (int)s.chars().filter(c->c == '\n').count();
+    javaLine += (int)s.chars().filter(c -> c == '\n').count();
     return this;
   }
   BytecodeLineFix a(String s, Pos p){//this call == s contains exactly 1 method call located in pos
@@ -46,23 +46,23 @@ final class BytecodeLineFix implements Consumer<Path>{
   @Override public void accept(Path classesDir){
     assert nonNull(classesDir);
     var cf= ClassFile.of();
-    Fs.walkV(classesDir, s->s
-      .filter(p->matches(p.getFileName().toString()))
-      .forEach(p->patchOne(cf, p))
+    Fs.walkV(classesDir, s -> s
+      .filter(p -> matches(p.getFileName().toString()))
+      .forEach(p -> patchOne(cf, p))
     );
   }
   private boolean matches(String n){
     return n.equals(base+".class") || n.endsWith(".class") && n.startsWith(base+"$"); // anon/inner: Foo$1.class etc
   }
   private void patchOne(ClassFile cf, Path classFile){
-    byte[] in= Fs.of(()->Files.readAllBytes(classFile));
+    byte[] in= Fs.of(() -> Files.readAllBytes(classFile));
     var model= cf.parse(in);
     var xform= ClassTransform
-      .dropping(e->e instanceof SourceFileAttribute)
-      .andThen(ClassTransform.endHandler(b->b.with(SourceFileAttribute.of(sourceFile))))
+      .dropping(e -> e instanceof SourceFileAttribute)
+      .andThen(ClassTransform.endHandler(b -> b.with(SourceFileAttribute.of(sourceFile))))
       .andThen(ClassTransform.transformingMethodBodies(this::patchCode));
     byte[] out= cf.transformClass(model, xform);
-    Fs.ofV(()->Files.write(classFile, out));
+    Fs.ofV(() -> Files.write(classFile, out));
   }
   private void patchCode(CodeBuilder cb, CodeElement ce){
     cb.with(ce instanceof LineNumber ln ? LineNumber.of(fearlessLine(ln.line())) : ce);
@@ -74,7 +74,7 @@ final class BytecodeLineFix implements Consumer<Path>{
   //still names the right method; 1000 is a last resort for a file with no mapped line at all.
   private int fearlessLine(int jl){
     var near= lineMap.ceilingEntry(jl);
-    if (near == null){ near= lineMap.floorEntry(jl); }
+    if (near == null){ near = lineMap.floorEntry(jl); }
     return near != null ? near.getValue() : 1000;
   }
 }

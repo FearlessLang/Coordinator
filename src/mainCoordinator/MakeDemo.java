@@ -7,7 +7,7 @@ import java.nio.file.Path;
 public final class MakeDemo{
   public static final String markerContent= "\n";
   public static void of(Path projectDir){
-    hello(projectDir,"demo","Hello");
+    hello(projectDir, "demo", "Hello");
     if (!Files.exists(projectDir.resolve("start.fearless"))){ Fs.writeUtf8(projectDir.resolve("start.fearless"), markerContent); }
     OpenPath.open(projectDir);
   }
@@ -17,7 +17,7 @@ public final class MakeDemo{
     if (!Files.exists(pkgDir.resolve("_rank_app.fear"))){ Fs.writeUtf8(pkgDir.resolve("_rank_app.fear"), rankAppFear.formatted(type)); }
   }
 
-  private static final String rankAppFear="""
+  private static final String rankAppFear= """
 use base.Main as Main;
 use base.Lists as List;
 use base.Num as Num;

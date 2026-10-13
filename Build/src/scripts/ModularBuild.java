@@ -12,10 +12,10 @@ import tools.JavaTool;
 import tools.PortableApp;
 import utils.OneOr;
 
-public class ModularBuild{
+public final class ModularBuild{
   static final Path out= ResolveResource.coordinatorSrc.getParent().getParent().resolve("out").resolve("modular");
   static final Path mods= out.resolve("mods");
-  static final Path resources= ResolveResource.coordinatorSrc.getParent().resolve("Build","src","resources");
+  static final Path resources= ResolveResource.coordinatorSrc.getParent().resolve("Build", "src", "resources");
 
   static void commons(){
     Fs.cleanDir(mods); Fs.ensureDir(mods);
@@ -68,7 +68,7 @@ public class ModularBuild{
   }
 
   static void deployEclipsePlugin(Path appRoot){
-    var found= Fs.walk(appRoot, s->s.filter(Files::isDirectory).filter(p->p.getFileName().toString().equals("mods")).toList());
+    var found= Fs.walk(appRoot, s -> s.filter(Files::isDirectory).filter(p -> p.getFileName().toString().equals("mods")).toList());
     var appDir= OneOr.of("Expected exactly one 'mods' dir under "+appRoot, found.stream()).getParent();
     Fs.copyFresh(buildEclipsePlugin(), appDir.resolve("eclipsePlugin"));
   }
@@ -81,19 +81,19 @@ public class ModularBuild{
     var classes= out.resolve("eclipsePluginClasses");
     Fs.cleanDir(classes); Fs.ensureDir(classes);
     var plugins= ResolveResource.eclipsePlugins;
-    var bundles= Fs.walk(plugins, s->s.filter(p->p.getParent().equals(plugins) && p.toString().endsWith(".jar")).map(Path::toString).sorted().toList());
+    var bundles= Fs.walk(plugins, s -> s.filter(p -> p.getParent().equals(plugins) && p.toString().endsWith(".jar")).map(Path::toString).sorted().toList());
     var args= new ArrayList<>(JavacTool.javacArgs);
     args.addAll(List.of("--release", ResolveResource.eclipseJavaVersion, "-Xlint:-path",
       "-d", classes.toString(),
       "-cp", String.join(File.pathSeparator, bundles)));
-    List.of(plugin.resolve("src"), ResolveResource.controllerSrc.resolve("suggest")).forEach(src->
-      Fs.walkV(src, s->s.filter(p->p.toString().endsWith(".java")).forEach(p->args.add(p.toString()))));
+    List.of(plugin.resolve("src"), ResolveResource.controllerSrc.resolve("suggest")).forEach(src ->
+      Fs.walkV(src, s -> s.filter(p -> p.toString().endsWith(".java")).forEach(p -> args.add(p.toString()))));
     Fs.runTool("javac", args);
     var res= out.resolve("eclipsePlugin");
     Fs.cleanDir(res); Fs.ensureDir(res);
     Fs.runTool("jar", List.of("--create",
       "--file", res.resolve(bundleFileName(plugin)).toString(),
-      "--manifest", plugin.resolve("META-INF","MANIFEST.MF").toString(),
+      "--manifest", plugin.resolve("META-INF", "MANIFEST.MF").toString(),
       "-C", classes.toString(), ".",
       "-C", plugin.toString(), "plugin.xml",
       "-C", plugin.toString(), "icons",
@@ -102,11 +102,11 @@ public class ModularBuild{
     return res;
   }
   static String bundleFileName(Path plugin){
-    var lines= Fs.readUtf8(plugin.resolve("META-INF","MANIFEST.MF")).lines().toList();
+    var lines= Fs.readUtf8(plugin.resolve("META-INF", "MANIFEST.MF")).lines().toList();
     return manifestValue(lines, "Bundle-SymbolicName").split(";")[0]+"_"+manifestValue(lines, "Bundle-Version")+".jar";
   }
   static String manifestValue(List<String> lines, String key){
-    var found= lines.stream().filter(l->l.startsWith(key+": "));
+    var found= lines.stream().filter(l -> l.startsWith(key+": "));
     return OneOr.of("Expected exactly one "+key+" in the plugin manifest", found).substring(key.length()+2).strip();
   }
 }

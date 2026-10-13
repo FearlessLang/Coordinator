@@ -33,9 +33,9 @@ record Tree(
   Tree{ assert root.equals(root.toAbsolutePath().normalize()); }
   public void collect(){    
     reqNoEmptyDirs();
-    Fs.walkV(root, s->s
-      .filter(p->!p.equals(root))
-      .filter(p->!Files.isDirectory(p, LinkOption.NOFOLLOW_LINKS))
+    Fs.walkV(root, s -> s
+      .filter(p -> !p.equals(root))
+      .filter(p -> !Files.isDirectory(p, LinkOption.NOFOLLOW_LINKS))
       .forEach(this::collectFile)
     );
   }
@@ -54,7 +54,7 @@ record Tree(
       : Report.onlyRegularFilesAndDirs(abs);
     }
     if (zip && !BuildWithZip.isInvisible(pe)){ reqNoSiblingForZipName(rel); collectBodyDiskZip(root, rel); return; }
-    for (RefParent p= pe; p.parent()!=p; p= p.parent()){ addKid(p); }
+    for (RefParent p= pe; p.parent()!=p; p = p.parent()){ addKid(p); }
     if (isRegularFile(abs) && !BuildWithZip.isInvisible(pe)){ visibleFiles.add(pe); }
   }
   private void reqNoSiblingForZipName(Path rel){
@@ -68,7 +68,7 @@ record Tree(
     var dirs= new LinkedHashSet<Path>();
     var nonEmpty= new LinkedHashSet<Path>();
     dirs.add(Path.of(""));
-    Fs.walkV(root, s->s.filter(p->!p.equals(root)).forEach(abs->{
+    Fs.walkV(root, s -> s.filter(p -> !p.equals(root)).forEach(abs -> {
       var rel= root.relativize(abs);
       nonEmpty.add(parentOrEmpty(rel));
       if (BuildWithZip.isInvisible(new PathEntry(root, rel))){ return; }
@@ -79,7 +79,7 @@ record Tree(
   private boolean isDirectory(Path abs){ return Files.isDirectory(abs, LinkOption.NOFOLLOW_LINKS); }
   private static void reqTime(Path abs, Path rel){
     var t= Fs.lastModified(abs);
-    BuildWithZip.reqTime(t, ()->Report.dateUnset(rel, t), now->Report.dateInTheFuture(rel, t, now));
+    BuildWithZip.reqTime(t, () -> Report.dateUnset(rel, t), now -> Report.dateInTheFuture(rel, t, now));
   }
   private static boolean isGeneratedTests(Path abs){
     var shape= abs.getParent().getFileName().toString().equals("auto_tests") && abs.getFileName().toString().endsWith("_test.fear");
@@ -89,7 +89,7 @@ record Tree(
   private void collectBodyDiskZip(Path root, Path rel){
     for (var e: ZipWellFormedness.allEntryPaths(root, rel)){
       if (e.segments().getLast().endsWith(".zip")){ continue; }//expanded
-      for (RefParent p= e; p.parent()!=p; p= p.parent()){ addKid(p); }
+      for (RefParent p= e; p.parent()!=p; p = p.parent()){ addKid(p); }
       if (!BuildWithZip.isInvisible(e)){ visibleFiles.add(e); }
     }
   }
@@ -97,14 +97,14 @@ record Tree(
     var dir= kid.parent();
     if (dir == kid){ return; } // root
     var m= BuildWithZip.isInvisible(dir) ? dotKidsByDir : visKidsByDir;
-    m.computeIfAbsent(dir, _->new LinkedHashSet<>()).add(kid);
+    m.computeIfAbsent(dir, _ -> new LinkedHashSet<>()).add(kid);
   }
   private static boolean isDiskZip(Path abs, Path rel){ return isRegularFile(abs) && rel.getFileName().toString().endsWith(".zip"); }
   private static Path parentOrEmpty(Path p){ return p.getParent()==null ? Path.of("") : p.getParent(); }
 }
 public final class BuildWithZip{
   public static boolean isInvisible(RefParent r){
-    return AutoloadHandler.components(r.fearPath()).stream().anyMatch(s->s.startsWith("."));
+    return AutoloadHandler.components(r.fearPath()).stream().anyMatch(s -> s.startsWith("."));
   }
   static final long futureTolerance= 5_000;
   static void reqTime(long t, Supplier<UserError> unset, LongFunction<UserError> future){
@@ -116,11 +116,11 @@ public final class BuildWithZip{
   BuildWithZip(Path root){ t= new Tree(root.toAbsolutePath().normalize(), new ArrayList<>(), new LinkedHashMap<>(), new LinkedHashMap<>()); }
   List<Ref> build(){
     t.collect();
-    t.visKidsByDir().forEach((_,kids)->{
+    t.visKidsByDir().forEach((_,kids) -> {
       kids.forEach(BuildWithZip::checkIndividualVisibleSegment);
       checkCollectiveVisible(kids);
     });
-    t.dotKidsByDir().forEach((_,kids)->{
+    t.dotKidsByDir().forEach((_,kids) -> {
       kids.forEach(BuildWithZip::checkIndividualInvisibleSegment);
       checkCollectiveInvisible(kids);
     });
@@ -144,7 +144,7 @@ public final class BuildWithZip{
     char c0= atom.charAt(0);
     var letterOr_= c0 == '_' || ('a' <= c0 && c0 <= 'z');
     if (!letterOr_){ throw Report.visibleMustStartWithLetterOrUnderscore(kid); }
-    for (int i : Range.of(1,atom.length())){
+    for (int i : Range.of(1, atom.length())){
       char c= atom.charAt(i);
       boolean ok= ('a' <= c && c <= 'z') || ('0' <= c && c <= '9') || c == '_';
       if (!ok){ throw Report.visibleInvalidChar(kid, c); }
@@ -163,11 +163,11 @@ public final class BuildWithZip{
     }
   }
   private static final Set<String> winReserved= Set.of(
-    "con","prn","aux","nul",
-    "com1","com2","com3","com4","com5","com6","com7","com8","com9",
-    "lpt1","lpt2","lpt3","lpt4","lpt5","lpt6","lpt7","lpt8","lpt9"
+    "con", "prn", "aux", "nul",
+    "com1", "com2", "com3", "com4", "com5", "com6", "com7", "com8", "com9",
+    "lpt1", "lpt2", "lpt3", "lpt4", "lpt5", "lpt6", "lpt7", "lpt8", "lpt9"
   );
-  private static final String winBadChars="<>:\"/\\|?*";
+  private static final String winBadChars= "<>:\"/\\|?*";
 
   private static void checkIndividualInvisibleSegment(RefParent kid){
     assert isInvisible(kid);
