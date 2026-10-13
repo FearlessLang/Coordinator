@@ -17,7 +17,7 @@ import utils.Join;
 import utils.Pos;
 import utils.Range;
 
-public class Backend{
+public final class Backend{
   public Backend(Path out, BackendTools tools){
     assert nonNull(out,tools);
     this.out= out;

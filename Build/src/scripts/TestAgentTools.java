@@ -8,7 +8,7 @@ import resources.ResolveResource;
 import tools.Fs;
 import tools.JavaTool;
 
-public class TestAgentTools{
+public final class TestAgentTools{
   public static void main(String[] args) throws InterruptedException{
     assert (args.length==4 || args.length==5) && List.of("true","false").contains(args[1]);
     var channel= Path.of(args[args.length-2]);

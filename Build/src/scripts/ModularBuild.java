@@ -12,7 +12,7 @@ import tools.JavaTool;
 import tools.PortableApp;
 import utils.OneOr;
 
-public class ModularBuild{
+public final class ModularBuild{
   static final Path out= ResolveResource.coordinatorSrc.getParent().getParent().resolve("out").resolve("modular");
   static final Path mods= out.resolve("mods");
   static final Path resources= ResolveResource.coordinatorSrc.getParent().resolve("Build","src","resources");

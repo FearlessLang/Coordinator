@@ -114,7 +114,7 @@ public interface Coordinator {
     return Stream.concat(Stream.of(modsPath()), baseCachePath().stream()).toList();
   }
 }
-class Helper{
+final class Helper{
   static boolean isFear(Ref u){ return u.fearPath().endsWith(".fear"); }
   static OutputOracle out(Path path){
     return ()->path.resolve(Coordinator.outDir);
@@ -216,7 +216,7 @@ class Helper{
     if (reservedPkgNames.contains(pkg)){ throw Report.projectReservedPackageName(u, candidates.getFirst()); }
     return Optional.of(pkg);
   }
-}class WouldCompile extends RuntimeException{
+}final class WouldCompile extends RuntimeException{
   private static final long serialVersionUID= 1L;
 }
 record NoCompile(Coordinator inner) implements Coordinator{
