@@ -10,9 +10,9 @@ import tools.JavaTool;
 public final class DeployZeroToHeroPages{
   public static void main(String[] args) throws InterruptedException{
     var prefix= ResolveResource.commonsSrc.getParent().getParent();
-    var fearlessTourSrc= prefix.resolve("FearlessTour","src");
-    var fearlessTourExternalJars= prefix.resolve("FearlessTour","externalJars");
-    var zeroToHeroSrc= prefix.resolve("ZeroToHero","src");
+    var fearlessTourSrc= prefix.resolve("FearlessTour", "src");
+    var fearlessTourExternalJars= prefix.resolve("FearlessTour", "externalJars");
+    var zeroToHeroSrc= prefix.resolve("ZeroToHero", "src");
     var zeroToHeroRoot= prefix.resolve("ZeroToHero");
 
     ModularBuild.commons();
@@ -32,6 +32,6 @@ public final class DeployZeroToHeroPages{
     ModularBuild.buildJar("ZeroToHeroGame", List.of(zeroToHeroSrc), automaticModuleReqs);
 
     JavaTool.runMain(List.of("-ea"), ModularBuild.out.resolve("FearlessTour"), ModularBuild.mods, "compileHtml.CompileHtml");
-    JavaTool.runMain(List.of("-ea","-Duser.dir="+zeroToHeroRoot), ModularBuild.out.resolve("ZeroToHeroGame"), ModularBuild.mods, "mainZeroToHero.Main");
+    JavaTool.runMain(List.of("-ea", "-Duser.dir="+zeroToHeroRoot), ModularBuild.out.resolve("ZeroToHeroGame"), ModularBuild.mods, "mainZeroToHero.Main");
   }
 }

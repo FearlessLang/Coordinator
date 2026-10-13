@@ -34,18 +34,18 @@ final class TypeDoc{
   }
 
   void declared(Pos pos, M m, List<DocOcc> docs, List<MethodRef> inheritedFrom){
-    oneOf(declaredByKey, new DeclaredMethodKey(pos.fileName(),pos.line(),pos.column(),m.sig().m()), true, docs, inheritedFrom).add(m);
+    oneOf(declaredByKey, new DeclaredMethodKey(pos.fileName(), pos.line(), pos.column(), m.sig().m()), true, docs, inheritedFrom).add(m);
   }
 
   void imported(M m, List<MethodRef> from){
-    oneOf(importedByKey, new ImportedKey(m.sig().origin(),m.sig().rc(),m.sig().m()), false, List.of(), from).add(m);
+    oneOf(importedByKey, new ImportedKey(m.sig().origin(), m.sig().rc(), m.sig().m()), false, List.of(), from).add(m);
   }
 
   private <K> MethodDoc oneOf(Map<K,MethodDoc> byKey, K k, boolean declared, List<DocOcc> docs, List<MethodRef> inheritedFrom){
     var d= byKey.get(k);
     if (d == null){
-      d = new MethodDoc(this,declared,docs,inheritedFrom);
-      byKey.put(k,d);
+      d = new MethodDoc(this, declared, docs, inheritedFrom);
+      byKey.put(k, d);
       methods.add(d);
     }
     else{ d.addInheritedFrom(inheritedFrom); }
@@ -87,10 +87,10 @@ final class MethodDoc{
  */
 record MethodRef(TName owner, Optional<T.C> provider, M method){
   static MethodRef provider(T.C provider, M method){
-    return new MethodRef(provider.name(),Optional.of(provider),method);
+    return new MethodRef(provider.name(), Optional.of(provider), method);
   }
   static MethodRef origin(M method){
-    return new MethodRef(method.sig().origin(),Optional.empty(),method);
+    return new MethodRef(method.sig().origin(), Optional.empty(), method);
   }
 }
 

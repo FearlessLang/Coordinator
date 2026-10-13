@@ -61,7 +61,7 @@ final class DocResolver{
 
   Optional<DocLink> resolveType(DocRef.TypeName ref){
     var cands= typeCandidates(ref).stream().map(Candidate::ofType).toList();
-    return pack("Type "+ref.pkg().map(p -> p+".").orElse("")+ref.simpleName()+shape(ref.arity(),"[","]"), cands);
+    return pack("Type "+ref.pkg().map(p -> p+".").orElse("")+ref.simpleName()+shape(ref.arity(), "[", "]"), cands);
   }
 
   //a name declared here always wins over a same-named one elsewhere; only when nothing
@@ -98,8 +98,8 @@ final class DocResolver{
   }
 
   private Optional<DocLink> onOwners(String shown, List<TName> owners, String selector, OptionalInt arity){
-    var cands= owners.stream().flatMap(o -> methodCandidatesOn(o,selector,arity).stream()).toList();
-    return pack(shown+selector+shape(arity,"(",")"), cands);
+    var cands= owners.stream().flatMap(o -> methodCandidatesOn(o, selector, arity).stream()).toList();
+    return pack(shown+selector+shape(arity, "(", ")"), cands);
   }
 
   private List<Candidate> methodCandidatesOn(TName owner, String selector, OptionalInt arity){
@@ -109,8 +109,8 @@ final class DocResolver{
         .filter(MethodDoc::visible)
         .filter(m -> m.main().sig().m().s().equals(selector))
         .filter(m -> arity.isEmpty() || m.main().sig().m().arity()==arity.getAsInt())
-        .gather(DistinctBy.<MethodDoc,String>of(m -> HtmlDocRenderer.methodId(owner,m.main())))
-        .map(m -> Candidate.ofLocalMethod(owner,m))
+        .gather(DistinctBy.<MethodDoc,String>of(m -> HtmlDocRenderer.methodId(owner, m.main())))
+        .map(m -> Candidate.ofLocalMethod(owner, m))
         .toList();
     }
     var lit= other.__of(owner);
@@ -142,10 +142,10 @@ final class DocResolver{
         .filter(MethodDoc::visible)
         .filter(m -> m.main().sig().m().s().equals(selector))
         .filter(m -> arity.isEmpty() || m.main().sig().m().arity()==arity.getAsInt())
-        .map(m -> Candidate.ofLocalMethod(t.main().name(),m)));
+        .map(m -> Candidate.ofLocalMethod(t.main().name(), m)));
     var foreignCands= other.dom().stream()
-      .flatMap(n -> foreignCandidates(n,selector,arity));
-    return pack(selector+shape(arity,"(",")"), Stream.concat(localCands,foreignCands).toList());
+      .flatMap(n -> foreignCandidates(n, selector, arity));
+    return pack(selector+shape(arity, "(", ")"), Stream.concat(localCands, foreignCands).toList());
   }
 
   private Stream<Candidate> foreignCandidates(TName owner, String selector, OptionalInt arity){
@@ -158,11 +158,11 @@ final class DocResolver{
       .filter(m -> m.sig().m().s().equals(selector))
       .filter(m -> arity.isEmpty() || m.sig().m().arity()==arity.getAsInt())
       .gather(DistinctBy.<M,Integer>of(m -> m.sig().m().arity()))
-      .map(m -> Candidate.ofForeignMethod(owner,selector,m.sig().m().arity()));
+      .map(m -> Candidate.ofForeignMethod(owner, selector, m.sig().m().arity()));
   }
 
   static String shape(OptionalInt arity, String open, String close){
-    return arity.isEmpty() ? "" : Join.of(Collections.nCopies(arity.getAsInt(),"_"),open,",",close,open+close);
+    return arity.isEmpty() ? "" : Join.of(Collections.nCopies(arity.getAsInt(), "_"), open, ",", close, open+close);
   }
 
   private Optional<DocLink> pack(String title, List<Candidate> cands){

@@ -22,9 +22,9 @@ final class BytecodeLineFix implements Consumer<Path>{
   private final String sourceFile;
   private final TreeMap<Integer,Integer> lineMap= new TreeMap<>();
   private int javaLine= 1;
-  BytecodeLineFix(String base,URI sourceFile){ this(base,sourceFile.toString().substring("fear:/".length())); }
-  BytecodeLineFix(String base,String sourceFile){
-    assert nonNull(base,sourceFile);
+  BytecodeLineFix(String base, URI sourceFile){ this(base, sourceFile.toString().substring("fear:/".length())); }
+  BytecodeLineFix(String base, String sourceFile){
+    assert nonNull(base, sourceFile);
     this.base= base;
     this.sourceFile= sourceFile;
   }

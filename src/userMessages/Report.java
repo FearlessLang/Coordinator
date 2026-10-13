@@ -77,7 +77,7 @@ min.js
 min.css
 """.lines().collect(Collectors.toCollection(LinkedHashSet::new));
 
-  private static String tickList(Set<String> xs){ return Join.of(xs.stream().map(x -> "`"+x+"`"),"",", ",""); }
+  private static String tickList(Set<String> xs){ return Join.of(xs.stream().map(x -> "`"+x+"`"), "", ", ", ""); }
 
   private static String rulesWall(){ return """
 We check this so that you do not get surprises later.
@@ -141,7 +141,7 @@ Start Fearless on an existing project folder, or on a file inside one.
       "- Start Fearless on the Fearless project folder.");
   }
   public static UserError emptyDirectory(Path kid){
-    return directFail(showRel(kid),"""
+    return directFail(showRel(kid), """
 This directory is empty.
 Different systems handle empty directories differently,
 and they may not be supported by compression tools (zip)
@@ -149,7 +149,7 @@ or version control systems (git).
 """);}
 
   public static UserError dateInTheFuture(Path kid, long t, long now){
-    return new UserError(showRel(kid)+"\nThis file is dated "+future(t,now)+"""
+    return new UserError(showRel(kid)+"\nThis file is dated "+future(t, now)+"""
 Fearless decides what needs compiling by comparing the modification dates of the files,
 so a file dated in the future would make the later edits look older than the last compile.
 This usually comes from a computer whose clock is wrong, from a shared or network folder
@@ -159,7 +159,7 @@ Save the file again, or correct the clock of this computer.
   public static UserError dateUnset(Path kid, long t){
     return new UserError(showRel(kid)+"\nThis file is dated "+dateOf(t)+"."+unset+"Save the file again, so that it gets the current date.\n");}
   public static UserError zipEntryDateInTheFuture(Path diskZip, List<String> steps, String entryName, long t, long now){
-    return new UserError(showZipRel(diskZip, steps, entryName)+"\nThis zip entry is dated "+future(t,now)+"""
+    return new UserError(showZipRel(diskZip, steps, entryName)+"\nThis zip entry is dated "+future(t, now)+"""
 Fearless decides what needs compiling by comparing the modification dates of the files,
 and the entries of a zip count as the files they unpack to:
 a file dated in the future would make the later edits look older than the last compile.
@@ -419,7 +419,7 @@ Invalid entry names (based on the exact text of the entry name):
   public static UserError zipNestingTooDeep(Path diskZip, List<String> steps, int depth, int maxDepth){
     assert !steps.isEmpty();
     var all= Pop.right(steps);
-    return directFail(showZipRel(diskZip,all,steps.getLast()),"""
+    return directFail(showZipRel(diskZip, all, steps.getLast()), """
 Too many layers of nested zips.
 We explored %s layers and there was still more.
 Different systems handle very nested zips differently; overall if
@@ -428,7 +428,7 @@ recursively unzipped, it would clearly go over the OS path length limit.
   //Reached when reading THIS ONE entry exhausted the memory of the whole program,
   //so the size we could report is exactly the size we could not measure.
   public static UserError zipEntryTooBig(Path diskZip, List<String> steps, String entryName){
-    return directFail(showZipRel(diskZip, steps, entryName),"""
+    return directFail(showZipRel(diskZip, steps, entryName), """
 This zip entry is too big to read.
 Fearless ran out of memory while unpacking this single entry.
 A zip entry can be much bigger unpacked than it looks inside the zip,
@@ -436,12 +436,12 @@ sometimes thousands of times bigger, and we can only check content we can hold.
 Remove this entry from the zip, or store its content as normal files instead.
 """);}
   public static UserError zipNoEntries(Path diskZip, List<String> steps){
-    return directFail(showZip(diskZip, steps),"""
+    return directFail(showZip(diskZip, steps), """
 This zip file contains no entries.
 This is most likely a mistake.
 """);}
   public static UserError zipNotAZip(Path diskZip, List<String> steps){
-    return directFail(showZip(diskZip, steps),"""
+    return directFail(showZip(diskZip, steps), """
 This file is named as a zip file, but its content is not a zip file.
 A zip file starts with its first entry, or with the zip end record if it has no entries.
 Other kinds of files renamed to ".zip", files saved from a web page, and self extracting
@@ -557,7 +557,7 @@ Valid alternatives:
       +-- bla/
           +-- _beer/
               +-- bar.fear
-""".formatted(disp(file.fearPath()), Join.of(candidates.stream().map(UserError::disp), "",", ","")));
+""".formatted(disp(file.fearPath()), Join.of(candidates.stream().map(UserError::disp), "", ", ", "")));
   }
   private static final String rankFilePattern= """
 Each package folder must contain exactly one file whose name follows this pattern:
@@ -601,7 +601,7 @@ Rank files:
   %s
 
 Each package must contain exactly one rank file.
-""".formatted(disp(pkg), Join.of(rankFiles.stream().map(f -> disp(f.fearPath())), "",", ","")));
+""".formatted(disp(pkg), Join.of(rankFiles.stream().map(f -> disp(f.fearPath())), "", ", ", "")));
   }
   public static UserError projectMalformedRankFileName(Ref rankFile){ return new UserError("""
 Malformed rank file name.
@@ -620,11 +620,11 @@ File:
   }
   private static UserError claim(SourceOracle src, Literal l, String msg){
     var owner= owner(l);
-    return new UserError(Message.of(src::loadString,List.of(new Frame(owner,l.span().inner)),owner.substring(0,1).toUpperCase()+owner.substring(1)+msg));
+    return new UserError(Message.of(src::loadString, List.of(new Frame(owner, l.span().inner)), owner.substring(0, 1).toUpperCase()+owner.substring(1)+msg));
   }
-  private static UserError claim(SourceOracle src, Literal l, T.C c, String msg){ return claim(src,l," implements "+disp(repr(c))+".\n"+msg); }
-  private static String withArity(TName n){ return n.s()+Join.of(Collections.nCopies(n.arity(),"_"),"[",",","]",""); }
-  private static String repr(T.C c){ return c.name().s()+Join.of(c.ts().stream().map(Report::repr),"[",",","]",""); }
+  private static UserError claim(SourceOracle src, Literal l, T.C c, String msg){ return claim(src, l, " implements "+disp(repr(c))+".\n"+msg); }
+  private static String withArity(TName n){ return n.s()+Join.of(Collections.nCopies(n.arity(), "_"), "[", ",", "]", ""); }
+  private static String repr(T.C c){ return c.name().s()+Join.of(c.ts().stream().map(Report::repr), "[", ",", "]", ""); }
   private static String repr(T t){
     if (!(t instanceof T.RCC r)){ return t.toString(); }
     var n= r.c().name();
@@ -632,35 +632,35 @@ File:
     return r.rc().toStrSpace()+(lit ? n.simpleName() : repr(r.c()));
   }
   public static UserError claimNotMain(SourceOracle src, Literal l, TName claim){
-    return claim(src,l," implements "+disp(withArity(claim))+".\n"
+    return claim(src, l, " implements "+disp(withArity(claim))+".\n"
     + "Only a main can open files: "+owner(l)+" must also implement \"base.Main\", directly or through one of its supertypes.");
   }
   public static UserError claimIconNotConcrete(SourceOracle src, Literal l, T.C c){
-    return claim(src,l,c,"The icon "+disp(repr(c.ts().getFirst()))+" is not a concrete type name.\n"
+    return claim(src, l, c, "The icon "+disp(repr(c.ts().getFirst()))+" is not a concrete type name.\n"
     + "An icon is a type name with no type variables and no generic arguments, like \"IconsFoo\".");
   }
   public static UserError claimIconNotAsset(SourceOracle src, Literal l, T.C c){
-    return claim(src,l,c,"The icon "+disp(repr(c.ts().getFirst()))+" is not the type generated for an image file.\n"
+    return claim(src, l, c, "The icon "+disp(repr(c.ts().getFirst()))+" is not the type generated for an image file.\n"
     + "An icon is the type generated for an image file, like \"IconsFoo\" for \"_pkg/icons/foo.png\", or \"base.IconsConflict\".");
   }
   public static UserError claimExtNotStr(SourceOracle src, Literal l, T.C c){
-    return claim(src,l,c,"The extension "+disp(repr(c.ts().get(1)))+" is not a string literal type.\n"
+    return claim(src, l, c, "The extension "+disp(repr(c.ts().get(1)))+" is not a string literal type.\n"
     + "An extension is written as a string literal type, like "+disp("\"foo\"")+" or "+disp("`foo`")+".");
   }
   public static UserError claimExtInvalid(SourceOracle src, Literal l, T.C c, String ext){
-    return claim(src,l,c,disp(ext)+" is not a valid extension.\n"
+    return claim(src, l, c, disp(ext)+" is not a valid extension.\n"
     + "An extension is 1 to "+Fs.maxExtSeg+" characters, each a lowercase letter \"a\"-\"z\" or a digit \"0\"-\"9\", with no dot; \"fearless\" is reserved.");
   }
   public static UserError claimShortcutNotFapp(SourceOracle src, Literal l, T.C c, String ext){
-    return claim(src,l,c,disp(ext)+" is not a shortcut extension: a shortcut file only starts its main, so it must not look like a document of another program or a file of the project.\n"
+    return claim(src, l, c, disp(ext)+" is not a shortcut extension: a shortcut file only starts its main, so it must not look like a document of another program or a file of the project.\n"
     + "A shortcut extension is \"fapp\" followed by three digits, like \"fapp042\"; or implement \"base.Shortcut[_]\" to let the Fearless manager choose one.");
   }
   public static UserError claimOpenWithFapp(SourceOracle src, Literal l, T.C c, String ext){
-    return claim(src,l,c,disp(ext)+" is a shortcut extension: \"fapp\" followed by three digits names the shortcut files of the Fearless manager.\n"
+    return claim(src, l, c, disp(ext)+" is a shortcut extension: \"fapp\" followed by three digits names the shortcut files of the Fearless manager.\n"
     + "Use an extension of the form \"ffile\" followed by three digits, like \"ffile042\", or a system extension, like \"htm\"; or implement \"base.OpenWith[_]\" to let the Fearless manager choose one.");
   }
   public static UserError claimExtTwice(SourceOracle src, Literal l, T.C first, T.C second, String ext){
-    return claim(src,l," claims the extension "+disp(ext)+" more than once:\n"
+    return claim(src, l, " claims the extension "+disp(ext)+" more than once:\n"
     + "both "+disp(repr(first))+" and "+disp(repr(second))+" claim it.\n"
     + "A main can claim each extension at most once, across all its \"base.OpenWith[_,_]\" and \"base.Shortcut[_,_]\", since one extension has one icon.");
   }
@@ -691,7 +691,7 @@ Add an arity when the name alone matches several declarations:
 
 To show code that is not a name, use two backticks or more:
   ``this.foo(x)``   shown as code, never checked, never a link
-""".formatted(String.join("\n\n",problems)));
+""".formatted(String.join("\n\n", problems)));
   }
 
   public static UserError generatedTestNameReserved(String problem, String topName){ return new UserError("""
@@ -707,5 +707,5 @@ package's own examples, using two reserved name patterns:
   exact name is instead treated as deliberate, and suppresses generation entirely.
 
 Rename this type, or use the second pattern above to opt the whole package out.
-""".formatted(problem,topName)); }
+""".formatted(problem, topName)); }
 }

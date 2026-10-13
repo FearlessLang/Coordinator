@@ -18,19 +18,19 @@ import utils.Bug;
 
 public final class StringFiles {
   public static String read(Path path, BiConsumer<String,String> onError){
-    byte[] bytes= ByteFiles.read(path,(k,c) ->
-      fail(onError,requiresReport(k),FailureText.explain(Op.Read,k,path),c));
+    byte[] bytes= ByteFiles.read(path, (k,c) ->
+      fail(onError, requiresReport(k), FailureText.explain(Op.Read, k, path), c));
     var input= ByteBuffer.wrap(bytes);
     var output= CharBuffer.allocate(bytes.length);
     var decoder= StandardCharsets.UTF_8.newDecoder()
       .onMalformedInput(CodingErrorAction.REPORT)
       .onUnmappableCharacter(CodingErrorAction.REPORT);
-    var result= decoder.decode(input,output,true);
+    var result= decoder.decode(input, output, true);
     if (result.isError()){
       var cause= codingException(result);
       output.flip();
-      return fail(onError,false,
-        invalidUtf8(path,bytes,input.position(),result.length(),output.toString()),cause);
+      return fail(onError, false,
+        invalidUtf8(path, bytes, input.position(), result.length(), output.toString()), cause);
     }
     assert !result.isOverflow();
     result = decoder.flush(output);
@@ -40,8 +40,8 @@ public final class StringFiles {
   }
   //Whole-file create with UTF-8 content: refuses to touch anything already at the location.
   public static void writeNew(Path path, String text, BiConsumer<String,String> onError){
-    ByteFiles.writeNew(path,utf8(text),(k,c) ->
-      fail(onError,requiresReport(k),FailureText.explain(Op.Write,k,path),c));
+    ByteFiles.writeNew(path, utf8(text), (k,c) ->
+      fail(onError, requiresReport(k), FailureText.explain(Op.Write, k, path), c));
   }
   //Strict, mirroring the strict decode in read: String.getBytes(UTF_8) would silently
   //REPLACE an unpaired surrogate with U+FFFD, and silently altering the user's data on
@@ -59,7 +59,7 @@ public final class StringFiles {
       buffer.get(bytes);
       return bytes;
     }
-    catch (CharacterCodingException e){ throw new Error("The text to write is not valid UTF-16, so it cannot be encoded as UTF-8",e); }
+    catch (CharacterCodingException e){ throw new Error("The text to write is not valid UTF-16, so it cannot be encoded as UTF-8", e); }
   }
   private static boolean requiresReport(ByteFiles.Kind kind){
     return switch (kind){
@@ -81,20 +81,20 @@ public final class StringFiles {
       Explanation explanation,
       Throwable cause){
     var outAction= report ? "" : explanation.text();
-    if (!report && explanation.suppressed().isEmpty()){ onError.accept(outAction,""); throw Bug.unreachable(); }
+    if (!report && explanation.suppressed().isEmpty()){ onError.accept(outAction, ""); throw Bug.unreachable(); }
     var outReport= new StringBuilder(report ? explanation.text() : "")
       .append("\nOriginal failure:\n").append(stackTrace(cause));
     for (var i= 0; i < explanation.suppressed().size(); i++){ outReport
       .append("\nSuppressed error ").append(i).append(":\n")
       .append(stackTrace(explanation.suppressed().get(i)));
     }
-    onError.accept(outAction,outReport.toString());
+    onError.accept(outAction, outReport.toString());
     throw Bug.unreachable();
   }
   private static Explanation invalidUtf8(Path path, byte[] bytes, int offset, int length, String prefix){
     var location= location(prefix);
     var suppressed= new Suppressed();
-    var text= CommonInfo.of(Op.Read,path,suppressed)+"""
+    var text= CommonInfo.of(Op.Read, path, suppressed)+"""
 The file's bytes were read successfully, but they do not form valid UTF-8 text.
 
 The first invalid UTF-8 sequence begins at:
@@ -111,10 +111,10 @@ Nearby bytes:  %s
       location.line(),
       location.column(),
       offset,
-      Message.displayString(tail(location.linePrefix(),80)),
-      hex(bytes,offset,Math.min(bytes.length,offset+length)),
-      hex(bytes,Math.max(0,offset-8),Math.min(bytes.length,offset+length+8)));
-    return new Explanation(text,suppressed.toList());
+      Message.displayString(tail(location.linePrefix(), 80)),
+      hex(bytes, offset, Math.min(bytes.length, offset+length)),
+      hex(bytes, Math.max(0, offset-8), Math.min(bytes.length, offset+length+8)));
+    return new Explanation(text, suppressed.toList());
   }
   private static CharacterCodingException codingException(CoderResult result){
     try { result.throwException(); throw Bug.unreachable(); }
@@ -130,14 +130,14 @@ Nearby bytes:  %s
       line++;
       start = i;
     }
-    return new Location(line,prefix.codePointCount(start,prefix.length())+1,prefix.substring(start));
+    return new Location(line, prefix.codePointCount(start, prefix.length())+1, prefix.substring(start));
   }
   private static String tail(String text, int length){
-    var size= text.codePointCount(0,text.length());
-    return size <= length ? text : "..."+text.substring(text.offsetByCodePoints(0,size-length));
+    var size= text.codePointCount(0, text.length());
+    return size <= length ? text : "..."+text.substring(text.offsetByCodePoints(0, size-length));
   }
   private static String hex(byte[] bytes, int from, int to){
-    return HexFormat.ofDelimiter(" ").withUpperCase().formatHex(bytes,from,to);
+    return HexFormat.ofDelimiter(" ").withUpperCase().formatHex(bytes, from, to);
   }
   private static String stackTrace(Throwable error){
     var out= new StringWriter();

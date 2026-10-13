@@ -31,41 +31,41 @@ Assertion failure.
     Fs.writeUtf8(project.resolve(".out").resolve("logs").resolve("_base").resolve("unit_test_log$"+stamp+".log"), content);
   }
   @Test void aLogBecomesOneSuiteCountingItsTestsAndItsFailures(@TempDir Path project){
-    writeLog(project,"20260904_012117_731Z",log);
+    writeLog(project, "20260904_012117_731Z", log);
     var suite= JUnitReport.suite("demo", project);
     assertTrue(suite.startsWith("<testsuite name=\"demo\" tests=\"3\" failures=\"1\" errors=\"0\">"), suite);
   }
   @Test void aDisabledPlanLineBecomesASkippedTestAndTheRunLinesGo(@TempDir Path project){
-    writeLog(project,"20260904_012117_731Z",log);
+    writeLog(project, "20260904_012117_731Z", log);
     var suite= JUnitReport.suite("demo", project);
     assertTrue(suite.contains("<testcase classname=\"Later\" name=\"Later at line: 9\" file=\"_hello/_rank_app.fear\" line=\"9\"><skipped/></testcase>"), suite);
     assertFalse(suite.contains("PLAN|"), suite);
   }
   @Test void theNewestLogIsTheOneReported(@TempDir Path project){
-    writeLog(project,"20260901_000000_000Z","<testcase classname=\"Old\" name=\"Old\"></testcase>\n");
-    writeLog(project,"20260903_000000_000Z","<testcase classname=\"New\" name=\"New\"></testcase>\n");
+    writeLog(project, "20260901_000000_000Z", "<testcase classname=\"Old\" name=\"Old\"></testcase>\n");
+    writeLog(project, "20260903_000000_000Z", "<testcase classname=\"New\" name=\"New\"></testcase>\n");
     var suite= JUnitReport.suite("demo", project);
     assertTrue(suite.contains("\"New\""), suite);
     assertFalse(suite.contains("\"Old\""), suite);
   }
   @Test void writingWrapsTheSuiteInAJUnitDocument(@TempDir Path project){
-    writeLog(project,"20260904_012117_731Z",log);
-    JUnitReport.write(project,project,"demo",Instant.parse("2026-09-03T00:00:00Z"));
+    writeLog(project, "20260904_012117_731Z", log);
+    JUnitReport.write(project, project, "demo", Instant.parse("2026-09-03T00:00:00Z"));
     var xml= Fs.readUtf8(JUnitReport.file(project));
     assertTrue(xml.startsWith("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<testsuites>\n"), xml);
     assertTrue(xml.endsWith("</testsuites>\n"), xml);
   }
   @Test void aRunThatLoggedNoUnitTestsReportsNothing(@TempDir Path project){
     assertEquals("", JUnitReport.suite("demo", project));
-    JUnitReport.write(project,project,"demo",Instant.parse("2026-09-03T00:00:00Z"));
+    JUnitReport.write(project, project, "demo", Instant.parse("2026-09-03T00:00:00Z"));
     assertFalse(Files.exists(JUnitReport.file(project)));
   }
   @Test void aLogStillBeingWrittenIsReportedUpToItsLastCompleteRecord(@TempDir Path project){
-    writeLog(project,"20260904_012117_731Z",log);
+    writeLog(project, "20260904_012117_731Z", log);
     var file= project.resolve(".out").resolve("logs").resolve("_base").resolve("unit_test_log$20260904_012117_731Z.log");
     var open= "<testcase classname=\"Last\" name=\"Last at line: 11\" file=\"_hello/_rank_app.fear\" line=\"11\">\n<failure>\nAssertion ";
-    Fs.ofV(() -> Files.writeString(file,open,StandardOpenOption.APPEND));
-    Fs.ofV(() -> Files.write(file,new byte[]{(byte)0xC3},StandardOpenOption.APPEND));
+    Fs.ofV(() -> Files.writeString(file, open, StandardOpenOption.APPEND));
+    Fs.ofV(() -> Files.write(file, new byte[]{(byte)0xC3}, StandardOpenOption.APPEND));
     utils.Err.strCmp("""
 <testsuite name="demo" tests="3" failures="1" errors="0">
 <testcase classname="Later" name="Later at line: 9" file="_hello/_rank_app.fear" line="9"><skipped/></testcase>
@@ -82,8 +82,8 @@ Assertion failure.
   }
   //A main that runs no unit tests must not republish the log some earlier run left behind
   @Test void aLogOlderThanThisRunIsNotReported(@TempDir Path project){
-    writeLog(project,"20260904_012117_731Z",log);
-    JUnitReport.write(project,project,"demo",Instant.parse("2026-09-05T00:00:00Z"));
+    writeLog(project, "20260904_012117_731Z", log);
+    JUnitReport.write(project, project, "demo", Instant.parse("2026-09-05T00:00:00Z"));
     assertFalse(Files.exists(JUnitReport.file(project)));
   }
 }

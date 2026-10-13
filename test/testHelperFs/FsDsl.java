@@ -21,8 +21,8 @@ import realSourceOracle.RealSourceOracleWithZip;
 import tools.SourceOracle;
 
 public final class FsDsl{
-  record Item(String name,String content){}
-  private record Leaf(String name,String content,boolean isDir){}
+  record Item(String name, String content){}
+  private record Leaf(String name, String content, boolean isDir){}
   private static final class ZipNode{
     final LinkedHashMap<String,ZipNode> nested= new LinkedHashMap<>();
     final ArrayList<Leaf> leafs= new ArrayList<>();
@@ -31,7 +31,7 @@ public final class FsDsl{
   static List<Item> parse(String spec){
     var items= new ArrayList<Item>();
     var cur= new ArrayList<String>();
-    for (var line: spec.split("\n",-1)){
+    for (var line: spec.split("\n", -1)){
       if (line.equals("jjj")){ addItem(items, cur); cur.clear(); continue; }
       cur.add(line);
     }
@@ -169,7 +169,7 @@ public final class FsDsl{
   public static String dumpErr(Path root, RuntimeException ex){
     String msg= String.valueOf(ex.getMessage());
     var abs= root.toAbsolutePath().normalize().toString();
-    var absSl= abs.replace('\\','/');
+    var absSl= abs.replace('\\', '/');
     var uri= root.toUri().normalize().toString();
     return msg.replace(abs, "<root>").replace(absSl, "<root>").replace(uri, "<root-uri>");
   }

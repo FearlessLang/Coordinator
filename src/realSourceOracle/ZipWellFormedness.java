@@ -21,7 +21,7 @@ public final class ZipWellFormedness{
   public static List<ZipEntry> allEntryPaths(Path root, Path local){
     assert root.isAbsolute() && !local.isAbsolute();
     var out= new ArrayList<ZipEntry>();
-    reqCollect(root.resolve(local),root,local, List.of(), 0, out);
+    reqCollect(root.resolve(local), root, local, List.of(), 0, out);
     reqNoFileUsedAsDirectory(out);
     reqNoFolderForNestedZipName(out);
     return List.copyOf(out);

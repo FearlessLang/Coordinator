@@ -61,15 +61,15 @@ public final class InitialSupportGuiMain{
     addBtn(advanced, "Create empty project");
     addBtn(advanced, "Import template...");
     actions.add(advanced);
-    var root= new JPanel(new BorderLayout(12,12));
-    root.setBorder(new EmptyBorder(12,12,12,12));
+    var root= new JPanel(new BorderLayout(12, 12));
+    root.setBorder(new EmptyBorder(12, 12, 12, 12));
     frame.setContentPane(root);
     root.add(header(), BorderLayout.NORTH);
     root.add(center(), BorderLayout.CENTER);
     root.add(footer(), BorderLayout.SOUTH);
     frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
-    frame.setMinimumSize(new Dimension(300,300));
-    frame.setSize(new Dimension(950,700));
+    frame.setMinimumSize(new Dimension(300, 300));
+    frame.setSize(new Dimension(950, 700));
     frame.setLocationRelativeTo(null);
     frame.setVisible(true);
   }
@@ -80,7 +80,7 @@ public final class InitialSupportGuiMain{
     title.setFont(uiFont.deriveFont(Font.BOLD, uiFont.getSize2D() + 6f));
     p.add(title, BorderLayout.NORTH);
     var sub= new JLabel(startText);
-    sub.setBorder(new EmptyBorder(6,0,0,0));
+    sub.setBorder(new EmptyBorder(6, 0, 0, 0));
     p.add(sub, BorderLayout.SOUTH);
     return p;
   }
@@ -97,8 +97,8 @@ public final class InitialSupportGuiMain{
     split.setResizeWeight(0.70);
     split.setBorder(null);
     split.setContinuousLayout(true);
-    rightScroll.getViewport().setViewPosition(new Point(0,0));
-    leftScroll.getViewport().setViewPosition(new Point(0,0));
+    rightScroll.getViewport().setViewPosition(new Point(0, 0));
+    leftScroll.getViewport().setViewPosition(new Point(0, 0));
     return split;
   }
 
@@ -106,7 +106,7 @@ public final class InitialSupportGuiMain{
     var p= new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
     var info= addBtn(p, "Info", "About Fearless", _ -> showHtml(aboutHtml, "About Fearless"));
     info.setFont(uiFont.deriveFont(uiFont.getSize2D() - 2f));
-    info.setMargin(new Insets(2,8,2,8));
+    info.setMargin(new Insets(2, 8, 2, 8));
     return p;
   }
 
@@ -119,8 +119,8 @@ public final class InitialSupportGuiMain{
   }
   private void showHtml(String html, String title){
     var s= new JScrollPane(textPaneHtml(html));
-    s.setPreferredSize(new Dimension(780,560));
-    s.getViewport().setViewPosition(new Point(0,0));
+    s.setPreferredSize(new Dimension(780, 560));
+    s.getViewport().setViewPosition(new Point(0, 0));
     JOptionPane.showMessageDialog(frame, s, title, JOptionPane.INFORMATION_MESSAGE);
   }
   private static void openUri(String s){
@@ -155,7 +155,7 @@ public final class InitialSupportGuiMain{
     p.setEditable(false);
     p.putClientProperty(JEditorPane.HONOR_DISPLAY_PROPERTIES, Boolean.TRUE);
     p.setFont(uiFont);
-    p.setBorder(new EmptyBorder(10,10,10,10));
+    p.setBorder(new EmptyBorder(10, 10, 10, 10));
     p.addHyperlinkListener(e -> {
       if (e.getEventType() == HyperlinkEvent.EventType.ACTIVATED){ openUri(e.getURL() != null ? e.getURL().toString() : e.getDescription()); }
     });
@@ -164,7 +164,7 @@ public final class InitialSupportGuiMain{
   private static JPanel vbox(){
     var p= new JPanel();
     p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
-    p.setBorder(new EmptyBorder(8,8,8,8));
+    p.setBorder(new EmptyBorder(8, 8, 8, 8));
     return p;
   }
   private static JButton addBtn(Container parent, String text, String tooltip, Consumer<JButton> c){

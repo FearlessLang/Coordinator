@@ -23,7 +23,7 @@ import tools.ReadZip;
 import utils.Range;
 
 public final class ZipLocator{
-  private static Map<String, byte[]> readHere(Path diskZip, List<String> steps, byte[] bytes){
+  private static Map<String,byte[]> readHere(Path diskZip, List<String> steps, byte[] bytes){
     return readZip(diskZip, steps).readAll(() -> zipStream(diskZip, bytes));
   }
   public static List<String> entryNames(Path diskZip, List<String> steps){
@@ -35,7 +35,7 @@ public final class ZipLocator{
     var empty= head.length >= 4 && Arrays.equals(head, 0, 4, emptyZipSignature, 0, 4);
     throw empty ? Report.zipNoEntries(diskZip, steps) : Report.zipNotAZip(diskZip, steps);
   }
-  private static final byte[] emptyZipSignature= {'P','K',5,6};
+  private static final byte[] emptyZipSignature= {'P', 'K', 5, 6};
   public static byte[] entryBytes(Path diskZip, List<String> steps, String entryName){
     var res= fetch(diskZip, steps, bytes -> readHere(diskZip, steps, bytes).get(entryName));
     if (res == null){ throw Violation.cacheCouldNotFindZipEntry(diskZip, steps, entryName); }

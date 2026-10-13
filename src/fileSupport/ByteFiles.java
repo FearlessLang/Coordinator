@@ -22,10 +22,10 @@ import java.util.Locale;
 
 public final class ByteFiles {
   public enum Op {
-    Read("read","reading","read", StandardOpenOption.READ),
+    Read("read", "reading", "read", StandardOpenOption.READ),
     // The write probe deliberately omits CREATE and TRUNCATE_EXISTING: a probe that
     // diagnoses a failed write must not create or empty the very file it inspects.
-    Write("write","writing","written", StandardOpenOption.WRITE);
+    Write("write", "writing", "written", StandardOpenOption.WRITE);
     final String verb;
     final String gerund;
     final String participle;
@@ -37,7 +37,7 @@ public final class ByteFiles {
     // Plain replace: the text blocks stay literal, with no format-string hazards.
     // Applied exactly once, by FailureText.explain, on the final assembled text, so no
     // individual text can forget it.
-    String fill(String text){ return text.replace("`read`",verb).replace("`reading`",gerund).replace("`written`",participle); }
+    String fill(String text){ return text.replace("`read`", verb).replace("`reading`", gerund).replace("`written`", participle); }
   }
   public enum Kind {
     FileBusy_WindowsSharingViolation,
@@ -112,7 +112,7 @@ public final class ByteFiles {
   // T is the operation's result type: byte[] for read, Void for the writes. In
   // practice every handler throws; the type parameter only makes the throwing
   // handler typecheck against each entry point.
-  public interface Handler<T, X extends Throwable> { T failure(Kind kind, Throwable cause) throws X; }
+  public interface Handler<T,X extends Throwable> { T failure(Kind kind, Throwable cause) throws X; }
   private interface IoOperation<T> { T run() throws IOException; }
 
   public static <X extends Throwable> byte[] read(Path path, Handler<byte[],X> handler) throws X {
@@ -123,23 +123,23 @@ public final class ByteFiles {
   public static <X extends Throwable> void writeNew(Path path, byte[] bytes, Handler<Void,X> handler) throws X {
     attempt(Op.Write, path, () -> { Files.write(path, bytes, StandardOpenOption.WRITE, StandardOpenOption.CREATE_NEW); return null; }, handler);
   }
-  private static <T, X extends Throwable> T attempt(Op op, Path path, IoOperation<T> operation, Handler<T,X> handler) throws X {
+  private static <T,X extends Throwable> T attempt(Op op, Path path, IoOperation<T> operation, Handler<T,X> handler) throws X {
     try { return operation.run(); }
     catch (IOException|UnsupportedOperationException|ClosedFileSystemException|FileSystemNotFoundException e){ return classifyError(op, path, e, handler); }
     catch (OutOfMemoryError e){ return classifyMemoryError(e, handler); }
   }
-  private static <T, X extends Throwable> T classifyMemoryError(OutOfMemoryError e, Handler<T,X> handler) throws X {
+  private static <T,X extends Throwable> T classifyMemoryError(OutOfMemoryError e, Handler<T,X> handler) throws X {
     var message= e.getMessage();
     if (message != null && TextMatch.MFileTooLargeForByteArray.has(message.toLowerCase(Locale.ROOT))){ return handler.failure(FileTooLargeForByteArray, e); }
     throw e;
   }
-  private static <T, X extends Throwable> T classifyError(Op op, Path path, Throwable firstFailure, Handler<T,X> handler) throws X {
+  private static <T,X extends Throwable> T classifyError(Op op, Path path, Throwable firstFailure, Handler<T,X> handler) throws X {
     var kind= kindFromFailure(firstFailure);
     if ((kind == AccessDenied || kind == UnknownFailureAfterSuccessfulOpen) && isFolder(path)){ return handler.failure(PathIsFolder, firstFailure); }
     if (kind != UnknownFailureAfterSuccessfulOpen){ return handler.failure(kind, firstFailure); }
     return checkOpenFailure(op, path, firstFailure, handler);
   }
-  private static <T, X extends Throwable> T checkOpenFailure(Op op, Path path, Throwable firstFailure, Handler<T,X> handler) throws X {
+  private static <T,X extends Throwable> T checkOpenFailure(Op op, Path path, Throwable firstFailure, Handler<T,X> handler) throws X {
     FileChannel channel;
     try { channel= FileChannel.open(path, op.probeOptions); }
     catch (IOException|UnsupportedOperationException|ClosedFileSystemException|FileSystemNotFoundException e){

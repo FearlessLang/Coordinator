@@ -151,7 +151,7 @@ final class FailureText {
   }
 }
 record Explanation(String text, List<Throwable> suppressed){
-  Explanation{ assert Require.unmodifiable(suppressed,"suppressed"); }
+  Explanation{ assert Require.unmodifiable(suppressed, "suppressed"); }
 }
 final class Suppressed{
   private final List<Throwable> errors= new ArrayList<>();
@@ -226,7 +226,7 @@ final class Holders{
   // outro: shown only when at least one holder was found, after the list.
   static String section(Path path, Suppressed suppressed, String intro, String whenNone, String outro){
     List<String> holders;
-    try{ holders= enumerate(path,suppressed); }
+    try{ holders= enumerate(path, suppressed); }
     catch (IOException e){ return "\n<reading programs holding this file open failed>"+suppressed.mark(e)+"\n"; }
     if (holders.isEmpty()){ return whenNone; }
     return intro+holders.size()+(holders.size() == 1 ? " program" : " programs")+" currently holding this file open:\n\n"

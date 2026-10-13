@@ -23,14 +23,14 @@ public final class ApiJson{
     q(s.origin().s()), q(""+s.origin().arity()), q(s.abs() ?"abs":"concrete"))); }
   static String tJ(T t){
     var es= switch (t){
-      case T.X(var n,_) -> Stream.of(q("x"), q(n));
+      case T.X(var n, _) -> Stream.of(q("x"), q(n));
       case T.ReadImmX(var x) -> Stream.of(q("x"), q("read/imm"), q(x.name()));
       case T.RCX(var rc, var x) -> Stream.of(q("x"), q(rc.name()), q(x.name()));
-      case T.RCC(var rc, var c,_) -> Stream.concat(
+      case T.RCC(var rc, var c, _) -> Stream.concat(
         Stream.of(q("c"), q(rc.name()), q(c.name().s())),
         c.ts().stream().map(ApiJson::tJ));
     };
     return arr(es);
   }
-  static String q(String s){ return "\""+s.replace("\\","\\\\").replace("\"","\\\"")+"\""; }
+  static String q(String s){ return "\""+s.replace("\\", "\\\\").replace("\"", "\\\"")+"\""; }
 }

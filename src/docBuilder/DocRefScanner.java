@@ -24,7 +24,7 @@ final class DocRefScanner{
     int i= 0;
     while (i < text.length()){
       if (text.charAt(i) != '`'){ i += 1; continue; }
-      int fence= runLength(text,i);
+      int fence= runLength(text, i);
       int close= closingFence(text, i+fence, fence);
       if (close < 0){ i += fence; continue; }
       res.add(new CodeSpan(i+fence, close, fence));
@@ -47,7 +47,7 @@ final class DocRefScanner{
     int i= from;
     while (i < text.length()){
       if (text.charAt(i) != '`'){ i += 1; continue; }
-      int n= runLength(text,i);
+      int n= runLength(text, i);
       if (n == fence){ return i; }
       i += n;
     }
@@ -93,7 +93,7 @@ final class DocRefScanner{
       var sel= selector();
       if (!ok){ return Optional.empty(); }
       if (sel.isEmpty()){ return receiver.map(r -> (DocRef)r); }
-      return Optional.of(new DocRef.MethodName(receiver, sel.get(), arity('(',')')));
+      return Optional.of(new DocRef.MethodName(receiver, sel.get(), arity('(', ')')));
     }
 
     boolean startsSelector(){ return i < s.length() && (s.charAt(i) == '.' || opChar(i)); }
@@ -134,13 +134,13 @@ final class DocRefScanner{
     }
 
     DocRef.Receiver type(Optional<String> pkg, String name){
-      return new DocRef.TypeName(pkg, name, arity('[',']'));
+      return new DocRef.TypeName(pkg, name, arity('[', ']'));
     }
 
     String word(int from){
       int end= from;
       while (end < s.length() && isWordChar(s.charAt(end))){ end += 1; }
-      return s.substring(Math.min(from,s.length()), end);
+      return s.substring(Math.min(from, s.length()), end);
     }
 
     //"[_,_]" or "()" only: a real argument list like "[Int]" is not an arity marker,

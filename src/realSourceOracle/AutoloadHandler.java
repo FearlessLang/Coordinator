@@ -24,9 +24,9 @@ public record AutoloadHandler(Predicate<String> matches, String baseType){
   public static String dropExt(String name){
     int dot= name.lastIndexOf('.');
     assert dot > 0;
-    return name.substring(0,dot);
+    return name.substring(0, dot);
   }
-  static String standardTypeName(String pkgName,SourceOracle.Ref ref,String path){
+  static String standardTypeName(String pkgName, SourceOracle.Ref ref, String path){
     var all= components(path);
     int i= all.indexOf(pkgName);
     assert i >= 0 && i + 1 < all.size();
@@ -43,7 +43,7 @@ public record AutoloadHandler(Predicate<String> matches, String baseType){
   public static String capFirst(String s){
     var m= leading.matcher(s);
     var head= m.find() ? m.end() : 0;
-    return s.substring(0,head).toUpperCase(Locale.ROOT)+inner.matcher(s.substring(head)).replaceAll(r -> r.group(1).toUpperCase(Locale.ROOT));
+    return s.substring(0, head).toUpperCase(Locale.ROOT)+inner.matcher(s.substring(head)).replaceAll(r -> r.group(1).toUpperCase(Locale.ROOT));
   }
   static final Pattern upper= Pattern.compile("[A-Z]");
   static final Pattern visibleAtom= Pattern.compile("[a-z_][a-z0-9_]*");

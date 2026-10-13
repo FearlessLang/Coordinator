@@ -54,7 +54,7 @@ public final class UserError extends RuntimeException{
     return this;
   }
   public UserError bare(){ bare = true; return this; }
-  public UserError followedBy(String more){ var res= new UserError(getMessage()+more,this); res.bare = bare; return res; }
+  public UserError followedBy(String more){ var res= new UserError(getMessage()+more, this); res.bare = bare; return res; }
 
   //The project root this run actually used, so that a message always shows the folder
   //that was really involved. Tests set it to whatever fake root they use; a real run
@@ -89,7 +89,7 @@ public final class UserError extends RuntimeException{
 
   //-- path rendering, shared by both message files
   public static String disp(String s){ return Message.displayString(s); }
-  public static String showRel(Path rel){ return showRelText(rel.toString().replace("\\","/")); }
+  public static String showRel(Path rel){ return showRelText(rel.toString().replace("\\", "/")); }
   public static String showRel(RefParent rel){
     var s= rel.fearPath();
     assert s.startsWith(SourceOracle.root);
@@ -99,7 +99,7 @@ public final class UserError extends RuntimeException{
   public static String showZipRel(Path diskZip, List<String> steps, String entryName){
     assert diskZip.isAbsolute();
     diskZip = root.relativize(diskZip);
-    String zipPath= diskZip.toString().replace("\\","/");
+    String zipPath= diskZip.toString().replace("\\", "/");
     if (!steps.isEmpty()){ zipPath += "/"+String.join("/", steps); }
     return showRelText(zipPath)+printEntryName(entryName)+"\n";
   }

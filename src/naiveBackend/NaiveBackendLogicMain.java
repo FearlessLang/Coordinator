@@ -23,13 +23,13 @@ public final class NaiveBackendLogicMain{
     }
     assert foldDistinct(outPath);
     Runnable post= () -> fixers.forEach(f -> f.accept(pkgPath));
-    var javacOut= Fs.of(() -> JavacTool.compileTree(outPath, classes,post,genJava.resolve(tools.pkgName()+".jar"),extraClasspathDirs));
+    var javacOut= Fs.of(() -> JavacTool.compileTree(outPath, classes, post, genJava.resolve(tools.pkgName()+".jar"), extraClasspathDirs));
     assert javacOut.isEmpty(): javacOut;
     Fs.rmTree(outPath); Fs.rmTree(classes);//comment out this line to keep the generated .java and .class files for debugging
   }
   private static boolean foldDistinct(Path dir){
     var seen= new HashMap<String,String>();
-    return Fs.walk(dir, s -> s.map(p -> p.getFileName().toString()).allMatch(n -> foldFree(seen,n)));
+    return Fs.walk(dir, s -> s.map(p -> p.getFileName().toString()).allMatch(n -> foldFree(seen, n)));
   }
   private static boolean foldFree(HashMap<String,String> seen, String name){
     var prev= seen.putIfAbsent(name.toLowerCase(Locale.ROOT), name);

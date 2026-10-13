@@ -37,14 +37,14 @@ record MiddleLayer(Coordinator coordinator, Layer next, LinkedHashMap<String,Lis
         if (out.stillBuilt(pkg, files, next.pkgNames(), maxIn)){ nextOther = out.addCachedPkgApi(nextOther, pkg); return; }
         var rich= SourceOracleWithAutoload.of(src, "_"+pkg);
         var capabilities= new CapabilityEnvironment(rich.autoloadedAssets());
-        List<Literal> core= coordinator.frontend(pkg, rich.sources(files), rich.oracle(), other,other.virtualizationMap().getOrDefault(pkg,Map.of()), capabilities);
+        List<Literal> core= coordinator.frontend(pkg, rich.sources(files), rich.oracle(), other, other.virtualizationMap().getOrDefault(pkg, Map.of()), capabilities);
         var mains= MainsInfo.of(core, src, stLib());
         coordinator.backend(pkg, core, rich.oracle(), other, capabilities);
         long newStamp= out.commitPkgApi(pkg, core, maxIn); // newStamp will be the old api file mtime if there was no reason to commit.
         out.commitMains(pkg, mains);
         out.commitBuilt(pkg, files, next.pkgNames(), maxIn);
         var map= AllLs.of(core).values().stream().collect(Collectors.toUnmodifiableMap (Literal::name, d -> d));
-        nextOther = nextOther.mergeWith(map,Math.max(nextOther.stamp(),newStamp));
+        nextOther = nextOther.mergeWith(map, Math.max(nextOther.stamp(), newStamp));
       }};
     pkgs.forEach(res::compilePkg);
     return res.nextOther;
@@ -57,15 +57,15 @@ record BaseLayer(Coordinator coordinator, Map<String,Map<String,String>> map, lo
     if (cacheDir.isPresent()){ return deployedBaseApi(cacheDir.get(), pkgName); }
     var other= OtherPackages.empty();
     long maxIn= stLib.allFiles().stream().mapToLong(Ref::lastModified).max().getAsLong();
-    if (out.stillBuilt(pkgName, stLib.allFiles(), List.of(), maxIn)){ return out.startCachedPkgApi(pkgName,map,Math.max(baseStamp,out.pkgApiStamp(pkgName))); }
+    if (out.stillBuilt(pkgName, stLib.allFiles(), List.of(), maxIn)){ return out.startCachedPkgApi(pkgName, map, Math.max(baseStamp, out.pkgApiStamp(pkgName))); }
     var rich= SourceOracleWithAutoload.ofBase(stLib);
     var capabilities= new CapabilityEnvironment(rich.autoloadedAssets());
-    List<Literal> core= coordinator.frontend(pkgName,rich.sources(stLib.allFiles()),rich.oracle(),other,Map.of(),capabilities);
-    coordinator.backend(pkgName,core,rich.oracle(),other,capabilities);
+    List<Literal> core= coordinator.frontend(pkgName, rich.sources(stLib.allFiles()), rich.oracle(), other, Map.of(), capabilities);
+    coordinator.backend(pkgName, core, rich.oracle(), other, capabilities);
     long newStamp= out.commitPkgApi(pkgName, core, maxIn);
     out.commitMains(pkgName, Map.of());
     out.commitBuilt(pkgName, stLib.allFiles(), List.of(), maxIn);
-    return OtherPackages.start(map, AllLs.of(core).values(), Math.max(baseStamp,newStamp));
+    return OtherPackages.start(map, AllLs.of(core).values(), Math.max(baseStamp, newStamp));
   }
   private OtherPackages deployedBaseApi(Path cacheDir, String pkgName){
     var json= cacheDir.resolve(pkgName+".json");

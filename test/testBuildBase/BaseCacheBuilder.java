@@ -23,7 +23,7 @@ public final class BaseCacheBuilder{
   public static void deployInto(Path appRoot){
     var modsDir= singleDirNamed(appRoot, "mods");
     var stdLib= modsDir.getParent().resolve("stdLib");
-    Fs.rmTree(stdLib.resolve("base","auto_tests"));
+    Fs.rmTree(stdLib.resolve("base", "auto_tests"));
     buildInto(modsDir, stdLib, Optional.empty());
   }
   private static Path singleDirNamed(Path root, String name){

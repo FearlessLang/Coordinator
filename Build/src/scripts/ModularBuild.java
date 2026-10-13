@@ -15,7 +15,7 @@ import utils.OneOr;
 public final class ModularBuild{
   static final Path out= ResolveResource.coordinatorSrc.getParent().getParent().resolve("out").resolve("modular");
   static final Path mods= out.resolve("mods");
-  static final Path resources= ResolveResource.coordinatorSrc.getParent().resolve("Build","src","resources");
+  static final Path resources= ResolveResource.coordinatorSrc.getParent().resolve("Build", "src", "resources");
 
   static void commons(){
     Fs.cleanDir(mods); Fs.ensureDir(mods);
@@ -93,7 +93,7 @@ public final class ModularBuild{
     Fs.cleanDir(res); Fs.ensureDir(res);
     Fs.runTool("jar", List.of("--create",
       "--file", res.resolve(bundleFileName(plugin)).toString(),
-      "--manifest", plugin.resolve("META-INF","MANIFEST.MF").toString(),
+      "--manifest", plugin.resolve("META-INF", "MANIFEST.MF").toString(),
       "-C", classes.toString(), ".",
       "-C", plugin.toString(), "plugin.xml",
       "-C", plugin.toString(), "icons",
@@ -102,7 +102,7 @@ public final class ModularBuild{
     return res;
   }
   static String bundleFileName(Path plugin){
-    var lines= Fs.readUtf8(plugin.resolve("META-INF","MANIFEST.MF")).lines().toList();
+    var lines= Fs.readUtf8(plugin.resolve("META-INF", "MANIFEST.MF")).lines().toList();
     return manifestValue(lines, "Bundle-SymbolicName").split(";")[0]+"_"+manifestValue(lines, "Bundle-Version")+".jar";
   }
   static String manifestValue(List<String> lines, String key){

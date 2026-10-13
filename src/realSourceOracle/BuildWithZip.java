@@ -144,7 +144,7 @@ public final class BuildWithZip{
     char c0= atom.charAt(0);
     var letterOr_= c0 == '_' || ('a' <= c0 && c0 <= 'z');
     if (!letterOr_){ throw Report.visibleMustStartWithLetterOrUnderscore(kid); }
-    for (int i : Range.of(1,atom.length())){
+    for (int i : Range.of(1, atom.length())){
       char c= atom.charAt(i);
       boolean ok= ('a' <= c && c <= 'z') || ('0' <= c && c <= '9') || c == '_';
       if (!ok){ throw Report.visibleInvalidChar(kid, c); }
@@ -163,9 +163,9 @@ public final class BuildWithZip{
     }
   }
   private static final Set<String> winReserved= Set.of(
-    "con","prn","aux","nul",
-    "com1","com2","com3","com4","com5","com6","com7","com8","com9",
-    "lpt1","lpt2","lpt3","lpt4","lpt5","lpt6","lpt7","lpt8","lpt9"
+    "con", "prn", "aux", "nul",
+    "com1", "com2", "com3", "com4", "com5", "com6", "com7", "com8", "com9",
+    "lpt1", "lpt2", "lpt3", "lpt4", "lpt5", "lpt6", "lpt7", "lpt8", "lpt9"
   );
   private static final String winBadChars= "<>:\"/\\|?*";
 

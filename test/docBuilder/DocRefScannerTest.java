@@ -18,23 +18,23 @@ final class DocRefScannerTest{
   }
 
   @Test void aBareTypeNameIsAReference(){
-    assertEquals(Optional.of(new DocRef.TypeName(Optional.empty(),"Foo",OptionalInt.empty())), only("see `Foo` here"));
+    assertEquals(Optional.of(new DocRef.TypeName(Optional.empty(), "Foo", OptionalInt.empty())), only("see `Foo` here"));
   }
 
   @Test void aPackageQualifiedTypeNameIsAReference(){
-    assertEquals(Optional.of(new DocRef.TypeName(Optional.of("base"),"Foo",OptionalInt.empty())), only("`base.Foo`"));
+    assertEquals(Optional.of(new DocRef.TypeName(Optional.of("base"), "Foo", OptionalInt.empty())), only("`base.Foo`"));
   }
 
   @Test void anExplicitTypeArityNarrowsTheReference(){
-    assertEquals(Optional.of(new DocRef.TypeName(Optional.empty(),"Foo",OptionalInt.of(2))), only("`Foo[_,_]`"));
+    assertEquals(Optional.of(new DocRef.TypeName(Optional.empty(), "Foo", OptionalInt.of(2))), only("`Foo[_,_]`"));
   }
 
   @Test void aBareSelectorIsAReference(){
-    assertEquals(Optional.of(new DocRef.MethodName(Optional.empty(),".foo",OptionalInt.empty())), only("`.foo`"));
+    assertEquals(Optional.of(new DocRef.MethodName(Optional.empty(), ".foo", OptionalInt.empty())), only("`.foo`"));
   }
 
   @Test void aSelectorArityNarrowsTheReference(){
-    assertEquals(Optional.of(new DocRef.MethodName(Optional.empty(),".foo",OptionalInt.of(2))), only("`.foo(_,_)`"));
+    assertEquals(Optional.of(new DocRef.MethodName(Optional.empty(), ".foo", OptionalInt.of(2))), only("`.foo(_,_)`"));
   }
 
   @Test void aZeroArityMarkerIsDistinctFromNoMarkerAtAll(){
@@ -43,7 +43,7 @@ final class DocRefScannerTest{
 
   @Test void aQualifiedMethodCarriesBothItsOwnerAndSelector(){
     var ref= (DocRef.MethodName)only("`Foo.bar`").get();
-    assertEquals(Optional.of(new DocRef.TypeName(Optional.empty(),"Foo",OptionalInt.empty())), ref.owner());
+    assertEquals(Optional.of(new DocRef.TypeName(Optional.empty(), "Foo", OptionalInt.empty())), ref.owner());
     assertEquals(".bar", ref.selector());
   }
 
@@ -57,19 +57,19 @@ final class DocRefScannerTest{
   //++ of Foo, exactly as "Foo.foo(_,_)" is its two argument .foo
   @Test void anOperatorMethodOfATypeIsAReference(){
     var ref= (DocRef.MethodName)only("`Foo++(_,_)`").get();
-    assertEquals(Optional.of(new DocRef.TypeName(Optional.empty(),"Foo",OptionalInt.empty())), ref.owner());
+    assertEquals(Optional.of(new DocRef.TypeName(Optional.empty(), "Foo", OptionalInt.empty())), ref.owner());
     assertEquals("++", ref.selector());
     assertEquals(OptionalInt.of(2), ref.arity());
   }
 
   @Test void aBareOperatorIsAReference(){
-    assertEquals(Optional.of(new DocRef.MethodName(Optional.empty(),">>=+",OptionalInt.empty())), only("`>>=+`"));
+    assertEquals(Optional.of(new DocRef.MethodName(Optional.empty(), ">>=+", OptionalInt.empty())), only("`>>=+`"));
   }
 
   @Test void anOperatorOnAReceiverOrAPackageQualifiedTypeIsAReference(){
     assertEquals(Optional.of(new DocRef.LocalName("this")), ((DocRef.MethodName)only("`this++`").get()).owner());
     var q= (DocRef.MethodName)only("`base.Foo++`").get();
-    assertEquals(Optional.of(new DocRef.TypeName(Optional.of("base"),"Foo",OptionalInt.empty())), q.owner());
+    assertEquals(Optional.of(new DocRef.TypeName(Optional.of("base"), "Foo", OptionalInt.empty())), q.owner());
     assertEquals("++", q.selector());
   }
 
@@ -135,9 +135,9 @@ final class DocRefScannerTest{
     var spans= DocRefScanner.refSpans(text);
     assertEquals(2, spans.size());
     assertEquals(
-      List.of(new DocRef.TypeName(Optional.empty(),"Foo",OptionalInt.empty()),
-              new DocRef.TypeName(Optional.empty(),"Bar",OptionalInt.empty())),
-      spans.stream().map(sp -> DocRefScanner.wholeRef(text,sp).get()).toList());
+      List.of(new DocRef.TypeName(Optional.empty(), "Foo", OptionalInt.empty()),
+              new DocRef.TypeName(Optional.empty(), "Bar", OptionalInt.empty())),
+      spans.stream().map(sp -> DocRefScanner.wholeRef(text, sp).get()).toList());
   }
 
   //a signature is generated code, so every type in it is offered and nothing in it
@@ -145,7 +145,7 @@ final class DocRefScannerTest{
   @Test void aSignatureOffersEveryTypeNameItContains(){
     var names= DocRefScanner.signatureTypes("read .foo(read Bar):Baz").stream()
       .map(f -> ((DocRef.TypeName)f.ref()).simpleName()).toList();
-    assertEquals(List.of("Bar","Baz"), names);
+    assertEquals(List.of("Bar", "Baz"), names);
   }
 
   @Test void aSignatureDoesNotSeeATypeInsideALongerWord(){

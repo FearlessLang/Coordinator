@@ -25,7 +25,7 @@ public final class Violation {
   public static String reported(Throwable cause){ return "Reported reason:\n"+cause.getMessage(); }
   private static Supplier<List<String>> running= List::of;
   public static void running(Supplier<List<String>> live){ running = live; }
-  static String associatedPrograms(){ return Join.of(running.get().stream().map(s -> "  "+s),"","\n","",""); }
+  static String associatedPrograms(){ return Join.of(running.get().stream().map(s -> "  "+s), "", "\n", "", ""); }
   public static String freshCopyThenReport(){ return """
     Replace this Fearless folder with a fresh copy.
     If this keeps happening, report the problem.
@@ -55,7 +55,7 @@ public final class Violation {
       Fearless runs on Windows, macOS and Linux.
 
       The operating system reported itself as:
-      %s""".formatted(path(System.getProperty("os.name","<not reported>"))));
+      %s""".formatted(path(System.getProperty("os.name", "<not reported>"))));
   }
   //Fearless asks the operating system for English so that the failures it reports back
   //to us are text we can recognise. Without it we cannot tell one failure from another.
@@ -202,7 +202,7 @@ public final class Violation {
         %s
       """.formatted(
         path(diskZip.toString()),
-        Join.of(steps.stream().map(Message::displayString),"[",", ","]", "<no steps>"),
+        Join.of(steps.stream().map(Message::displayString), "[", ", ", "]", "<no steps>"),
         Message.displayString(entryName)
       ));
   }

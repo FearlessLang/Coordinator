@@ -155,6 +155,6 @@ final class LimitedJsonParser{
     i++; return true;
   }
   private RuntimeException err(String msg){
-    return Violation.cacheInvalidFile(forErr,msg+" at "+i);
+    return Violation.cacheInvalidFile(forErr, msg+" at "+i);
   }
 }

@@ -15,7 +15,7 @@ import userMessages.UserError;
 import tools.SourceOracle;
 import tools.Utf8Sink;
 
-public record ProgrammaticMain(StringBuilder out, StringBuilder err,String fName, String code, Path stdLib, Path stdRt, Path dest){
+public record ProgrammaticMain(StringBuilder out, StringBuilder err, String fName, String code, Path stdLib, Path stdRt, Path dest){
   public void runFearless(){
     var oldOut= System.out;
     var oldErr= System.err;
@@ -30,7 +30,7 @@ public record ProgrammaticMain(StringBuilder out, StringBuilder err,String fName
   private void _runFearless() throws InterruptedException{
     System.setOut(new PrintStream(new Utf8Sink(out::append), true, UTF_8));
     System.setErr(new PrintStream(new Utf8Sink(err::append), true, UTF_8));
-    var oracle= SourceOracle.debugBuilder().put(fName,code).build();
+    var oracle= SourceOracle.debugBuilder().put(fName, code).build();
     var c= new Coordinator(){
       @Override public SourceOracle sourceOracle(Path path){ return oracle; }
       @Override public Path stdLibBase(){ return stdLib; }

@@ -41,11 +41,11 @@ public final class JUnitReport{
   }
   private static String suiteOf(String name, Path log){
     var body= disabled.matcher(complete(log)).replaceAll(JUnitReport::skipped)
-      .replaceAll("(?m)^PLAN\\|RUN\\|.*$\\r?\\n?","");
+      .replaceAll("(?m)^PLAN\\|RUN\\|.*$\\r?\\n?", "");
     return """
 <testsuite name="%s" tests="%d" failures="%d" errors="0">
 %s</testsuite>
-""".formatted(name, count(body,"<testcase "), count(body,"<failure>"), body);
+""".formatted(name, count(body, "<testcase "), count(body, "<failure>"), body);
   }
   private static String complete(Path log){
     var bytes= Fs.of(() -> Files.readAllBytes(log));
@@ -61,10 +61,10 @@ public final class JUnitReport{
     }
     return text;
   }
-  private static int count(String body, String what){ return body.split(what,-1).length-1; }
+  private static int count(String body, String what){ return body.split(what, -1).length-1; }
   private static String skipped(MatchResult mr){
     return "<testcase classname=\""+xmlAttr(mr.group(2))+"\" name=\""+xmlAttr(mr.group(3))
       +"\" file=\""+xmlAttr(mr.group(1))+"\" line=\""+mr.group(4)+"\"><skipped/></testcase>";
   }
-  private static String xmlAttr(String s){ return s.replace("&","&amp;").replace("<","&lt;").replace("\"","&quot;"); }
+  private static String xmlAttr(String s){ return s.replace("&", "&amp;").replace("<", "&lt;").replace("\"", "&quot;"); }
 }
