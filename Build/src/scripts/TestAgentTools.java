@@ -14,7 +14,6 @@ public class TestAgentTools{
     var channel= Path.of(args[args.length-2]);
     var app= ResolveResource.managedFolderOut.resolve("fearlessManaged"+ResolveResource.versionId);
     if (stale(app)){ DeployManagedFearless.main(args); }
-    Fs.copyFresh(app,Path.of(args[args.length-1]).resolve(app.getFileName()));
     ModularBuild.commons();
     ModularBuild.frontendMain();
     ModularBuild.coordinatorMain();
