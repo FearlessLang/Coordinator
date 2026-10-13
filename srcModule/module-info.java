@@ -1,4 +1,4 @@
-module Coordinator {
+module Coordinator{
   requires transitive Commons;
   requires transitive FearlessFrontend;
   requires transitive java.desktop;

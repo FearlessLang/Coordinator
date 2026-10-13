@@ -50,7 +50,7 @@ import tools.SourceOracle.Ref;
 import utils.Push;
 import userMessages.UserError;
 
-public final class RunIntegration {
+public final class RunIntegration{
   static{ utils.Err.setUp(AssertionFailedError.class, Assertions::assertEquals, Assertions::assertTrue); }
 
   static final Path baseCache= ResolveResource.stLibDebugOut.resolve("baseCache");
@@ -85,7 +85,7 @@ public final class RunIntegration {
   }
   String run(String name){ return main(freshIntegrationRoot(name), List.of()); }
   String main(Path project, List<String> jvmArgs){
-    try { return coordinator(project, jvmArgs).main(project, stLib);}
+    try{ return coordinator(project, jvmArgs).main(project, stLib);}
     catch (InterruptedException e){ return Assertions.fail(e);}
   }
   void testOk(String name){ unitTestsOk(name, freshIntegrationRoot(name)); }

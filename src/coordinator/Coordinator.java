@@ -36,7 +36,7 @@ import utils.OneOr;
 import utils.Push;
 import utils.Range;
 
-public interface Coordinator {
+public interface Coordinator{
   default String runAllMains(String pkgName, OutputOracle out) throws InterruptedException{
     return runMains(runData(out.rootDir().getParent(), stdLibBase()), Push.of(out.rootDir().resolve("gen_java"), sharedClasspath()), "_"+pkgName+".Main");
   }
@@ -169,7 +169,7 @@ final class Helper{
     return new MiddleLayer(coordinator, l, pkgs);
   }
   static Layer mapFromRanks(Coordinator coordinator, List<Ref> allRanks, SourceOracle o, OutputOracle out, SourceOracle stLib){
-    Map<String,Map<String,String>> res; try {res= new FrontendLogicMain()
+    Map<String,Map<String,String>> res; try{res= new FrontendLogicMain()
       .parseRankFiles(allRanks, Comparator.comparingInt(Helper::rankNumber), Push.of(allRanks.stream().map(Helper::pkgName).toList(), "base"));}
     catch (FearlessException fe){ throw Report.sourceError(fe.render(o)); }
     long baseStamp= out.commitMap(res, allRanks.stream().mapToLong(Ref::lastModified).max().getAsLong());

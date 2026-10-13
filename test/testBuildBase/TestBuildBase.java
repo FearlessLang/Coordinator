@@ -22,7 +22,7 @@ import tools.JavaTool;
 import tools.SourceOracle;
 import utils.Push;
 
-final class TestBuildBase {
+final class TestBuildBase{
   Coordinator c= new Coordinator(){
     @Override public Path modsPath(){  return ResolveResource.coordinatorJars; }
     @Override public BackendTools backendTools(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, CapabilityEnvironment capabilities){
@@ -44,7 +44,7 @@ final class TestBuildBase {
     }
   };
   @Test void test(){
-    try { c.main(ResolveResource.stLibPath, c.sourceOracle(ResolveResource.stLibPath));}
+    try{ c.main(ResolveResource.stLibPath, c.sourceOracle(ResolveResource.stLibPath));}
     catch (InterruptedException e){ Assertions.fail(e);}
   }
 }

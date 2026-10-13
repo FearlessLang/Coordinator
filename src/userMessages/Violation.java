@@ -20,7 +20,7 @@ import static userMessages.UserError.path;
 /// files changed under us are all the same thing from here: we cannot keep the
 /// promise, so we stop rather than continue on an unknown footing.
 /// The counterpart is Report, for what the user gave us and can change.
-public final class Violation {
+public final class Violation{
   //-- the pieces of text that more than one message needs, written once
   public static String reported(Throwable cause){ return "Reported reason:\n"+cause.getMessage(); }
   private static Supplier<List<String>> running= List::of;

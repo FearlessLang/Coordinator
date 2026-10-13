@@ -18,7 +18,7 @@ import userMessages.Report;
 /// them and no temporary folder is needed.
 /// mapConflict is the one exception: it needs the rank files to be parsed, so its two
 /// files carry real "map .. as .. in ..;" directives.
-public final class ProjectTreeErrorTest {
+public final class ProjectTreeErrorTest{
   static{ utils.Err.setUp(AssertionFailedError.class, Assertions::assertEquals, Assertions::assertTrue); }
 
   static final Path fakeRoot= Path.of("unused", "project", "root");
@@ -35,7 +35,7 @@ public final class ProjectTreeErrorTest {
     var c= new Coordinator(){
       @Override public SourceOracle sourceOracle(Path path){ return oracle; }
     };
-    try { c.main(fakeRoot, oracle); }
+    try{ c.main(fakeRoot, oracle); }
     catch (RuntimeException e){ return e.getMessage(); }
     catch (InterruptedException e){ throw new AssertionError(e); }
     return Assertions.fail("Expected an error, but the project was accepted");
