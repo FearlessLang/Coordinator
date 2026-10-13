@@ -305,15 +305,6 @@ public final class InitialSupportGuiMain{
       Your demo folder should now be open.
       Inside it, you will find <b>start.fearless</b>.
     </p>
-
-    <h3>Associate .fearless files with Fearless</h3>
-    <ol>
-      <li>Right-click <b>start.fearless</b>.</li>
-      <li>Choose <b>Open With...</b> (or <b>Properties</b> -> <b>Open With</b>).</li>
-      <li>Select <b>.../fearless/bin/fearlessw</b>.</li>
-      <li>Choose <b>Always</b> / <b>Remember</b> / <b>Set as default</b>.</li>
-      <li>The first time you run fearless on a new project, it may take a while.</li>
-    </ol>
   </body>
 </html>
 """;
