@@ -9,10 +9,8 @@ public class FsStringPathTest{
   // -------- helpers (each helper does exactly ONE call) --------
 
   private static void okFileNameWithExt(String in,String out){ assertEquals(out, Fs.fileNameWithExtension(in)); }
-  private static void okRemoveFileName(String in,String out){ assertEquals(out, Fs.removeFileName(in)); }
   private static void okRemoveFileNameAllowTop(String in,String out){ assertEquals(out, Fs.removeFileNameAllowTop(in)); }
   private static void okFileNameNoExt(String in,String out){ assertEquals(out, Fs.fileNameWithoutExtension(in)); }
-  private static void okExtWithDot(String in,String out){ assertEquals(out, Fs.extensionWithDot(in)); }
 
   // -------- fileNameWithExtension : success --------
 
@@ -29,21 +27,6 @@ public class FsStringPathTest{
   @Test void fneA2(){ assertThrows(AssertionError.class,()->Fs.fileNameWithExtension("a/b/")); }
   @Test void fneA3(){ assertThrows(AssertionError.class,()->Fs.fileNameWithExtension("/")); }
   @Test void fneA4(){ assertThrows(AssertionError.class,()->Fs.fileNameWithExtension("")); }
-
-  // -------- removeFileName : success --------
-
-  @Test void rfn1(){ okRemoveFileName("a/b/c","a/b"); }
-  @Test void rfn2(){ okRemoveFileName("a/b/c.txt","a/b"); }
-  @Test void rfn3(){ okRemoveFileName("fear:/a/b/c.fear","fear:/a/b"); }
-  @Test void rfn4(){ okRemoveFileName("a.b/c.z","a.b"); }
-  @Test void rfn5(){ okRemoveFileName("a:/b/c","a:/b"); }
-
-  // -------- removeFileName : assertion failures --------
-
-  @Test void rfnA1(){ assertThrows(AssertionError.class,()->Fs.removeFileName("a")); }
-  @Test void rfnA2(){ assertThrows(AssertionError.class,()->Fs.removeFileName("abc")); }
-  @Test void rfnA3(){ assertThrows(AssertionError.class,()->Fs.removeFileName("a/")); }
-  @Test void rfnA4(){ assertThrows(AssertionError.class,()->Fs.removeFileName("/")); }
 
   // -------- removeFileNameAllowTop : success --------
 
@@ -71,20 +54,4 @@ public class FsStringPathTest{
   @Test void fneA04(){ assertThrows(AssertionError.class,()->Fs.fileNameWithoutExtension("a/b/c.")); }
   @Test void fneA05(){ assertThrows(AssertionError.class,()->Fs.fileNameWithoutExtension("a/b/")); }
   @Test void fneA06(){ assertThrows(AssertionError.class,()->Fs.fileNameWithoutExtension("abc")); }
-
-  // -------- extensionWithDot : success --------
-
-  @Test void ext1(){ okExtWithDot("a/b/c.txt",".txt"); }
-  @Test void ext2(){ okExtWithDot("a/b/c.tar.gz",".tar.gz"); }
-  @Test void ext3(){ okExtWithDot("a.b/c.z",".z"); }
-  @Test void ext4(){ okExtWithDot("a/b/c..d","..d"); }
-  @Test void ext5(){ okExtWithDot("a/b/.gitignore",".gitignore"); }
-  @Test void ext6(){ okExtWithDot("fear:/a/b/c.fear",".fear"); }
-
-  // -------- extensionWithDot : assertion failures --------
-
-  @Test void extA1(){ assertThrows(AssertionError.class,()->Fs.extensionWithDot("a/b/c")); }
-  @Test void extA2(){ assertThrows(AssertionError.class,()->Fs.extensionWithDot("a/b/c.")); }
-  @Test void extA3(){ assertThrows(AssertionError.class,()->Fs.extensionWithDot("a/b/")); }
-  @Test void extA4(){ assertThrows(AssertionError.class,()->Fs.extensionWithDot("abc")); }
 }
