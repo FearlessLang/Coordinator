@@ -206,5 +206,4 @@ public final class FsDsl{
     utils.Err.strCmp(expected, res);
   }  
   
-  private FsDsl(){}
 }

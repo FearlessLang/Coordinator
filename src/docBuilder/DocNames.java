@@ -11,8 +11,6 @@ import java.util.stream.Collectors;
 import core.E.Literal;
 
 public final class DocNames{
-  private DocNames(){}
-
   static final List<String> baseNames= List.of(
 "Action",
 "Angle",

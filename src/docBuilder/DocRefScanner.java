@@ -16,8 +16,6 @@ import core.TName;
 /// What counts as a name is asked of core (TName.isTypeName, TName.isPkgName,
 /// MName.isMethodName), so this never grows its own idea of the grammar.
 final class DocRefScanner{
-  private DocRefScanner(){}
-
   record Found(int start, int end, DocRef ref){}
   record CodeSpan(int start, int end, int fence){}
 
