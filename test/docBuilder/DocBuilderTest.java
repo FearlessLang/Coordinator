@@ -943,7 +943,7 @@ Holder
 
   private static List<String> idsIn(String html, String prefix){
     var res= new java.util.ArrayList<String>();
-    for (int i= html.indexOf(prefix); i >= 0; i= html.indexOf(prefix,i+1)){
+    for (int i= html.indexOf(prefix); i >= 0; i = html.indexOf(prefix,i+1)){
       var from= i+prefix.length();
       res.add(html.substring(from, html.indexOf('"', from)));
     }

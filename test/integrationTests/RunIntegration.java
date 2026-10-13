@@ -160,7 +160,7 @@ Hello world
   }
   static Path docExamplesProject(Path tmp){
     var root= tmp.resolve("root");
-    UserError.root= root;
+    UserError.root = root;
     FsDsl.materialize(root, """
 _p/_rank_app.fear
 iii
@@ -268,7 +268,7 @@ In file: fear:/_p/auto_tests/p_test.fear
   }
   @Test void aDeletedLowerPackageIsNoticedByThePackagesBuiltOnIt(@TempDir Path tmp){
     var root= tmp.resolve("root");
-    UserError.root= root;
+    UserError.root = root;
     FsDsl.materialize(root, """
 _lib/_rank_core.fear
 iii
@@ -289,7 +289,7 @@ App:Main, lib.Lib{s->base.Debug#(`app`)}
   }
   @Test void onlyImmCapture(@TempDir Path tmp){
     var root= tmp.resolve("root");
-    UserError.root= root;
+    UserError.root = root;
     Fs.ensureDir(root.resolve("_oic"));
     Fs.writeUtf8(root.resolve("_oic").resolve("_rank_app.fear"), """
       use base.Nat as Nat;
@@ -454,7 +454,7 @@ zeroMemo
   // instead of blaming a file the user never wrote.
   @Test void assetAutoloadNameCollision(@TempDir Path tmp) throws InterruptedException{
     Path root= tmp.resolve("root");
-    UserError.root= root;
+    UserError.root = root;
     FsDsl.materialize(root, """
 _col/_rank_app.fear
 iii
@@ -491,7 +491,7 @@ We check this so that you[###]
 
   @Test void mainsAreListedWithTheFileDeclaringThem(@TempDir Path tmp){
     Path root= tmp.resolve("root");
-    UserError.root= root;
+    UserError.root = root;
     FsDsl.materialize(root, """
 _col/_rank_app.fear
 iii
@@ -513,7 +513,7 @@ Again:Main{s->base.Debug#("again")}
   }
   @Test void aCaptureFreeMainDeclaredInAMethodIsListedLikeTheOnesItRuns(@TempDir Path tmp) throws InterruptedException{
     Path root= tmp.resolve("root");
-    UserError.root= root;
+    UserError.root = root;
     FsDsl.materialize(root, """
 _col/_rank_app.fear
 iii
@@ -527,7 +527,7 @@ MkFree:{.mk:Main->Free:Main,CaptureFree{s->base.Debug#(`free`)}}
   }
   @Test void aPackageNamedAfterAJavaKeywordRuns(@TempDir Path tmp) throws InterruptedException{
     Path root= tmp.resolve("root");
-    UserError.root= root;
+    UserError.root = root;
     FsDsl.materialize(root, """
 _int/_rank_app.fear
 iii
@@ -538,7 +538,7 @@ Hello:Main{s->base.Debug#(`hi`)}
   }
   @Test void anAssetWhoseNameStartsWithUnderscoreAutoLoadsAsAPrivateType(@TempDir Path tmp) throws InterruptedException{
     Path root= tmp.resolve("root");
-    UserError.root= root;
+    UserError.root = root;
     FsDsl.materialize(root, """
 _col/_rank_app.fear
 iii
@@ -560,7 +560,7 @@ hello
   // still works.
   @Test void aForgedAutoloadedAssetCannotReadAFileTheCompilerDidNotAutoImport(@TempDir Path tmp) throws InterruptedException{
     Path root= tmp.resolve("root");
-    UserError.root= root;
+    UserError.root = root;
     FsDsl.materialize(root, """
 _col/_rank_app.fear
 iii
@@ -595,7 +595,7 @@ REAL ASSET CONTENT
 
   @Test void aBaseAssetIsReadFromTheStdLibBase(@TempDir Path tmp) throws InterruptedException{
     Path root= tmp.resolve("root");
-    UserError.root= root;
+    UserError.root = root;
     FsDsl.materialize(root, """
 _col/_rank_app.fear
 iii
@@ -606,7 +606,7 @@ Hello:Main{s->base.Debug#(base.IconsConflict.path+" "+(base.IconsConflict.readIm
   }
   static Path claimsProject(Path tmp, String code) throws IOException{
     Path root= tmp.resolve("root");
-    UserError.root= root;
+    UserError.root = root;
     FsDsl.materialize(root, """
 _col/_rank_app.fear
 iii
@@ -1093,7 +1093,7 @@ not read by the compiler
   }
   @Test void aSecondCompileKeepsTheMainsInfoEntriesOfAnUnchangedPackage(@TempDir Path tmp) throws Exception{
     Path root= tmp.resolve("root");
-    UserError.root= root;
+    UserError.root = root;
     FsDsl.materialize(root, """
 _a/_rank_app.fear
 iii
@@ -1206,7 +1206,7 @@ Foo:Opener, Other, Shortcut[base.IconsConflict,"fapp042"], OpenWith[IconsFoo]{s-
   }
   @Test void literalTypesInSignaturesCompileRunAndAreReadBackFromTheApiJson(@TempDir Path tmp) throws Exception{
     Path root= tmp.resolve("root");
-    UserError.root= root;
+    UserError.root = root;
     FsDsl.materialize(root, """
 _lib/_rank_core.fear
 iii
@@ -1223,7 +1223,7 @@ Hello:base.Main{s->base.Debug#((lib.Lit.m("a\\"))+(lib.Lit.n(`b"c`))+(lib.Lit.k.
 
   @Test void anAssetWhoseNameForgesNoValidTypeIsReportedAgainstTheRealFile(@TempDir Path tmp){
     Path root= tmp.resolve("root");
-    UserError.root= root;
+    UserError.root = root;
     FsDsl.materialize(root, """
 _col/_rank_app.fear
 iii
@@ -1257,7 +1257,7 @@ We check this so that you[###]
 
   @Test void aRealApiPreservingEditMustNotRebuildTheDependentPackage(@TempDir Path tmp) throws Exception{
     Path root= tmp.resolve("root");
-    UserError.root= root;
+    UserError.root = root;
     FsDsl.materialize(root, """
 _a/_rank_core.fear
 iii
@@ -1287,7 +1287,7 @@ Hello:Main{s->base.Debug#(Greeting.hi)}
   // Confirms expected behaviour: only the packages at the highest rank number get their Main run.
   @Test void onlyTheHighestRankPackageMainRuns(@TempDir Path tmp) throws InterruptedException{
     Path root= tmp.resolve("root");
-    UserError.root= root;
+    UserError.root = root;
     FsDsl.materialize(root, """
 _a/_rank_core.fear
 iii
@@ -1307,7 +1307,7 @@ Hello:Main{s->base.Debug#("from app")}
   // Confirms expected behaviour: packages tied for that highest rank number all run.
   @Test void allPackagesAtTheHighestRankRun(@TempDir Path tmp) throws InterruptedException{
     Path root= tmp.resolve("root");
-    UserError.root= root;
+    UserError.root = root;
     FsDsl.materialize(root, """
 _a/_rank_app.fear
 iii
@@ -1342,7 +1342,7 @@ Hello:Main{s->base.Debug#("from z")}
   static boolean recursionCompiled;
   String runRecursionMain(String main) throws InterruptedException{
     var root= ResolveResource.integrationTests.resolve("runRecursion");
-    if (!recursionCompiled){ compileOk("runRecursion"); recursionCompiled= true; }
+    if (!recursionCompiled){ compileOk("runRecursion"); recursionCompiled = true; }
     var out= new StringBuilder();
     Coordinator.startMain(root, ResolveResource.stLibPath, main, coordinator(root).sharedClasspath(), out::append).await();
     return out.toString();
@@ -1414,7 +1414,7 @@ imm Hello.main(_) error line: 6 in file _hello/_rank_app.fear
   }
   @Test void aFailingGetShowsNoActionFrames(@TempDir Path tmp) throws InterruptedException{
     Path root= tmp.resolve("root");
-    UserError.root= root;
+    UserError.root = root;
     FsDsl.materialize(root, """
 _hello/_rank_app.fear
 iii
@@ -1434,7 +1434,7 @@ imm Hello.main(_) error line: 4 in file _hello/_rank_app.fear
   }
   @Test void aMainEndingWithAnErrorExitsWith1AndTheOtherMainsStillRun(@TempDir Path tmp) throws InterruptedException{
     Path root= tmp.resolve("root");
-    UserError.root= root;
+    UserError.root = root;
     FsDsl.materialize(root, """
 _col/_rank_app.fear
 iii
@@ -1456,7 +1456,7 @@ b
   }
   @Test void aMainEndingWithAJavaErrorExitsWith1() throws InterruptedException{
     var root= ResolveResource.integrationTests.resolve("runRecursion");
-    if (!recursionCompiled){ compileOk("runRecursion"); recursionCompiled= true; }
+    if (!recursionCompiled){ compileOk("runRecursion"); recursionCompiled = true; }
     var out= new StringBuilder();
     Assertions.assertEquals(1, Coordinator.startMain(root, ResolveResource.stLibPath, "rec.NaiveSum", coordinator(root).sharedClasspath(), out::append).await(), out::toString);
     utils.Err.strCmp("[###]java.lang.StackOverflowError[###]", out.toString());
@@ -1464,7 +1464,7 @@ b
 
   @Test void virtualizationMapMentionsAPackageThatDoesNotExist(@TempDir Path tmp) throws InterruptedException{
     Path root= tmp.resolve("root");
-    UserError.root= root;
+    UserError.root = root;
     FsDsl.materialize(root, """
 _pka/_rank_app999.fear
 iii
@@ -1490,7 +1490,7 @@ Error 7 WellFormedness
 
   @Test void useOfAHigherRankPackageIsReportedAsUndeclaredNotAsAnOrderingProblem(@TempDir Path tmp) throws InterruptedException{
     Path root= tmp.resolve("root");
-    UserError.root= root;
+    UserError.root = root;
     FsDsl.materialize(root, """
 _a/_rank_core.fear
 iii
@@ -1518,7 +1518,7 @@ Error 7 WellFormedness
 
   @Test void twoTypeNamesDifferingOnlyByCaseMustStillBuildOnASecondRun(@TempDir Path tmp) throws InterruptedException{
     Path root= tmp.resolve("root");
-    UserError.root= root;
+    UserError.root = root;
     FsDsl.materialize(root, """
 _col/_rank_app.fear
 iii
@@ -1579,7 +1579,7 @@ Hello:Main{s->base.Debug#("""+call.replace("$URL",url)+")}\n";
     var server= startServer(ex->reply(ex,200,"hello download".getBytes(UTF_8)));
     try{
       Path root= tmp.resolve("root");
-      UserError.root= root;
+      UserError.root = root;
       FsDsl.materialize(root, downloadProject(url(server,"/ok"),
         "s.download.downloadStrUtf8(\"$URL\", 1000, NeverRecovers)"));
       var out= coordinator(root).main(root, stLib);
@@ -1592,7 +1592,7 @@ Hello:Main{s->base.Debug#("""+call.replace("$URL",url)+")}\n";
     var server= startServer(ex->reply(ex,200,new byte[]{65,66,67}));
     try{
       Path root= tmp.resolve("root");
-      UserError.root= root;
+      UserError.root = root;
       FsDsl.materialize(root, downloadProject(url(server,"/bytes"),
         "s.download.downloadBytes(\"$URL\", 1000).size"));
       var out= coordinator(root).main(root, stLib);
@@ -1603,7 +1603,7 @@ Hello:Main{s->base.Debug#("""+call.replace("$URL",url)+")}\n";
 
   @Test void downloadRejectsNonHttpScheme(@TempDir Path tmp) throws Exception{
     Path root= tmp.resolve("root");
-    UserError.root= root;
+    UserError.root = root;
     FsDsl.materialize(root, downloadProject("ftp://127.0.0.1/x",
       "s.download.downloadStrUtf8(\"$URL\", 1000, NeverRecovers)"));
     var out= coordinator(root).main(root, stLib);
@@ -1613,7 +1613,7 @@ Hello:Main{s->base.Debug#("""+call.replace("$URL",url)+")}\n";
 
   @Test void downloadRejectsMalformedUrl(@TempDir Path tmp) throws Exception{
     Path root= tmp.resolve("root");
-    UserError.root= root;
+    UserError.root = root;
     FsDsl.materialize(root, downloadProject("not a url",
       "s.download.downloadStrUtf8(\"$URL\", 1000, NeverRecovers)"));
     var out= coordinator(root).main(root, stLib);
@@ -1624,7 +1624,7 @@ Hello:Main{s->base.Debug#("""+call.replace("$URL",url)+")}\n";
     var server= startServer(ex->reply(ex,200,"0123456789".getBytes(UTF_8)));
     try{
       Path root= tmp.resolve("root");
-      UserError.root= root;
+      UserError.root = root;
       FsDsl.materialize(root, downloadProject(url(server,"/big"),
         "s.download.downloadBytes(\"$URL\", 4).size"));
       var out= coordinator(root).main(root, stLib);
@@ -1638,7 +1638,7 @@ Hello:Main{s->base.Debug#("""+call.replace("$URL",url)+")}\n";
     var server= startServer(ex->replyChunked(ex,"0123456789".getBytes(UTF_8)));
     try{
       Path root= tmp.resolve("root");
-      UserError.root= root;
+      UserError.root = root;
       FsDsl.materialize(root, downloadProject(url(server,"/chunked"),
         "s.download.downloadBytes(\"$URL\", 4).size"));
       var out= coordinator(root).main(root, stLib);
@@ -1659,7 +1659,7 @@ Hello:Main{s->base.Debug#("""+call.replace("$URL",url)+")}\n";
     });
     try{
       Path root= tmp.resolve("root");
-      UserError.root= root;
+      UserError.root = root;
       FsDsl.materialize(root, downloadProject(url(server,"/start"),
         "s.download.downloadStrUtf8(\"$URL\", 1000, NeverRecovers)"));
       var out= coordinator(root).main(root, stLib);
@@ -1672,7 +1672,7 @@ Hello:Main{s->base.Debug#("""+call.replace("$URL",url)+")}\n";
     var server= startServer(ex->redirect(ex,"/loop"));
     try{
       Path root= tmp.resolve("root");
-      UserError.root= root;
+      UserError.root = root;
       FsDsl.materialize(root, downloadProject(url(server,"/loop"),
         "s.download.downloadStrUtf8(\"$URL\", 1000, NeverRecovers)"));
       var out= coordinator(root).main(root, stLib);
@@ -1685,7 +1685,7 @@ Hello:Main{s->base.Debug#("""+call.replace("$URL",url)+")}\n";
     var server= startServer(ex->redirect(ex,"file:///etc/passwd"));
     try{
       Path root= tmp.resolve("root");
-      UserError.root= root;
+      UserError.root = root;
       FsDsl.materialize(root, downloadProject(url(server,"/go"),
         "s.download.downloadStrUtf8(\"$URL\", 1000, NeverRecovers)"));
       var out= coordinator(root).main(root, stLib);
@@ -1700,7 +1700,7 @@ Hello:Main{s->base.Debug#("""+call.replace("$URL",url)+")}\n";
     var server= startServer(ex->reply(ex,404,"nope".getBytes(UTF_8)));
     try{
       Path root= tmp.resolve("root");
-      UserError.root= root;
+      UserError.root = root;
       FsDsl.materialize(root, downloadProject(url(server,"/missing"),
         "s.download.downloadStrUtf8(\"$URL\", 1000, NeverRecovers)"));
       var out= coordinator(root).main(root, stLib);
@@ -1719,7 +1719,7 @@ Hello:Main{s->base.Debug#("""+call.replace("$URL",url)+")}\n";
     var server= startServer(ex->reply(ex,200,body));
     try{
       Path root= tmp.resolve("root");
-      UserError.root= root;
+      UserError.root = root;
       var u= url(server,"/accent");
       FsDsl.materialize(root, """
 _col/_rank_app.fear
@@ -1744,7 +1744,7 @@ Hello:Main{s->base.Debug#(
     var server= startServer(ex->reply(ex,200,png));
     try{
       Path root= tmp.resolve("root");
-      UserError.root= root;
+      UserError.root = root;
       FsDsl.materialize(root, downloadProject(url(server,"/img.png"),
         "s.download.downloadImage(\"$URL\", 100_000, 1_000_000).width"));
       var out= coordinator(root).main(root, stLib);
@@ -1759,7 +1759,7 @@ Hello:Main{s->base.Debug#(
     });
     try{
       Path root= tmp.resolve("root");
-      UserError.root= root;
+      UserError.root = root;
       FsDsl.materialize(root, downloadProject(url(server,"/stall"),
         "s.download.downloadStrUtf8(\"$URL\", 1000, NeverRecovers)"));
       var out= coordinator(root).main(root, stLib);

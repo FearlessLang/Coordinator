@@ -42,7 +42,7 @@ final class RealSourceOracleWithZipDslTest{
   }
   private void autoloadErr(Path tmp, String pkgName, String spec, String expected){
     Path root= tmp.resolve("root").toAbsolutePath().normalize();
-    UserError.root= root;
+    UserError.root = root;
     FsDsl.materialize(root, spec);
     var base= new RealSourceOracleWithZip(root);
     var ex= assertThrows(UserError.class, ()->SourceOracleWithAutoload.of(base, pkgName));
@@ -53,7 +53,7 @@ final class RealSourceOracleWithZipDslTest{
   //another tool can still contain one.
   @Test void err_zip_duplicate_entry_name(@TempDir Path tmp){
     Path root= tmp.resolve("root").toAbsolutePath().normalize();
-    UserError.root= root;
+    UserError.root = root;
     Fs.ensureDir(root.resolve("_pkg"));
     Fs.ofV(()->Files.write(root.resolve("_pkg/z.zip"), rawDuplicateEntryZip("a.fear","1","2")));
     var ex= assertThrows(UserError.class, ()->new RealSourceOracleWithZip(root));
@@ -140,7 +140,7 @@ T:{}
 """); }
   private static Path dated(Path tmp, String spec, String file, long t){
     Path root= tmp.resolve("root").toAbsolutePath().normalize();
-    UserError.root= root;
+    UserError.root = root;
     FsDsl.materialize(root, spec);
     Fs.ofV(()->Files.setLastModifiedTime(root.resolve(file), FileTime.fromMillis(t)));
     return root;
@@ -198,7 +198,7 @@ This file is dated [###]""", FsDsl.dumpErr(root, ex));
   }
   private static Path zipWithEntryAt(Path tmp, String entry, long t){
     Path root= tmp.resolve("root").toAbsolutePath().normalize();
-    UserError.root= root;
+    UserError.root = root;
     Fs.ensureDir(root.resolve("_pkg"));
     var bytes= new ByteArrayOutputStream();
     Fs.ofV(()->{
@@ -458,7 +458,7 @@ We check this so that you[###]
 
   @Test void err_nested_zip_that_is_not_a_zip(@TempDir Path tmp) throws Exception{
     Path root= tmp.resolve("root").toAbsolutePath().normalize();
-    UserError.root= root;
+    UserError.root = root;
     Files.createDirectories(root.resolve("_pkg"));
     Files.writeString(root.resolve("_pkg/a.fear"), "A");
     var bytes= new ByteArrayOutputStream();
@@ -1303,7 +1303,7 @@ We check this so that you[###]
 
   @Test void err_visible_symlink_forbidden(@TempDir Path tmp) throws Exception{
     Path root= tmp.resolve("root").toAbsolutePath().normalize();
-    UserError.root= root;
+    UserError.root = root;
     Files.createDirectories(root.resolve("_pkg"));
     createSymbolicLinkOrSkip(root.resolve("_pkg/link.fear"), root.resolve("_pkg/missing.fear"));
     var ex= assertThrows(UserError.class, ()->new RealSourceOracleWithZip(root));
@@ -1327,7 +1327,7 @@ We check this so that you[###]
 
   @Test void ok_invisible_symlink_is_ignored(@TempDir Path tmp) throws Exception{
     Path root= tmp.resolve("root").toAbsolutePath().normalize();
-    UserError.root= root;
+    UserError.root = root;
     Files.createDirectories(root.resolve("_pkg/.d"));
     Files.writeString(root.resolve("_pkg/a.fear"), "A");
     Files.writeString(root.resolve("_pkg/.d/real.txt"), "R");
@@ -1397,7 +1397,7 @@ We check this so that you[###]
   // so this exercises the message factory directly rather than through a real scan.
   @Test void err_invisible_invalid_surrogate_message(@TempDir Path tmp) throws Exception{
     Path root= tmp.resolve("root").toAbsolutePath().normalize();
-    UserError.root= root;
+    UserError.root = root;
     Files.createDirectories(root.resolve("_pkg"));
     Files.writeString(root.resolve("_pkg/a.fear"), "X");
     var oracle= new RealSourceOracleWithZip(root);
@@ -1479,7 +1479,7 @@ We check this so that you[###]
 
   @Test void ok_asset_autoload_no_collision_for_distinct_names(@TempDir Path tmp){
     Path root= tmp.resolve("root");
-    UserError.root= root;
+    UserError.root = root;
     FsDsl.materialize(root, """
 _assets/foo.txt
 iii
@@ -1498,7 +1498,7 @@ world
 
   @Test void ok_asset_autoload_original_file_name_is_the_bare_file_name(@TempDir Path tmp){
     Path root= tmp.resolve("root");
-    UserError.root= root;
+    UserError.root = root;
     FsDsl.materialize(root, """
 _assets/foo.txt
 iii
@@ -1517,7 +1517,7 @@ world
 
   @Test void ok_base_asset_autoload(@TempDir Path tmp){
     Path root= tmp.resolve("root");
-    UserError.root= root;
+    UserError.root = root;
     FsDsl.materialize(root, """
 _rank_base000.fear
 iii
@@ -1547,7 +1547,7 @@ IconsConflict: base.ImageFile{
 
   @Test void ok_all_files_sorted_by_fear_path(@TempDir Path tmp){
     Path root= tmp.resolve("root");
-    UserError.root= root;
+    UserError.root = root;
     FsDsl.materialize(root, """
 _pkg/a/b.fear
 iii
@@ -1565,7 +1565,7 @@ A
   }
   @Test void ok_asset_autoload_keyed_by_type_name(@TempDir Path tmp){
     Path root= tmp.resolve("root");
-    UserError.root= root;
+    UserError.root = root;
     FsDsl.materialize(root, """
 _pkg/a.fear
 iii
@@ -1593,7 +1593,7 @@ ZInBar Triple[diskPath=_pkg/z.zip, zipSteps=, zipEntry=in/bar.png]
   @Test void ok_image_asset_by_type_name(@TempDir Path tmp){
     Path root= tmp.resolve("root");
     Path std= tmp.resolve("std");
-    UserError.root= root;
+    UserError.root = root;
     FsDsl.materialize(root, """
 _a/a.fear
 iii
@@ -1643,7 +1643,7 @@ Optional.empty
     byte[] bad= { (byte)0xFF, (byte)0xFE, 'X' };
 
     Path diskRoot= tmp.resolve("disk").toAbsolutePath().normalize();
-    UserError.root= diskRoot;
+    UserError.root = diskRoot;
     Files.createDirectories(diskRoot.resolve("_pkg"));
     Files.write(diskRoot.resolve("_pkg/a.fear"), bad);
     var diskRef= new RealSourceOracleWithZip(diskRoot).allFiles().stream()
@@ -1651,7 +1651,7 @@ Optional.empty
     assertThrows(UncheckedIOException.class, diskRef::loadString);
 
     Path zipRoot= tmp.resolve("zip").toAbsolutePath().normalize();
-    UserError.root= zipRoot;
+    UserError.root = zipRoot;
     Files.createDirectories(zipRoot.resolve("_pkg"));
     try (var zos= new ZipOutputStream(Files.newOutputStream(zipRoot.resolve("_pkg/z.zip")))){
       zos.putNextEntry(new java.util.zip.ZipEntry("a.fear"));

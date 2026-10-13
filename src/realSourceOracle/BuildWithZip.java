@@ -54,7 +54,7 @@ record Tree(
       : Report.onlyRegularFilesAndDirs(abs);
     }
     if (zip && !BuildWithZip.isInvisible(pe)){ reqNoSiblingForZipName(rel); collectBodyDiskZip(root, rel); return; }
-    for (RefParent p= pe; p.parent()!=p; p= p.parent()){ addKid(p); }
+    for (RefParent p= pe; p.parent()!=p; p = p.parent()){ addKid(p); }
     if (isRegularFile(abs) && !BuildWithZip.isInvisible(pe)){ visibleFiles.add(pe); }
   }
   private void reqNoSiblingForZipName(Path rel){
@@ -89,7 +89,7 @@ record Tree(
   private void collectBodyDiskZip(Path root, Path rel){
     for (var e: ZipWellFormedness.allEntryPaths(root, rel)){
       if (e.segments().getLast().endsWith(".zip")){ continue; }//expanded
-      for (RefParent p= e; p.parent()!=p; p= p.parent()){ addKid(p); }
+      for (RefParent p= e; p.parent()!=p; p = p.parent()){ addKid(p); }
       if (!BuildWithZip.isInvisible(e)){ visibleFiles.add(e); }
     }
   }
@@ -167,7 +167,7 @@ public final class BuildWithZip{
     "com1","com2","com3","com4","com5","com6","com7","com8","com9",
     "lpt1","lpt2","lpt3","lpt4","lpt5","lpt6","lpt7","lpt8","lpt9"
   );
-  private static final String winBadChars="<>:\"/\\|?*";
+  private static final String winBadChars= "<>:\"/\\|?*";
 
   private static void checkIndividualInvisibleSegment(RefParent kid){
     assert isInvisible(kid);

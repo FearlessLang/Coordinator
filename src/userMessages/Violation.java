@@ -24,7 +24,7 @@ public final class Violation {
   //-- the pieces of text that more than one message needs, written once
   public static String reported(Throwable cause){ return "Reported reason:\n"+cause.getMessage(); }
   private static Supplier<List<String>> running= List::of;
-  public static void running(Supplier<List<String>> live){ running= live; }
+  public static void running(Supplier<List<String>> live){ running = live; }
   static String associatedPrograms(){ return Join.of(running.get().stream().map(s->"  "+s),"","\n","",""); }
   public static String freshCopyThenReport(){ return """
     Replace this Fearless folder with a fresh copy.

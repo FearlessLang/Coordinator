@@ -21,7 +21,7 @@ final class StringFilesTest{
   @Test void invalidUtf8MessageStaysWithinWhitelistAndUsesPlainDots(@TempDir Path tmp) throws Exception{
     var prefix= "x".repeat(120).getBytes(StandardCharsets.UTF_8);
     var bytes= Arrays.copyOf(prefix, prefix.length+1);
-    bytes[prefix.length]= (byte)0xFF;
+    bytes[prefix.length] = (byte)0xFF;
     var file= tmp.resolve("bad.fear");
     Files.write(file, bytes);
     var captured= new Box<String>(null);

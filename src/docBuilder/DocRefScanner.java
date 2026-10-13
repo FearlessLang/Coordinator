@@ -28,7 +28,7 @@ final class DocRefScanner{
       int close= closingFence(text, i+fence, fence);
       if (close < 0){ i += fence; continue; }
       res.add(new CodeSpan(i+fence, close, fence));
-      i= close+fence;
+      i = close+fence;
     }
     return res;
   }
@@ -103,7 +103,7 @@ final class DocRefScanner{
     Optional<String> selector(){
       if (!startsSelector()){ return Optional.empty(); }
       var sel= s.charAt(i) == '.' ? "."+word(i+1) : ops(i);
-      if (!MName.isMethodName(sel)){ ok= false; return Optional.empty(); }
+      if (!MName.isMethodName(sel)){ ok = false; return Optional.empty(); }
       i += sel.length();
       return Optional.of(sel);
     }
@@ -123,12 +123,12 @@ final class DocRefScanner{
     //a type, possibly package qualified, or a name bound where the comment is written
     Optional<DocRef.Receiver> receiver(){
       var first= word(i);
-      if (first.isEmpty()){ ok= false; return Optional.empty(); }
+      if (first.isEmpty()){ ok = false; return Optional.empty(); }
       i += first.length();
       if (TName.isTypeName(first)){ return Optional.of(type(Optional.empty(), first)); }
       var second= i < s.length() && s.charAt(i) == '.' ? word(i+1) : "";
       if (!TName.isTypeName(second)){ return Optional.of(new DocRef.LocalName(first)); }
-      if (!TName.isPkgName(first)){ ok= false; return Optional.empty(); }
+      if (!TName.isPkgName(first)){ ok = false; return Optional.empty(); }
       i += 1+second.length();
       return Optional.of(type(Optional.of(first), second));
     }
@@ -154,7 +154,7 @@ final class DocRefScanner{
         if (at >= s.length() || s.charAt(at) != '_'){ return OptionalInt.empty(); }
         count += 1;
         at += 1;
-        if (at < s.length() && s.charAt(at) == close){ i= at+1; return OptionalInt.of(count); }
+        if (at < s.length() && s.charAt(at) == close){ i = at+1; return OptionalInt.of(count); }
         if (at >= s.length() || s.charAt(at) != ','){ return OptionalInt.empty(); }
         at += 1;
       }

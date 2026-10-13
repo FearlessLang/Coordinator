@@ -416,7 +416,7 @@ code{
       sb.append(h(text.substring(i,f.start())));
       sb.append("<a href=\"").append(h(href(link.get()))).append("\">")
         .append(h(text.substring(f.start(),f.end()))).append("</a>");
-      i= f.end();
+      i = f.end();
     }
     sb.append(h(text.substring(i)));
     return sb.toString();
@@ -474,7 +474,7 @@ code{
     for (var cs: codeSpans){
       sb.append(h(text.substring(i,cs.start()-cs.fence())));
       sb.append("<code>").append(renderCode(text,cs,linked)).append("</code>");
-      i= cs.end()+cs.fence();
+      i = cs.end()+cs.fence();
     }
     sb.append(h(text.substring(i)));
     return sb.toString();
@@ -548,8 +548,8 @@ code{
   String shortFile(Pos p){
     var s= p.fileName().toString();
     var slash= s.lastIndexOf('/');
-    if (slash >= 0){ s= s.substring(slash+1); }
-    if (s.endsWith(".fear")){ s= s.substring(0,s.length()-5); }
+    if (slash >= 0){ s = s.substring(slash+1); }
+    if (s.endsWith(".fear")){ s = s.substring(0,s.length()-5); }
     return s;
   }
 

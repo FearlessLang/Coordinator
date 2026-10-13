@@ -74,7 +74,7 @@ final class BytecodeLineFix implements Consumer<Path>{
   //still names the right method; 1000 is a last resort for a file with no mapped line at all.
   private int fearlessLine(int jl){
     var near= lineMap.ceilingEntry(jl);
-    if (near == null){ near= lineMap.floorEntry(jl); }
+    if (near == null){ near = lineMap.floorEntry(jl); }
     return near != null ? near.getValue() : 1000;
   }
 }

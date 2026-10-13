@@ -112,21 +112,21 @@ final class SourceDocs{
             if (s.startsWith("//",i)){
               var k= s.length() > i+2 ? s.charAt(i+2) : ' ';
               if (k == '/' || k == '>' || k == '-'){ add(l,i+1,s.substring(i+3),s.substring(0,i).isBlank(),k == '>',k == '-'); }
-              i= s.length();
+              i = s.length();
             }
-            else if (s.startsWith("/*",i)){ mode= Mode.Block; i += 2; }
-            else if (s.charAt(i) == '"'){ mode= Mode.DoubleString; i += 1; }
-            else if (s.charAt(i) == '`'){ mode= Mode.BacktickString; i += 1; }
+            else if (s.startsWith("/*",i)){ mode = Mode.Block; i += 2; }
+            else if (s.charAt(i) == '"'){ mode = Mode.DoubleString; i += 1; }
+            else if (s.charAt(i) == '`'){ mode = Mode.BacktickString; i += 1; }
             else if (s.charAt(i) == '{'){ depth += 1; i += 1; }
             else if (s.charAt(i) == '}'){ depth -= 1; i += 1; }
             else{ i += 1; }
           }
           case DoubleString, BacktickString -> {
-            if (s.charAt(i) == (mode == Mode.DoubleString ? '"' : '`')){ mode= Mode.Normal; }
+            if (s.charAt(i) == (mode == Mode.DoubleString ? '"' : '`')){ mode = Mode.Normal; }
             i += 1;
           }
           case Block -> {
-            if (s.startsWith("*/",i)){ mode= Mode.Normal; i += 2; }
+            if (s.startsWith("*/",i)){ mode = Mode.Normal; i += 2; }
             else{ i += 1; }
           }
         }

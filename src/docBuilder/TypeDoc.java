@@ -44,7 +44,7 @@ final class TypeDoc{
   private <K> MethodDoc oneOf(Map<K,MethodDoc> byKey, K k, boolean declared, List<DocOcc> docs, List<MethodRef> inheritedFrom){
     var d= byKey.get(k);
     if (d == null){
-      d= new MethodDoc(this,declared,docs,inheritedFrom);
+      d = new MethodDoc(this,declared,docs,inheritedFrom);
       byKey.put(k,d);
       methods.add(d);
     }

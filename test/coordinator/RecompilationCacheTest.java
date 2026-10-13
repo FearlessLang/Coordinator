@@ -315,7 +315,7 @@ final class RecompilationCacheTest{
     var stub= new ScriptedCoordinator();
     var edited= new EditableRef(SourceOracle.root+"_a/a.fear", start-MARGIN);
     stub.scripts.put("a", _->{
-      edited.lastModified= start-MARGIN/2;
+      edited.lastModified = start-MARGIN/2;
       return List.of(literal("A1", RC.imm));
     });
     var pkgs= new LinkedHashMap<String,List<Ref>>();

@@ -25,7 +25,7 @@ import userMessages.UserError;
 import utils.Pos;
 
 public record MainsInfo(Map<String,Main> mains){
-  public MainsInfo{ mains= Collections.unmodifiableMap(new TreeMap<>(mains)); }
+  public MainsInfo{ mains = Collections.unmodifiableMap(new TreeMap<>(mains)); }
   public record Main(String file, List<Claim> shortcuts, List<Claim> openWiths){}
   public record Claim(String icon, String diskPath, String zipSteps, String zipEntry, String extension){}
   public static Optional<MainsInfo> read(Path project){ return Helper.out(project).mainsInfo(); }

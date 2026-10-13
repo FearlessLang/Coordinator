@@ -66,7 +66,7 @@ public final class ZipLocator{
     byte[] bytes= null;
     for (int i: Range.of(steps)){
       var upTo= steps.subList(0, i+1);
-      bytes= readHere(diskZip, upTo, bytes).get(steps.get(i));
+      bytes = readHere(diskZip, upTo, bytes).get(steps.get(i));
       if (bytes == null){ throw Violation.cacheCouldNotFindZipEntry(diskZip, upTo, steps.get(i)); }
     }
     return onFinal.apply(bytes);

@@ -63,14 +63,14 @@ public final class FsDsl{
   private static void emit(Path root, LinkedHashMap<Path,ZipNode> zips, Item it){
     String name= it.name();
     boolean isDir= name.endsWith("/");
-    if (isDir){ name= name.substring(0, name.length()-1); }
+    if (isDir){ name = name.substring(0, name.length()-1); }
     var segs= name.split("/", -1);
 
     int zi= firstZipSeg(segs);
     if (zi < 0){ emitDisk(root, segs, isDir, it.content()); return; }
 
     Path diskZip= root;
-    for (int i= 0; i <= zi; i++){ diskZip= diskZip.resolve(segs[i]); }
+    for (int i= 0; i <= zi; i++){ diskZip = diskZip.resolve(segs[i]); }
 
     var node= zips.computeIfAbsent(diskZip, _->new ZipNode());
     var after= List.of(segs).subList(zi+1, segs.length);
@@ -86,7 +86,7 @@ public final class FsDsl{
 
   private static void emitDisk(Path root, String[] segs, boolean isDir, String content){
     Path p= root;
-    for (var s: segs){ p= p.resolve(s); }
+    for (var s: segs){ p = p.resolve(s); }
     if (isDir){ mkdirs(p); return; }
     mkdirs(p.getParent());
     writeString(p, content);
@@ -102,8 +102,8 @@ public final class FsDsl{
       int next= nextZipIndex(after, from);
       if (next < 0){ break; }
       String step= String.join("/", after.subList(from, next+1));
-      root= root.nested.computeIfAbsent(step, _->new ZipNode());
-      from= next+1;
+      root = root.nested.computeIfAbsent(step, _->new ZipNode());
+      from = next+1;
     }
     String entry= String.join("/", after.subList(from, after.size()));
     if (entry.isEmpty()){ return; } // declaration only at this zip level
@@ -191,14 +191,14 @@ public final class FsDsl{
   }
   public static String runOk(Path tmp, String spec){
     Path root= tmp.resolve("root");
-    UserError.root= root;
+    UserError.root = root;
     mkdirs(root);
     materialize(root, spec);
     return dump(new RealSourceOracleWithZip(root));
   }
   public static void runErrIOE(Path tmp, String spec, String expected){
     Path root= tmp.resolve("root").toAbsolutePath().normalize();
-    UserError.root= root;
+    UserError.root = root;
     mkdirs(root);
     materialize(root, spec);
     var ex= assertThrows(UserError.class, ()->new RealSourceOracleWithZip(root));

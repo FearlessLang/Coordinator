@@ -163,7 +163,7 @@ final class Helper{
     int lastNum= rankNumber(ranks.getFirst());
     var pkgs= new LinkedHashMap<String, List<Ref>>();
     for (Ref u:ranks){
-      if (rankNumber(u) != lastNum){ l= new MiddleLayer(coordinator,l,pkgs); pkgs= new LinkedHashMap<>(); lastNum= rankNumber(u); }
+      if (rankNumber(u) != lastNum){ l = new MiddleLayer(coordinator,l,pkgs); pkgs = new LinkedHashMap<>(); lastNum = rankNumber(u); }
       pkgs.put(pkgName(u),map.get(pkgName(u)));
     }
     return new MiddleLayer(coordinator,l,pkgs);

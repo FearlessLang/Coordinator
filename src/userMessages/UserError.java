@@ -50,11 +50,11 @@ public final class UserError extends RuntimeException{
   private Runnable recovery;
   private boolean bare;
   public UserError withRecovery(String label, Runnable action){
-    recoveryLabel= label; recovery= action;
+    recoveryLabel = label; recovery = action;
     return this;
   }
-  public UserError bare(){ bare= true; return this; }
-  public UserError followedBy(String more){ var res= new UserError(getMessage()+more,this); res.bare= bare; return res; }
+  public UserError bare(){ bare = true; return this; }
+  public UserError followedBy(String more){ var res= new UserError(getMessage()+more,this); res.bare = bare; return res; }
 
   //The project root this run actually used, so that a message always shows the folder
   //that was really involved. Tests set it to whatever fake root they use; a real run
@@ -65,10 +65,10 @@ public final class UserError extends RuntimeException{
   //owner. Read only when a message is displayed: what this process is about to do is
   //known then, and is not a property of what went wrong.
   private static boolean managerOwner= false;
-  public static void becameManagerOwner(){ managerOwner= true; }
+  public static void becameManagerOwner(){ managerOwner = true; }
 
   private static java.awt.Window owner= null;
-  public static void owner(java.awt.Window w){ owner= w; }
+  public static void owner(java.awt.Window w){ owner = w; }
 
   //-- building
   static UserError die(String first, String... more){
@@ -98,9 +98,9 @@ public final class UserError extends RuntimeException{
   private static String showRelText(String p){ return "Root: "+PrettyFileName.displayFileName(root.toUri())+"\nPath: "+disp(p)+"\n"; }
   public static String showZipRel(Path diskZip, List<String> steps, String entryName){
     assert diskZip.isAbsolute();
-    diskZip= root.relativize(diskZip);
+    diskZip = root.relativize(diskZip);
     String zipPath= diskZip.toString().replace("\\","/");
-    if (!steps.isEmpty()){ zipPath+="/"+String.join("/", steps); }
+    if (!steps.isEmpty()){ zipPath += "/"+String.join("/", steps); }
     return showRelText(zipPath)+printEntryName(entryName)+"\n";
   }
   private static String printEntryName(String entryName){

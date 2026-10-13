@@ -199,7 +199,7 @@ final class CommonInfo{
       while (Files.isSymbolicLink(current)){//returns false (not throws) on error, ending the walk
         if (depth >= MaxLinkFollowed){ return out.append("\nChain exceeds ").append(MaxLinkFollowed).append(" links; not followed further.\n").toString(); }
         if (!visited.add(current)){ return out.append("\nChain loops back to ").append(Message.displayString(current.toString())).append(".\n").toString(); }
-        current= current.getParent().resolve(Files.readSymbolicLink(current)).normalize();//read to advance; relative to the link's own dir; current is absolute and a root cannot be a symlink, so getParent()!=null
+        current = current.getParent().resolve(Files.readSymbolicLink(current)).normalize();//read to advance; relative to the link's own dir; current is absolute and a root cannot be a symlink, so getParent()!=null
         depth++;
         out.append("\n  ").append(located(current, suppressed)).append("\n");//either last is final location or a dedicated message is present
       }
@@ -718,7 +718,7 @@ final class FileTooLargeForByteArray{
   static String of(Path path, Suppressed suppressed){
     String size;
     try{ size= String.format("%,d bytes", Files.size(path)); }
-    catch(IOException e){ size= "<reading the size failed>"+suppressed.mark(e); }//documented: Files.size throws when the file cannot be read
+    catch(IOException e){ size = "<reading the size failed>"+suppressed.mark(e); }//documented: Files.size throws when the file cannot be read
     return "This file is "+size+" long. Fearless reads a file into one block of memory, and\n"
       +"one block can hold at most 2,147,483,647 bytes (about 2 GB).\n";
   }

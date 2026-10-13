@@ -33,7 +33,7 @@ public final class StringFiles {
         invalidUtf8(path,bytes,input.position(),result.length(),output.toString()),cause);
     }
     assert !result.isOverflow();
-    result= decoder.flush(output);
+    result = decoder.flush(output);
     assert result.isUnderflow();
     output.flip();
     return output.toString();
@@ -128,7 +128,7 @@ Nearby bytes:  %s
       if (c != '\r' && c != '\n'){ continue; }
       if (c == '\r' && i < prefix.length() && prefix.charAt(i) == '\n'){ i++; }
       line++;
-      start= i;
+      start = i;
     }
     return new Location(line,prefix.codePointCount(start,prefix.length())+1,prefix.substring(start));
   }
