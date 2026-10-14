@@ -56,7 +56,7 @@ final class RunIntegration{
   static final Path baseCache= ResolveResource.stLibDebugOut.resolve("baseCache");
   static final Path reportsDir= ResolveResource.coordinatorSrc.getParent().resolve(".out", "junit_xml");
   static final Path reportsFile= reportsDir.resolve("all_auto_tests.xml");
-  static final List<String> suites= new ArrayList<>();
+  static final ArrayList<String> suites= new ArrayList<>();
   static final SourceOracle stLib= new RealSourceOracleWithZip(ResolveResource.stLibPath);
   @BeforeAll static void buildBaseOnce(){
     BaseCacheBuilder.buildInto(ResolveResource.coordinatorJars, ResolveResource.stLibDebugOut, Optional.of(ResolveResource.stLibPath));

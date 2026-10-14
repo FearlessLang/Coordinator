@@ -5,10 +5,8 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.SequencedCollection;
-import java.util.SequencedMap;
 
 import core.E.Literal;
 import core.M;
@@ -24,9 +22,9 @@ final class TypeDoc{
     variants.add(l);
   }
 
-  final List<Literal> variants= new ArrayList<>();
+  final ArrayList<Literal> variants= new ArrayList<>();
   final List<DocOcc> docs;
-  final SequencedMap<Object,MethodDoc> byKey= new LinkedHashMap<>();
+  final LinkedHashMap<Object,MethodDoc> byKey= new LinkedHashMap<>();
   final SequencedCollection<MethodDoc> methods= byKey.sequencedValues();
 
   Literal main(){ return variants.getFirst(); }
@@ -64,8 +62,8 @@ final class MethodDoc{
   final TypeDoc owner;
   final boolean declared;
   final List<DocOcc> docs;
-  final List<M> variants= new ArrayList<>();
-  final Map<MethodRefKey,MethodRef> inheritedByKey= new LinkedHashMap<>();
+  final ArrayList<M> variants= new ArrayList<>();
+  final LinkedHashMap<MethodRefKey,MethodRef> inheritedByKey= new LinkedHashMap<>();
   final Collection<MethodRef> inheritedFrom= inheritedByKey.values();
 
   M main(){ return variants.getFirst(); }

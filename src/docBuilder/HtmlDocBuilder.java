@@ -48,9 +48,9 @@ public final class HtmlDocBuilder{
   Path htmlPath;
   Optional<Path> testsRoot;
 
-  final List<TypeDoc> types= new ArrayList<>();
+  final ArrayList<TypeDoc> types= new ArrayList<>();
   final IdentityHashMap<Src,TypeDoc> typeBySrc= new IdentityHashMap<>();
-  final Map<URI,SourceDocs> sources= new HashMap<>();
+  final HashMap<URI,SourceDocs> sources= new HashMap<>();
 
   public void packageLocation(String pkgName, Path htmlPath, Optional<Path> testsRoot){
     assert Require.nonNull(pkgName, htmlPath, testsRoot);
@@ -125,15 +125,15 @@ public final class HtmlDocBuilder{
     return Message.of(oracle::loadString, List.of(new Frame("the documentation of package "+pkgName, span)), msg);
   }
 
-  void linkType(DocResolver resolver, TypeDoc t, Map<DocOcc,Map<Integer,DocLink>> spans, List<String> problems){
+  void linkType(DocResolver resolver, TypeDoc t, IdentityHashMap<DocOcc,Map<Integer,DocLink>> spans, ArrayList<String> problems){
     linkGroup(resolver, Scope.of(t.main()), t.docs, spans, problems);
     t.methods.forEach(m -> linkGroup(resolver, Scope.of(t.main(), m.main()), m.docs, spans, problems));
   }
 
   //one group per declaration, carrying the scope its comment is written in: a fenced
   //``` ... ``` block never spans declarations, so "inside a fence" resets per group.
-  void linkGroup(DocResolver resolver, Scope scope, List<DocOcc> docs, Map<DocOcc,Map<Integer,DocLink>> spans,
-      List<String> problems){
+  void linkGroup(DocResolver resolver, Scope scope, List<DocOcc> docs, IdentityHashMap<DocOcc,Map<Integer,DocLink>> spans,
+      ArrayList<String> problems){
     var inFence= false;
     for (var occ: docs){
       if (occ.text().strip().equals("```")){ inFence = !inFence; continue; }
@@ -145,7 +145,7 @@ public final class HtmlDocBuilder{
   }
 
   void link(DocResolver resolver, DocOcc occ, Scope scope,
-      Map<DocOcc,Map<Integer,DocLink>> spans, List<String> problems){
+      IdentityHashMap<DocOcc,Map<Integer,DocLink>> spans, ArrayList<String> problems){
     var res= new HashMap<Integer,DocLink>();
     for (var sp: DocRefScanner.refSpans(occ.text())){
       var ref= DocRefScanner.wholeRef(occ.text(), sp);

@@ -44,9 +44,9 @@ final class RecompilationCacheTest{
     };
   }
   private static final class ScriptedCoordinator implements Coordinator{
-    final Map<String,Function<OtherPackages,List<Literal>>> scripts= new LinkedHashMap<>();
-    final Map<String,Integer> frontendCalls= new LinkedHashMap<>();
-    final Map<String,OtherPackages> lastOtherSeen= new LinkedHashMap<>();
+    final LinkedHashMap<String,Function<OtherPackages,List<Literal>>> scripts= new LinkedHashMap<>();
+    final LinkedHashMap<String,Integer> frontendCalls= new LinkedHashMap<>();
+    final LinkedHashMap<String,OtherPackages> lastOtherSeen= new LinkedHashMap<>();
     void fixedOutput(String pkg, List<Literal> core){ scripts.put(pkg, _ -> core); }
     @Override public List<Literal> frontend(String pkgName, List<Ref> files, SourceOracle oracle, OtherPackages other, Map<String,String> vres, CapabilityEnvironment capabilities){
       frontendCalls.merge(pkgName, 1, Integer::sum);
@@ -471,7 +471,7 @@ final class RecompilationCacheTest{
 
   private static final class RecordingCoordinator implements Coordinator{
     private final Path mods;
-    final Map<String,Integer> frontendCalls= new LinkedHashMap<>();
+    final LinkedHashMap<String,Integer> frontendCalls= new LinkedHashMap<>();
     RecordingCoordinator(Path stdLib, Path mods){ this.mods= mods; }
     @Override public Path modsPath(){ return mods; }
     @Override public String runAllMains(String pkgName, OutputOracle out){ return ""; }
