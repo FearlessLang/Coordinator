@@ -27,7 +27,7 @@ record MiddleLayer(Coordinator coordinator, Layer next, LinkedHashMap<String,Lis
   @Override public OtherPackages compile(SourceOracle src, OutputOracle out){
     var other= next.compile(src, out);
     var nextOther= other;
-    for (var pkg: pkgs.keySet()){
+    for (var pkg : pkgs.keySet()){
       var files= pkgs.get(pkg);
       long maxSrc= files.stream().mapToLong(Ref::lastModified).max().getAsLong();
       long maxIn= Math.max(maxSrc, other.stamp());//out.mapStamp() must be <= then other.watermark() since it comes from next

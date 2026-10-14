@@ -97,7 +97,7 @@ final class HtmlDocRenderer{
     var sb= new StringBuilder(4_000).append(HtmlDocBuilder.generatedMark).append(pkgName).append("; any edit is overwritten\n\n");
     for (int i : Range.of(shown)){
       sb.append(names.perType().get(i)).append(": base.Test {::\n");
-      for (var m: visibleMethods(shown.get(i))){ sb.append(Join.of(testLines(m), "  .test base.Test{::\n", "\n", "\n  }\n", "")); }
+      for (var m : visibleMethods(shown.get(i))){ sb.append(Join.of(testLines(m), "  .test base.Test{::\n", "\n", "\n  }\n", "")); }
       sb.append("  }\n\n");
     }
     sb.append(names.top()).append(": base.UnitTests {::\n");
@@ -386,7 +386,7 @@ code{
     var bound= Stream.concat(m.owner.main().bs().stream(), m.main().sig().bs().stream()).map(B::x).collect(Collectors.toSet());
     var sb= new StringBuilder();
     int i= 0;
-    for (var f: DocRefScanner.signatureTypes(text)){
+    for (var f : DocRefScanner.signatureTypes(text)){
       var t= (DocRef.TypeName)f.ref();
       if (bound.contains(t.simpleName())){ continue; }
       var link= resolver.resolveType(t);
@@ -433,7 +433,7 @@ code{
     var linked= spans.getOrDefault(occ, Map.of());
     var sb= new StringBuilder();
     int i= 0;
-    for (var cs: DocRefScanner.codeSpans(text)){
+    for (var cs : DocRefScanner.codeSpans(text)){
       sb.append(h(text.substring(i, cs.start()-cs.fence())));
       sb.append("<code>").append(renderCode(text, cs, linked)).append("</code>");
       i = cs.end()+cs.fence();

@@ -31,7 +31,7 @@ public final class FsDsl{
   static List<Item> parse(String spec){
     var items= new ArrayList<Item>();
     var cur= new ArrayList<String>();
-    for (var line: spec.split("\n", -1)){
+    for (var line : spec.split("\n", -1)){
       if (line.equals("jjj")){ addItem(items, cur); cur.clear(); continue; }
       cur.add(line);
     }
@@ -52,7 +52,7 @@ public final class FsDsl{
   public static void materialize(Path root, String spec){
     try{
       var zips= new LinkedHashMap<Path,ZipNode>();
-      for (var it: parse(spec)){ emit(root, zips, it); }
+      for (var it : parse(spec)){ emit(root, zips, it); }
       zips.forEach((diskZip, node) -> writeDiskZip(diskZip, node));
     }
     catch (InvalidPathException e){
@@ -86,7 +86,7 @@ public final class FsDsl{
 
   private static void emitDisk(Path root, String[] segs, boolean isDir, String content){
     var p= root;
-    for (var s: segs){ p = p.resolve(s); }
+    for (var s : segs){ p = p.resolve(s); }
     if (isDir){ mkdirs(p); return; }
     mkdirs(p.getParent());
     writeString(p, content);
@@ -129,7 +129,7 @@ public final class FsDsl{
         var bytes= buildZip(child);
         putFile(zos, name, bytes);
       });
-      for (var e: node.leafs){
+      for (var e : node.leafs){
         if (e.isDir){ putDir(zos, e.name); }
         else{ putFile(zos, e.name, e.content.getBytes(UTF_8)); }
       }
@@ -159,7 +159,7 @@ public final class FsDsl{
     var rs= new ArrayList<SourceOracle.Ref>(so.allFiles());
     rs.sort(Comparator.comparing(SourceOracle.Ref::fearPath));
     var sb= new StringBuilder();
-    for (var r: rs){
+    for (var r : rs){
       sb.append("--- ").append(r.fearPath()).append("\n");
       sb.append(r.loadString()).append("\n");
     }

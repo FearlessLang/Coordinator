@@ -136,7 +136,7 @@ public final class HtmlDocBuilder{
   void linkGroup(DocResolver resolver, Scope scope, List<DocOcc> docs, IdentityHashMap<DocOcc,Map<Integer,DocLink>> spans,
       ArrayList<String> problems){
     var inFence= false;
-    for (var occ: docs){
+    for (var occ : docs){
       if (occ.text().strip().equals("```")){ inFence = !inFence; continue; }
       //a //> line is real Fearless code, not prose: any backtick in it is a genuine
       //raw string literal, never doc-comment markup, so it is never reference-checked.
@@ -148,7 +148,7 @@ public final class HtmlDocBuilder{
   void link(DocResolver resolver, DocOcc occ, Scope scope,
       IdentityHashMap<DocOcc,Map<Integer,DocLink>> spans, ArrayList<String> problems){
     var res= new HashMap<Integer,DocLink>();
-    for (var sp: DocRefScanner.refSpans(occ.text())){
+    for (var sp : DocRefScanner.refSpans(occ.text())){
       var ref= DocRefScanner.wholeRef(occ.text(), sp);
       if (ref.isEmpty()){ problems.add(problem(occ, sp, notAName)); continue; }
       var link= resolver.resolve(ref.get(), scope);

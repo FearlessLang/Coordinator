@@ -257,7 +257,7 @@ AllAutoTests_p: base.UnitTests {::
     var root= docExamplesProject(tmp);
     coordinator(root).compile(root, stLib);
     editAndTouch(root.resolve("_p", "_rank_app.fear"), "Calc.twice(2)", "Calc.thrice(2)");
-    for (var _: List.of(1, 2)){
+    for (var _ : List.of(1, 2)){
       var ex= assertThrows(UserError.class, () -> coordinator(root).compile(root, stLib));
       utils.Err.strCmp("""
 In file: fear:/_p/auto_tests/p_test.fear
@@ -451,7 +451,7 @@ zeroMemo
   //@Test void testGui1(){ testOk("testGui1");}
   void compileOk(String name){ var project= freshIntegrationRoot(name); coordinator(project).compile(project, stLib); }
   @Test void theInteractiveProjectsStillCompile(){
-    for (var name: List.of("testGui1", "testGui2", "testGuiImg", "testGuiLive", "testBasketball", "testTicTacToe")){ compileOk(name); }
+    for (var name : List.of("testGui1", "testGui2", "testGuiImg", "testGuiLive", "testBasketball", "testTicTacToe")){ compileOk(name); }
   }
 
   // Two assets that generate the same auto-loaded type name (here "foo.txt" and "foo.png",

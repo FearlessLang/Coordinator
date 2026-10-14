@@ -34,13 +34,13 @@ public record ZipEntry(Path root, Path local, List<String> segments, List<String
   }
   private static void reqCollect(Path diskZip, Path root, Path local, List<String> steps, ArrayList<ZipEntry> out){
     if (steps.size() > maxZipNesting){ throw Report.zipNestingTooDeep(diskZip, steps); }
-    for (var name: ZipLocator.entryNames(diskZip, steps)){
+    for (var name : ZipLocator.entryNames(diskZip, steps)){
       out.add(new ZipEntry(root, local, zipsToSegments(steps, name), steps, name));
       if (name.endsWith(".zip")){ reqCollect(diskZip, root, local, Push.of(steps, name), out); }
     }
   }
   private static void reqNoFileUsedAsDirectory(List<ZipEntry> out){
-    for (var e: out){
+    for (var e : out){
       var nested= out.stream().filter(o -> isProperPrefix(e.segments(), o.segments())).findFirst();
       if (nested.isEmpty()){ continue; }
       var extra= nested.get().segments().subList(e.segments().size(), nested.get().segments().size());
@@ -49,7 +49,7 @@ public record ZipEntry(Path root, Path local, List<String> segments, List<String
     }
   }
   private static void reqNoFolderForNestedZipName(List<ZipEntry> out){
-    for (var e: out){
+    for (var e : out){
       if (!e.lastZips().endsWith(".zip")){ continue; }
       var folder= dropZipExt(e.segments());
       out.stream()

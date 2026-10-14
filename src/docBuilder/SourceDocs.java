@@ -56,7 +56,7 @@ final class SourceDocs{
       .sorted(Comparator.comparingInt(DocOcc::line).thenComparingInt(DocOcc::column))
       .toList();
     var res= new ArrayList<List<DocOcc>>();
-    for (var d: lost){
+    for (var d : lost){
       var last= res.isEmpty() ? null : res.getLast().getLast();
       if (last != null && d.line()-last.line() <= 1){ res.getLast().add(d); continue; }
       res.add(new ArrayList<>(List.of(d)));

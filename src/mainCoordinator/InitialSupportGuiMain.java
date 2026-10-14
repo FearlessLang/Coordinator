@@ -44,7 +44,7 @@ public final class InitialSupportGuiMain{
     try{ UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName()); }
     catch (Exception _){ throw Bug.unreachable(); }
     var d= UIManager.getDefaults();
-    for (var k: d.keySet()){ if (d.get(k) instanceof Font){ d.put(k, new FontUIResource(uiFont)); } }
+    for (var k : d.keySet()){ if (d.get(k) instanceof Font){ d.put(k, new FontUIResource(uiFont)); } }
     SwingUtilities.invokeLater(InitialSupportGuiMain::new);
   }
 

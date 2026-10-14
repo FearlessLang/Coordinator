@@ -61,10 +61,10 @@ public record SourceOracleWithAutoload(SourceOracle base, Ref autoload, URI auto
     var out= new StringBuilder();
     var declaredBy= new LinkedHashMap<String,Ref>();
     var assets= new LinkedHashMap<String,Triple>();
-    for (var ref: base.allFiles()){
+    for (var ref : base.allFiles()){
       var p= path.apply(ref);
       if (!p.contains("/"+pkgName+"/")){ continue; }
-      for (var h: handlers){
+      for (var h : handlers){
         if (!h.matches().test(p)){ continue; }
         var type= AutoloadHandler.standardTypeName(pkgName, ref, p);
         var prev= declaredBy.putIfAbsent(type, ref);

@@ -63,7 +63,7 @@ public interface Coordinator{
     var top= ranks.stream().mapToInt(Helper::rankNumber).max().getAsInt();
     var listed= Files.exists(out.mainsPath());
     var res= new LinkedHashMap<String,Boolean>();
-    for (var r: ranks){
+    for (var r : ranks){
       var pkg= Helper.pkgName(r);
       var lower= ranks.stream().filter(d -> Helper.rankNumber(d) < Helper.rankNumber(r)).map(Helper::pkgName).toList();
       var below= lower.stream().mapToLong(out::pkgApiStamp);
@@ -74,7 +74,7 @@ public interface Coordinator{
   }
   default String main(Path project, SourceOracle stLib) throws InterruptedException{
     var sb= new StringBuilder();
-    for (var p: compile(project, stLib)){ sb.append(runAllMains(p, Helper.out(project))); }
+    for (var p : compile(project, stLib)){ sb.append(runAllMains(p, Helper.out(project))); }
     return sb.toString();
   }
   default List<String> compile(Path project, SourceOracle stLib){
@@ -146,10 +146,10 @@ final class Helper{
     catch (FearlessException e){ throw Report.sourceError(e.render(o)); }
     Layer l= new BaseLayer(coordinator, res, out.commitMap(res, allRanks.stream().mapToLong(Ref::lastModified).max().getAsLong()), stLib);
     var byRank= new TreeMap<Integer,LinkedHashMap<String,List<Ref>>>();
-    for (var r: allRanks.stream().sorted(Comparator.comparing(Ref::fearPath)).toList()){
+    for (var r : allRanks.stream().sorted(Comparator.comparing(Ref::fearPath)).toList()){
       byRank.computeIfAbsent(rankNumber(r), _ -> new LinkedHashMap<>()).put(pkgName(r), map.get(pkgName(r)));
     }
-    for (var pkgs: byRank.values()){ l = new MiddleLayer(coordinator, l, pkgs); }
+    for (var pkgs : byRank.values()){ l = new MiddleLayer(coordinator, l, pkgs); }
     return l;
   }
   static LinkedHashMap<String,List<Ref>> pkgMap(SourceOracle o, Path path){
