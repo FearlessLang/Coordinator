@@ -1,13 +1,13 @@
 package testBuildBase;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import coordinator.CapabilityEnvironment;
@@ -45,6 +45,6 @@ final class TestBuildBase{
   };
   @Test void test(){
     try{ c.main(ResolveResource.stLibPath, c.sourceOracle(ResolveResource.stLibPath));}
-    catch (InterruptedException e){ Assertions.fail(e);}
+    catch (InterruptedException e){ fail(e);}
   }
 }

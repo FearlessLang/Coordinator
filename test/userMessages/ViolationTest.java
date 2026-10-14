@@ -1,5 +1,7 @@
 package userMessages;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -61,7 +63,7 @@ If this keeps happening, report the problem.
 """, Violation.couldNotForceEnglish("Locale.setDefault refused: security manager denied setDefault permission", cause).getMessage());
   }
   @Test void couldNotForceEnglishOneArgOverloadMatchesTwoArgWithNullCause(){
-    Assertions.assertEquals(
+    assertEquals(
       Violation.couldNotForceEnglish("mock locale failure", null).getMessage(),
       Violation.couldNotForceEnglish("mock locale failure").getMessage());
   }
