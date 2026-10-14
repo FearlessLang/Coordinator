@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -192,11 +193,7 @@ public final class HtmlDocBuilder{
       occ.line(), occ.textColumn()+sp.end()-1), msg);
   }
 
-  TypeDoc type(Literal l){
-    var res= typeBySrc.get(l.src());
-    assert res != null: "Literal not registered: "+l.pos()+" "+l.name();
-    return res;
-  }
+  TypeDoc type(Literal l){ return Objects.requireNonNull(typeBySrc.get(l.src())); }
 
   //owner.cs() is fully flattened, so an overridden ancestor still gets its own entry here:
   //by design, "From:" shows every provider along the chain, shadowed ones included.
