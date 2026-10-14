@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.function.Function;
 import java.util.stream.Stream;
 import java.util.zip.CRC32;
+import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
 import org.junit.jupiter.api.Assertions;
@@ -203,7 +204,7 @@ This file is dated [###]""", FsDsl.dumpErr(root, ex));
     var bytes= new ByteArrayOutputStream();
     Fs.ofV(() -> {
       try (var zip= new ZipOutputStream(bytes)){
-        var e= new java.util.zip.ZipEntry(entry);
+        var e= new ZipEntry(entry);
         e.setTime(t);
         zip.putNextEntry(e);
         zip.write("A".getBytes(StandardCharsets.UTF_8));
@@ -463,10 +464,10 @@ We check this so that you[###]
     Files.writeString(root.resolve("_pkg/a.fear"), "A");
     var bytes= new ByteArrayOutputStream();
     try (var zos= new ZipOutputStream(bytes, StandardCharsets.UTF_8)){
-      zos.putNextEntry(new java.util.zip.ZipEntry("notes.zip"));
+      zos.putNextEntry(new ZipEntry("notes.zip"));
       zos.write("plain text, not a zip".getBytes(StandardCharsets.UTF_8));
       zos.closeEntry();
-      zos.putNextEntry(new java.util.zip.ZipEntry("b.fear"));
+      zos.putNextEntry(new ZipEntry("b.fear"));
       zos.write("B".getBytes(StandardCharsets.UTF_8));
       zos.closeEntry();
     }
@@ -1654,7 +1655,7 @@ Optional.empty
     UserError.root = zipRoot;
     Files.createDirectories(zipRoot.resolve("_pkg"));
     try (var zos= new ZipOutputStream(Files.newOutputStream(zipRoot.resolve("_pkg/z.zip")))){
-      zos.putNextEntry(new java.util.zip.ZipEntry("a.fear"));
+      zos.putNextEntry(new ZipEntry("a.fear"));
       zos.write(bad);
       zos.closeEntry();
     }

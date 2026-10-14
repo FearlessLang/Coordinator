@@ -11,6 +11,7 @@ import java.util.stream.Stream;
 import core.*;
 import core.E.*;
 import offensiveUtils.Require;
+import realSourceOracle.SourceOracleWithAutoload;
 import tools.Fs;
 import utils.Join;
 import utils.Pos;
@@ -132,7 +133,7 @@ public final class Backend{
     sb.append("    throw new AssertionError(\"No main called \"+n+\" in package ").append(tools.pkgName()).append("\");\n  }\n}\n");
     Fs.writeUtf8(out.resolve("Main.java"), sb.toString());
   }
-  static String assetLiteral(realSourceOracle.SourceOracleWithAutoload.Triple t){
+  static String assetLiteral(SourceOracleWithAutoload.Triple t){
     return "{"+javaStrLit(t.diskPath())+","+javaStrLit(t.zipSteps())+","+javaStrLit(t.zipEntry())+"}";
   }
   static String javaStrLit(String s){

@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.TreeMap;
+import java.util.function.Consumer;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.LongStream;
@@ -96,7 +97,7 @@ public interface Coordinator{
     out.mains(l.pkgs().keySet()).mains().forEach((k,v) -> res.put(k, v.file()));
     return Optional.of(Collections.unmodifiableMap(res));
   }
-  static ChildJvm startMain(Path project, Path base, String main, List<Path> sharedClasspath, java.util.function.Consumer<String> out){
+  static ChildJvm startMain(Path project, Path base, String main, List<Path> sharedClasspath, Consumer<String> out){
     return JavaTool.startMainFromJars(runData(project, base), Push.of(genJava(project), sharedClasspath), "_"+main.substring(0, main.indexOf('.'))+".Main", out, main);
   }
   static Path genJava(Path project){ return project.resolve(outDir).resolve("gen_java"); }

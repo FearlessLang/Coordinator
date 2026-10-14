@@ -17,13 +17,13 @@ record ProduceBody(BytecodeLineFix sb, Backend b, String thisName, M m){
     emitE(m.e().get());
     sb.a(";\n  }\n");
   }
-  private String optCast(core.T t){
-    if (!(t instanceof core.T.RCC rcc)){ return ""; }
+  private String optCast(T t){
+    if (!(t instanceof T.RCC rcc)){ return ""; }
     var n= rcc.c().name();
     var lit= n.pkgName().equals("base") && LiteralDeclarations.isPrimitiveLiteral(n.simpleName());
     return "("+b.typeName(lit ? LiteralDeclarations.superLiteral(n) : n)+")";
   }
-  void emitE(core.E e){ switch (e){
+  void emitE(E e){ switch (e){
     case X x -> sb.a(b.encodeTrailingPrimes(x.name())+"$");
     case Type t -> emitType(t);
     case Call c -> emitCall(c);
@@ -50,7 +50,7 @@ record ProduceBody(BytecodeLineFix sb, Backend b, String thisName, M m){
     }
     sb.a(")");//CHECK THIS: I think this is enough to make sure that there is never two fearless method calls on the same java line (possibly even overkill?)
   }
-  private String castedReceiverExpr(core.E recv){ return recv instanceof Call c ? optCast(c.expectedRes().inner) : ""; }
+  private String castedReceiverExpr(E recv){ return recv instanceof Call c ? optCast(c.expectedRes().inner) : ""; }
   private void emitLit(Literal lit){
     if (LiteralDeclarations.has(lit.cs(), LiteralDeclarations.captureFree)){
       b.generateInterface(lit, false);
