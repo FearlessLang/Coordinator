@@ -552,7 +552,7 @@ final class DocBuilderTest{
       @Override public TSpan span(){ return TSpan.fromPos(at, 1); }
     });
     var anon= new Literal(RC.imm, new TName("pkg.Anon", 0, at), List.of(), List.of(), "this", List.of(), src, true);
-    SourceOracle oracle= SourceOracle.debugBuilder().putURI(file, "\nx /// the anonymous one\n").build();
+    var oracle= SourceOracle.debugBuilder().putURI(file, "\nx /// the anonymous one\n").build();
     var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(anon), Optional.empty());
     builder.visitLiteral(anon);
     var html= new HtmlDocRenderer("pkg", Map.of(), builder.types, OtherPackages.empty(), Map.of(), Optional.empty()).render();
@@ -804,7 +804,7 @@ Holder
     });
     var colliding= new Literal(RC.imm, new TName("pkg._Holder_Examples", 0, collidingPos),
       List.of(), List.of(), "this", List.of(), collidingSrc, false);
-    SourceOracle oracle= SourceOracle.debugBuilder().putURI(file, "l1\nl2\nl3\nl4\n_Holder_Examples: Test {}\n").build();
+    var oracle= SourceOracle.debugBuilder().putURI(file, "l1\nl2\nl3\nl4\n_Holder_Examples: Test {}\n").build();
     var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(holder, colliding), Optional.empty());
     builder.visitLiteral(holder);
     builder.visitLiteral(colliding);

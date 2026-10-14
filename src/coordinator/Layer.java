@@ -7,7 +7,6 @@ import java.util.Map;
 import java.util.stream.Stream;
 
 import core.AllLs;
-import core.E.Literal;
 import core.OtherPackages;
 import realSourceOracle.SourceOracleWithAutoload;
 import tools.Fs;
@@ -26,7 +25,7 @@ record MiddleLayer(Coordinator coordinator, Layer next, LinkedHashMap<String,Lis
   @Override public SourceOracle stLib(){ return next.stLib(); }
   @Override public List<String> pkgNames(){ return Stream.concat(next.pkgNames().stream(), pkgs.keySet().stream()).toList(); }
   @Override public OtherPackages compile(SourceOracle src, OutputOracle out){
-    OtherPackages other= next.compile(src, out);
+    var other= next.compile(src, out);
     var nextOther= other;
     for (var pkg: pkgs.keySet()){
       var files= pkgs.get(pkg);
@@ -35,7 +34,7 @@ record MiddleLayer(Coordinator coordinator, Layer next, LinkedHashMap<String,Lis
       if (out.stillBuilt(pkg, files, next.pkgNames(), maxIn)){ nextOther = out.addCachedPkgApi(nextOther, pkg); continue; }
       var rich= SourceOracleWithAutoload.of(src, "_"+pkg);
       var capabilities= new CapabilityEnvironment(rich.autoloadedAssets());
-      List<Literal> core= coordinator.frontend(pkg, rich.sources(files), rich.oracle(), other, other.virtualizationMap().getOrDefault(pkg, Map.of()), capabilities);
+      var core= coordinator.frontend(pkg, rich.sources(files), rich.oracle(), other, other.virtualizationMap().getOrDefault(pkg, Map.of()), capabilities);
       var mains= MainsInfo.of(core, src, stLib());
       coordinator.backend(pkg, core, rich.oracle(), other, capabilities);
       long newStamp= out.commit(pkg, core, mains, files, next.pkgNames(), maxIn); // newStamp will be the old api file mtime if there was no reason to commit.
@@ -54,7 +53,7 @@ record BaseLayer(Coordinator coordinator, Map<String,Map<String,String>> map, lo
     if (out.stillBuilt(pkgName, stLib.allFiles(), List.of(), maxIn)){ return out.startCachedPkgApi(pkgName, map, Math.max(baseStamp, out.pkgApiStamp(pkgName))); }
     var rich= SourceOracleWithAutoload.ofBase(stLib);
     var capabilities= new CapabilityEnvironment(rich.autoloadedAssets());
-    List<Literal> core= coordinator.frontend(pkgName, rich.sources(stLib.allFiles()), rich.oracle(), other, Map.of(), capabilities);
+    var core= coordinator.frontend(pkgName, rich.sources(stLib.allFiles()), rich.oracle(), other, Map.of(), capabilities);
     coordinator.backend(pkgName, core, rich.oracle(), other, capabilities);
     long newStamp= out.commit(pkgName, core, Map.of(), stLib.allFiles(), List.of(), maxIn);
     return OtherPackages.start(map, AllLs.of(core).values(), Math.max(baseStamp, newStamp));

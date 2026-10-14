@@ -78,9 +78,9 @@ public interface Coordinator{
     return sb.toString();
   }
   default List<String> compile(Path project, SourceOracle stLib){
-    SourceOracle o= sourceOracle(project);
+    var o= sourceOracle(project);
     var out= Helper.out(project);
-    Layer l= Helper.layerOf(this, o, project, out, stLib);
+    var l= Helper.layerOf(this, o, project, out, stLib);
     out.forgetAllBut(l.pkgNames());
     l.compile(o, out);
     Fs.writeUtf8(out.mainsPath(), out.mains(l.pkgs().keySet()).located(o, stLib).print());
@@ -88,7 +88,7 @@ public interface Coordinator{
   }
   default Optional<Map<String,String>> mains(Path project, SourceOracle stLib){
     var c= new NoCompile(baseCachePath());
-    SourceOracle o= sourceOracle(project);
+    var o= sourceOracle(project);
     var out= new NoCommit(Helper.out(project).rootDir());
     Layer l;
     try{ l= Helper.layerOf(c, o, project, out, stLib); l.compile(o, out); }
@@ -140,7 +140,7 @@ final class Helper{
   }
   static Layer layerOf(Coordinator coordinator, SourceOracle o, Path project, OutputOracle out, SourceOracle stLib){
     var map= pkgMap(o, project);
-    List<Ref> allRanks= map.values().stream().map(Helper::okPkgContent).toList();
+    var allRanks= map.values().stream().map(Helper::okPkgContent).toList();
     Map<String,Map<String,String>> res; try{res= new FrontendLogicMain()
       .parseRankFiles(allRanks, Comparator.comparingInt(Helper::rankNumber), Push.of(allRanks.stream().map(Helper::pkgName).toList(), "base"));}
     catch (FearlessException e){ throw Report.sourceError(e.render(o)); }

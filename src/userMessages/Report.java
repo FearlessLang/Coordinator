@@ -330,7 +330,7 @@ when deciding what needs compiling, so such a date can not be trusted.
     );
   }
   public static UserError invisibleSiblingNamesCollide(RefParent kid, String prev, String name, boolean caseOnly, boolean nfcOnly){
-    String reason=
+    var reason=
       caseOnly ? "Names differ only by case."
       : nfcOnly  ? "Names differ only by Unicode normalization (NFC)."
       :            "Names collide after Unicode NFC normalization and case-folding.";

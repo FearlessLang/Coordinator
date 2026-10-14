@@ -24,7 +24,7 @@ import utils.Bug;
 
 public final class StringFiles{
   public static String read(Path path, BiConsumer<String,String> onError){
-    byte[] bytes= ByteFiles.read(path, (k,c) ->
+    var bytes= ByteFiles.read(path, (k,c) ->
       fail(onError, requiresReport.contains(k), FailureText.explain(Op.Read, k, path), c));
     var input= ByteBuffer.wrap(bytes);
     try{ return UTF_8.newDecoder().decode(input).toString(); }

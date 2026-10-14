@@ -19,7 +19,7 @@ final class UserErrorTest{
     assertWhitelisted(UserError.path("C:\\Users\\caf\u00e9\\proj"));
   }
   @Test void displayFileNameStaysWithinWhitelist(@TempDir Path tmp){
-    Path nonAscii= tmp.resolve("caf\u00e9_\u4e2d\u6587");
+    var nonAscii= tmp.resolve("caf\u00e9_\u4e2d\u6587");
     assertWhitelisted(PrettyFileName.displayFileName(nonAscii.toUri()));
   }
   private static void assertWhitelisted(String s){

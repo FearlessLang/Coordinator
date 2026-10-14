@@ -193,7 +193,7 @@ final class CommonInfo{
   private static String chain(Path path, Suppressed suppressed){
     var visited= new HashSet<Path>();
     var out= new StringBuilder();
-    Path current= path.toAbsolutePath().normalize();//normalize is lexical, no I/O
+    var current= path.toAbsolutePath().normalize();//normalize is lexical, no I/O
     try{
       while (Files.isSymbolicLink(current)){//returns false (not throws) on error, ending the walk
         if (visited.size() >= maxLinkFollowed){ return out.append("\nChain exceeds ").append(maxLinkFollowed).append(" links; not followed further.\n").toString(); }

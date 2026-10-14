@@ -52,14 +52,14 @@ public final class Main{
   private static void run(String[] args) throws InterruptedException{
     var appDir= JavacTool.reqAppDir(Violation::mustUseLauncher);
     offerAssociation(appDir);
-    Optional<Path> launch= Stream.of(args).filter(a -> !a.startsWith("-psn_")).findFirst().map(Main::normalize);
+    var launch= Stream.of(args).filter(a -> !a.startsWith("-psn_")).findFirst().map(Main::normalize);
     if (Fs.isMac() && !hasConsoleFlag()){ Desktop.getDesktop().setOpenFileHandler(e -> e.getFiles().forEach(f -> spawnMac(appDir, f.toPath()))); }
     if (launch.isEmpty()){
       if (Fs.isMac()){ Thread.sleep(1000); }
       if (macSpawnOk.get() == 0){ InitialSupportGuiMain.main(new String[]{}); }
       return;
     }
-    Path l= launch.get();
+    var l= launch.get();
     if (!Files.exists(l)){ throw Report.launchPathNotFound(l); }
     var stdLib= appDir.resolve("stdLib");
     run(Files.isDirectory(l) ? l : l.getParent(), stdLib.resolve("base"), stdLib.resolve("rt"));
@@ -98,9 +98,9 @@ public final class Main{
   private static void hookStd() throws InvocationTargetException, InterruptedException, ExecutionException{
     if (!Desktop.isDesktopSupported()){ throw Violation.desktopUnsupported(); }
     assert !SwingUtilities.isEventDispatchThread();
-    FutureTask<Consumer<String>> task= new FutureTask<>(Main::initGui);
+    var task= new FutureTask<>(Main::initGui);
     SwingUtilities.invokeAndWait(task);
-    Consumer<String> frame= task.get();
+    var frame= task.get();
     System.setOut(new PrintStream(new Utf8Sink(frame), true, UTF_8));
     System.setErr(new PrintStream(new Utf8Sink(frame), true, UTF_8));
   }

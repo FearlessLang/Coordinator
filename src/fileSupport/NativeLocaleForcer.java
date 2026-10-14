@@ -61,7 +61,7 @@ public final class NativeLocaleForcer{
   // the old Os version, which never looked at the result) NULL is now an Error.
   @SuppressWarnings("restricted")
   private static void setCLocale(int lcAll) throws Throwable{
-    MethodHandle setlocale= linker.downcallHandle(
+    var setlocale= linker.downcallHandle(
       linker.defaultLookup().findOrThrow("setlocale"),
       FunctionDescriptor.of(ADDRESS, JAVA_INT, ADDRESS));
     try (var arena= Arena.ofConfined()){
@@ -76,12 +76,12 @@ public final class NativeLocaleForcer{
     // With captureCallState the handle takes one extra LEADING MemorySegment
     // parameter: the buffer Windows's error code is captured into.
     // BOOL SetProcessPreferredUILanguages(DWORD flags, PCZZWSTR languages, PULONG count);
-    MethodHandle set= linker.downcallHandle(
+    var set= linker.downcallHandle(
       kernel32.findOrThrow("SetProcessPreferredUILanguages"),
       FunctionDescriptor.of(JAVA_INT, JAVA_INT, ADDRESS, ADDRESS),
       captureLastError);
     // BOOL GetProcessPreferredUILanguages(DWORD flags, PULONG count, PZZWSTR buffer, PULONG bufferChars);
-    MethodHandle get= linker.downcallHandle(
+    var get= linker.downcallHandle(
       kernel32.findOrThrow("GetProcessPreferredUILanguages"),
       FunctionDescriptor.of(JAVA_INT, JAVA_INT, ADDRESS, ADDRESS, ADDRESS),
       captureLastError);
@@ -120,7 +120,7 @@ public final class NativeLocaleForcer{
     var out= new ArrayList<String>();
     long offset= 0;
     while (true){
-      String s= wideList.getString(offset, StandardCharsets.UTF_16LE);//reads up to the next null terminator
+      var s= wideList.getString(offset, StandardCharsets.UTF_16LE);//reads up to the next null terminator
       if (s.isEmpty()){ return out; }//the empty string is the list terminator
       out.add(s);
       offset += (s.length()+1)*2L;//chars plus terminator, two bytes each
