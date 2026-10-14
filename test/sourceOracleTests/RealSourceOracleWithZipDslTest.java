@@ -1493,8 +1493,8 @@ world
     var base= new RealSourceOracleWithZip(root);
     var res= SourceOracleWithAutoload.of(base, "_assets");
     var generated= res.newRefs().getFirst().loadString();
-    assertTrue(generated.contains("Foo: base.TxtFile{"), generated);
-    assertTrue(generated.contains("Bar: base.TxtFile{"), generated);
+    utils.Err.strCmp("[###]Foo: base.TxtFile{[###]", generated);
+    utils.Err.strCmp("[###]Bar: base.TxtFile{[###]", generated);
   }
 
   @Test void okAssetAutoloadOriginalFileNameIsTheBareFileName(@TempDir Path tmp){
@@ -1512,8 +1512,8 @@ world
     var base= new RealSourceOracleWithZip(root);
     var res= SourceOracleWithAutoload.of(base, "_assets");
     var generated= res.newRefs().getFirst().loadString();
-    assertTrue(generated.contains(".originalFileName: base.Str -> \"foo.txt\";"), generated);
-    assertTrue(generated.contains(".originalFileName: base.Str -> \"bar.txt\";"), generated);
+    utils.Err.strCmp("[###].originalFileName: base.Str -> \"foo.txt\";[###]", generated);
+    utils.Err.strCmp("[###].originalFileName: base.Str -> \"bar.txt\";[###]", generated);
   }
 
   @Test void okBaseAssetAutoload(@TempDir Path tmp){

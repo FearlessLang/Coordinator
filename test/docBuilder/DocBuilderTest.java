@@ -16,6 +16,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
 
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -30,6 +31,7 @@ import core.Src;
 import core.T;
 import core.TName;
 import core.TSpan;
+import org.opentest4j.AssertionFailedError;
 import realSourceOracle.PathEntry;
 import tools.Fs;
 import tools.SourceOracle;
@@ -37,6 +39,7 @@ import userMessages.UserError;
 import utils.Pos;
 
 final class DocBuilderTest{
+  static{ utils.Err.setUp(AssertionFailedError.class, Assertions::assertEquals, Assertions::assertTrue); }
   private static final URI file= URI.create("fear:/_pkg/a.fear");
   private static final URI tests= URI.create("fear:/auto_tests/pkg_test.fear");
 
@@ -209,7 +212,7 @@ final class DocBuilderTest{
     renderer.renderExamples(sb, List.of(".check{1.assertEq(1)}"));
     var rendered= sb.toString();
     assertTrue(rendered.contains("<details class=\"examples\">"), "examples must render as an expandable details block: "+rendered);
-    assertTrue(rendered.contains("<pre class=\"example\">.check{1.assertEq(1)}</pre>"), rendered);
+    utils.Err.strCmp("[###]<pre class=\"example\">.check{1.assertEq(1)}</pre>[###]", rendered);
   }
 
   @Test void renderExamplesRendersNothingWhenThereAreNoExamples(){
@@ -553,8 +556,8 @@ final class DocBuilderTest{
     var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(anon), Optional.empty());
     builder.visitLiteral(anon);
     var html= new HtmlDocRenderer("pkg", Map.of(), builder.types, OtherPackages.empty(), Map.of(), Optional.empty()).render();
-    assertTrue(html.contains(">Anon@a:2<"), html);
-    assertTrue(html.contains("anonymous literal at "), html);
+    utils.Err.strCmp("[###]>Anon@a:2<[###]", html);
+    utils.Err.strCmp("[###]anonymous literal at [###]", html);
   }
 
   @Test void renderTextProducesAPlainSignatureLineWithNoPlaceholderForMissingDocs(){
@@ -813,8 +816,8 @@ Holder
     var renderer= new HtmlDocRenderer("pkg", Map.of(), builder.types, OtherPackages.empty(), Map.of(), Optional.empty());
     var ex= assertThrows(UserError.class, () -> builder.writeTest(renderer, new PathEntry(tmp, Path.of("auto_tests", "pkg_test.fear"))));
 
-    assertTrue(ex.getMessage().contains("_Holder_Examples"), ex.getMessage());
-    assertTrue(ex.getMessage().contains("AllAutoTests_pkg"), ex.getMessage());
+    utils.Err.strCmp("[###]_Holder_Examples[###]", ex.getMessage());
+    utils.Err.strCmp("[###]AllAutoTests_pkg[###]", ex.getMessage());
   }
 
   @Test void renderTextShowsPlainFromProvenanceForAnInheritedMethod(){
@@ -831,7 +834,7 @@ Holder
 
     var text= new HtmlDocRenderer("pkg", Map.of(), builder.types, OtherPackages.empty(), Map.of(), Optional.empty()).renderText();
 
-    assertTrue(text.contains("from: Sup.foo"), text);
+    utils.Err.strCmp("[###]from: Sup.foo[###]", text);
     assertFalse(text.contains("<a "), text);
   }
 
@@ -847,7 +850,7 @@ Holder
 
     var ex= assertThrows(UserError.class, () -> builder.complete(tests));
 
-    assertTrue(ex.getMessage().contains("more than one declaration on the same line"), ex.getMessage());
+    utils.Err.strCmp("[###]more than one declaration on the same line[###]", ex.getMessage());
   }
 
   @Test void aTrailingDocSharedByThreeDeclarationsOnOneLineIsStillAnAmbiguousReferenceError(@TempDir Path tmp){
@@ -876,7 +879,7 @@ Holder
 
     var ex= assertThrows(UserError.class, () -> builder.complete(tests));
 
-    assertTrue(ex.getMessage().contains("more than one declaration on the same line"), ex.getMessage());
+    utils.Err.strCmp("[###]more than one declaration on the same line[###]", ex.getMessage());
   }
 
   @Test void aTrailingDocAfterAClosedNestedBraceOnTheSameLineIsNotAmbiguous(@TempDir Path tmp){
