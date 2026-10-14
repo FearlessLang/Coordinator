@@ -41,7 +41,7 @@ public record SourceOracleWithAutoload(SourceOracle base, Ref autoload, URI auto
     if (suppressed(base, pkgName, path)){ return new Res(base, List.of(), Map.of()); }
     var gen= generate(base, pkgName, path);
     if (gen.text().isEmpty()){ return new Res(base, List.of(), Map.of()); }
-    var auto= syntheticRef(pkgName, gen.text());
+    var auto= new SyntheticRef(SourceOracle.root+pkgName+autoloadFileSuffix, gen.text());
     var all= Push.of(base.allFiles(), auto);
     return new Res(
       new SourceOracleWithAutoload(base, auto, auto.fearURI().normalize(), all),
@@ -68,19 +68,15 @@ public record SourceOracleWithAutoload(SourceOracle base, Ref autoload, URI auto
         var type= AutoloadHandler.standardTypeName(pkgName, ref, p);
         var prev= declaredBy.putIfAbsent(type, ref);
         if (prev != null){ throw Report.autoloadedNamesCollide(ref, prev.fearPath(), ref.fearPath(), type); }
-        var t= AssetAutoload.triple(ref);
+        var t= AutoloadHandler.triple(ref);
         out.append(h.generate(t, p, type));
         assets.put(type, t);
       }
     }
     return new Generated(out.toString(), Collections.unmodifiableMap(assets));
   }
-  public static Ref syntheticRef(String pkgName, String text){
-    return new SyntheticRef(SourceOracle.root+pkgName+autoloadFileSuffix, text);
-  }
   private record SyntheticRef(String fearPath, String text) implements Ref{
     @Override public byte[] loadBytes(){ return text.getBytes(StandardCharsets.UTF_8); }
-    @Override public String loadString(){ return text; }
     @Override public long lastModified(){ return 0; }
     @Override public String toString(){ return fearPath; }
   }

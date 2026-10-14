@@ -28,9 +28,6 @@ record Candidate(TName owner, Optional<String> selector, OptionalInt arity, Opti
     var m= method.main().sig().m();
     return new Candidate(owner, Optional.of(m.s()), OptionalInt.of(m.arity()), Optional.of(method));
   }
-  static Candidate ofForeignMethod(TName owner, String selector, int arity){
-    return new Candidate(owner, Optional.of(selector), OptionalInt.of(arity), Optional.empty());
-  }
 }
 
 sealed interface DocLink{
@@ -40,5 +37,3 @@ sealed interface DocLink{
   /// variable. Shown as code, never an error.
   record NoLink() implements DocLink{}
 }
-
-record ResolvedSpan(int start, int end, DocLink link){}

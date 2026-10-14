@@ -18,7 +18,6 @@ import core.AllLs;
 import core.E.Literal;
 import core.M;
 import core.OtherPackages;
-import core.Sig;
 import core.TName;
 import tools.Fs;
 import tools.SourceOracle.Ref;
@@ -34,10 +33,6 @@ public interface OutputOracle{
   default long pkgApiStamp(String pkg){ return Fs.lastModified(pkgApiPath(pkg)); }
   default boolean stillBuilt(String pkg, List<Ref> files, List<String> below, long minMillis){
     return Fs.lastModified(builtPath(pkg)) >= minMillis && Fs.readUtf8(builtPath(pkg)).equals(OutputHelper.built(files, below)) && Files.exists(mainsPath(pkg));
-  }
-  default void commitBuilt(String pkg, List<Ref> files, List<String> below, long inputsStamp){
-    Fs.writeUtf8(builtPath(pkg), OutputHelper.built(files, below));
-    Fs.ofV(() -> Files.setLastModifiedTime(builtPath(pkg), FileTime.fromMillis(inputsStamp)));
   }
   default void forgetAllBut(List<String> pkgs){
     if (!Files.isDirectory(rootDir())){ return; }
@@ -61,7 +56,13 @@ public interface OutputOracle{
     return Fs.writeUtf8(pkgApiPath(pkg), ApiJson.toJSon(core), res.isEmpty() ? -1 : minExclusiveMillis);
   }
   default Optional<MainsInfo> mainsInfo(){ return Optional.of(mainsPath()).filter(Files::exists).map(MainsInfo::parse); }
-  default void commitMains(String pkg, Map<String,MainsInfo.Main> mains){ Fs.writeUtf8(mainsPath(pkg), new MainsInfo(mains).print()); }
+  default long commit(String pkg, List<Literal> core, Map<String,MainsInfo.Main> mains, List<Ref> files, List<String> below, long inputsStamp){
+    long newStamp= commitPkgApi(pkg, core, inputsStamp);
+    Fs.writeUtf8(mainsPath(pkg), new MainsInfo(mains).print());
+    Fs.writeUtf8(builtPath(pkg), OutputHelper.built(files, below));
+    Fs.ofV(() -> Files.setLastModifiedTime(builtPath(pkg), FileTime.fromMillis(inputsStamp)));
+    return newStamp;
+  }
   default MainsInfo mains(Collection<String> pkgs){
     return new MainsInfo(pkgs.stream().flatMap(p -> MainsInfo.parse(mainsPath(p)).mains().entrySet().stream()).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
   }
@@ -97,13 +98,10 @@ final class OutputHelper{
     return Optional.of(s);
   }
   static boolean consistent(Map<TName,Literal> map, List<Literal> core){
-    var allCore= AllLs.of(core).values();
     //Not filtered to public-only: privates can still be mentioned in meth parameters and ret types.
-    return map.size() == allCore.size() && allCore.stream().allMatch(l -> map.containsKey(l.name()) && eqApi(l, map.get(l.name())));
+    return api(map.values()).equals(api(AllLs.of(core).values()));
   }
-  private static boolean eqApi(Literal a, Literal b){
-    return a.rc() == b.rc() && a.name().equals(b.name()) && a.thisName().equals(b.thisName())
-      && a.bs().equals(b.bs()) && a.cs().equals(b.cs()) && sigs(a).equals(sigs(b));
+  private static Map<TName,List<?>> api(Collection<Literal> ls){
+    return ls.stream().collect(Collectors.toMap(Literal::name, l -> List.of(l.rc(), l.thisName(), l.bs(), l.cs(), l.ms().stream().map(M::sig).toList())));
   }
-  private static List<Sig> sigs(Literal l){ return l.ms().stream().map(M::sig).toList(); }
 }

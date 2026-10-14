@@ -24,7 +24,13 @@ import utils.Range;
 
 public final class ZipLocator{
   private static Map<String,byte[]> readHere(Path diskZip, List<String> steps, byte[] bytes){
-    return readZip(diskZip, steps).readAll(() -> zipStream(diskZip, bytes));
+    return new ReadZip(
+      n -> Report.zipBadEntryName(diskZip, steps, n),
+      a -> Report.zipDuplicateEntryName(diskZip, steps, a),
+      n -> Report.zipEntryTooBig(diskZip, steps, n),
+      n -> Report.zipEmptyDirectoryEntry(diskZip, steps, n),
+      (n,t) -> reqTime(n, t, () -> Report.zipEntryDateUnset(diskZip, steps, n, t), now -> Report.zipEntryDateInTheFuture(diskZip, steps, n, t, now))
+    ).readAll(() -> zipStream(diskZip, bytes));
   }
   public static List<String> entryNames(Path diskZip, List<String> steps){
     return fetch(diskZip, steps, bytes -> reqEntries(diskZip, steps, bytes, List.copyOf(readHere(diskZip, steps, bytes).keySet())));
@@ -41,18 +47,6 @@ public final class ZipLocator{
     if (res == null){ throw Violation.cacheCouldNotFindZipEntry(diskZip, steps, entryName); }
     return res;
   }
-  private static <T> T fetch(Path diskZip, List<String> steps, Function<byte[],T> onFinal){
-    return Fs.of(() -> fetchSteps(diskZip, steps, onFinal));
-  }
-  private static ReadZip readZip(Path diskZip, List<String> steps){
-    return new ReadZip(
-      n -> Report.zipBadEntryName(diskZip, steps, n),
-      a -> Report.zipDuplicateEntryName(diskZip, steps, a),
-      n -> Report.zipEntryTooBig(diskZip, steps, n),
-      n -> Report.zipEmptyDirectoryEntry(diskZip, steps, n),
-      (n,t) -> reqTime(n, t, () -> Report.zipEntryDateUnset(diskZip, steps, n, t), now -> Report.zipEntryDateInTheFuture(diskZip, steps, n, t, now))
-    );
-  }
   private static void reqTime(String name, long t, Supplier<UserError> unset, LongFunction<UserError> future){
     if (Stream.of(name.split("/")).anyMatch(s -> s.startsWith("."))){ return; }
     BuildWithZip.reqTime(t, unset, future);
@@ -62,7 +56,7 @@ public final class ZipLocator{
       ? new ZipInputStream(Files.newInputStream(diskZip), UTF_8)
       : new ZipInputStream(new ByteArrayInputStream(bytes), UTF_8);
   }
-  private static <T> T fetchSteps(Path diskZip, List<String> steps, Function<byte[],T> onFinal) throws IOException{
+  private static <T> T fetch(Path diskZip, List<String> steps, Function<byte[],T> onFinal){
     byte[] bytes= null;
     for (int i: Range.of(steps)){
       var upTo= steps.subList(0, i+1);
