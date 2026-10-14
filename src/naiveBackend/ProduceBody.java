@@ -13,9 +13,9 @@ import utils.Streams;
 
 record ProduceBody(BytecodeLineFix sb, Backend b, String thisName, M m){
   public void emitBody(){
-    if (!"_".equals(thisName)){ sb.a("    var ").a(thisName).a("$= this;\n"); }
+    if (!thisName.equals("_")){ sb.a("    var ").a(thisName).a("$= this;\n"); }
     Streams.zipI(m.xs(), m.sig().ts())
-      .filter((_,x,_) -> !"_".equals(x))
+      .filter((_,x,_) -> !x.equals("_"))
       .forEach((i,x,t) -> sb
         .a("    var ").a(b.encodeTrailingPrimes(x))
         .a("$= ").a(optCast(t)).a("p"+i+";\n"));
