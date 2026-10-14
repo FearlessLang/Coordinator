@@ -1,7 +1,13 @@
 package naiveBackend;
 
-import core.*;
-import core.E.*;
+import core.E;
+import core.E.Call;
+import core.E.Literal;
+import core.E.Type;
+import core.E.X;
+import core.LiteralDeclarations;
+import core.M;
+import core.T;
 import utils.Range;
 import utils.Streams;
 

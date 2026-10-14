@@ -1,10 +1,21 @@
 package docBuilder;
 
 import java.net.URI;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.SequencedCollection;
+import java.util.SequencedMap;
 
-import core.*;
 import core.E.Literal;
+import core.M;
+import core.MName;
+import core.RC;
+import core.T;
+import core.TName;
 import utils.Pos;
 
 final class TypeDoc{
