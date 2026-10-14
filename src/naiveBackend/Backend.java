@@ -104,7 +104,7 @@ public final class Backend{
     var head= s.substring(0, s.length() - k);
     assert head.indexOf('\'')==-1: "prime (') must be trailing only: "+s;
     return head + "$p" + k;
-  }  
+  }
   String decTypeName(TName n){ return encodeTrailingPrimes(n.simpleName())+"$"+caseTag(n.simpleName())+"$"+n.arity(); }
   String typeName(TName n){ return "_"+encodeTrailingPrimes(n.s())+"$"+caseTag(n.simpleName())+"$"+n.arity(); }
   static String caseTag(String s){

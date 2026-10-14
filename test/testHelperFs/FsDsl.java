@@ -204,6 +204,6 @@ public final class FsDsl{
     var ex= assertThrows(UserError.class, () -> new RealSourceOracleWithZip(root));
     String res= dumpErr(root, ex);
     utils.Err.strCmp(expected, res);
-  }  
-  
+  }
+
 }

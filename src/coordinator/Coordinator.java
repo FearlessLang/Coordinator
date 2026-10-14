@@ -101,7 +101,7 @@ public interface Coordinator{
   }
   static Path genJava(Path project){ return project.resolve(outDir).resolve("gen_java"); }
   String outDir= ".fearless_out";
-  
+
   default List<Literal> frontend(String pkgName, List<Ref> files, SourceOracle oracle, OtherPackages other, Map<String,String> vres, CapabilityEnvironment capabilities){
     var tests= new ArrayList<Ref>();
     try{ return new FrontendLogicMain().of(pkgName, vres, files, other, core -> docs(pkgName, testsUri(pkgName, files), oracle, other, core, capabilities, tests)); }
