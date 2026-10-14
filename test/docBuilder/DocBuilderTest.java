@@ -19,6 +19,7 @@ import java.util.OptionalInt;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.opentest4j.AssertionFailedError;
 
 import core.B;
 import core.E.Literal;
@@ -31,7 +32,6 @@ import core.Src;
 import core.T;
 import core.TName;
 import core.TSpan;
-import org.opentest4j.AssertionFailedError;
 import realSourceOracle.PathEntry;
 import tools.Fs;
 import tools.SourceOracle;

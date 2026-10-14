@@ -1,9 +1,9 @@
 package userMessages;
 
 import static userMessages.UserError.disp;
+import static userMessages.UserError.path;
 import static userMessages.UserError.showRel;
 import static userMessages.UserError.showZipRel;
-import static userMessages.UserError.path;
 
 import java.nio.file.Path;
 import java.time.Duration;
@@ -16,10 +16,10 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import core.E.Literal;
 import core.LiteralDeclarations;
 import core.T;
 import core.TName;
-import core.E.Literal;
 import metaParser.Frame;
 import metaParser.Message;
 import tools.Fs;

@@ -15,11 +15,11 @@ import java.util.function.Supplier;
 import java.util.stream.Stream;
 import java.util.zip.ZipInputStream;
 
-import userMessages.Violation;
-import userMessages.Report;
-import userMessages.UserError;
 import tools.Fs;
 import tools.ReadZip;
+import userMessages.Report;
+import userMessages.UserError;
+import userMessages.Violation;
 import utils.Range;
 
 public final class ZipLocator{

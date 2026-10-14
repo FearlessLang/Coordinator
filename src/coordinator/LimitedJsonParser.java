@@ -11,7 +11,7 @@ import java.util.Optional;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-import userMessages.Violation;
+
 import core.B;
 import core.E.Literal;
 import core.M;
@@ -22,6 +22,7 @@ import core.Src;
 import core.T;
 import core.TName;
 import core.TSpan;
+import userMessages.Violation;
 import utils.Pos;
 
 final class LimitedJsonParser{

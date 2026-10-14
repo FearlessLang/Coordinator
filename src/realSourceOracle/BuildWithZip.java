@@ -16,13 +16,14 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.function.LongFunction;
 import java.util.function.Supplier;
+
 import docBuilder.HtmlDocBuilder;
-import userMessages.Report;
-import userMessages.UserError;
 import tools.Fs;
 import tools.SourceOracle;
 import tools.SourceOracle.Ref;
 import tools.SourceOracle.RefParent;
+import userMessages.Report;
+import userMessages.UserError;
 
 public final class BuildWithZip{
   public static boolean isInvisible(RefParent r){

@@ -1,9 +1,10 @@
 package mainCoordinator;
 
-import tools.Fs;
-import tools.OpenPath;
 import java.nio.file.Files;
 import java.nio.file.Path;
+
+import tools.Fs;
+import tools.OpenPath;
 
 public final class MakeDemo{
   public static final String markerContent= "\n";
