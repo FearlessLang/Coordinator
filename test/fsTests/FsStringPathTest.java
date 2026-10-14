@@ -4,7 +4,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 import tools.Fs;
 
-public final class FsStringPathTest{
+final class FsStringPathTest{
 
   // -------- helpers (each helper does exactly ONE call) --------
 
