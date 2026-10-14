@@ -377,8 +377,8 @@ iii
 Root: [###]
 Path: "_pkg"
 
-This directory is empty.
-Different systems handle empty directories differently,
+This folder is empty.
+Different systems handle empty folders differently,
 and they may not be supported by compression tools (zip)
 or version control systems (git).
 
@@ -409,7 +409,7 @@ Path: "_pkg/e.zip"
 Entry: "d"
 
 This zip contains a folder entry called "d", but it is empty.
-Different systems handle empty directories differently, and they may not be
+Different systems handle empty folders differently, and they may not be
 supported by compression tools (zip) or version control systems (git).
 
 We check this so that you[###]
@@ -428,7 +428,7 @@ Path: "_pkg/e.zip"
 Entry: "d"
 
 This zip contains a folder entry called "d", but it is empty.
-Different systems handle empty directories differently, and they may not be
+Different systems handle empty folders differently, and they may not be
 supported by compression tools (zip) or version control systems (git).
 
 We check this so that you[###]

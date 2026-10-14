@@ -137,8 +137,8 @@ Start Fearless on an existing project folder, or on a file inside one.
   }
   public static UserError emptyDirectory(Path kid){
     return directFail(showRel(kid), """
-This directory is empty.
-Different systems handle empty directories differently,
+This folder is empty.
+Different systems handle empty folders differently,
 and they may not be supported by compression tools (zip)
 or version control systems (git).
 """);}
@@ -445,7 +445,7 @@ Fearless expands each zip file into a folder: rename this file if it is not mean
   public static UserError zipEmptyDirectoryEntry(Path diskZip, List<String> steps, String entryName){
     return directFail(showZipRel(diskZip, steps, entryName),
       "This zip contains a folder entry called "+disp(entryName)+", but it is empty.\n"
-     +"Different systems handle empty directories differently, and they may not be\n"
+     +"Different systems handle empty folders differently, and they may not be\n"
      +"supported by compression tools (zip) or version control systems (git).");
   }
 
