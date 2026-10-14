@@ -1,7 +1,15 @@
 package docBuilder;
 
 import java.net.URI;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.IdentityHashMap;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 
 import utils.Pos;
 
@@ -14,10 +22,10 @@ final class SourceDocs{
 
   final URI uri;
   final List<String> lines;
-  final Map<Integer,List<DocOcc>> docsByLine= new HashMap<>();
-  final Map<Integer,int[]> depthByLine= new HashMap<>();
+  final HashMap<Integer,List<DocOcc>> docsByLine= new HashMap<>();
+  final HashMap<Integer,int[]> depthByLine= new HashMap<>();
   final Set<DocOcc> attached= Collections.newSetFromMap(new IdentityHashMap<>());
-  final Map<DocOcc,Integer> inlineClaimedFromColumn= new IdentityHashMap<>();
+  final IdentityHashMap<DocOcc,Integer> inlineClaimedFromColumn= new IdentityHashMap<>();
   final Set<DocOcc> ambiguousInline= Collections.newSetFromMap(new IdentityHashMap<>());
 
   List<DocOcc> docsAt(Pos pos, boolean includeBefore){
@@ -48,7 +56,7 @@ final class SourceDocs{
       .sorted(Comparator.comparingInt(DocOcc::line).thenComparingInt(DocOcc::column))
       .toList();
     var res= new ArrayList<List<DocOcc>>();
-    for (var d: lost){
+    for (var d : lost){
       var last= res.isEmpty() ? null : res.getLast().getLast();
       if (last != null && d.line()-last.line() <= 1){ res.getLast().add(d); continue; }
       res.add(new ArrayList<>(List.of(d)));
@@ -60,7 +68,7 @@ final class SourceDocs{
   //it, so it ends a paragraph without ending the block. The ones at either end of the
   //block separate nothing and are dropped. Anything else ends the block, and whatever
   //documentation is left above it is then attached to nothing, which is an error.
-  void collectBefore(int line, List<DocOcc> res){
+  void collectBefore(int line, ArrayList<DocOcc> res){
     var before= new ArrayList<DocOcc>();
     for (int l= line-1; l >= 1; l -= 1){
       var pure= pureDocs(l);

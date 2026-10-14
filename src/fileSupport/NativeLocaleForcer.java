@@ -1,5 +1,9 @@
 package fileSupport;
 
+import static java.lang.foreign.ValueLayout.ADDRESS;
+import static java.lang.foreign.ValueLayout.JAVA_CHAR;
+import static java.lang.foreign.ValueLayout.JAVA_INT;
+
 import java.lang.foreign.Arena;
 import java.lang.foreign.FunctionDescriptor;
 import java.lang.foreign.Linker;
@@ -15,10 +19,6 @@ import java.util.Locale;
 import tools.Fs;
 import userMessages.UserError;
 import userMessages.Violation;
-
-import static java.lang.foreign.ValueLayout.ADDRESS;
-import static java.lang.foreign.ValueLayout.JAVA_CHAR;
-import static java.lang.foreign.ValueLayout.JAVA_INT;
 
 // Code to be executed at the very beginning of main.
 // Java is forced to Locale.US.
@@ -54,14 +54,14 @@ public final class NativeLocaleForcer{
       throw Violation.unsupportedOperatingSystem();
     }
     catch (UserError e){ throw e; }
-    catch (Throwable t){ throw Violation.couldNotForceEnglish("The call into the operating system failed.", t); }
+    catch (Throwable e){ throw Violation.couldNotForceEnglish("The call into the operating system failed.", e); }
   }
   // char* setlocale(int category, const char* locale);
   // Returns NULL when the request is rejected; per the fail-loudly policy (and unlike
   // the old Os version, which never looked at the result) NULL is now an Error.
   @SuppressWarnings("restricted")
   private static void setCLocale(int lcAll) throws Throwable{
-    MethodHandle setlocale= linker.downcallHandle(
+    var setlocale= linker.downcallHandle(
       linker.defaultLookup().findOrThrow("setlocale"),
       FunctionDescriptor.of(ADDRESS, JAVA_INT, ADDRESS));
     try (var arena= Arena.ofConfined()){
@@ -76,12 +76,12 @@ public final class NativeLocaleForcer{
     // With captureCallState the handle takes one extra LEADING MemorySegment
     // parameter: the buffer Windows's error code is captured into.
     // BOOL SetProcessPreferredUILanguages(DWORD flags, PCZZWSTR languages, PULONG count);
-    MethodHandle set= linker.downcallHandle(
+    var set= linker.downcallHandle(
       kernel32.findOrThrow("SetProcessPreferredUILanguages"),
       FunctionDescriptor.of(JAVA_INT, JAVA_INT, ADDRESS, ADDRESS),
       captureLastError);
     // BOOL GetProcessPreferredUILanguages(DWORD flags, PULONG count, PZZWSTR buffer, PULONG bufferChars);
-    MethodHandle get= linker.downcallHandle(
+    var get= linker.downcallHandle(
       kernel32.findOrThrow("GetProcessPreferredUILanguages"),
       FunctionDescriptor.of(JAVA_INT, JAVA_INT, ADDRESS, ADDRESS, ADDRESS),
       captureLastError);
@@ -110,7 +110,7 @@ public final class NativeLocaleForcer{
       throw Violation.couldNotForceEnglish("Windows process UI language read failed (GetLastError=" + lastError(callState) + ")");
     }
     var languages= parseDoubleNullTerminatedUtf16(buffer);
-    if (languages.size() == 1 && enUs.equals(languages.get(0))){ return; }
+    if (languages.size() == 1 && languages.getFirst().equals(enUs)){ return; }
     throw Violation.couldNotForceEnglish("Fearless set the Windows process UI language to en-US, but Windows reported the language as " + languages + " instead");
   }
   private static int lastError(MemorySegment callState){
@@ -120,7 +120,7 @@ public final class NativeLocaleForcer{
     var out= new ArrayList<String>();
     long offset= 0;
     while (true){
-      String s= wideList.getString(offset, StandardCharsets.UTF_16LE);//reads up to the next null terminator
+      var s= wideList.getString(offset, StandardCharsets.UTF_16LE);//reads up to the next null terminator
       if (s.isEmpty()){ return out; }//the empty string is the list terminator
       out.add(s);
       offset += (s.length()+1)*2L;//chars plus terminator, two bytes each

@@ -1,6 +1,12 @@
 package integrationTests;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
@@ -12,6 +18,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
 import java.security.SecureRandom;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import javax.imageio.ImageIO;
@@ -31,32 +40,29 @@ import coordinator.Coordinator;
 import coordinator.OutputOracle;
 import core.E.Literal;
 import core.OtherPackages;
-import resources.ResolveResource;
-import testBuildBase.BaseCacheBuilder;
+import fileSupport.JUnitReport;
 import naiveBackend.Backend;
 import naiveBackend.BackendTools;
 import realSourceOracle.RealSourceOracleWithZip;
 import realSourceOracle.SourceOracleWithAutoload;
+import resources.ResolveResource;
+import testBuildBase.BaseCacheBuilder;
 import testHelperFs.FsDsl;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import fileSupport.JUnitReport;
 import tools.Fs;
 import tools.JavaTool;
 import tools.JavacTool;
 import tools.SourceOracle;
 import tools.SourceOracle.Ref;
-import utils.Push;
 import userMessages.UserError;
+import utils.Push;
 
-public final class RunIntegration{
+final class RunIntegration{
   static{ utils.Err.setUp(AssertionFailedError.class, Assertions::assertEquals, Assertions::assertTrue); }
 
   static final Path baseCache= ResolveResource.stLibDebugOut.resolve("baseCache");
   static final Path reportsDir= ResolveResource.coordinatorSrc.getParent().resolve(".out", "junit_xml");
   static final Path reportsFile= reportsDir.resolve("all_auto_tests.xml");
-  static final List<String> suites= new ArrayList<>();
+  static final ArrayList<String> suites= new ArrayList<>();
   static final SourceOracle stLib= new RealSourceOracleWithZip(ResolveResource.stLibPath);
   @BeforeAll static void buildBaseOnce(){
     BaseCacheBuilder.buildInto(ResolveResource.coordinatorJars, ResolveResource.stLibDebugOut, Optional.of(ResolveResource.stLibPath));
@@ -86,7 +92,7 @@ public final class RunIntegration{
   String run(String name){ return main(freshIntegrationRoot(name), List.of()); }
   String main(Path project, List<String> jvmArgs){
     try{ return coordinator(project, jvmArgs).main(project, stLib);}
-    catch (InterruptedException e){ return Assertions.fail(e);}
+    catch (InterruptedException e){ return fail(e);}
   }
   void testOk(String name){ unitTestsOk(name, freshIntegrationRoot(name)); }
   void unitTestsOk(String name, Path root){
@@ -94,11 +100,11 @@ public final class RunIntegration{
     var out= main(root, List.of("-Dfearless.endMarker="+marker));
     writeJUnitReport(name, root);
     var fails= out.lines().filter(l -> l.startsWith("Test failure ")).toList();
-    Assertions.assertTrue(fails.isEmpty(), () -> "Fearless unit tests failed in "+name+":\n"+String.join("\n", fails));
+    assertTrue(fails.isEmpty(), () -> "Fearless unit tests failed in "+name+":\n"+String.join("\n", fails));
     var lines= out.lines().toList();
     var mains= coordinator(root).mains(root, stLib).orElseThrow().size();
     var allCompleted= lines.stream().filter(marker::equals).count() == mains && lines.getLast().equals(marker);
-    Assertions.assertTrue(allCompleted, () -> "Not all the "+mains+" mains of "+name+" completed: a main that completes prints the line \""+marker+"\", and the output must end with that line. Output:\n"+out);
+    assertTrue(allCompleted, () -> "Not all the "+mains+" mains of "+name+" completed: a main that completes prints the line \""+marker+"\", and the output must end with that line. Output:\n"+out);
   }
   static void writeJUnitReport(String name){ writeJUnitReport(name, ResolveResource.integrationTests.resolve(name)); }
   static void writeJUnitReport(String name, Path root){
@@ -132,7 +138,7 @@ imm Assert._fail(_) error line: [###]
 imm MyTests# error line: 5 in file _hello/_rank_app.fear
 """, out);
   }
-  @Test void map_a_to_pkc(){ utils.Err.strCmp("CTEXT\n", run("map_a_to_pkc"));}
+  @Test void mapAToPkc(){ utils.Err.strCmp("CTEXT\n", run("map_a_to_pkc"));}
   // What counts as a main of a package: a top level type implementing base.Main, and
   // also one declared inside a method when it implements base.CaptureFree, since that
   // is the promise that it captures nothing and so the backend gives it an instance.
@@ -150,7 +156,7 @@ top level main
     var out= Coordinator.runMains(Coordinator.runData(tmp, ResolveResource.stLibPath), List.of(ResolveResource.coordinatorJars, baseCache), "_base.Main");
     writeJUnitReport("baseGeneratedExamples", tmp);
     var fails= out.lines().filter(l -> l.startsWith("Test failure ")).toList();
-    Assertions.assertTrue(fails.isEmpty(), () -> "The doc examples of base failed:\n"+String.join("\n", fails));
+    assertTrue(fails.isEmpty(), () -> "The doc examples of base failed:\n"+String.join("\n", fails));
   }
   @Test void testDocs(){
     utils.Err.strCmp("""
@@ -222,12 +228,12 @@ AllAutoTests_p: base.UnitTests {::
   }
 """, Fs.readUtf8(generatedTests(root)));
     var stamp= Files.getLastModifiedTime(generatedTests(root));
-    Assertions.assertEquals(Map.of("p", true), Coordinator.pkgsBuilt(root));
+    assertEquals(Map.of("p", true), Coordinator.pkgsBuilt(root));
     utils.Err.strCmp(expected, c.main(root, stLib));
     utils.Err.strCmp(expected, c.main(root, stLib));
-    Assertions.assertEquals(stamp, Files.getLastModifiedTime(generatedTests(root)));
-    Assertions.assertEquals(Map.of("p", true), Coordinator.pkgsBuilt(root));
-    Assertions.assertEquals(List.of("p"), frontends);
+    assertEquals(stamp, Files.getLastModifiedTime(generatedTests(root)));
+    assertEquals(Map.of("p", true), Coordinator.pkgsBuilt(root));
+    assertEquals(List.of("p"), frontends);
   }
   @Test void aStaleGeneratedTestIsRegenerated(@TempDir Path tmp) throws IOException{
     var root= docExamplesProject(tmp);
@@ -236,23 +242,23 @@ AllAutoTests_p: base.UnitTests {::
     c.compile(root, stLib);
     editAndTouch(root.resolve("_p", "_rank_app.fear"), ".inc", ".plus");
     c.compile(root, stLib);
-    Assertions.assertTrue(Fs.readUtf8(generatedTests(root)).contains(".check{Calc.plus(1) .assertEq 2}"));
-    Assertions.assertEquals(Map.of("p", true), Coordinator.pkgsBuilt(root));
-    Assertions.assertEquals(List.of("p", "p"), frontends);
+    utils.Err.strCmp("[###].check{Calc.plus(1) .assertEq 2}[###]", Fs.readUtf8(generatedTests(root)));
+    assertEquals(Map.of("p", true), Coordinator.pkgsBuilt(root));
+    assertEquals(List.of("p", "p"), frontends);
   }
   @Test void aFileWithoutTheMarkAtTheGeneratedLocationIsAnOrdinarySourceFile(@TempDir Path tmp) throws IOException{
     var root= docExamplesProject(tmp);
     var mine= "Mine:base.Main{s->base.Debug#(`mine`)}\n";
     Fs.writeUtf8(generatedTests(root), mine);
     utils.Err.strCmp("hi\nmine\n", main(root, List.of()));
-    Assertions.assertEquals(mine, Fs.readUtf8(generatedTests(root)));
+    assertEquals(mine, Fs.readUtf8(generatedTests(root)));
   }
   @Test void aBrokenExampleIsReportedInTheGeneratedTestsAtEveryCompile(@TempDir Path tmp) throws IOException{
     var root= docExamplesProject(tmp);
     coordinator(root).compile(root, stLib);
     editAndTouch(root.resolve("_p", "_rank_app.fear"), "Calc.twice(2)", "Calc.thrice(2)");
-    for (var _: List.of(1, 2)){
-      var ex= Assertions.assertThrows(UserError.class, () -> coordinator(root).compile(root, stLib));
+    for (var _ : List.of(1, 2)){
+      var ex= assertThrows(UserError.class, () -> coordinator(root).compile(root, stLib));
       utils.Err.strCmp("""
 In file: fear:/_p/auto_tests/p_test.fear
 [###]thrice[###]""", ex.getMessage());
@@ -261,10 +267,10 @@ In file: fear:/_p/auto_tests/p_test.fear
   @Test void aUserWrittenAllAutoTestsSuppressesGeneration(@TempDir Path tmp) throws IOException{
     var root= docExamplesProject(tmp);
     coordinator(root).compile(root, stLib);
-    Assertions.assertTrue(Files.exists(generatedTests(root)));
+    assertTrue(Files.exists(generatedTests(root)));
     editAndTouch(root.resolve("_p", "_rank_app.fear"), "App:Main", "AllAutoTests_p: base.UnitTests{t->t}\nApp:Main");
     utils.Err.strCmp("hi\n", main(root, List.of()));
-    Assertions.assertFalse(Files.exists(generatedTests(root)));
+    assertFalse(Files.exists(generatedTests(root)));
   }
   @Test void aDeletedLowerPackageIsNoticedByThePackagesBuiltOnIt(@TempDir Path tmp){
     var root= tmp.resolve("root");
@@ -281,11 +287,11 @@ App:Main, lib.Lib{s->base.Debug#(`app`)}
 """);
     utils.Err.strCmp("app\n", main(root, List.of()));
     Fs.rmTree(root.resolve("_lib"));
-    Assertions.assertEquals(Map.of("app", false), Coordinator.pkgsBuilt(root));
-    var ex= Assertions.assertThrows(UserError.class, () -> main(root, List.of()));
+    assertEquals(Map.of("app", false), Coordinator.pkgsBuilt(root));
+    var ex= assertThrows(UserError.class, () -> main(root, List.of()));
     utils.Err.strCmp("[###]lib.Lib[###]", ex.getMessage());
-    Assertions.assertFalse(Files.exists(root.resolve(".fearless_out", "gen_java", "lib.jar")));
-    Assertions.assertFalse(Files.exists(root.resolve(".fearless_out", "lib.built")));
+    assertFalse(Files.exists(root.resolve(".fearless_out", "gen_java", "lib.jar")));
+    assertFalse(Files.exists(root.resolve(".fearless_out", "lib.built")));
   }
   @Test void onlyImmCapture(@TempDir Path tmp){
     var root= tmp.resolve("root");
@@ -353,8 +359,8 @@ App:Main, lib.Lib{s->base.Debug#(`app`)}
   private Path theOneLogFile(Path dir, String prefix) throws IOException{
     try (var files= Files.list(dir)){
       var found= files.filter(p -> p.getFileName().toString().startsWith(prefix)).toList();
-      Assertions.assertEquals(1, found.size(), found.toString());
-      return found.get(0);
+      assertEquals(1, found.size(), found.toString());
+      return found.getFirst();
     }
   }
   @Test void testLogging() throws InterruptedException, IOException{
@@ -445,7 +451,7 @@ zeroMemo
   //@Test void testGui1(){ testOk("testGui1");}
   void compileOk(String name){ var project= freshIntegrationRoot(name); coordinator(project).compile(project, stLib); }
   @Test void theInteractiveProjectsStillCompile(){
-    for (var name: List.of("testGui1", "testGui2", "testGuiImg", "testGuiLive", "testBasketball", "testTicTacToe")){ compileOk(name); }
+    for (var name : List.of("testGui1", "testGui2", "testGuiImg", "testGuiLive", "testBasketball", "testTicTacToe")){ compileOk(name); }
   }
 
   // Two assets that generate the same auto-loaded type name (here "foo.txt" and "foo.png",
@@ -453,7 +459,7 @@ zeroMemo
   // the synthetic autoloaded_assets.fear file, with a message naming the two real files
   // instead of blaming a file the user never wrote.
   @Test void assetAutoloadNameCollision(@TempDir Path tmp) throws InterruptedException{
-    Path root= tmp.resolve("root");
+    var root= tmp.resolve("root");
     UserError.root = root;
     FsDsl.materialize(root, """
 _col/_rank_app.fear
@@ -468,7 +474,7 @@ _col/foo.png
 iii
 ignored
 """);
-    var ex= Assertions.assertThrows(UserError.class, () -> coordinator(root).main(root, stLib));
+    var ex= assertThrows(UserError.class, () -> coordinator(root).main(root, stLib));
     utils.Err.strCmp("""
 Invalid path in this project folder.
 
@@ -490,7 +496,7 @@ We check this so that you[###]
   }
 
   @Test void mainsAreListedWithTheFileDeclaringThem(@TempDir Path tmp){
-    Path root= tmp.resolve("root");
+    var root= tmp.resolve("root");
     UserError.root = root;
     FsDsl.materialize(root, """
 _col/_rank_app.fear
@@ -509,10 +515,10 @@ Again:Main{s->base.Debug#("again")}
   "col.Hello": ["_col/_rank_app.fear", [], []]
 }
 """, Fs.readUtf8(mainsInfo(root)));
-    Assertions.assertEquals(Map.of("col.Again", "_col/more.fear", "col.Hello", "_col/_rank_app.fear"), coordinator(root).mains(root, stLib).orElseThrow());
+    assertEquals(Map.of("col.Again", "_col/more.fear", "col.Hello", "_col/_rank_app.fear"), coordinator(root).mains(root, stLib).orElseThrow());
   }
   @Test void aCaptureFreeMainDeclaredInAMethodIsListedLikeTheOnesItRuns(@TempDir Path tmp) throws InterruptedException{
-    Path root= tmp.resolve("root");
+    var root= tmp.resolve("root");
     UserError.root = root;
     FsDsl.materialize(root, """
 _col/_rank_app.fear
@@ -523,10 +529,10 @@ Top:Main{s->base.Debug#(`top`)}
 MkFree:{.mk:Main->Free:Main,CaptureFree{s->base.Debug#(`free`)}}
 """);
     utils.Err.strCmp("free\ntop\n", coordinator(root).main(root, stLib));
-    Assertions.assertEquals(Map.of("col.Free", "_col/_rank_app.fear", "col.Top", "_col/_rank_app.fear"), coordinator(root).mains(root, stLib).orElseThrow());
+    assertEquals(Map.of("col.Free", "_col/_rank_app.fear", "col.Top", "_col/_rank_app.fear"), coordinator(root).mains(root, stLib).orElseThrow());
   }
   @Test void aPackageNamedAfterAJavaKeywordRuns(@TempDir Path tmp) throws InterruptedException{
-    Path root= tmp.resolve("root");
+    var root= tmp.resolve("root");
     UserError.root = root;
     FsDsl.materialize(root, """
 _int/_rank_app.fear
@@ -537,7 +543,7 @@ Hello:Main{s->base.Debug#(`hi`)}
     utils.Err.strCmp("hi\n", coordinator(root).main(root, stLib));
   }
   @Test void anAssetWhoseNameStartsWithUnderscoreAutoLoadsAsAPrivateType(@TempDir Path tmp) throws InterruptedException{
-    Path root= tmp.resolve("root");
+    var root= tmp.resolve("root");
     UserError.root = root;
     FsDsl.materialize(root, """
 _col/_rank_app.fear
@@ -559,7 +565,7 @@ hello
   // matches) must be rejected, never read - while a real auto-loaded asset (Note, from note.txt)
   // still works.
   @Test void aForgedAutoloadedAssetCannotReadAFileTheCompilerDidNotAutoImport(@TempDir Path tmp) throws InterruptedException{
-    Path root= tmp.resolve("root");
+    var root= tmp.resolve("root");
     UserError.root = root;
     FsDsl.materialize(root, """
 _col/_rank_app.fear
@@ -588,13 +594,13 @@ iii
 REAL ASSET CONTENT
 """);
     var out= coordinator(root).main(root, stLib);
-    Assertions.assertFalse(out.contains("TOP-SECRET-NOT-AN-ASSET"), out);
-    Assertions.assertTrue(out.contains("was not recognized by the compiler as auto-imported"), out);
-    Assertions.assertTrue(out.contains("REAL ASSET CONTENT"), out);
+    assertFalse(out.contains("TOP-SECRET-NOT-AN-ASSET"), out);
+    utils.Err.strCmp("[###]was not recognized by the compiler as auto-imported[###]", out);
+    utils.Err.strCmp("[###]REAL ASSET CONTENT[###]", out);
   }
 
   @Test void aBaseAssetIsReadFromTheStdLibBase(@TempDir Path tmp) throws InterruptedException{
-    Path root= tmp.resolve("root");
+    var root= tmp.resolve("root");
     UserError.root = root;
     FsDsl.materialize(root, """
 _col/_rank_app.fear
@@ -605,7 +611,7 @@ Hello:Main{s->base.Debug#(base.IconsConflict.path+" "+(base.IconsConflict.readIm
     utils.Err.strCmp("fear:/_base/icons/conflict.png 256\n", coordinator(root).main(root, stLib));
   }
   static Path claimsProject(Path tmp, String code) throws IOException{
-    Path root= tmp.resolve("root");
+    var root= tmp.resolve("root");
     UserError.root = root;
     FsDsl.materialize(root, """
 _col/_rank_app.fear
@@ -631,7 +637,7 @@ Lib:base.Main, base.OpenWith[base.IconsConflict,"fear"]{s->base.Debug#(`lib`)}
   }
   void claimRefused(Path tmp, String code, String expected) throws IOException{
     var root= claimsProject(tmp, code);
-    var ex= Assertions.assertThrows(UserError.class, () -> coordinator(root).compile(root, stLib));
+    var ex= assertThrows(UserError.class, () -> coordinator(root).compile(root, stLib));
     utils.Err.strCmp(expected, ex.getMessage());
   }
   @Test void wellFormedClaimsAreAccepted(@TempDir Path tmp) throws Exception{
@@ -1055,7 +1061,7 @@ Lib:base.Main, base.OpenWith[base.IconsConflict,"fear"]{s->base.Debug#(`lib`)}
     editAndTouch(root.resolve("_col", "_rank_app.fear"), "{s->base.Debug#(`conflict`)}", """
 {s->base.Debug#(`conflict`)}
 Clash:lib.Lib, OpenWith[IconsFoo,"fear"]{s->base.Debug#(`clash`)}""");
-    var ex= Assertions.assertThrows(UserError.class, () -> coordinator(root).main(root, stLib));
+    var ex= assertThrows(UserError.class, () -> coordinator(root).main(root, stLib));
     utils.Err.strCmp("""
 In file: fear:/_col/_rank_app.fear
 
@@ -1092,7 +1098,7 @@ not read by the compiler
 """, Fs.readUtf8(mainsInfo(root)));
   }
   @Test void aSecondCompileKeepsTheMainsInfoEntriesOfAnUnchangedPackage(@TempDir Path tmp) throws Exception{
-    Path root= tmp.resolve("root");
+    var root= tmp.resolve("root");
     UserError.root = root;
     FsDsl.materialize(root, """
 _a/_rank_app.fear
@@ -1127,13 +1133,13 @@ Foo:Main, OpenWith[IconsFoo,"foo"]{s->base.Debug#(`foo`)}
 """);
     coordinator(root).compile(root, stLib);
     var text= Fs.readUtf8(mainsInfo(root));
-    Assertions.assertEquals(Map.of("col", true), Coordinator.pkgsBuilt(root));
+    assertEquals(Map.of("col", true), Coordinator.pkgsBuilt(root));
     Files.delete(root.resolve(Coordinator.outDir).resolve("col.mains.info"));
-    Assertions.assertEquals(Map.of("col", false), Coordinator.pkgsBuilt(root));
-    Assertions.assertEquals(Optional.empty(), coordinator(root).mains(root, stLib));
+    assertEquals(Map.of("col", false), Coordinator.pkgsBuilt(root));
+    assertEquals(Optional.empty(), coordinator(root).mains(root, stLib));
     coordinator(root).compile(root, stLib);
     utils.Err.strCmp(text, Fs.readUtf8(mainsInfo(root)));
-    Assertions.assertEquals(Map.of("col.Foo", "_col/_rank_app.fear"), coordinator(root).mains(root, stLib).orElseThrow());
+    assertEquals(Map.of("col.Foo", "_col/_rank_app.fear"), coordinator(root).mains(root, stLib).orElseThrow());
   }
   @Test void aPackageReachingTheTopRankListsItsMains(@TempDir Path tmp) throws Exception{
     var root= claimsProject(tmp, """
@@ -1144,9 +1150,9 @@ iii
 Lib:base.Main, base.OpenWith[base.IconsConflict,"fear"]{s->base.Debug#(`lib`)}
 """);
     coordinator(root).compile(root, stLib);
-    Assertions.assertEquals(Map.of("col.Foo", "_col/_rank_app.fear"), coordinator(root).mains(root, stLib).orElseThrow());
+    assertEquals(Map.of("col.Foo", "_col/_rank_app.fear"), coordinator(root).mains(root, stLib).orElseThrow());
     Fs.rmTree(root.resolve("_col"));
-    Assertions.assertEquals(Map.of("lib", true), Coordinator.pkgsBuilt(root));
+    assertEquals(Map.of("lib", true), Coordinator.pkgsBuilt(root));
     utils.Err.strCmp("lib\n", coordinator(root).main(root, stLib));
     utils.Err.strCmp("""
 {
@@ -1165,10 +1171,10 @@ More:base.Main{s->base.Debug#(`more`)}
     coordinator(root).compile(root, stLib);
     var text= Fs.readUtf8(mainsInfo(root));
     Files.delete(mainsInfo(root));
-    Assertions.assertEquals(Map.of("col", false, "more", false), Coordinator.pkgsBuilt(root));
+    assertEquals(Map.of("col", false, "more", false), Coordinator.pkgsBuilt(root));
     coordinator(root).compile(root, stLib);
     utils.Err.strCmp(text, Fs.readUtf8(mainsInfo(root)));
-    Assertions.assertEquals(Map.of("col", true, "more", true), Coordinator.pkgsBuilt(root));
+    assertEquals(Map.of("col", true, "more", true), Coordinator.pkgsBuilt(root));
   }
   @Test void aMovedIconOfALowerRankPackageIsFollowed(@TempDir Path tmp) throws Exception{
     var root= claimsProject(tmp, """
@@ -1205,7 +1211,7 @@ Foo:Opener, Other, Shortcut[base.IconsConflict,"fapp042"], OpenWith[IconsFoo]{s-
 """, Fs.readUtf8(mainsInfo(root)));
   }
   @Test void literalTypesInSignaturesCompileRunAndAreReadBackFromTheApiJson(@TempDir Path tmp) throws Exception{
-    Path root= tmp.resolve("root");
+    var root= tmp.resolve("root");
     UserError.root = root;
     FsDsl.materialize(root, """
 _lib/_rank_core.fear
@@ -1222,7 +1228,7 @@ Hello:base.Main{s->base.Debug#((lib.Lit.m("a\\"))+(lib.Lit.n(`b"c`))+(lib.Lit.k.
   }
 
   @Test void anAssetWhoseNameForgesNoValidTypeIsReportedAgainstTheRealFile(@TempDir Path tmp){
-    Path root= tmp.resolve("root");
+    var root= tmp.resolve("root");
     UserError.root = root;
     FsDsl.materialize(root, """
 _col/_rank_app.fear
@@ -1234,8 +1240,8 @@ _col/_1.txt
 iii
 hello
 """);
-    var ex= Assertions.assertThrows(UserError.class, () -> coordinator(root).main(root, stLib));
-    Assertions.assertFalse(ex.getMessage().contains(SourceOracleWithAutoload.autoloadFileSuffix), ex.getMessage());
+    var ex= assertThrows(UserError.class, () -> coordinator(root).main(root, stLib));
+    assertFalse(ex.getMessage().contains(SourceOracleWithAutoload.autoloadFileSuffix), ex.getMessage());
     utils.Err.strCmp("""
 Invalid path in this project folder.
 
@@ -1256,7 +1262,7 @@ We check this so that you[###]
   }
 
   @Test void aRealApiPreservingEditMustNotRebuildTheDependentPackage(@TempDir Path tmp) throws Exception{
-    Path root= tmp.resolve("root");
+    var root= tmp.resolve("root");
     UserError.root = root;
     FsDsl.materialize(root, """
 _a/_rank_core.fear
@@ -1279,14 +1285,14 @@ Hello:Main{s->base.Debug#(Greeting.hi)}
     editAndTouch(root.resolve("_a/_rank_core.fear"), "\"hi\"", "\"ho\"");
     c.main(root, stLib);
 
-    Assertions.assertNotEquals(aBuilt, Fs.lastModified(out.resolve("a.built")));
-    Assertions.assertEquals(aJson, Fs.lastModified(out.resolve("a.json")));
-    Assertions.assertEquals(bBuilt, Fs.lastModified(out.resolve("b.built")));
+    assertNotEquals(aBuilt, Fs.lastModified(out.resolve("a.built")));
+    assertEquals(aJson, Fs.lastModified(out.resolve("a.json")));
+    assertEquals(bBuilt, Fs.lastModified(out.resolve("b.built")));
   }
 
   // Confirms expected behaviour: only the packages at the highest rank number get their Main run.
   @Test void onlyTheHighestRankPackageMainRuns(@TempDir Path tmp) throws InterruptedException{
-    Path root= tmp.resolve("root");
+    var root= tmp.resolve("root");
     UserError.root = root;
     FsDsl.materialize(root, """
 _a/_rank_core.fear
@@ -1300,13 +1306,13 @@ use base.Main as Main;
 Hello:Main{s->base.Debug#("from app")}
 """);
     var out= coordinator(root).main(root, stLib);
-    Assertions.assertTrue(out.contains("from app"), out);
-    Assertions.assertFalse(out.contains("from core"), out);
+    utils.Err.strCmp("[###]from app[###]", out);
+    assertFalse(out.contains("from core"), out);
   }
 
   // Confirms expected behaviour: packages tied for that highest rank number all run.
   @Test void allPackagesAtTheHighestRankRun(@TempDir Path tmp) throws InterruptedException{
-    Path root= tmp.resolve("root");
+    var root= tmp.resolve("root");
     UserError.root = root;
     FsDsl.materialize(root, """
 _a/_rank_app.fear
@@ -1320,8 +1326,8 @@ use base.Main as Main;
 Hello:Main{s->base.Debug#("from z")}
 """);
     var out= coordinator(root).main(root, stLib);
-    Assertions.assertTrue(out.contains("from a"), out);
-    Assertions.assertTrue(out.contains("from z"), out);
+    utils.Err.strCmp("[###]from a[###]", out);
+    utils.Err.strCmp("[###]from z[###]", out);
   }
 
   @Test void flowsAreDeterministic(){ testOk("testFlowDeterminism"); }
@@ -1333,10 +1339,13 @@ Hello:Main{s->base.Debug#("from z")}
     c.compile(project, stLib);
     var out= new StringBuilder();
     var child= Coordinator.startMain(project, ResolveResource.stLibPath, "term.FirstDoesNotWaitForTheRest", c.sharedClasspath(), out::append);
-    var waiter= new Thread(() -> { try{ child.await(); } catch (InterruptedException e){ child.kill(); } });
+    var waiter= new Thread(() -> {
+      try{ child.await(); }
+      catch (InterruptedException _){ child.kill(); }
+    });
     waiter.start();
     waiter.join(60_000);
-    if (waiter.isAlive()){ child.kill(); Assertions.fail("first! did not return within 60s while the later elements diverge:\n"+out); }
+    if (waiter.isAlive()){ child.kill(); fail("first! did not return within 60s while the later elements diverge:\n"+out); }
     utils.Err.strCmp("0\n", out.toString());
   }
   static boolean recursionCompiled;
@@ -1354,7 +1363,7 @@ Hello:Main{s->base.Debug#("from z")}
     long start= System.nanoTime();
     utils.Err.strCmp("500000500000", runRecursionMain("rec.DeepSum"));
     long millis= (System.nanoTime()-start)/1_000_000;
-    Assertions.assertTrue(millis < 20_000, "one million steps took "+millis+"ms");
+    assertTrue(millis < 20_000, "one million steps took "+millis+"ms");
   }
   @Test void aFamilyNestingTooManyCallsOnOneThreadOverflows() throws InterruptedException{
     utils.Err.strCmp("[###]java.lang.StackOverflowError[###]", runRecursionMain("rec.CrowdedSum"));
@@ -1413,7 +1422,7 @@ imm Hello.main(_) error line: 6 in file _hello/_rank_app.fear
 """, run("helloStackTraces"));
   }
   @Test void aFailingGetShowsNoActionFrames(@TempDir Path tmp) throws InterruptedException{
-    Path root= tmp.resolve("root");
+    var root= tmp.resolve("root");
     UserError.root = root;
     FsDsl.materialize(root, """
 _hello/_rank_app.fear
@@ -1433,7 +1442,7 @@ imm Hello.main(_) error line: 4 in file _hello/_rank_app.fear
 """, coordinator(root).main(root, stLib));
   }
   @Test void aMainEndingWithAnErrorExitsWith1AndTheOtherMainsStillRun(@TempDir Path tmp) throws InterruptedException{
-    Path root= tmp.resolve("root");
+    var root= tmp.resolve("root");
     UserError.root = root;
     FsDsl.materialize(root, """
 _col/_rank_app.fear
@@ -1450,20 +1459,20 @@ b
 """, c.main(root, stLib));
     var cp= Push.of(Coordinator.genJava(root), c.sharedClasspath());
     var out= new StringBuilder();
-    Assertions.assertEquals(1, JavaTool.startMainFromJars(Coordinator.runData(root, c.stdLibBase()), cp, "_col.Main", out::append).await(), out::toString);
-    Assertions.assertEquals(1, Coordinator.startMain(root, c.stdLibBase(), "col.A", c.sharedClasspath(), out::append).await(), out::toString);
-    Assertions.assertEquals(0, Coordinator.startMain(root, c.stdLibBase(), "col.B", c.sharedClasspath(), out::append).await(), out::toString);
+    assertEquals(1, JavaTool.startMainFromJars(Coordinator.runData(root, c.stdLibBase()), cp, "_col.Main", out::append).await(), out::toString);
+    assertEquals(1, Coordinator.startMain(root, c.stdLibBase(), "col.A", c.sharedClasspath(), out::append).await(), out::toString);
+    assertEquals(0, Coordinator.startMain(root, c.stdLibBase(), "col.B", c.sharedClasspath(), out::append).await(), out::toString);
   }
   @Test void aMainEndingWithAJavaErrorExitsWith1() throws InterruptedException{
     var root= ResolveResource.integrationTests.resolve("runRecursion");
     if (!recursionCompiled){ compileOk("runRecursion"); recursionCompiled = true; }
     var out= new StringBuilder();
-    Assertions.assertEquals(1, Coordinator.startMain(root, ResolveResource.stLibPath, "rec.NaiveSum", coordinator(root).sharedClasspath(), out::append).await(), out::toString);
+    assertEquals(1, Coordinator.startMain(root, ResolveResource.stLibPath, "rec.NaiveSum", coordinator(root).sharedClasspath(), out::append).await(), out::toString);
     utils.Err.strCmp("[###]java.lang.StackOverflowError[###]", out.toString());
   }
 
   @Test void virtualizationMapMentionsAPackageThatDoesNotExist(@TempDir Path tmp) throws InterruptedException{
-    Path root= tmp.resolve("root");
+    var root= tmp.resolve("root");
     UserError.root = root;
     FsDsl.materialize(root, """
 _pka/_rank_app999.fear
@@ -1477,7 +1486,7 @@ iii
 use base.Str as Str;
 B:{.text:Str->a.C.text;}
 """);
-    var ex= Assertions.assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib));
+    var ex= assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib));
     utils.Err.strCmp("""
 For package "pkb", the virtual package name "a" is mapped to "nonexistentpkg",
 but package "nonexistentpkg" does not exist:
@@ -1489,7 +1498,7 @@ Error 7 WellFormedness
   }
 
   @Test void useOfAHigherRankPackageIsReportedAsUndeclaredNotAsAnOrderingProblem(@TempDir Path tmp) throws InterruptedException{
-    Path root= tmp.resolve("root");
+    var root= tmp.resolve("root");
     UserError.root = root;
     FsDsl.materialize(root, """
 _a/_rank_core.fear
@@ -1503,7 +1512,7 @@ iii
 use base.Str as Str;
 Greeting:{ .hi: Str -> "hi" }
 """);
-    var ex= Assertions.assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib));
+    var ex= assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib));
     utils.Err.strCmp("""
 In file: fear:/_a/_rank_core.fear
 
@@ -1517,7 +1526,7 @@ Error 7 WellFormedness
   }
 
   @Test void twoTypeNamesDifferingOnlyByCaseMustStillBuildOnASecondRun(@TempDir Path tmp) throws InterruptedException{
-    Path root= tmp.resolve("root");
+    var root= tmp.resolve("root");
     UserError.root = root;
     FsDsl.materialize(root, """
 _col/_rank_app.fear
@@ -1578,12 +1587,12 @@ Hello:Main{s->base.Debug#("""+call.replace("$URL", url)+")}\n";
   @Test void downloadStrUtf8Succeeds(@TempDir Path tmp) throws Exception{
     var server= startServer(ex -> reply(ex, 200, "hello download".getBytes(UTF_8)));
     try{
-      Path root= tmp.resolve("root");
+      var root= tmp.resolve("root");
       UserError.root = root;
       FsDsl.materialize(root, downloadProject(url(server, "/ok"),
         "s.download.downloadStrUtf8(\"$URL\", 1000, NeverRecovers)"));
       var out= coordinator(root).main(root, stLib);
-      Assertions.assertTrue(out.contains("hello download"), out);
+      utils.Err.strCmp("[###]hello download[###]", out);
     }
     finally{ server.stop(0); }
   }
@@ -1591,45 +1600,45 @@ Hello:Main{s->base.Debug#("""+call.replace("$URL", url)+")}\n";
   @Test void downloadBytesReturnsExactContent(@TempDir Path tmp) throws Exception{
     var server= startServer(ex -> reply(ex, 200, new byte[]{65, 66, 67}));
     try{
-      Path root= tmp.resolve("root");
+      var root= tmp.resolve("root");
       UserError.root = root;
       FsDsl.materialize(root, downloadProject(url(server, "/bytes"),
         "s.download.downloadBytes(\"$URL\", 1000).size"));
       var out= coordinator(root).main(root, stLib);
-      Assertions.assertTrue(out.contains("3"), out);
+      utils.Err.strCmp("[###]3[###]", out);
     }
     finally{ server.stop(0); }
   }
 
   @Test void downloadRejectsNonHttpScheme(@TempDir Path tmp) throws Exception{
-    Path root= tmp.resolve("root");
+    var root= tmp.resolve("root");
     UserError.root = root;
     FsDsl.materialize(root, downloadProject("ftp://127.0.0.1/x",
       "s.download.downloadStrUtf8(\"$URL\", 1000, NeverRecovers)"));
     var out= coordinator(root).main(root, stLib);
-    Assertions.assertTrue(out.contains("Invalid URL descriptor"), out);
-    Assertions.assertTrue(out.contains("unsupported scheme"), out);
+    utils.Err.strCmp("[###]Invalid URL descriptor[###]", out);
+    utils.Err.strCmp("[###]unsupported scheme[###]", out);
   }
 
   @Test void downloadRejectsMalformedUrl(@TempDir Path tmp) throws Exception{
-    Path root= tmp.resolve("root");
+    var root= tmp.resolve("root");
     UserError.root = root;
     FsDsl.materialize(root, downloadProject("not a url",
       "s.download.downloadStrUtf8(\"$URL\", 1000, NeverRecovers)"));
     var out= coordinator(root).main(root, stLib);
-    Assertions.assertTrue(out.contains("Invalid URL descriptor"), out);
+    utils.Err.strCmp("[###]Invalid URL descriptor[###]", out);
   }
 
   @Test void downloadFailsWhenContentLengthExceedsMaxBytes(@TempDir Path tmp) throws Exception{
     var server= startServer(ex -> reply(ex, 200, "0123456789".getBytes(UTF_8)));
     try{
-      Path root= tmp.resolve("root");
+      var root= tmp.resolve("root");
       UserError.root = root;
       FsDsl.materialize(root, downloadProject(url(server, "/big"),
         "s.download.downloadBytes(\"$URL\", 4).size"));
       var out= coordinator(root).main(root, stLib);
-      Assertions.assertTrue(out.contains("Download exceeds maxBytes"), out);
-      Assertions.assertTrue(out.contains("contentLength"), out);
+      utils.Err.strCmp("[###]Download exceeds maxBytes[###]", out);
+      utils.Err.strCmp("[###]contentLength[###]", out);
     }
     finally{ server.stop(0); }
   }
@@ -1637,13 +1646,13 @@ Hello:Main{s->base.Debug#("""+call.replace("$URL", url)+")}\n";
   @Test void downloadFailsWhenStreamedBytesExceedMaxBytesWithoutContentLength(@TempDir Path tmp) throws Exception{
     var server= startServer(ex -> replyChunked(ex, "0123456789".getBytes(UTF_8)));
     try{
-      Path root= tmp.resolve("root");
+      var root= tmp.resolve("root");
       UserError.root = root;
       FsDsl.materialize(root, downloadProject(url(server, "/chunked"),
         "s.download.downloadBytes(\"$URL\", 4).size"));
       var out= coordinator(root).main(root, stLib);
-      Assertions.assertTrue(out.contains("Download exceeds maxBytes"), out);
-      Assertions.assertTrue(out.contains("bytesRead"), out);
+      utils.Err.strCmp("[###]Download exceeds maxBytes[###]", out);
+      utils.Err.strCmp("[###]bytesRead[###]", out);
     }
     finally{ server.stop(0); }
   }
@@ -1658,12 +1667,12 @@ Hello:Main{s->base.Debug#("""+call.replace("$URL", url)+")}\n";
       }
     });
     try{
-      Path root= tmp.resolve("root");
+      var root= tmp.resolve("root");
       UserError.root = root;
       FsDsl.materialize(root, downloadProject(url(server, "/start"),
         "s.download.downloadStrUtf8(\"$URL\", 1000, NeverRecovers)"));
       var out= coordinator(root).main(root, stLib);
-      Assertions.assertTrue(out.contains("landed"), out);
+      utils.Err.strCmp("[###]landed[###]", out);
     }
     finally{ server.stop(0); }
   }
@@ -1671,12 +1680,12 @@ Hello:Main{s->base.Debug#("""+call.replace("$URL", url)+")}\n";
   @Test void downloadFailsAfterTooManyRedirects(@TempDir Path tmp) throws Exception{
     var server= startServer(ex -> redirect(ex, "/loop"));
     try{
-      Path root= tmp.resolve("root");
+      var root= tmp.resolve("root");
       UserError.root = root;
       FsDsl.materialize(root, downloadProject(url(server, "/loop"),
         "s.download.downloadStrUtf8(\"$URL\", 1000, NeverRecovers)"));
       var out= coordinator(root).main(root, stLib);
-      Assertions.assertTrue(out.contains("too many redirects"), out);
+      utils.Err.strCmp("[###]too many redirects[###]", out);
     }
     finally{ server.stop(0); }
   }
@@ -1684,14 +1693,14 @@ Hello:Main{s->base.Debug#("""+call.replace("$URL", url)+")}\n";
   @Test void downloadRedirectRevalidatesScheme(@TempDir Path tmp) throws Exception{
     var server= startServer(ex -> redirect(ex, "file:///etc/passwd"));
     try{
-      Path root= tmp.resolve("root");
+      var root= tmp.resolve("root");
       UserError.root = root;
       FsDsl.materialize(root, downloadProject(url(server, "/go"),
         "s.download.downloadStrUtf8(\"$URL\", 1000, NeverRecovers)"));
       var out= coordinator(root).main(root, stLib);
-      Assertions.assertTrue(out.contains("Invalid URL descriptor"), out);
-      Assertions.assertTrue(out.contains("unsupported scheme"), out);
-      Assertions.assertTrue(out.contains("file:///etc/passwd"), out);
+      utils.Err.strCmp("[###]Invalid URL descriptor[###]", out);
+      utils.Err.strCmp("[###]unsupported scheme[###]", out);
+      utils.Err.strCmp("[###]file:///etc/passwd[###]", out);
     }
     finally{ server.stop(0); }
   }
@@ -1699,12 +1708,12 @@ Hello:Main{s->base.Debug#("""+call.replace("$URL", url)+")}\n";
   @Test void downloadFailsOnNon2xxStatus(@TempDir Path tmp) throws Exception{
     var server= startServer(ex -> reply(ex, 404, "nope".getBytes(UTF_8)));
     try{
-      Path root= tmp.resolve("root");
+      var root= tmp.resolve("root");
       UserError.root = root;
       FsDsl.materialize(root, downloadProject(url(server, "/missing"),
         "s.download.downloadStrUtf8(\"$URL\", 1000, NeverRecovers)"));
       var out= coordinator(root).main(root, stLib);
-      Assertions.assertTrue(out.contains("HTTP status: 404"), out);
+      utils.Err.strCmp("[###]HTTP status: 404[###]", out);
     }
     finally{ server.stop(0); }
   }
@@ -1718,7 +1727,7 @@ Hello:Main{s->base.Debug#("""+call.replace("$URL", url)+")}\n";
     var body= ("caf"+eAcute).getBytes(UTF_8);
     var server= startServer(ex -> reply(ex, 200, body));
     try{
-      Path root= tmp.resolve("root");
+      var root= tmp.resolve("root");
       UserError.root = root;
       var u= url(server, "/accent");
       FsDsl.materialize(root, """
@@ -1733,8 +1742,8 @@ Hello:Main{s->base.Debug#(
 `, 1000, NeverRecoversU).size.str))}
 """);
       var out= coordinator(root).main(root, stLib);
-      Assertions.assertTrue(out.contains("caf?"), out);
-      Assertions.assertTrue(out.contains("|4"), out);
+      utils.Err.strCmp("[###]caf?[###]", out);
+      utils.Err.strCmp("[###]|4[###]", out);
     }
     finally{ server.stop(0); }
   }
@@ -1743,27 +1752,28 @@ Hello:Main{s->base.Debug#(
     var png= onePixelPng();
     var server= startServer(ex -> reply(ex, 200, png));
     try{
-      Path root= tmp.resolve("root");
+      var root= tmp.resolve("root");
       UserError.root = root;
       FsDsl.materialize(root, downloadProject(url(server, "/img.png"),
         "s.download.downloadImage(\"$URL\", 100_000, 1_000_000).width"));
       var out= coordinator(root).main(root, stLib);
-      Assertions.assertTrue(out.contains("3"), out);
+      utils.Err.strCmp("[###]3[###]", out);
     }
     finally{ server.stop(0); }
   }
 
   @Test void downloadTimesOutOnStalledResponse(@TempDir Path tmp) throws Exception{
     var server= startServer(_ -> {
-      try{ Thread.sleep(40_000); } catch (InterruptedException ignored){}
+      try{ Thread.sleep(40_000); }
+      catch (InterruptedException _){}
     });
     try{
-      Path root= tmp.resolve("root");
+      var root= tmp.resolve("root");
       UserError.root = root;
       FsDsl.materialize(root, downloadProject(url(server, "/stall"),
         "s.download.downloadStrUtf8(\"$URL\", 1000, NeverRecovers)"));
       var out= coordinator(root).main(root, stLib);
-      Assertions.assertTrue(out.contains("Download timed out"), out);
+      utils.Err.strCmp("[###]Download timed out[###]", out);
     }
     finally{ server.stop(0); }
   }

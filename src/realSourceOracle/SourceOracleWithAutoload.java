@@ -1,7 +1,8 @@
 package realSourceOracle;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+
 import java.net.URI;
-import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -60,10 +61,10 @@ public record SourceOracleWithAutoload(SourceOracle base, Ref autoload, URI auto
     var out= new StringBuilder();
     var declaredBy= new LinkedHashMap<String,Ref>();
     var assets= new LinkedHashMap<String,Triple>();
-    for (var ref: base.allFiles()){
+    for (var ref : base.allFiles()){
       var p= path.apply(ref);
       if (!p.contains("/"+pkgName+"/")){ continue; }
-      for (var h: handlers){
+      for (var h : handlers){
         if (!h.matches().test(p)){ continue; }
         var type= AutoloadHandler.standardTypeName(pkgName, ref, p);
         var prev= declaredBy.putIfAbsent(type, ref);
@@ -76,7 +77,7 @@ public record SourceOracleWithAutoload(SourceOracle base, Ref autoload, URI auto
     return new Generated(out.toString(), Collections.unmodifiableMap(assets));
   }
   private record SyntheticRef(String fearPath, String text) implements Ref{
-    @Override public byte[] loadBytes(){ return text.getBytes(StandardCharsets.UTF_8); }
+    @Override public byte[] loadBytes(){ return text.getBytes(UTF_8); }
     @Override public long lastModified(){ return 0; }
     @Override public String toString(){ return fearPath; }
   }

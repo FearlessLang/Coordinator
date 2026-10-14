@@ -1,5 +1,7 @@
 package fileSupport;
+
 import static fileSupport.ByteFiles.Kind.*;
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -7,7 +9,6 @@ import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.charset.CharacterCodingException;
 import java.nio.charset.MalformedInputException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.EnumSet;
 import java.util.HexFormat;
@@ -23,10 +24,10 @@ import utils.Bug;
 
 public final class StringFiles{
   public static String read(Path path, BiConsumer<String,String> onError){
-    byte[] bytes= ByteFiles.read(path, (k,c) ->
+    var bytes= ByteFiles.read(path, (k,c) ->
       fail(onError, requiresReport.contains(k), FailureText.explain(Op.Read, k, path), c));
     var input= ByteBuffer.wrap(bytes);
-    try{ return StandardCharsets.UTF_8.newDecoder().decode(input).toString(); }
+    try{ return UTF_8.newDecoder().decode(input).toString(); }
     catch (CharacterCodingException e){
       return fail(onError, false, invalidUtf8(path, bytes, input.position(), ((MalformedInputException)e).getInputLength()), e);
     }
@@ -44,7 +45,7 @@ public final class StringFiles{
   //propagates as an Error, like the other observed-bug throws.
   private static byte[] utf8(String text){
     try{
-      var buffer= StandardCharsets.UTF_8.newEncoder().encode(CharBuffer.wrap(text));
+      var buffer= UTF_8.newEncoder().encode(CharBuffer.wrap(text));
       var bytes= new byte[buffer.remaining()];
       buffer.get(bytes);
       return bytes;
@@ -66,7 +67,7 @@ public final class StringFiles{
     throw Bug.unreachable();
   }
   private static Explanation invalidUtf8(Path path, byte[] bytes, int offset, int length){
-    var lines= new String(bytes, 0, offset, StandardCharsets.UTF_8).split("\r\n|\r|\n", -1);
+    var lines= new String(bytes, 0, offset, UTF_8).split("\r\n|\r|\n", -1);
     var last= lines[lines.length-1];
     var suppressed= new Suppressed();
     var text= CommonInfo.of(Op.Read, path, suppressed)+"""

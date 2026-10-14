@@ -7,8 +7,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import userMessages.Report;
 import tools.SourceOracle;
+import userMessages.Report;
 
 public final class RealSourceOracleWithZip implements SourceOracle{
   private final List<Ref> allFiles;

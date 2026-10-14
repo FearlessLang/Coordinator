@@ -2,6 +2,7 @@
 package scripts;
 
 import java.util.List;
+
 import tools.JavaTool;
 
 public final class DeployZeroToHeroPages{

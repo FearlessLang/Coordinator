@@ -7,6 +7,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+
 import resources.ResolveResource;
 import tools.Fs;
 import tools.JavaTool;
@@ -16,7 +17,7 @@ public final class RunBenchmarks{
     ModularBuild.mainJars();
     var stlibs= new ArrayList<String>();
     var include= new ArrayList<String>();
-    for (var a: args){ (a.contains("=") ? stlibs : include).add(a); }
+    for (var a : args){ (a.contains("=") ? stlibs : include).add(a); }
     var bench= ResolveResource.controllerSrc.getParent().resolve("benchmarks", "src");
     var classes= ModularBuild.out.resolve("benchmarks");
     Fs.cleanDir(classes);

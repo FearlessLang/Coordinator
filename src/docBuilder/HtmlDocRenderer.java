@@ -1,7 +1,5 @@
 package docBuilder;
 
-import static offensiveUtils.Require.*;
-
 import java.nio.file.Path;
 import java.util.Collection;
 import java.util.Comparator;
@@ -15,7 +13,13 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import core.*;
+import core.B;
+import core.ExportedToStr;
+import core.M;
+import core.OtherPackages;
+import core.T;
+import core.TName;
+import offensiveUtils.Require;
 import tools.Fs;
 import utils.Join;
 import utils.Range;
@@ -23,7 +27,7 @@ import utils.Range;
 final class HtmlDocRenderer{
   HtmlDocRenderer(String pkgName, Map<String,String> uses, List<TypeDoc> types, OtherPackages other,
       Map<DocOcc,Map<Integer,DocLink>> spans, Optional<Path> baseDocLocation){
-    assert nonNull(pkgName, uses, types, other, spans, baseDocLocation);
+    assert Require.nonNull(pkgName, uses, types, other, spans, baseDocLocation);
     this.pkgName= pkgName;
     this.types= types;
     this.spans= spans;
@@ -38,7 +42,7 @@ final class HtmlDocRenderer{
   final Optional<Path> baseDocLocation;
   //filled by href() as links are emitted, so every ambiguous link that reaches the
   //page also gets its landing section; rendered after all types, when it is complete.
-  final Map<DocLink.Ambiguous,String> pages= new LinkedHashMap<>();
+  final LinkedHashMap<DocLink.Ambiguous,String> pages= new LinkedHashMap<>();
   final ExportedToStr toStr;
   final DocResolver resolver;
 
@@ -93,7 +97,7 @@ final class HtmlDocRenderer{
     var sb= new StringBuilder(4_000).append(HtmlDocBuilder.generatedMark).append(pkgName).append("; any edit is overwritten\n\n");
     for (int i : Range.of(shown)){
       sb.append(names.perType().get(i)).append(": base.Test {::\n");
-      for (var m: visibleMethods(shown.get(i))){ sb.append(Join.of(testLines(m), "  .test base.Test{::\n", "\n", "\n  }\n", "")); }
+      for (var m : visibleMethods(shown.get(i))){ sb.append(Join.of(testLines(m), "  .test base.Test{::\n", "\n", "\n  }\n", "")); }
       sb.append("  }\n\n");
     }
     sb.append(names.top()).append(": base.UnitTests {::\n");
@@ -382,7 +386,7 @@ code{
     var bound= Stream.concat(m.owner.main().bs().stream(), m.main().sig().bs().stream()).map(B::x).collect(Collectors.toSet());
     var sb= new StringBuilder();
     int i= 0;
-    for (var f: DocRefScanner.signatureTypes(text)){
+    for (var f : DocRefScanner.signatureTypes(text)){
       var t= (DocRef.TypeName)f.ref();
       if (bound.contains(t.simpleName())){ continue; }
       var link= resolver.resolveType(t);
@@ -429,7 +433,7 @@ code{
     var linked= spans.getOrDefault(occ, Map.of());
     var sb= new StringBuilder();
     int i= 0;
-    for (var cs: DocRefScanner.codeSpans(text)){
+    for (var cs : DocRefScanner.codeSpans(text)){
       sb.append(h(text.substring(i, cs.start()-cs.fence())));
       sb.append("<code>").append(renderCode(text, cs, linked)).append("</code>");
       i = cs.end()+cs.fence();

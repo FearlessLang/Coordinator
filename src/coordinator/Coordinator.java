@@ -11,28 +11,29 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.TreeMap;
+import java.util.function.Consumer;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.LongStream;
 import java.util.stream.Stream;
 
-import offensiveUtils.Require;
-import userMessages.Report;
-import userMessages.Violation;
+import core.E.Literal;
 import core.FearlessException;
 import core.OtherPackages;
 import core.TName;
-import core.E.Literal;
 import main.FrontendLogicMain;
 import naiveBackend.BackendTools;
 import naiveBackend.NaiveBackendLogicMain;
+import offensiveUtils.Require;
 import realSourceOracle.RealSourceOracleWithZip;
-import tools.Fs;
 import tools.ChildJvm;
+import tools.Fs;
 import tools.JavaTool;
 import tools.JavacTool;
 import tools.SourceOracle;
 import tools.SourceOracle.Ref;
+import userMessages.Report;
+import userMessages.Violation;
 import utils.OneOr;
 import utils.Push;
 
@@ -62,7 +63,7 @@ public interface Coordinator{
     var top= ranks.stream().mapToInt(Helper::rankNumber).max().getAsInt();
     var listed= Files.exists(out.mainsPath());
     var res= new LinkedHashMap<String,Boolean>();
-    for (var r: ranks){
+    for (var r : ranks){
       var pkg= Helper.pkgName(r);
       var lower= ranks.stream().filter(d -> Helper.rankNumber(d) < Helper.rankNumber(r)).map(Helper::pkgName).toList();
       var below= lower.stream().mapToLong(out::pkgApiStamp);
@@ -73,13 +74,13 @@ public interface Coordinator{
   }
   default String main(Path project, SourceOracle stLib) throws InterruptedException{
     var sb= new StringBuilder();
-    for (var p: compile(project, stLib)){ sb.append(runAllMains(p, Helper.out(project))); }
+    for (var p : compile(project, stLib)){ sb.append(runAllMains(p, Helper.out(project))); }
     return sb.toString();
   }
   default List<String> compile(Path project, SourceOracle stLib){
-    SourceOracle o= sourceOracle(project);
+    var o= sourceOracle(project);
     var out= Helper.out(project);
-    Layer l= Helper.layerOf(this, o, project, out, stLib);
+    var l= Helper.layerOf(this, o, project, out, stLib);
     out.forgetAllBut(l.pkgNames());
     l.compile(o, out);
     Fs.writeUtf8(out.mainsPath(), out.mains(l.pkgs().keySet()).located(o, stLib).print());
@@ -87,7 +88,7 @@ public interface Coordinator{
   }
   default Optional<Map<String,String>> mains(Path project, SourceOracle stLib){
     var c= new NoCompile(baseCachePath());
-    SourceOracle o= sourceOracle(project);
+    var o= sourceOracle(project);
     var out= new NoCommit(Helper.out(project).rootDir());
     Layer l;
     try{ l= Helper.layerOf(c, o, project, out, stLib); l.compile(o, out); }
@@ -96,16 +97,16 @@ public interface Coordinator{
     out.mains(l.pkgs().keySet()).mains().forEach((k,v) -> res.put(k, v.file()));
     return Optional.of(Collections.unmodifiableMap(res));
   }
-  static ChildJvm startMain(Path project, Path base, String main, List<Path> sharedClasspath, java.util.function.Consumer<String> out){
+  static ChildJvm startMain(Path project, Path base, String main, List<Path> sharedClasspath, Consumer<String> out){
     return JavaTool.startMainFromJars(runData(project, base), Push.of(genJava(project), sharedClasspath), "_"+main.substring(0, main.indexOf('.'))+".Main", out, main);
   }
   static Path genJava(Path project){ return project.resolve(outDir).resolve("gen_java"); }
   String outDir= ".fearless_out";
-  
+
   default List<Literal> frontend(String pkgName, List<Ref> files, SourceOracle oracle, OtherPackages other, Map<String,String> vres, CapabilityEnvironment capabilities){
     var tests= new ArrayList<Ref>();
     try{ return new FrontendLogicMain().of(pkgName, vres, files, other, core -> docs(pkgName, testsUri(pkgName, files), oracle, other, core, capabilities, tests)); }
-    catch (FearlessException fe){ throw Report.sourceError(fe.render(oracle.withFallback(() -> tests))); }
+    catch (FearlessException e){ throw Report.sourceError(e.render(oracle.withFallback(() -> tests))); }
   }
   private Optional<Ref> docs(String pkgName, URI testsUri, SourceOracle oracle, OtherPackages other, List<Literal> core, CapabilityEnvironment capabilities, ArrayList<Ref> tests){
     var docs= backendTools(pkgName, oracle, other, core, capabilities).docs();
@@ -139,16 +140,16 @@ final class Helper{
   }
   static Layer layerOf(Coordinator coordinator, SourceOracle o, Path project, OutputOracle out, SourceOracle stLib){
     var map= pkgMap(o, project);
-    List<Ref> allRanks= map.values().stream().map(Helper::okPkgContent).toList();
+    var allRanks= map.values().stream().map(Helper::okPkgContent).toList();
     Map<String,Map<String,String>> res; try{res= new FrontendLogicMain()
       .parseRankFiles(allRanks, Comparator.comparingInt(Helper::rankNumber), Push.of(allRanks.stream().map(Helper::pkgName).toList(), "base"));}
-    catch (FearlessException fe){ throw Report.sourceError(fe.render(o)); }
+    catch (FearlessException e){ throw Report.sourceError(e.render(o)); }
     Layer l= new BaseLayer(coordinator, res, out.commitMap(res, allRanks.stream().mapToLong(Ref::lastModified).max().getAsLong()), stLib);
     var byRank= new TreeMap<Integer,LinkedHashMap<String,List<Ref>>>();
-    for (var r: allRanks.stream().sorted(Comparator.comparing(Ref::fearPath)).toList()){
+    for (var r : allRanks.stream().sorted(Comparator.comparing(Ref::fearPath)).toList()){
       byRank.computeIfAbsent(rankNumber(r), _ -> new LinkedHashMap<>()).put(pkgName(r), map.get(pkgName(r)));
     }
-    for (var pkgs: byRank.values()){ l = new MiddleLayer(coordinator, l, pkgs); }
+    for (var pkgs : byRank.values()){ l = new MiddleLayer(coordinator, l, pkgs); }
     return l;
   }
   static LinkedHashMap<String,List<Ref>> pkgMap(SourceOracle o, Path path){
@@ -195,7 +196,7 @@ record NoCompile(Optional<Path> baseCachePath) implements Coordinator{
 }
 record NoCommit(Path rootDir) implements OutputOracle{
   @Override public long commitMap(Map<String,Map<String,String>> map, long minExclusiveMillis){
-    if (OutputHelper.mapFromJSon(mapPath()).filter(map::equals).isEmpty()){ throw new WouldCompile(); }
+    if (OutputHelper.mapFromJson(mapPath()).filter(map::equals).isEmpty()){ throw new WouldCompile(); }
     return mapStamp();
   }
 }

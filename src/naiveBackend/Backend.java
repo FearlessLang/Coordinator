@@ -1,17 +1,23 @@
 package naiveBackend;
 
-import static offensiveUtils.Require.*;
-
 import java.math.BigInteger;
-import java.nio.file.*;
-import java.util.*;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.TreeMap;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
-import core.*;
-import core.E.*;
+import core.E.Literal;
+import core.LiteralDeclarations;
+import core.M;
+import core.MName;
+import core.RC;
+import core.TName;
+import offensiveUtils.Require;
+import realSourceOracle.SourceOracleWithAutoload;
 import tools.Fs;
 import utils.Join;
 import utils.Pos;
@@ -19,13 +25,13 @@ import utils.Range;
 
 public final class Backend{
   public Backend(Path out, BackendTools tools){
-    assert nonNull(out, tools);
+    assert Require.nonNull(out, tools);
     this.out= out;
     this.tools= tools;
   }
-  Path out;
-  BackendTools tools;
-  List<Consumer<Path>> fixers= new ArrayList<>();
+  final Path out;
+  final BackendTools tools;
+  final ArrayList<Consumer<Path>> fixers= new ArrayList<>();
   boolean isRepr(Literal l){ return l.name().equals(new TName("base.Repr", 1, Pos.unknown)); }
   public List<Consumer<Path>> produceJavaCode(){
     Fs.cleanDir(out);
@@ -99,12 +105,12 @@ public final class Backend{
   }
   String encodeTrailingPrimes(String s){
     int k= 0;
-    while (k < s.length() && s.charAt(s.length() - 1 - k) == '\''){ k++; }
+    while (k < s.length() && s.charAt(s.length() - 1 - k) == '\''){ k += 1; }
     if (k == 0){ return s; }
     var head= s.substring(0, s.length() - k);
-    assert head.indexOf('\'')==-1: "prime (') must be trailing only: "+s;
+    assert head.indexOf('\'') < 0: "prime (') must be trailing only: "+s;
     return head + "$p" + k;
-  }  
+  }
   String decTypeName(TName n){ return encodeTrailingPrimes(n.simpleName())+"$"+caseTag(n.simpleName())+"$"+n.arity(); }
   String typeName(TName n){ return "_"+encodeTrailingPrimes(n.s())+"$"+caseTag(n.simpleName())+"$"+n.arity(); }
   static String caseTag(String s){
@@ -115,7 +121,7 @@ public final class Backend{
     var s= m.s();
     return rc.name()+"$"+(s.startsWith(".") ? encodeTrailingPrimes(s.substring(1)) : "$"+mangleOp(s))+"$"+m.arity();
   }
-  final Map<String,String> mains= new TreeMap<>();
+  final TreeMap<String,String> mains= new TreeMap<>();
   void writeMainJava(){
     var all= Join.of(mains.keySet().stream().map(n -> "\""+n+"\""), "{", ",", "}", "{}");
     var assets= Join.of(tools.capabilities().autoloadedAssets().values().stream().map(Backend::assetLiteral), "{", ",", "}", "{}");
@@ -133,7 +139,7 @@ public final class Backend{
     sb.append("    throw new AssertionError(\"No main called \"+n+\" in package ").append(tools.pkgName()).append("\");\n  }\n}\n");
     Fs.writeUtf8(out.resolve("Main.java"), sb.toString());
   }
-  static String assetLiteral(realSourceOracle.SourceOracleWithAutoload.Triple t){
+  static String assetLiteral(SourceOracleWithAutoload.Triple t){
     return "{"+javaStrLit(t.diskPath())+","+javaStrLit(t.zipSteps())+","+javaStrLit(t.zipEntry())+"}";
   }
   static String javaStrLit(String s){

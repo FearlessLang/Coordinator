@@ -154,7 +154,7 @@ record Explanation(String text, List<Throwable> suppressed){
   Explanation{ assert Require.unmodifiable(suppressed, "suppressed"); }
 }
 final class Suppressed{
-  private final List<Throwable> errors= new ArrayList<>();
+  private final ArrayList<Throwable> errors= new ArrayList<>();
   String mark(Throwable error){
     var index= errors.size();
     errors.add(error);
@@ -163,8 +163,8 @@ final class Suppressed{
   List<Throwable> toList(){ return List.copyOf(errors); }
 }
 final class CommonInfo{
-  private static final int PortableLinkDepth= 8;  // POSIX guarantees only SYMLOOP_MAX >= 8
-  private static final int MaxLinkFollowed= 64;   // backstop so the walk always terminates
+  private static final int portableLinkDepth= 8;  // POSIX guarantees only SYMLOOP_MAX >= 8
+  private static final int maxLinkFollowed= 64;   // backstop so the walk always terminates
 
   static String of(Op op, Path path, Suppressed suppressed){
     return "Fearless could not "+op.verb+" this file:\n\n  "+located(path, suppressed)+"\n\n"+chain(path, suppressed);
@@ -193,17 +193,17 @@ final class CommonInfo{
   private static String chain(Path path, Suppressed suppressed){
     var visited= new HashSet<Path>();
     var out= new StringBuilder();
-    Path current= path.toAbsolutePath().normalize();//normalize is lexical, no I/O
+    var current= path.toAbsolutePath().normalize();//normalize is lexical, no I/O
     try{
       while (Files.isSymbolicLink(current)){//returns false (not throws) on error, ending the walk
-        if (visited.size() >= MaxLinkFollowed){ return out.append("\nChain exceeds ").append(MaxLinkFollowed).append(" links; not followed further.\n").toString(); }
+        if (visited.size() >= maxLinkFollowed){ return out.append("\nChain exceeds ").append(maxLinkFollowed).append(" links; not followed further.\n").toString(); }
         if (!visited.add(current)){ return out.append("\nChain loops back to ").append(Message.displayString(current.toString())).append(".\n").toString(); }
         current = current.getParent().resolve(Files.readSymbolicLink(current)).normalize();//read to advance; relative to the link's own dir; current is absolute and a root cannot be a symlink, so getParent()!=null
         out.append("\n  ").append(located(current, suppressed)).append("\n");//either last is final location or a dedicated message is present
       }
     }
     catch (IOException e){ return out.append("\n<reading next failed>").append(suppressed.mark(e)).append("\n").toString(); }
-    if (visited.size() > PortableLinkDepth){ out.append("\nWarning: ").append(visited.size()).append(" links deep; some systems may cap it at 8.\n"); }
+    if (visited.size() > portableLinkDepth){ out.append("\nWarning: ").append(visited.size()).append(" links deep; some systems may cap it at 8.\n"); }
     return out.toString();
   }
 }

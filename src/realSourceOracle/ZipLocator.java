@@ -15,11 +15,11 @@ import java.util.function.Supplier;
 import java.util.stream.Stream;
 import java.util.zip.ZipInputStream;
 
-import userMessages.Violation;
-import userMessages.Report;
-import userMessages.UserError;
 import tools.Fs;
 import tools.ReadZip;
+import userMessages.Report;
+import userMessages.UserError;
+import userMessages.Violation;
 import utils.Range;
 
 public final class ZipLocator{
@@ -58,7 +58,7 @@ public final class ZipLocator{
   }
   private static <T> T fetch(Path diskZip, List<String> steps, Function<byte[],T> onFinal){
     byte[] bytes= null;
-    for (int i: Range.of(steps)){
+    for (int i : Range.of(steps)){
       var upTo= steps.subList(0, i+1);
       bytes = readHere(diskZip, upTo, bytes).get(steps.get(i));
       if (bytes == null){ throw Violation.cacheCouldNotFindZipEntry(diskZip, upTo, steps.get(i)); }

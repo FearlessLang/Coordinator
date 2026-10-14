@@ -3,11 +3,11 @@ package naiveBackend;
 import java.nio.file.Path;
 import java.util.Optional;
 
-import core.TName;
-import core.M;
 import core.E.Call;
 import core.E.Literal;
 import core.E.Type;
+import core.M;
+import core.TName;
 import tools.NativeOverrides;
 import utils.Pos;
 

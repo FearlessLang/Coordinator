@@ -1,15 +1,21 @@
 package naiveBackend;
 
-import core.*;
-import core.E.*;
+import core.E;
+import core.E.Call;
+import core.E.Literal;
+import core.E.Type;
+import core.E.X;
+import core.LiteralDeclarations;
+import core.M;
+import core.T;
 import utils.Range;
 import utils.Streams;
 
 record ProduceBody(BytecodeLineFix sb, Backend b, String thisName, M m){
   public void emitBody(){
-    if (!"_".equals(thisName)){ sb.a("    var ").a(thisName).a("$= this;\n"); }
+    if (!thisName.equals("_")){ sb.a("    var ").a(thisName).a("$= this;\n"); }
     Streams.zipI(m.xs(), m.sig().ts())
-      .filter((_,x,_) -> !"_".equals(x))
+      .filter((_,x,_) -> !x.equals("_"))
       .forEach((i,x,t) -> sb
         .a("    var ").a(b.encodeTrailingPrimes(x))
         .a("$= ").a(optCast(t)).a("p"+i+";\n"));
@@ -17,13 +23,13 @@ record ProduceBody(BytecodeLineFix sb, Backend b, String thisName, M m){
     emitE(m.e().get());
     sb.a(";\n  }\n");
   }
-  private String optCast(core.T t){
-    if (!(t instanceof core.T.RCC rcc)){ return ""; }
+  private String optCast(T t){
+    if (!(t instanceof T.RCC rcc)){ return ""; }
     var n= rcc.c().name();
     var lit= n.pkgName().equals("base") && LiteralDeclarations.isPrimitiveLiteral(n.simpleName());
     return "("+b.typeName(lit ? LiteralDeclarations.superLiteral(n) : n)+")";
   }
-  void emitE(core.E e){ switch (e){
+  void emitE(E e){ switch (e){
     case X x -> sb.a(b.encodeTrailingPrimes(x.name())+"$");
     case Type t -> emitType(t);
     case Call c -> emitCall(c);
@@ -37,7 +43,7 @@ record ProduceBody(BytecodeLineFix sb, Backend b, String thisName, M m){
     sb.a(sl+"Instance.instance("+LiteralDeclarations.toJavaLiteral(n.simpleName())+")");
   }
   private void emitCall(Call c){
-    String cast= castedReceiverExpr(c.e());
+    var cast= castedReceiverExpr(c.e());
     if (!cast.isEmpty()){ sb.a("("+cast); }
     emitE(c.e());
     if (!cast.isEmpty()){ sb.a(")"); }
@@ -50,7 +56,7 @@ record ProduceBody(BytecodeLineFix sb, Backend b, String thisName, M m){
     }
     sb.a(")");//CHECK THIS: I think this is enough to make sure that there is never two fearless method calls on the same java line (possibly even overkill?)
   }
-  private String castedReceiverExpr(core.E recv){ return recv instanceof Call c ? optCast(c.expectedRes().inner) : ""; }
+  private String castedReceiverExpr(E recv){ return recv instanceof Call c ? optCast(c.expectedRes().inner) : ""; }
   private void emitLit(Literal lit){
     if (LiteralDeclarations.has(lit.cs(), LiteralDeclarations.captureFree)){
       b.generateInterface(lit, false);

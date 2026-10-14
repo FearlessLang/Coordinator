@@ -9,11 +9,11 @@ You need to add a file LocalResources.java (that is already in the gitignore)
 following the template LocalResourcesTemplate.java
 */
 public final class ResolveResource extends LocalResources{
-  static public final Path coordinatorJars= coordinatorSrc.getParent().resolve("externalJars");
-  static public final Path coordinatorTestJars= coordinatorSrc.getParent().resolve("testJars");
-  static public final Path controllerPluginSrc= controllerSrc.getParent().resolve("fearlessPluginProject");
-  static public final Path eclipsePlugins= portableEclipse.resolve("plugins");
+  public static final Path coordinatorJars= coordinatorSrc.getParent().resolve("externalJars");
+  public static final Path coordinatorTestJars= coordinatorSrc.getParent().resolve("testJars");
+  public static final Path controllerPluginSrc= controllerSrc.getParent().resolve("fearlessPluginProject");
+  public static final Path eclipsePlugins= portableEclipse.resolve("plugins");
 
-  static public final String eclipseJavaVersion= "21";
+  public static final String eclipseJavaVersion= "21";
   public static final String versionId= "0_001";
 }

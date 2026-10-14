@@ -1,5 +1,10 @@
 package userMessages;
 
+import static userMessages.UserError.disp;
+import static userMessages.UserError.path;
+import static userMessages.UserError.showRel;
+import static userMessages.UserError.showZipRel;
+
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
@@ -11,10 +16,10 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import core.E.Literal;
 import core.LiteralDeclarations;
 import core.T;
 import core.TName;
-import core.E.Literal;
 import metaParser.Frame;
 import metaParser.Message;
 import tools.Fs;
@@ -23,11 +28,6 @@ import tools.SourceOracle.Ref;
 import tools.SourceOracle.RefParent;
 import utils.Join;
 import utils.Pop;
-
-import static userMessages.UserError.disp;
-import static userMessages.UserError.showRel;
-import static userMessages.UserError.showZipRel;
-import static userMessages.UserError.path;
 
 /// Report: the user gave us something we cannot accept, and can fix it by changing
 /// what they gave us. Their file and folder names, their zips, their project layout,
@@ -137,8 +137,8 @@ Start Fearless on an existing project folder, or on a file inside one.
   }
   public static UserError emptyDirectory(Path kid){
     return directFail(showRel(kid), """
-This directory is empty.
-Different systems handle empty directories differently,
+This folder is empty.
+Different systems handle empty folders differently,
 and they may not be supported by compression tools (zip)
 or version control systems (git).
 """);}
@@ -258,7 +258,7 @@ when deciding what needs compiling, so such a date can not be trusted.
       "- The file extension contains an unsupported character: "+Message.displayChar(c)+".\n"
     + "  Extensions may use only lowercase letters (a-z) and digits (0-9).",
       "- Rename the file to use an extension made only of lowercase letters and digits.\n"
-    + "  Examples: \".txt\", \".fear\", \".md\", \".tar.gz\""
+    + "  Examples: \".txt\", \".fear\", \".md\", \".tar.gz\"."
     );
   }
   private static String listed(String label, RefParent r){ return "  "+label+":\n  "+showRel(r).replace("\nPath:", "\n  Path:")+"\n"; }
@@ -294,7 +294,7 @@ when deciding what needs compiling, so such a date can not be trusted.
     return fail(showRel(kid),
       "- A protected name segment ends with a dot or a space.\n"
     + "  Some systems/tools trim these, which causes collisions.\n"
-    + "  Bad segment: "+disp(name)+"",
+    + "  Bad segment: "+disp(name),
       "- Rename the segment so it does not end with '.' or space."
     );
   }
@@ -308,8 +308,8 @@ when deciding what needs compiling, so such a date can not be trusted.
   public static UserError invisibleNoControlChars(RefParent kid, int cp, String name){
     return fail(showRel(kid),
       "- A protected name segment contains a control character.\n"
-     + "  Character: " + Message.displayChar(cp)+"\n"
-     + "  Segment: " + disp(name) + "",
+    + "  Character: " + Message.displayChar(cp)+"\n"
+    + "  Segment: " + disp(name),
       "- Rename the segment to remove the control character."
     );}
   public static UserError invisibleNoWindowsBadChars(RefParent kid, char bad, String name){
@@ -324,13 +324,13 @@ when deciding what needs compiling, so such a date can not be trusted.
   public static UserError invisibleWindowsReservedDeviceName(RefParent kid, String base, String name){
     return fail(showRel(kid),
       "- A protected name segment uses a Windows reserved device name.\n"
-    + "  Bad base: "+disp(base)+" in segment: "+disp(name)+"",
+    + "  Bad base: "+disp(base)+" in segment: "+disp(name),
       "- Rename it so the base name is not a Windows device name.\n"
     + "  Reserved device name: \"con\", \"prn\", \"aux\", \"nul\", \"com1\"..\"com9\", \"lpt1\"..\"lpt9\"."
     );
   }
   public static UserError invisibleSiblingNamesCollide(RefParent kid, String prev, String name, boolean caseOnly, boolean nfcOnly){
-    String reason=
+    var reason=
       caseOnly ? "Names differ only by case."
       : nfcOnly  ? "Names differ only by Unicode normalization (NFC)."
       :            "Names collide after Unicode NFC normalization and case-folding.";
@@ -445,13 +445,13 @@ Fearless expands each zip file into a folder: rename this file if it is not mean
   public static UserError zipEmptyDirectoryEntry(Path diskZip, List<String> steps, String entryName){
     return directFail(showZipRel(diskZip, steps, entryName),
       "This zip contains a folder entry called "+disp(entryName)+", but it is empty.\n"
-     +"Different systems handle empty directories differently, and they may not be\n"
+     +"Different systems handle empty folders differently, and they may not be\n"
      +"supported by compression tools (zip) or version control systems (git).");
   }
 
   //-- project layout: which folder defines a package, and the rank file of each package
   public static UserError projectEmpty(Path root){ return new UserError("""
-The fearless project folder contains no *.fear files
+This project folder contains no ".fear" files.
 Folder:
 %s
 """.formatted(path(root.toString())));
@@ -610,7 +610,7 @@ File:
   }
   private static UserError claim(SourceOracle src, Literal l, String msg){
     var owner= owner(l);
-    return new UserError(Message.of(src::loadString, List.of(new Frame(owner, l.span().inner)), owner.substring(0, 1).toUpperCase()+owner.substring(1)+msg));
+    return new UserError(Message.of(src::loadString, List.of(new Frame(owner, l.span().inner)), Character.toUpperCase(owner.charAt(0))+owner.substring(1)+msg));
   }
   private static UserError claim(SourceOracle src, Literal l, T.C c, String msg){ return claim(src, l, " implements "+disp(repr(c))+".\n"+msg); }
   private static String withArity(TName n){ return n.s()+Join.of(Collections.nCopies(n.arity(), "_"), "[", ",", "]", ""); }

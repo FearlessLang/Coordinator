@@ -12,10 +12,10 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import core.AllLs;
+import core.E.Literal;
 import core.LiteralDeclarations;
 import core.T;
 import core.TName;
-import core.E.Literal;
 import fileSupport.Info;
 import realSourceOracle.SourceOracleWithAutoload;
 import tools.Fs;
@@ -95,7 +95,7 @@ public record MainsInfo(Map<String,Main> mains){
       if (cs.isEmpty()){ return; }
       if (!LiteralDeclarations.has(l.cs(), main)){ throw Report.claimNotMain(src, l, cs.getFirst().name()); }
       var exts= new HashMap<String,T.C>();
-      for (var c: cs){
+      for (var c : cs){
         if (!(c.ts().getFirst() instanceof T.RCC i && i.c().ts().isEmpty())){ throw Report.claimIconNotConcrete(src, l, c); }
         if (SourceOracleWithAutoload.imageAsset(src, stLib, name(c.ts().getFirst())).isEmpty()){ throw Report.claimIconNotAsset(src, l, c); }
         if (c.ts().size() == 1){ continue; }
