@@ -56,8 +56,9 @@ public interface Coordinator{
   }
   static URI testsUri(String pkg, List<Ref> files){ return OneOr.of("One rank file per package", files.stream().filter(Helper::hasReservedRankPrefix)).fearURI().resolve("auto_tests/"+pkg+"_test.fear"); }
   default SourceOracle sourceOracle(Path path){ return new RealSourceOracleWithZip(path); }
-  static Map<String,Boolean> pkgsBuilt(Path path){
+  static Map<String,Boolean> pkgsBuilt(Path path, Path baseCache){
     var map= Helper.pkgMap(new RealSourceOracleWithZip(path), path);
+    var baseApi= Fs.lastModified(baseCache.resolve("base.json"));
     var ranks= map.values().stream().map(Helper::okPkgContent).toList();
     var out= Helper.out(path);
     var top= ranks.stream().mapToInt(Helper::rankNumber).max().getAsInt();
@@ -67,7 +68,7 @@ public interface Coordinator{
       var pkg= Helper.pkgName(r);
       var lower= ranks.stream().filter(d -> Helper.rankNumber(d) < Helper.rankNumber(r)).map(Helper::pkgName).toList();
       var below= lower.stream().mapToLong(out::pkgApiStamp);
-      var maxIn= LongStream.concat(LongStream.concat(map.get(pkg).stream().mapToLong(Ref::lastModified), below), LongStream.of(out.mapStamp())).max().getAsLong();
+      var maxIn= LongStream.concat(LongStream.concat(map.get(pkg).stream().mapToLong(Ref::lastModified), below), LongStream.of(out.mapStamp(), baseApi)).max().getAsLong();
       res.put(pkg, out.stillBuilt(pkg, map.get(pkg), Push.of(lower, "base"), maxIn) && (listed || Helper.rankNumber(r) != top));
     }
     return Collections.unmodifiableMap(res);
