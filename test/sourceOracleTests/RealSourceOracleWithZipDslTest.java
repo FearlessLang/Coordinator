@@ -1,7 +1,8 @@
 package sourceOracleTests;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static testHelperFs.FsDsl.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static testHelperFs.FsDsl.runErrIOE;
 
 import java.io.ByteArrayOutputStream;
 import java.io.UncheckedIOException;
