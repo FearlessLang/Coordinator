@@ -228,11 +228,11 @@ AllAutoTests_p: base.UnitTests {::
   }
 """, Fs.readUtf8(generatedTests(root)));
     var stamp= Files.getLastModifiedTime(generatedTests(root));
-    assertEquals(Map.of("p", true), Coordinator.pkgsBuilt(root));
+    assertEquals(Map.of("p", true), Coordinator.pkgsBuilt(root, baseCache));
     utils.Err.strCmp(expected, c.main(root, stLib));
     utils.Err.strCmp(expected, c.main(root, stLib));
     assertEquals(stamp, Files.getLastModifiedTime(generatedTests(root)));
-    assertEquals(Map.of("p", true), Coordinator.pkgsBuilt(root));
+    assertEquals(Map.of("p", true), Coordinator.pkgsBuilt(root, baseCache));
     assertEquals(List.of("p"), frontends);
   }
   @Test void aStaleGeneratedTestIsRegenerated(@TempDir Path tmp) throws IOException{
@@ -243,7 +243,7 @@ AllAutoTests_p: base.UnitTests {::
     editAndTouch(root.resolve("_p", "_rank_app.fear"), ".inc", ".plus");
     c.compile(root, stLib);
     utils.Err.strCmp("[###].check{Calc.plus(1) .assertEq 2}[###]", Fs.readUtf8(generatedTests(root)));
-    assertEquals(Map.of("p", true), Coordinator.pkgsBuilt(root));
+    assertEquals(Map.of("p", true), Coordinator.pkgsBuilt(root, baseCache));
     assertEquals(List.of("p", "p"), frontends);
   }
   @Test void aFileWithoutTheMarkAtTheGeneratedLocationIsAnOrdinarySourceFile(@TempDir Path tmp) throws IOException{
@@ -287,7 +287,7 @@ App:Main, lib.Lib{s->base.Debug#(`app`)}
 """);
     utils.Err.strCmp("app\n", main(root, List.of()));
     Fs.rmTree(root.resolve("_lib"));
-    assertEquals(Map.of("app", false), Coordinator.pkgsBuilt(root));
+    assertEquals(Map.of("app", false), Coordinator.pkgsBuilt(root, baseCache));
     var ex= assertThrows(UserError.class, () -> main(root, List.of()));
     utils.Err.strCmp("[###]lib.Lib[###]", ex.getMessage());
     assertFalse(Files.exists(root.resolve(".fearless_out", "gen_java", "lib.jar")));
@@ -1133,9 +1133,9 @@ Foo:Main, OpenWith[IconsFoo,"foo"]{s->base.Debug#(`foo`)}
 """);
     coordinator(root).compile(root, stLib);
     var text= Fs.readUtf8(mainsInfo(root));
-    assertEquals(Map.of("col", true), Coordinator.pkgsBuilt(root));
+    assertEquals(Map.of("col", true), Coordinator.pkgsBuilt(root, baseCache));
     Files.delete(root.resolve(Coordinator.outDir).resolve("col.mains.info"));
-    assertEquals(Map.of("col", false), Coordinator.pkgsBuilt(root));
+    assertEquals(Map.of("col", false), Coordinator.pkgsBuilt(root, baseCache));
     assertEquals(Optional.empty(), coordinator(root).mains(root, stLib));
     coordinator(root).compile(root, stLib);
     utils.Err.strCmp(text, Fs.readUtf8(mainsInfo(root)));
@@ -1152,7 +1152,7 @@ Lib:base.Main, base.OpenWith[base.IconsConflict,"fear"]{s->base.Debug#(`lib`)}
     coordinator(root).compile(root, stLib);
     assertEquals(Map.of("col.Foo", "_col/_rank_app.fear"), coordinator(root).mains(root, stLib).orElseThrow());
     Fs.rmTree(root.resolve("_col"));
-    assertEquals(Map.of("lib", true), Coordinator.pkgsBuilt(root));
+    assertEquals(Map.of("lib", true), Coordinator.pkgsBuilt(root, baseCache));
     utils.Err.strCmp("lib\n", coordinator(root).main(root, stLib));
     utils.Err.strCmp("""
 {
@@ -1171,10 +1171,25 @@ More:base.Main{s->base.Debug#(`more`)}
     coordinator(root).compile(root, stLib);
     var text= Fs.readUtf8(mainsInfo(root));
     Files.delete(mainsInfo(root));
-    assertEquals(Map.of("col", false, "more", false), Coordinator.pkgsBuilt(root));
+    assertEquals(Map.of("col", false, "more", false), Coordinator.pkgsBuilt(root, baseCache));
     coordinator(root).compile(root, stLib);
     utils.Err.strCmp(text, Fs.readUtf8(mainsInfo(root)));
-    assertEquals(Map.of("col", true, "more", true), Coordinator.pkgsBuilt(root));
+    assertEquals(Map.of("col", true, "more", true), Coordinator.pkgsBuilt(root, baseCache));
+  }
+  @Test void aBaseApiNewerThanAPackageMakesThatPackageNotBuilt(@TempDir Path tmp) throws Exception{
+    var root= claimsProject(tmp, """
+Foo:Main{s->base.Debug#(`foo`)}
+""");
+    coordinator(root).compile(root, stLib);
+    assertEquals(Map.of("col", true), Coordinator.pkgsBuilt(root, baseCache));
+    var baseApi= baseCache.resolve("base.json");
+    var old= Files.getLastModifiedTime(baseApi);
+    try{
+      Files.setLastModifiedTime(baseApi, FileTime.fromMillis(System.currentTimeMillis()+1000));
+      assertEquals(Optional.empty(), coordinator(root).mains(root, stLib));
+      assertEquals(Map.of("col", false), Coordinator.pkgsBuilt(root, baseCache));
+    }
+    finally{ Files.setLastModifiedTime(baseApi, old); }
   }
   @Test void aMovedIconOfALowerRankPackageIsFollowed(@TempDir Path tmp) throws Exception{
     var root= claimsProject(tmp, """
