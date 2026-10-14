@@ -23,7 +23,7 @@ import tools.SourceOracle;
 import utils.Push;
 
 final class TestBuildBase{
-  Coordinator c= new Coordinator(){
+  final Coordinator c= new Coordinator(){
     @Override public Path modsPath(){  return ResolveResource.coordinatorJars; }
     @Override public BackendTools backendTools(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, CapabilityEnvironment capabilities){
       return BackendTools.of(pkgName, oracle, other, core, ResolveResource.stLibDebugOut, baseCachePath(), Optional.of(ResolveResource.stLibPath), ResolveResource.stLibRTPath, capabilities);

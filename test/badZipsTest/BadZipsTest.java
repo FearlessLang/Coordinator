@@ -14,7 +14,7 @@ import testHelperFs.FsDsl;
 
 final class BadZipsTest{
   static{ utils.Err.setUp(AssertionFailedError.class, Assertions::assertEquals, Assertions::assertTrue); }
-  static Path root= ResolveResource.badZipCorpous;
+  static final Path root= ResolveResource.badZipCorpous;
   public static void runErrIOE(String in, String expected){
     Path input= root.resolve(in);
     UserError.root = root;
