@@ -196,7 +196,7 @@ record NoCompile(Optional<Path> baseCachePath) implements Coordinator{
 }
 record NoCommit(Path rootDir) implements OutputOracle{
   @Override public long commitMap(Map<String,Map<String,String>> map, long minExclusiveMillis){
-    if (OutputHelper.mapFromJSon(mapPath()).filter(map::equals).isEmpty()){ throw new WouldCompile(); }
+    if (OutputHelper.mapFromJson(mapPath()).filter(map::equals).isEmpty()){ throw new WouldCompile(); }
     return mapStamp();
   }
 }
