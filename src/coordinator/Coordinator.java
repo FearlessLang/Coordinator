@@ -106,7 +106,7 @@ public interface Coordinator{
   default List<Literal> frontend(String pkgName, List<Ref> files, SourceOracle oracle, OtherPackages other, Map<String,String> vres, CapabilityEnvironment capabilities){
     var tests= new ArrayList<Ref>();
     try{ return new FrontendLogicMain().of(pkgName, vres, files, other, core -> docs(pkgName, testsUri(pkgName, files), oracle, other, core, capabilities, tests)); }
-    catch (FearlessException fe){ throw Report.sourceError(fe.render(oracle.withFallback(() -> tests))); }
+    catch (FearlessException e){ throw Report.sourceError(e.render(oracle.withFallback(() -> tests))); }
   }
   private Optional<Ref> docs(String pkgName, URI testsUri, SourceOracle oracle, OtherPackages other, List<Literal> core, CapabilityEnvironment capabilities, ArrayList<Ref> tests){
     var docs= backendTools(pkgName, oracle, other, core, capabilities).docs();
@@ -143,7 +143,7 @@ final class Helper{
     List<Ref> allRanks= map.values().stream().map(Helper::okPkgContent).toList();
     Map<String,Map<String,String>> res; try{res= new FrontendLogicMain()
       .parseRankFiles(allRanks, Comparator.comparingInt(Helper::rankNumber), Push.of(allRanks.stream().map(Helper::pkgName).toList(), "base"));}
-    catch (FearlessException fe){ throw Report.sourceError(fe.render(o)); }
+    catch (FearlessException e){ throw Report.sourceError(e.render(o)); }
     Layer l= new BaseLayer(coordinator, res, out.commitMap(res, allRanks.stream().mapToLong(Ref::lastModified).max().getAsLong()), stLib);
     var byRank= new TreeMap<Integer,LinkedHashMap<String,List<Ref>>>();
     for (var r: allRanks.stream().sorted(Comparator.comparing(Ref::fearPath)).toList()){

@@ -54,7 +54,7 @@ public final class NativeLocaleForcer{
       throw Violation.unsupportedOperatingSystem();
     }
     catch (UserError e){ throw e; }
-    catch (Throwable t){ throw Violation.couldNotForceEnglish("The call into the operating system failed.", t); }
+    catch (Throwable e){ throw Violation.couldNotForceEnglish("The call into the operating system failed.", e); }
   }
   // char* setlocale(int category, const char* locale);
   // Returns NULL when the request is rejected; per the fail-loudly policy (and unlike

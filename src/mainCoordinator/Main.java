@@ -47,7 +47,7 @@ public final class Main{
     JavacTool.reqAppDir(Violation::mustUseLauncher);
     try{ if (!hasConsoleFlag()){ hookStd(); } run(args); }
     catch (UserError e){ System.err.print(e.getMessage()); }
-    catch (Throwable t){ System.err.print(UserError.crash(t)); }
+    catch (Throwable e){ System.err.print(UserError.crash(e)); }
   }
   private static void run(String[] args) throws InterruptedException{
     var appDir= JavacTool.reqAppDir(Violation::mustUseLauncher);

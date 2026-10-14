@@ -22,7 +22,7 @@ public record ProgrammaticMain(StringBuilder out, StringBuilder err, String fNam
     var oldErr= System.err;
     try{ _runFearless(); }
     catch (UserError e){ System.err.print(e.getMessage()); }
-    catch (Throwable t){ System.err.print(UserError.crash(t)); }
+    catch (Throwable e){ System.err.print(UserError.crash(e)); }
     finally{
       System.setOut(oldOut);
       System.setErr(oldErr);
