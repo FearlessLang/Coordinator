@@ -354,7 +354,7 @@ App:Main, lib.Lib{s->base.Debug#(`app`)}
     try (var files= Files.list(dir)){
       var found= files.filter(p -> p.getFileName().toString().startsWith(prefix)).toList();
       Assertions.assertEquals(1, found.size(), found.toString());
-      return found.get(0);
+      return found.getFirst();
     }
   }
   @Test void testLogging() throws InterruptedException, IOException{
