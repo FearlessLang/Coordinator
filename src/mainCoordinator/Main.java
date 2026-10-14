@@ -65,6 +65,7 @@ public final class Main{
     run(Files.isDirectory(l) ? l : l.getParent(), stdLib.resolve("base"), stdLib.resolve("rt"));
   }
   public static void run(Path project, Path base, Path rt) throws InterruptedException{
+    UserError.root = project;
     var c= new Coordinator(){
       @Override public Optional<Path> baseCachePath(){ return Optional.of(base.getParent().resolve("baseCache")); }
       @Override public BackendTools backendTools(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, CapabilityEnvironment capabilities){
