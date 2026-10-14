@@ -1,7 +1,5 @@
 package docBuilder;
 
-import static offensiveUtils.Require.*;
-
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -19,6 +17,7 @@ import core.E.*;
 import metaParser.Frame;
 import metaParser.Message;
 import metaParser.Span;
+import offensiveUtils.Require;
 import realSourceOracle.PathEntry;
 import tools.Fs;
 import tools.SourceOracle;
@@ -28,7 +27,7 @@ import utils.Pos;
 
 public final class HtmlDocBuilder{
   public HtmlDocBuilder(SourceOracle oracle, OtherPackages other, List<Literal> core, Optional<Path> baseDocLocation){
-    assert nonNull(oracle, other, core, baseDocLocation);
+    assert Require.nonNull(oracle, other, core, baseDocLocation);
     this.oracle= oracle;
     this.other= other;
     this.baseDocLocation= baseDocLocation;
@@ -49,7 +48,7 @@ public final class HtmlDocBuilder{
   final Map<URI,SourceDocs> sources= new HashMap<>();
 
   public void packageLocation(String pkgName, Path htmlPath, Optional<Path> testsRoot){
-    assert nonNull(pkgName, htmlPath, testsRoot);
+    assert Require.nonNull(pkgName, htmlPath, testsRoot);
     assert this.pkgName == null;
     this.pkgName = pkgName;
     this.htmlPath = htmlPath;
@@ -63,7 +62,7 @@ public final class HtmlDocBuilder{
     e.children().forEach(this::visitAll);
   }
   public void visitLiteral(Literal l){
-    assert nonNull(l);
+    assert Require.nonNull(l);
     var t= typeBySrc.get(l.src());
     if (t == null){
       t = new TypeDoc(l, docsAt(l.pos(), !l.infName()));
@@ -79,7 +78,7 @@ public final class HtmlDocBuilder{
   }
 
   public Optional<Ref> complete(URI testsUri){
-    assert nonNull(pkgName, htmlPath);
+    assert Require.nonNull(pkgName, htmlPath);
     var resolver= new DocResolver(pkgName, types, other);
     var spans= new IdentityHashMap<DocOcc,Map<Integer,DocLink>>();
     var problems= new ArrayList<String>();

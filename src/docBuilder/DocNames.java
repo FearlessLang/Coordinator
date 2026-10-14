@@ -1,7 +1,5 @@
 package docBuilder;
 
-import static offensiveUtils.Require.*;
-
 import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -10,6 +8,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import core.E.Literal;
+import offensiveUtils.Require;
 
 public final class DocNames{
   static final List<String> baseNames= List.of(
@@ -65,7 +64,7 @@ public final class DocNames{
 );
 
   public static Map<String,String> uses(String pkgName, Collection<Literal> core){
-    assert nonNull(pkgName, core);
+    assert Require.nonNull(pkgName, core);
     var local= core.stream()
       .filter(l -> l.name().pkgName().equals(pkgName))
       .map(l -> l.name().simpleName())

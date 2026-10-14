@@ -1,7 +1,5 @@
 package naiveBackend;
 
-import static offensiveUtils.Require.*;
-
 import java.lang.classfile.ClassFile;
 import java.lang.classfile.ClassTransform;
 import java.lang.classfile.CodeBuilder;
@@ -13,6 +11,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.TreeMap;
 import java.util.function.Consumer;
+import offensiveUtils.Require;
 import tools.Fs;
 import utils.Pos;
 
@@ -24,7 +23,7 @@ final class BytecodeLineFix implements Consumer<Path>{
   private int javaLine= 1;
   BytecodeLineFix(String base, URI sourceFile){ this(base, sourceFile.toString().substring("fear:/".length())); }
   BytecodeLineFix(String base, String sourceFile){
-    assert nonNull(base, sourceFile);
+    assert Require.nonNull(base, sourceFile);
     this.base= base;
     this.sourceFile= sourceFile;
   }
