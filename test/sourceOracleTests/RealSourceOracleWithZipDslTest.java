@@ -1,6 +1,7 @@
 package sourceOracleTests;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static testHelperFs.FsDsl.*;
 
 import java.io.ByteArrayOutputStream;
 import java.io.UncheckedIOException;
@@ -32,7 +33,6 @@ import utils.Pos;
 import testHelperFs.FsDsl;
 import tools.Fs;
 import tools.SourceOracle.Ref;
-import static testHelperFs.FsDsl.*;
 
 final class RealSourceOracleWithZipDslTest{
 

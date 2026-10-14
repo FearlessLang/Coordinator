@@ -1,5 +1,8 @@
 package userMessages;
 
+import static userMessages.UserError.die;
+import static userMessages.UserError.path;
+
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -10,9 +13,6 @@ import java.util.function.Supplier;
 import fileAssociations.LinuxAssociations;
 import metaParser.Message;
 import utils.Join;
-
-import static userMessages.UserError.die;
-import static userMessages.UserError.path;
 
 /// Violation: Fearless can no longer do its safe job.
 /// Not necessarily a bad actor. An operating system that does not offer a service we

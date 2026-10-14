@@ -1,5 +1,8 @@
 package userMessages;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.nio.file.Path;
 
 import org.junit.jupiter.api.Test;
@@ -7,9 +10,6 @@ import org.junit.jupiter.api.io.TempDir;
 
 import metaParser.PrettyFileName;
 import tools.Fs;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 final class UserErrorTest{
   @Test void pathIsUnchangedForPlainAscii(){

@@ -23,6 +23,7 @@ import tools.Fs;
 import tools.SourceOracle;
 import tools.SourceOracle.Ref;
 import tools.SourceOracle.RefParent;
+
 public final class BuildWithZip{
   public static boolean isInvisible(RefParent r){
     return AutoloadHandler.components(r.fearPath()).stream().anyMatch(s -> s.startsWith("."));
