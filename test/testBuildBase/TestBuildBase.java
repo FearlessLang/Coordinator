@@ -37,7 +37,7 @@ final class TestBuildBase{
       var capabilities= new CapabilityEnvironment(rich.autoloadedAssets());
       var core= frontend(pkgName, rich.sources(stLib.allFiles()), rich.oracle(), other, Map.of(), capabilities);
       backend(pkgName, core, rich.oracle(), other, capabilities);
-      var jars= Push.of(out.rootDir().resolve("gen_java"), sharedClasspath());
+      var jars= Push.of(Coordinator.genJava(out.rootDir()), sharedClasspath());
       var runOut= JavaTool.runMainFromJars(Coordinator.runData(out.rootDir().getParent(), ResolveResource.stLibPath), jars, "_"+pkgName+".Main");
       assertEquals("", runOut);
       return runOut;

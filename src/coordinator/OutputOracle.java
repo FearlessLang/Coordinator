@@ -42,7 +42,7 @@ public interface OutputOracle{
     gone.forEach(this::forget);
   }
   private void forget(String pkg){
-    var gen= rootDir().resolve("gen_java");
+    var gen= Coordinator.genJava(rootDir());
     List.of(builtPath(pkg), pkgApiPath(pkg), mainsPath(pkg), gen.resolve(pkg+".jar"), gen.resolve(pkg+".html"), gen.resolve(pkg+".txt")).forEach(Fs::rmTree);
   }
   default OtherPackages addCachedPkgApi(OtherPackages other, String pkg){
