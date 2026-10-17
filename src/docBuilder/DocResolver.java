@@ -14,6 +14,7 @@ import core.T;
 import core.TName;
 import utils.DistinctBy;
 import utils.Join;
+import utils.OneOr;
 
 /// Where a doc comment is written: the type it documents, and the method when it
 /// documents one. This is what makes "this" and the parameter names mean something.
@@ -108,7 +109,7 @@ record DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other){
   }
 
   private Optional<TypeDoc> localTypeDoc(TName n){
-    return types.stream().filter(t -> !t.main().infName() && t.main().name().equals(n)).findFirst();
+    return OneOr.opt("type "+n, types.stream().filter(t -> !t.main().infName() && t.main().name().equals(n)));
   }
 
   private List<M> declaredAndInherited(Literal owner){

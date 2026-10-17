@@ -33,6 +33,7 @@ import tools.SourceOracle.Ref;
 import userMessages.Report;
 import userMessages.UserError;
 import utils.Join;
+import utils.OneOr;
 import utils.Pos;
 
 final class RealSourceOracleWithZipDslTest{
@@ -1648,8 +1649,8 @@ Optional.empty
     UserError.root = diskRoot;
     Files.createDirectories(diskRoot.resolve("_pkg"));
     Files.write(diskRoot.resolve("_pkg/a.fear"), bad);
-    var diskRef= new RealSourceOracleWithZip(diskRoot).allFiles().stream()
-      .filter(r -> r.fearPath().equals("fear:/_pkg/a.fear")).findFirst().get();
+    var diskRef= OneOr.of("one fear:/_pkg/a.fear", new RealSourceOracleWithZip(diskRoot).allFiles().stream()
+      .filter(r -> r.fearPath().equals("fear:/_pkg/a.fear")));
     assertThrows(UncheckedIOException.class, diskRef::loadString);
 
     var zipRoot= tmp.resolve("zip").toAbsolutePath().normalize();
@@ -1660,8 +1661,8 @@ Optional.empty
       zos.write(bad);
       zos.closeEntry();
     }
-    var zipRef= new RealSourceOracleWithZip(zipRoot).allFiles().stream()
-      .filter(r -> r.fearPath().equals("fear:/_pkg/z/a.fear")).findFirst().get();
+    var zipRef= OneOr.of("one fear:/_pkg/z/a.fear", new RealSourceOracleWithZip(zipRoot).allFiles().stream()
+      .filter(r -> r.fearPath().equals("fear:/_pkg/z/a.fear")));
     assertThrows(UncheckedIOException.class, zipRef::loadString);
   }
 }
