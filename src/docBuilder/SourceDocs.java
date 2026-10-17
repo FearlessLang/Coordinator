@@ -29,7 +29,7 @@ final class SourceDocs{
   final Set<DocOcc> ambiguousInline= Collections.newSetFromMap(new IdentityHashMap<>());
 
   List<DocOcc> docsAt(Pos pos, boolean includeBefore){
-    assert pos.line() > 0 && pos.line() <= lines.size(): pos;
+    assert pos.line() > 0 && pos.line() <= lines.size() : pos;
     var res= new ArrayList<DocOcc>();
     if (includeBefore){ collectBefore(pos.line(), res); }
     inlineAfter(pos.line(), pos.column())

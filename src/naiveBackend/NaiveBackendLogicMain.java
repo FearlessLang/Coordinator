@@ -24,7 +24,7 @@ public final class NaiveBackendLogicMain{
     assert foldDistinct(outPath);
     Runnable post= () -> fixers.forEach(f -> f.accept(pkgPath));
     var javacOut= Fs.of(() -> JavacTool.compileTree(outPath, classes, post, genJava.resolve(tools.pkgName()+".jar"), extraClasspathDirs));
-    assert javacOut.isEmpty(): javacOut;
+    assert javacOut.isEmpty() : javacOut;
     Fs.rmTree(outPath); Fs.rmTree(classes);//comment out this line to keep the generated .java and .class files for debugging
   }
   private static boolean foldDistinct(Path dir){
@@ -33,7 +33,7 @@ public final class NaiveBackendLogicMain{
   }
   private static boolean foldFree(HashMap<String,String> seen, String name){
     var prev= seen.putIfAbsent(name.toLowerCase(Locale.ROOT), name);
-    assert prev == null || prev.equals(name):
+    assert prev == null || prev.equals(name) :
       "Generated names differ only by case, so they are one file on Windows and macOS: "+prev+" and "+name;
     return true;
   }
