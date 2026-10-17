@@ -6,7 +6,7 @@ import java.util.List;
 import resources.ResolveResource;
 
 public final class DeployManagedFearless{
-  public static void main(String[] a) throws InterruptedException{
+  public static void main(String[] args) throws InterruptedException{
     ModularBuild.deploy(ResolveResource.managedFolderOut,
       List.of(
         List.of(ResolveResource.commonsSrc),

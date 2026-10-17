@@ -5,12 +5,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 
+import coordinator.Coordinator;
 import tools.Fs;
 import tools.JavacTool;
 
 public final class NaiveBackendLogicMain{
   public void of(BackendTools tools, List<Path> extraClasspathDirs){
-    var genJava= tools.rootDir().resolve("gen_java");
+    var genJava= Coordinator.genJava(tools.rootDir());
     var outPath= genJava.resolve(tools.pkgName());
     var fixers= new Backend(outPath, tools).produceJavaCode();
     var classes= genJava.resolve("_classes");
@@ -23,7 +24,7 @@ public final class NaiveBackendLogicMain{
     assert foldDistinct(outPath);
     Runnable post= () -> fixers.forEach(f -> f.accept(pkgPath));
     var javacOut= Fs.of(() -> JavacTool.compileTree(outPath, classes, post, genJava.resolve(tools.pkgName()+".jar"), extraClasspathDirs));
-    assert javacOut.isEmpty(): javacOut;
+    assert javacOut.isEmpty() : javacOut;
     Fs.rmTree(outPath); Fs.rmTree(classes);//comment out this line to keep the generated .java and .class files for debugging
   }
   private static boolean foldDistinct(Path dir){
@@ -32,7 +33,7 @@ public final class NaiveBackendLogicMain{
   }
   private static boolean foldFree(HashMap<String,String> seen, String name){
     var prev= seen.putIfAbsent(name.toLowerCase(Locale.ROOT), name);
-    assert prev == null || prev.equals(name):
+    assert prev == null || prev.equals(name) :
       "Generated names differ only by case, so they are one file on Windows and macOS: "+prev+" and "+name;
     return true;
   }

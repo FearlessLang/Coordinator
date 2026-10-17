@@ -19,7 +19,7 @@ import tools.SourceOracle;
 import utils.OneOr;
 
 public final class BaseCacheBuilder{
-  public static void main(String[] a){ deployInto(Path.of(a[0])); }
+  public static void main(String[] args){ deployInto(Path.of(args[0])); }
   public static void deployInto(Path appRoot){
     var modsDir= singleDirNamed(appRoot, "mods");
     var stdLib= modsDir.getParent().resolve("stdLib");
@@ -51,9 +51,9 @@ public final class BaseCacheBuilder{
       out.commitPkgApi(pkgName, core, -1);
       var baseCache= stdLibDir.resolve("baseCache");
       Fs.copyFresh(scratch.resolve("base.json"), baseCache.resolve("base.json"));
-      Fs.copyFresh(scratch.resolve("gen_java").resolve("base.jar"), baseCache.resolve("base.jar"));
-      Fs.copyFresh(scratch.resolve("gen_java").resolve("base.html"), baseCache.resolve("base.html"));
-      Fs.copyFresh(scratch.resolve("gen_java").resolve("base.txt"), baseCache.resolve("base.txt"));
+      Fs.copyFresh(Coordinator.genJava(scratch).resolve("base.jar"), baseCache.resolve("base.jar"));
+      Fs.copyFresh(Coordinator.genJava(scratch).resolve("base.html"), baseCache.resolve("base.html"));
+      Fs.copyFresh(Coordinator.genJava(scratch).resolve("base.txt"), baseCache.resolve("base.txt"));
     }
     finally{ Fs.rmTree(scratch); }
   }

@@ -52,7 +52,7 @@ public final class ZipLocator{
     BuildWithZip.reqTime(t, unset, future);
   }
   private static ZipInputStream zipStream(Path diskZip, byte[] bytes) throws IOException{
-    return bytes==null
+    return bytes == null
       ? new ZipInputStream(Files.newInputStream(diskZip), UTF_8)
       : new ZipInputStream(new ByteArrayInputStream(bytes), UTF_8);
   }

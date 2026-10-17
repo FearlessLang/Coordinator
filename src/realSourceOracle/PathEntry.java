@@ -7,9 +7,10 @@ import java.util.stream.StreamSupport;
 
 import tools.Fs;
 import tools.SourceOracle;
+import utils.Join;
 
 public record PathEntry(Path root, Path local) implements SourceOracle.Ref{
-  @Override public String fearPath(){ return "fear:/"+String.join("/", localSegments(local)); }
+  @Override public String fearPath(){ return Join.of(localSegments(local), SourceOracle.root, "/", ""); }
   @Override public byte[] loadBytes(){ return Fs.of(() -> Files.readAllBytes(root.resolve(local))); }
   @Override public long lastModified(){ return Fs.lastModified(root.resolve(local)); }
   @Override public String toString(){ return fearPath(); }

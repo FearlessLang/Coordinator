@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Optional;
 
 import coordinator.CapabilityEnvironment;
+import coordinator.Coordinator;
 import core.E.Literal;
 import core.OtherPackages;
 import docBuilder.HtmlDocBuilder;
@@ -23,7 +24,7 @@ public record BackendTools(String pkgName, List<Literal> decs, Path rootDir, Htm
   }
   public static BackendTools of(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, Path rootDir, Optional<Path> baseCachePath, Optional<Path> testsRoot, Path rtPath, CapabilityEnvironment capabilities){
     var docs= new HtmlDocBuilder(oracle, other, core, baseCachePath.map(p -> p.resolve("base.html")));
-    docs.packageLocation(pkgName, rootDir.resolve("gen_java", pkgName+".html"), testsRoot);
+    docs.packageLocation(pkgName, Coordinator.genJava(rootDir).resolve(pkgName+".html"), testsRoot);
     return new BackendTools(pkgName, core, rootDir, docs, new MagicConsistency(pkgName, rtPath), capabilities, rtPath);
   }
 }

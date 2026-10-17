@@ -4,10 +4,10 @@ import java.util.List;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 import core.MName;
 import core.TName;
+import utils.Join;
 
 /// Reads the backtick spans of a doc comment. A single backtick span is a reference:
 /// all of it must be a name, so an unmarked word (a sentence starting with "As") is
@@ -25,7 +25,7 @@ final class DocRefScanner{
   }
 
   static List<CodeSpan> refSpans(String text){
-    return codeSpans(text).stream().filter(sp -> sp.fence()==1).toList();
+    return codeSpans(text).stream().filter(sp -> sp.fence() == 1).toList();
   }
 
   //the whole span must be the name: "`Foo.bar`" is one, "`this.foo(x)`" is not, and
@@ -76,7 +76,7 @@ final class DocRefScanner{
 
     //core decides what an operator character is: a one character operator is itself a
     //method name, while a letter, a digit or a "." is not.
-    String ops(int from){ return s.substring(from).chars().mapToObj(Character::toString).takeWhile(MName::isMethodName).collect(Collectors.joining()); }
+    String ops(int from){ return Join.of(s.substring(from).chars().mapToObj(Character::toString).takeWhile(MName::isMethodName), "", "", "", ""); }
 
     //a type, possibly package qualified, or a name bound where the comment is written
     Optional<DocRef.Receiver> receiver(){

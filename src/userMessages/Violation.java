@@ -110,7 +110,7 @@ public final class Violation{
       resets every app default on your machine, not only this one.
 
       What is locked:
-      %s""".formatted(String.join("\n", locked.stream().map(e -> e+claimedBy.apply(e)).toList())));
+      %s""".formatted(Join.of(locked.stream().map(e -> e+claimedBy.apply(e)), "", "\n", "")));
   }
   public static UserError associationNotOurs(Map<String,List<String>> held, Function<String,String> claimedBy){
     var lines= new ArrayList<String>();
@@ -123,7 +123,7 @@ public final class Violation{
       stopped before touching anything: your system is exactly as it was.
 
       What stood in the way:
-      %s""".formatted(String.join("\n", lines)));
+      %s""".formatted(Join.of(lines, "", "\n", "")));
   }
   public static UserError associationChosenDefault(List<String> locked, Function<String,String> claimedBy){
     return new UserError("""
@@ -139,7 +139,7 @@ public final class Violation{
       for these files, clears the choice.
 
       What is locked:
-      %s""".formatted(String.join("\n", locked.stream().map(e -> e+claimedBy.apply(e)+" -> "+LinuxAssociations.typeOf(e)).toList())));
+      %s""".formatted(Join.of(locked.stream().map(e -> e+claimedBy.apply(e)+" -> "+LinuxAssociations.typeOf(e)), "", "\n", "")));
   }
   public static UserError associationNotWritable(String reported){
     return new UserError("""

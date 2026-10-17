@@ -42,7 +42,7 @@ public interface OutputOracle{
     gone.forEach(this::forget);
   }
   private void forget(String pkg){
-    var gen= rootDir().resolve("gen_java");
+    var gen= Coordinator.genJava(rootDir());
     List.of(builtPath(pkg), pkgApiPath(pkg), mainsPath(pkg), gen.resolve(pkg+".jar"), gen.resolve(pkg+".html"), gen.resolve(pkg+".txt")).forEach(Fs::rmTree);
   }
   default OtherPackages addCachedPkgApi(OtherPackages other, String pkg){
@@ -58,7 +58,7 @@ public interface OutputOracle{
   }
   default Optional<MainsInfo> mainsInfo(){ return Optional.of(mainsPath()).filter(Files::exists).map(MainsInfo::parse); }
   default long commit(String pkg, List<Literal> core, Map<String,MainsInfo.Main> mains, List<Ref> files, List<String> below, long inputsStamp){
-    long newStamp= commitPkgApi(pkg, core, inputsStamp);
+    var newStamp= commitPkgApi(pkg, core, inputsStamp);
     Fs.writeUtf8(mainsPath(pkg), new MainsInfo(mains).print());
     Fs.writeUtf8(builtPath(pkg), OutputHelper.built(files, below));
     Fs.ofV(() -> Files.setLastModifiedTime(builtPath(pkg), FileTime.fromMillis(inputsStamp)));

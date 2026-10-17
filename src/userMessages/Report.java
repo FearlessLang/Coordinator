@@ -39,7 +39,7 @@ public final class Report{
     return directFail("Invalid path in this project folder.\n\n"+rel, "What went wrong\n"+wentWrong+"\n\nHow to fix\n"+howToFix);
   }
   private static UserError directFail(String rel, String msg){
-    return new UserError(rel+"\n"+msg+"\n\n" + rulesWall);
+    return new UserError(rel+"\n"+msg+"\n\n"+rulesWall);
   }
   public static final Set<String> allowedNoExtFiles= """
 readme
@@ -308,8 +308,8 @@ when deciding what needs compiling, so such a date can not be trusted.
   public static UserError invisibleNoControlChars(RefParent kid, int cp, String name){
     return fail(showRel(kid),
       "- A protected name segment contains a control character.\n"
-    + "  Character: " + Message.displayChar(cp)+"\n"
-    + "  Segment: " + disp(name),
+    + "  Character: "+Message.displayChar(cp)+"\n"
+    + "  Segment: "+disp(name),
       "- Rename the segment to remove the control character."
     );}
   public static UserError invisibleNoWindowsBadChars(RefParent kid, char bad, String name){
@@ -681,7 +681,7 @@ Add an arity when the name alone matches several declarations:
 
 To show code that is not a name, use two backticks or more:
   ``this.foo(x)``   shown as code, never checked, never a link
-""".formatted(String.join("\n\n", problems)));
+""".formatted(Join.of(problems, "", "\n\n", "")));
   }
 
   public static UserError generatedTestNameReserved(String problem, String topName){ return new UserError("""

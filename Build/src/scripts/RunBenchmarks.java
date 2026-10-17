@@ -6,11 +6,11 @@ import java.io.File;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import resources.ResolveResource;
 import tools.Fs;
 import tools.JavaTool;
+import utils.Join;
 
 public final class RunBenchmarks{
   public static void main(String[] args) throws InterruptedException{
@@ -21,12 +21,12 @@ public final class RunBenchmarks{
     var bench= ResolveResource.controllerSrc.getParent().resolve("benchmarks", "src");
     var classes= ModularBuild.out.resolve("benchmarks");
     Fs.cleanDir(classes);
-    var jars= Fs.walk(ModularBuild.mods, s -> s.filter(p -> p.toString().endsWith(".jar")).map(Path::toString).sorted().collect(Collectors.joining(File.pathSeparator)));
-    var javac= new ArrayList<>(List.of("-encoding", "UTF-8", "-proc:full", "-d", classes.toString(), "-s", classes.toString(), "-cp", jars));
+    var jars= Fs.walk(ModularBuild.mods, s -> s.filter(p -> p.toString().endsWith(".jar")).map(Path::toString).sorted().toList());
+    var javac= new ArrayList<>(List.of("-encoding", "UTF-8", "-proc:full", "-d", classes.toString(), "-s", classes.toString(), "-cp", Join.of(jars, "", File.pathSeparator, "")));
     List.of(bench, ModularBuild.resources).forEach(src -> Fs.walkV(src, s -> s.filter(p -> p.toString().endsWith(".java")).forEach(p -> javac.add(p.toString()))));
     Fs.runTool("javac", javac);
     var jvmArgs= new ArrayList<>(List.of("-ea"));
-    if (!stlibs.isEmpty()){ jvmArgs.add("-D"+"fearless.benchmarks.stlibs="+String.join(";", stlibs)); }
+    if (!stlibs.isEmpty()){ jvmArgs.add(Join.of(stlibs, "-D"+"fearless.benchmarks.stlibs=", ";", "")); }
     JavaTool.runMain(jvmArgs, classes, ModularBuild.mods, "benchmarks.Main", include.toArray(String[]::new));
   }
 }

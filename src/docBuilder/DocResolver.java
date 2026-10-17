@@ -14,6 +14,7 @@ import core.T;
 import core.TName;
 import utils.DistinctBy;
 import utils.Join;
+import utils.OneOr;
 
 /// Where a doc comment is written: the type it documents, and the method when it
 /// documents one. This is what makes "this" and the parameter names mean something.
@@ -71,7 +72,7 @@ record DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other){
   private List<TName> matching(Stream<TName> names, DocRef.TypeName ref){
     return names
       .filter(n -> n.simpleName().equals(ref.simpleName()))
-      .filter(n -> ref.arity().isEmpty() || n.arity()==ref.arity().getAsInt())
+      .filter(n -> ref.arity().isEmpty() || n.arity() == ref.arity().getAsInt())
       .toList();
   }
 
@@ -108,7 +109,7 @@ record DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other){
   }
 
   private Optional<TypeDoc> localTypeDoc(TName n){
-    return types.stream().filter(t -> !t.main().infName() && t.main().name().equals(n)).findFirst();
+    return OneOr.opt("type "+n, types.stream().filter(t -> !t.main().infName() && t.main().name().equals(n)));
   }
 
   private List<M> declaredAndInherited(Literal owner){
@@ -144,7 +145,7 @@ record DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other){
   }
 
   private static boolean named(M m, String selector, OptionalInt arity){
-    return m.sig().m().s().equals(selector) && (arity.isEmpty() || m.sig().m().arity()==arity.getAsInt());
+    return m.sig().m().s().equals(selector) && (arity.isEmpty() || m.sig().m().arity() == arity.getAsInt());
   }
 
   static String shape(OptionalInt arity, String open, String close){

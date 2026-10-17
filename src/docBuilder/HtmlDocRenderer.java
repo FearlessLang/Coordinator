@@ -32,8 +32,8 @@ final class HtmlDocRenderer{
     this.types= types;
     this.spans= spans;
     this.baseDocLocation= baseDocLocation;
-    this.toStr= new ExportedToStr(pkgName, uses);
-    this.resolver= new DocResolver(pkgName, types, other);
+    toStr= new ExportedToStr(pkgName, uses);
+    resolver= new DocResolver(pkgName, types, other);
   }
 
   final String pkgName;
@@ -385,7 +385,7 @@ code{
     var text= toStr.sig(m.main().sig());
     var bound= Stream.concat(m.owner.main().bs().stream(), m.main().sig().bs().stream()).map(B::x).collect(Collectors.toSet());
     var sb= new StringBuilder();
-    int i= 0;
+    var i= 0;
     for (var f : DocRefScanner.signatureTypes(text)){
       var t= (DocRef.TypeName)f.ref();
       if (bound.contains(t.simpleName())){ continue; }
@@ -423,7 +423,7 @@ code{
   //of them are one paragraph, kept on their own lines so that a list stays a list and
   //an indented line stays indented (the doc block is rendered with pre-wrap).
   void renderProse(StringBuilder sb, List<DocOcc> prose){
-    var lines= prose.stream().map(o -> o.text().isBlank() ? "" : renderText(o)).collect(Collectors.joining("\n"));
+    var lines= Join.of(prose.stream().map(o -> o.text().isBlank() ? "" : renderText(o)), "", "\n", "", "");
     paragraph.matcher(lines).results().forEach(p -> sb.append("<p>").append(p.group()).append("</p>\n"));
   }
   private static final Pattern paragraph= Pattern.compile("(?dm)^.+(\n.+)*");
@@ -432,7 +432,7 @@ code{
     var text= occ.text();
     var linked= spans.getOrDefault(occ, Map.of());
     var sb= new StringBuilder();
-    int i= 0;
+    var i= 0;
     for (var cs : DocRefScanner.codeSpans(text)){
       sb.append(h(text.substring(i, cs.start()-cs.fence())));
       sb.append("<code>").append(renderCode(text, cs, linked)).append("</code>");

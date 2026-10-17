@@ -6,7 +6,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.TreeMap;
 import java.util.function.Consumer;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -35,7 +34,7 @@ public final class Backend{
   boolean isRepr(Literal l){ return l.name().equals(new TName("base.Repr", 1, Pos.unknown)); }
   public List<Consumer<Path>> produceJavaCode(){
     Fs.cleanDir(out);
-    tools.decs().forEach(d -> {generateInterface(d, false); tools.checks().checkFileReplacement(d, decTypeName(d.name()));});
+    for (var d : tools.decs()){ generateInterface(d, false); tools.checks().checkFileReplacement(d, decTypeName(d.name())); }
     writeMainJava();
     return List.copyOf(fixers);
   }
@@ -86,7 +85,7 @@ public final class Backend{
     "(", ", ", ")", "()"
   );}
   void emitTopMethod(BytecodeLineFix sb, Literal l, M m, boolean abstractOnly){
-    if (!m.sig().origin().equals(l.name())){ return ; }
+    if (!m.sig().origin().equals(l.name())){ return; }
     var jName= mangledMethodName(m.sig().rc(), m.sig().m());
     sb.a("  default Object "+jName+paramsSig(m)+"{\n");
     if (abstractOnly || m.sig().abs()){
@@ -104,17 +103,17 @@ public final class Backend{
     return typeName(l.cs().getFirst().name());
   }
   String encodeTrailingPrimes(String s){
-    int k= 0;
+    var k= 0;
     while (k < s.length() && s.charAt(s.length() - 1 - k) == '\''){ k += 1; }
     if (k == 0){ return s; }
     var head= s.substring(0, s.length() - k);
-    assert head.indexOf('\'') < 0: "prime (') must be trailing only: "+s;
-    return head + "$p" + k;
+    assert head.indexOf('\'') < 0 : "prime (') must be trailing only: "+s;
+    return head+"$p"+k;
   }
   String decTypeName(TName n){ return encodeTrailingPrimes(n.simpleName())+"$"+caseTag(n.simpleName())+"$"+n.arity(); }
   String typeName(TName n){ return "_"+encodeTrailingPrimes(n.s())+"$"+caseTag(n.simpleName())+"$"+n.arity(); }
   static String caseTag(String s){
-    var bits= s.chars().filter(c -> 'A' <= c && c <= 'Z' || 'a' <= c && c <= 'z').mapToObj(c -> c < 'a' ? "1" : "0").collect(Collectors.joining());
+    var bits= Join.of(s.chars().filter(c -> 'A' <= c && c <= 'Z' || 'a' <= c && c <= 'z').mapToObj(c -> c < 'a' ? "1" : "0"), "", "", "", "");
     return new BigInteger("1"+bits, 2).toString(36);
   }
   String mangledMethodName(RC rc, MName m){
@@ -146,7 +145,7 @@ public final class Backend{
     assert s.indexOf('"') < 0 && s.indexOf('\\') < 0 && s.indexOf('\n') < 0 && s.indexOf('\r') < 0;
     return "\""+s+"\"";
   }
-  String mangleOp(String op){ return op.chars().mapToObj(c -> opNames.get(opChars.indexOf(c))).collect(Collectors.joining("_")); }
+  String mangleOp(String op){ return Join.of(op.chars().mapToObj(c -> opNames.get(opChars.indexOf(c))), "", "_", ""); }
   static final String opChars= "+-*/%<>=!&|^~?#\\";
   static final List<String> opNames= List.of("plus", "dash", "star", "slash", "pct", "lt", "gt", "eq", "bang", "and", "or", "xor", "tilde", "q", "hash", "bslash");
 }

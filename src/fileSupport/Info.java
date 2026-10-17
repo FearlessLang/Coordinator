@@ -7,13 +7,13 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 
 import metaParser.Frame;
 import metaParser.Message;
 import metaParser.Span;
 import tools.Fs;
 import userMessages.UserError;
+import utils.Join;
 import utils.OneOr;
 
 public sealed interface Info{
@@ -33,10 +33,10 @@ public sealed interface Info{
   private static String write(Info info, int indent){
     return switch (info){
       case Str s -> quote(s.value());
-      case Lst l -> l.items().stream().map(i -> write(i, 0)).collect(Collectors.joining(", ", "[", "]"));
-      case Obj o -> o.fields().isEmpty() ? "{}" : o.fields().stream()
-        .map(f -> "  ".repeat(indent+1)+quote(f.key())+": "+write(f.value(), indent+1))
-        .collect(Collectors.joining(",\n", "{\n", "\n"+"  ".repeat(indent)+"}"));
+      case Lst l -> Join.of(l.items().stream().map(i -> write(i, 0)), "[", ", ", "]", "[]");
+      case Obj o -> Join.of(o.fields().stream()
+        .map(f -> "  ".repeat(indent+1)+quote(f.key())+": "+write(f.value(), indent+1)),
+        "{\n", ",\n", "\n"+"  ".repeat(indent)+"}", "{}");
     };
   }
   private static String quote(String value){
