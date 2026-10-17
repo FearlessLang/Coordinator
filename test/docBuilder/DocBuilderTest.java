@@ -735,6 +735,26 @@ Holder
 """, text);
   }
 
+  private static TypeDoc exampleOf(TName name, List<B> bs){
+    var bar= namedMethod(".bar", name);
+    var typeDoc= new TypeDoc(new Literal(RC.imm, name, bs, List.of(), "this", List.of(), freshSrc(), false), List.of());
+    typeDoc.declared(Pos.of(file, 9, 1), bar, List.of(
+      new DocOcc(file, 9, 1, 4, ".check{bar.assertOk}", true, true, false)
+    ), List.of());
+    return typeDoc;
+  }
+  @Test void twoTypesSharingASimpleNameWithDifferentAritiesGetDistinctGeneratedSuites(){
+    var box0= exampleOf(new TName("pkg.Box", 0, Pos.unknown), List.of());
+    var box2= exampleOf(new TName("pkg.Box", 2, Pos.unknown), twoBounds());
+    var names= new HtmlDocRenderer("pkg", Map.of(), List.of(box0, box2), OtherPackages.empty(), Map.of(), Optional.empty()).testNames().perType();
+    assertEquals(names.stream().distinct().toList(), names);
+  }
+  @Test void aTypeNameEndingWithAPrimeGetsAGeneratedSuiteNameThatIsATypeName(){
+    var prime= exampleOf(new TName("pkg.Box'", 0, Pos.unknown), List.of());
+    var names= new HtmlDocRenderer("pkg", Map.of(), List.of(prime), OtherPackages.empty(), Map.of(), Optional.empty()).testNames().perType();
+    assertEquals(List.of(true), names.stream().map(TName::isTypeName).toList(), names.toString());
+  }
+
   @Test void aTypeNamedLikeTheTopLevelSuiteSuppressesGenerationForTheWholePackage(@TempDir Path tmp){
     var holderName= new TName("pkg.Holder", 0, Pos.unknown);
     var bar= namedMethod(".bar", holderName);
