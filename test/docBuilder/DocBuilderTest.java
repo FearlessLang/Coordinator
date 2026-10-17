@@ -211,8 +211,7 @@ final class DocBuilderTest{
     var renderer= new HtmlDocRenderer("pkg", Map.of(), List.of(), OtherPackages.empty(), Map.of(), Optional.empty());
     renderer.renderExamples(sb, List.of(".check{1.assertEq(1)}"));
     var rendered= sb.toString();
-    assertTrue(rendered.contains("<details class=\"examples\">"), "examples must render as an expandable details block: "+rendered);
-    utils.Err.strCmp("[###]<pre class=\"example\">.check{1.assertEq(1)}</pre>[###]", rendered);
+    utils.Err.strCmp("<details class=\"examples\">[###]<pre class=\"example\">.check{1.assertEq(1)}</pre>[###]", rendered);
   }
 
   @Test void renderExamplesRendersNothingWhenThereAreNoExamples(){
