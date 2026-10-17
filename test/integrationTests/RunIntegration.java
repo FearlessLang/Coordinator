@@ -1229,6 +1229,33 @@ Foo:Main{s->base.Debug#(`foo`)}
     }
     finally{ Files.setLastModifiedTime(baseApi, old); }
   }
+  void aCorruptedCacheFileIsDeletedWithTheWholeCache(Path tmp, String file, java.util.function.UnaryOperator<byte[]> corrupt, String why){
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_p/_rank_app999.fear
+iii
+use base.Main as Main;
+A:Main{s->base.Debug#(`hi`)}
+""");
+    utils.Err.strCmp("hi\n", main(root, List.of()));
+    var out= root.resolve(Coordinator.outDir);
+    var cached= out.resolve(file);
+    Fs.ofV(() -> Files.write(cached, corrupt.apply(Files.readAllBytes(cached))));
+    var ex= assertThrows(UserError.class, () -> main(root, List.of()));
+    utils.Err.strCmp("Build cache contains an invalid cached file.[###]"+why+"[###]Fearless deleted this project's .fearless_out folder: compile again to rebuild it.\n", ex.getMessage());
+    assertFalse(Files.exists(out));
+    utils.Err.strCmp("hi\n", main(root, List.of()));
+  }
+  @Test void aBuiltFileThatIsNotUtf8DeletesTheCache(@TempDir Path tmp){
+    aCorruptedCacheFileIsDeletedWithTheWholeCache(tmp, "p.built", _ -> new byte[]{(byte)0xff}, "Unexpected character");
+  }
+  @Test void aGarbledMainsInfoDeletesTheCache(@TempDir Path tmp){
+    aCorruptedCacheFileIsDeletedWithTheWholeCache(tmp, "p.mains.info", _ -> "[".getBytes(UTF_8), "mains.info");
+  }
+  @Test void anApiJsonWithAnUnknownReferenceCapabilityDeletesTheCache(@TempDir Path tmp){
+    aCorruptedCacheFileIsDeletedWithTheWholeCache(tmp, "p.json", bs -> new String(bs, UTF_8).replaceFirst("\"imm\"", "\"imx\"").getBytes(UTF_8), "imx");
+  }
   @Test void aMapDirectiveEditedInAHigherRankPackageMakesItsTargetPackageNotBuilt(@TempDir Path tmp) throws IOException{
     var root= tmp.resolve("root");
     UserError.root = root;

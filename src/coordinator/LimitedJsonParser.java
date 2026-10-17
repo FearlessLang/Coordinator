@@ -52,7 +52,9 @@ final class LimitedJsonParser{
     return res;
   }
   Map<TName,Literal> apiJsonToMap(){
-    return Collections.unmodifiableMap(end(arr()).stream().map(x -> typeLit(asArr(x))).collect(Collectors.toMap(Literal::name, l -> l, this::dup, LinkedHashMap::new)));
+    var types= end(arr());
+    try{ return Collections.unmodifiableMap(types.stream().map(x -> typeLit(asArr(x))).collect(Collectors.toMap(Literal::name, l -> l, this::dup, LinkedHashMap::new))); }
+    catch (IllegalArgumentException e){ throw err(e.getMessage()); }
   }
   private Literal dup(Literal a, Literal b){ throw err("Duplicate type "+a.name().s()); }
   private Literal typeLit(List<Object> a){
@@ -147,6 +149,6 @@ final class LimitedJsonParser{
     i += 1; return true;
   }
   private RuntimeException err(String msg){
-    return Violation.cacheInvalidFile(forErr, msg+" at "+i);
+    return OutputHelper.dropCache(forErr, Violation.cacheInvalidFile(forErr, msg+" at "+i));
   }
 }

@@ -1,8 +1,10 @@
 package coordinator;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
@@ -47,13 +49,19 @@ final class MainsInfoTest{
 """);
     var ex= assertThrows(UserError.class, () -> MainsInfo.read(project));
     utils.Err.strCmp("""
-In file: [###]mains.info
+Build cache contains an invalid cached file.
+[###]
+Parse error:
+  In file: [###]mains.info
 
 002|   "hello.Beer": ["_hello/beer.fear", [["hello.IconsBar", "_hello/icons/bar.png", "", ""]], []]
    |                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 While inspecting the file
 Expected a claim as [icon, diskPath, zipSteps, zipEntry, extension] here.
+
+Fearless deleted this project's .fearless_out folder: compile again to rebuild it.
 """, ex.getMessage());
+    assertFalse(Files.exists(project.resolve(Coordinator.outDir)));
   }
 }

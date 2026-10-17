@@ -176,7 +176,7 @@ public final class Violation{
       Build cache is missing a generated package API file.
       That metadata should be stored in:
       %s
-      Delete this project's .fearless_out folder, then recompile.
+      Fearless deleted this project's .fearless_out folder: compile again to rebuild it.
       """.formatted(path(apiJson.toString())));
   }
   public static UserError cacheInvalidFile(Path file, String parseErr){
@@ -189,6 +189,8 @@ public final class Violation{
 
       Parse error:
         %s
+
+      Fearless deleted this project's .fearless_out folder: compile again to rebuild it.
       """.formatted(path(file.toString()), parseErr));
   }
   public static UserError cacheCouldNotFindZipEntry(Path diskZip, List<String> steps, String entryName){
