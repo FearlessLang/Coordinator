@@ -86,8 +86,8 @@ final class SourceDocs{
   }
 
   static List<DocOcc> trimBlanks(List<DocOcc> ds){
-    int from= 0;
-    int to= ds.size();
+    var from= 0;
+    var to= ds.size();
     while (from < to && ds.get(from).text().isBlank()){ from += 1; }
     while (to > from && ds.get(to-1).text().isBlank()){ to -= 1; }
     return ds.subList(from, to);

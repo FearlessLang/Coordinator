@@ -45,10 +45,10 @@ public record AutoloadHandler(Predicate<String> matches, String baseType){
     assert path.startsWith(SourceOracle.root);
     return Stream.of(path.substring(SourceOracle.root.length()).split("/")).toList();
   }
-  public static String dropExt(String name){ int dot= name.lastIndexOf('.'); assert dot > 0; return name.substring(0, dot); }
+  public static String dropExt(String name){ var dot= name.lastIndexOf('.'); assert dot > 0; return name.substring(0, dot); }
   static String standardTypeName(String pkgName, SourceOracle.Ref ref, String path){
     var all= components(dropExt(path));
-    int i= all.indexOf(pkgName);
+    var i= all.indexOf(pkgName);
     assert i >= 0 && i + 1 < all.size();
     var res= Join.of(all.subList(i + 1, all.size()).stream().map(AutoloadHandler::capFirst), "", "", "");
     if (!TName.isTypeName(res)){ throw Report.autoloadedNameNotAType(ref, res); }

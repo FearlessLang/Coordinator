@@ -1390,9 +1390,9 @@ Hello:Main{s->base.Debug#(Greeting.hi)}
     var c= coordinator(root);
     c.main(root, stLib);
     var out= root.resolve(Coordinator.outDir);
-    long aBuilt= Fs.lastModified(out.resolve("a.built"));
-    long aJson= Fs.lastModified(out.resolve("a.json"));
-    long bBuilt= Fs.lastModified(out.resolve("b.built"));
+    var aBuilt= Fs.lastModified(out.resolve("a.built"));
+    var aJson= Fs.lastModified(out.resolve("a.json"));
+    var bBuilt= Fs.lastModified(out.resolve("b.built"));
     editAndTouch(root.resolve("_a/_rank_core.fear"), "\"hi\"", "\"ho\"");
     c.main(root, stLib);
 
@@ -1471,9 +1471,9 @@ Hello:Main{s->base.Debug#("from z")}
     utils.Err.strCmp("[###]java.lang.StackOverflowError[###]", runRecursionMain("rec.NaiveSum"));
   }
   @Test void runRecursionOnEveryStepIsDeepAndFast() throws InterruptedException{
-    long start= System.nanoTime();
+    var start= System.nanoTime();
     utils.Err.strCmp("500000500000", runRecursionMain("rec.DeepSum"));
-    long millis= (System.nanoTime()-start)/1_000_000;
+    var millis= (System.nanoTime()-start)/1_000_000;
     assertTrue(millis < 20_000, "one million steps took "+millis+"ms");
   }
   @Test void aFamilyNestingTooManyCallsOnOneThreadOverflows() throws InterruptedException{

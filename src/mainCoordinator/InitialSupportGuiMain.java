@@ -98,7 +98,7 @@ public final class InitialSupportGuiMain{
   }
 
   private void toggleMore(JButton more){
-    boolean now= !advanced.isVisible();
+    var now= !advanced.isVisible();
     advanced.setVisible(now);
     more.setText(now ? "Less..." : "More...");
     actions.revalidate();

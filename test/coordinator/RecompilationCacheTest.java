@@ -61,7 +61,7 @@ final class RecompilationCacheTest{
   private static final long touchGap= 500;
 
   @Test void fullyCachedRebuildRecomputesNothingAndTouchesNoFiles(@TempDir Path tmp){
-    long start= System.currentTimeMillis();
+    var start= System.currentTimeMillis();
     OutputOracle out= () -> tmp;
     var stub= new ScriptedCoordinator();
     stub.fixedOutput("a", List.of(literal("A1", RC.imm)));
@@ -74,8 +74,8 @@ final class RecompilationCacheTest{
     layer.compile(emptySrc, out);
     assertEquals(1, stub.calls("a"));
     assertEquals(1, stub.calls("b"));
-    long stampA= out.pkgApiStamp("a");
-    long stampB= out.pkgApiStamp("b");
+    var stampA= out.pkgApiStamp("a");
+    var stampB= out.pkgApiStamp("b");
 
     layer.compile(emptySrc, out);
     assertEquals(1, stub.calls("a"));
@@ -85,7 +85,7 @@ final class RecompilationCacheTest{
   }
 
   @Test void sourceTouchedWithUnchangedApiRecomputesButDoesNotRewriteAndLeavesSiblingAlone(@TempDir Path tmp){
-    long start= System.currentTimeMillis();
+    var start= System.currentTimeMillis();
     OutputOracle out= () -> tmp;
     var stub= new ScriptedCoordinator();
     stub.fixedOutput("a", List.of(literal("A1", RC.imm), literal("_Hidden", RC.imm)));
@@ -96,10 +96,10 @@ final class RecompilationCacheTest{
     var layer= new MiddleLayer(stub, fixedBase(start-margin), pkgs);
 
     layer.compile(emptySrc, out);
-    long stampA= out.pkgApiStamp("a");
-    long stampB= out.pkgApiStamp("b");
+    var stampA= out.pkgApiStamp("a");
+    var stampB= out.pkgApiStamp("b");
 
-    long afterBuild1= System.currentTimeMillis();
+    var afterBuild1= System.currentTimeMillis();
     pkgs.put("a", refs("a", afterBuild1+touchGap));
     layer.compile(emptySrc, out);
 
@@ -110,7 +110,7 @@ final class RecompilationCacheTest{
   }
 
   @Test void apiChangeRewritesAndCascadesToDependentLayerWithUpdatedData(@TempDir Path tmp){
-    long start= System.currentTimeMillis();
+    var start= System.currentTimeMillis();
     OutputOracle out= () -> tmp;
     var stub= new ScriptedCoordinator();
     var aName= new TName("A1", 0, Pos.unknown);
@@ -128,11 +128,11 @@ final class RecompilationCacheTest{
     layer2.compile(emptySrc, out);
     assertEquals(1, stub.calls("a"));
     assertEquals(1, stub.calls("c"));
-    long stampA= out.pkgApiStamp("a");
-    long stampC= out.pkgApiStamp("c");
+    var stampA= out.pkgApiStamp("a");
+    var stampC= out.pkgApiStamp("c");
     assertEquals(RC.imm, stub.lastOtherSeen.get("c").__of(aName).rc());
 
-    long afterBuild1= System.currentTimeMillis();
+    var afterBuild1= System.currentTimeMillis();
     pkgs1.put("a", refs("a", afterBuild1+touchGap));
     stub.fixedOutput("a", List.of(literal("A1", RC.mut)));
     layer2.compile(emptySrc, out);
@@ -146,7 +146,7 @@ final class RecompilationCacheTest{
   }
 
   @Test void apiPreservingEditMustNotCascadeToTheDependentLayer(@TempDir Path tmp){
-    long start= System.currentTimeMillis();
+    var start= System.currentTimeMillis();
     OutputOracle out= () -> tmp;
     var stub= new ScriptedCoordinator();
     stub.fixedOutput("a", List.of(literal("A1", RC.imm)));
@@ -162,7 +162,7 @@ final class RecompilationCacheTest{
     assertEquals(1, stub.calls("a"));
     assertEquals(1, stub.calls("c"));
 
-    long afterBuild1= System.currentTimeMillis();
+    var afterBuild1= System.currentTimeMillis();
     pkgs1.put("a", refs("a", afterBuild1+touchGap));
     layer2.compile(emptySrc, out);
 
@@ -171,7 +171,7 @@ final class RecompilationCacheTest{
   }
 
   @Test void rebuildAfterAnApiPreservingEditMustNotRecompileAgain(@TempDir Path tmp){
-    long start= System.currentTimeMillis();
+    var start= System.currentTimeMillis();
     OutputOracle out= () -> tmp;
     var stub= new ScriptedCoordinator();
     stub.fixedOutput("a", List.of(literal("A1", RC.imm)));
@@ -182,7 +182,7 @@ final class RecompilationCacheTest{
     layer.compile(emptySrc, out);
     assertEquals(1, stub.calls("a"));
 
-    long afterBuild1= System.currentTimeMillis();
+    var afterBuild1= System.currentTimeMillis();
     pkgs.put("a", refs("a", afterBuild1+touchGap));
     layer.compile(emptySrc, out);
     assertEquals(2, stub.calls("a"));
@@ -192,7 +192,7 @@ final class RecompilationCacheTest{
   }
 
   @Test void layerStampMustTrackTheFreshestSiblingNotJustTheLastOneMerged(@TempDir Path tmp){
-    long start= System.currentTimeMillis();
+    var start= System.currentTimeMillis();
     OutputOracle out= () -> tmp;
     var stub= new ScriptedCoordinator();
     stub.fixedOutput("a", List.of(literal("A1", RC.imm)));
@@ -202,9 +202,9 @@ final class RecompilationCacheTest{
     pkgs.put("b", refs("b", start-margin));
     var layer= new MiddleLayer(stub, fixedBase(start-margin), pkgs);
     layer.compile(emptySrc, out);
-    long stampB= out.pkgApiStamp("b");
+    var stampB= out.pkgApiStamp("b");
 
-    long afterBuild1= System.currentTimeMillis();
+    var afterBuild1= System.currentTimeMillis();
     pkgs.put("a", refs("a", afterBuild1+touchGap));
     pkgs.put("b", refs("b", afterBuild1+touchGap/2));
     stub.fixedOutput("a", List.of(literal("A1", RC.mut)));
@@ -224,7 +224,7 @@ final class RecompilationCacheTest{
   }
 
   @Test void deletingASourceFileMustRecompileThePackage(@TempDir Path tmp){
-    long start= System.currentTimeMillis();
+    var start= System.currentTimeMillis();
     OutputOracle out= () -> tmp;
     var stub= new ScriptedCoordinator();
     stub.fixedOutput("a", List.of(literal("A1", RC.imm)));
@@ -243,7 +243,7 @@ final class RecompilationCacheTest{
   }
 
   @Test void addingASourceFileWithAnOldMtimeMustRecompileThePackage(@TempDir Path tmp){
-    long start= System.currentTimeMillis();
+    var start= System.currentTimeMillis();
     OutputOracle out= () -> tmp;
     var stub= new ScriptedCoordinator();
     stub.fixedOutput("a", List.of(literal("A1", RC.imm)));
@@ -260,7 +260,7 @@ final class RecompilationCacheTest{
   }
 
   @Test void deletingALowerPackageMustRecompileThePackageBuiltAgainstIt(@TempDir Path tmp){
-    long start= System.currentTimeMillis();
+    var start= System.currentTimeMillis();
     OutputOracle out= () -> tmp;
     var stub= new ScriptedCoordinator();
     stub.fixedOutput("a", List.of(literal("A1", RC.imm)));
@@ -279,7 +279,7 @@ final class RecompilationCacheTest{
     assertEquals(2, stub.calls("b"));
   }
   @Test void aLowerPackageMovingIntoTheSameRankMustRecompileThePackageBuiltAgainstIt(@TempDir Path tmp){
-    long start= System.currentTimeMillis();
+    var start= System.currentTimeMillis();
     OutputOracle out= () -> tmp;
     var stub= new ScriptedCoordinator();
     stub.fixedOutput("a", List.of(literal("A1", RC.imm)));
@@ -309,7 +309,7 @@ final class RecompilationCacheTest{
     @Override public String toString(){ return fearPath; }
   }
   @Test void aSourceSavedAfterThePackageWasReadMustBeCompiledAgainByTheNextBuild(@TempDir Path tmp){
-    long start= System.currentTimeMillis();
+    var start= System.currentTimeMillis();
     OutputOracle out= () -> tmp;
     var stub= new ScriptedCoordinator();
     var edited= new EditableRef(SourceOracle.root+"_a/a.fear", start-margin);
@@ -350,7 +350,7 @@ final class RecompilationCacheTest{
   }
 
   @Test void apiChangeInTheBottomLayerCascadesThroughEveryLayerAbove(@TempDir Path tmp){
-    long start= System.currentTimeMillis();
+    var start= System.currentTimeMillis();
     OutputOracle out= () -> tmp;
     var s= stack(start);
     s.stub().fixedOutput("a", List.of(literal("A1", RC.imm)));
@@ -362,7 +362,7 @@ final class RecompilationCacheTest{
     assertEquals(1, s.stub().calls("b"));
     assertEquals(1, s.stub().calls("c"));
 
-    long afterBuild1= System.currentTimeMillis();
+    var afterBuild1= System.currentTimeMillis();
     s.a().put("a", refs("a", afterBuild1+touchGap));
     s.stub().fixedOutput("a", List.of(literal("A1", RC.mut)));
     s.top().compile(emptySrc, out);
@@ -374,7 +374,7 @@ final class RecompilationCacheTest{
   }
 
   @Test void apiPreservingEditInTheBottomLayerMustNotReachAnyLayerAbove(@TempDir Path tmp){
-    long start= System.currentTimeMillis();
+    var start= System.currentTimeMillis();
     OutputOracle out= () -> tmp;
     var s= stack(start);
     s.stub().fixedOutput("a", List.of(literal("A1", RC.imm)));
@@ -382,9 +382,9 @@ final class RecompilationCacheTest{
     s.stub().fixedOutput("c", List.of(literal("C1", RC.imm)));
 
     s.top().compile(emptySrc, out);
-    long stampC= out.pkgApiStamp("c");
+    var stampC= out.pkgApiStamp("c");
 
-    long afterBuild1= System.currentTimeMillis();
+    var afterBuild1= System.currentTimeMillis();
     s.a().put("a", refs("a", afterBuild1+touchGap));
     s.top().compile(emptySrc, out);
 
@@ -395,7 +395,7 @@ final class RecompilationCacheTest{
   }
 
   @Test void aBottomLayerApiChangeReachesTheTopEvenWhenTheMiddleApiIsUnchanged(@TempDir Path tmp){
-    long start= System.currentTimeMillis();
+    var start= System.currentTimeMillis();
     OutputOracle out= () -> tmp;
     var s= stack(start);
     s.stub().fixedOutput("a", List.of(literal("A1", RC.imm)));
@@ -403,9 +403,9 @@ final class RecompilationCacheTest{
     s.stub().fixedOutput("c", List.of(literal("C1", RC.imm)));
 
     s.top().compile(emptySrc, out);
-    long stampB= out.pkgApiStamp("b");
+    var stampB= out.pkgApiStamp("b");
 
-    long afterBuild1= System.currentTimeMillis();
+    var afterBuild1= System.currentTimeMillis();
     s.a().put("a", refs("a", afterBuild1+touchGap));
     s.stub().fixedOutput("a", List.of(literal("A1", RC.mut)));
     s.top().compile(emptySrc, out);
@@ -418,7 +418,7 @@ final class RecompilationCacheTest{
   }
 
   @Test void aChangeInTheMiddleLayerMustNotReachTheLayerBelowIt(@TempDir Path tmp){
-    long start= System.currentTimeMillis();
+    var start= System.currentTimeMillis();
     OutputOracle out= () -> tmp;
     var stub= new ScriptedCoordinator();
     stub.fixedOutput("a", List.of(literal("A1", RC.imm)));
@@ -435,9 +435,9 @@ final class RecompilationCacheTest{
     var top= new MiddleLayer(stub, l2, pkgsC);
 
     top.compile(emptySrc, out);
-    long stampA= out.pkgApiStamp("a");
+    var stampA= out.pkgApiStamp("a");
 
-    long afterBuild1= System.currentTimeMillis();
+    var afterBuild1= System.currentTimeMillis();
     pkgsB.put("b", refs("b", afterBuild1+touchGap));
     stub.fixedOutput("b", List.of(literal("B1", RC.mut)));
     top.compile(emptySrc, out);
@@ -450,7 +450,7 @@ final class RecompilationCacheTest{
   }
 
   @Test void aFullyCachedRebuildOfAThreeLayerStackRecomputesNothing(@TempDir Path tmp){
-    long start= System.currentTimeMillis();
+    var start= System.currentTimeMillis();
     OutputOracle out= () -> tmp;
     var s= stack(start);
     s.stub().fixedOutput("a", List.of(literal("A1", RC.imm)));
@@ -458,7 +458,7 @@ final class RecompilationCacheTest{
     s.stub().fixedOutput("c", List.of(literal("C1", RC.imm)));
 
     s.top().compile(emptySrc, out);
-    long afterBuild1= System.currentTimeMillis();
+    var afterBuild1= System.currentTimeMillis();
     s.a().put("a", refs("a", afterBuild1+touchGap));
     s.top().compile(emptySrc, out);
     assertEquals(2, s.stub().calls("a"));
