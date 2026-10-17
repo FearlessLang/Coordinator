@@ -1229,6 +1229,36 @@ Foo:Main{s->base.Debug#(`foo`)}
     }
     finally{ Files.setLastModifiedTime(baseApi, old); }
   }
+  @Test void aMapDirectiveEditedInAHigherRankPackageMakesItsTargetPackageNotBuilt(@TempDir Path tmp) throws IOException{
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_pkc/_rank_app100.fear
+iii
+use base.Str as Str;
+C:{.text:Str->"c";}
+jjj
+_pkd/_rank_app100.fear
+iii
+use base.Str as Str;
+C:{.text:Str->"d";}
+jjj
+_pkb/_rank_app200.fear
+iii
+use base.Str as Str;
+B:{.text:Str->a.C.text;}
+jjj
+_pka/_rank_app999.fear
+iii
+use base.Main as Main;
+map a as pkc in pkb;
+A:Main{s->base.Debug#(pkb.B.text)}
+""");
+    utils.Err.strCmp("c\n", main(root, List.of()));
+    editAndTouch(root.resolve("_pka", "_rank_app999.fear"), "map a as pkc", "map a as pkd");
+    assertEquals(Map.of("pka", false, "pkb", false, "pkc", true, "pkd", true), Coordinator.pkgsBuilt(root, baseCache));
+    utils.Err.strCmp("d\n", main(root, List.of()));
+  }
   @Test void aMovedIconOfALowerRankPackageIsFollowed(@TempDir Path tmp) throws Exception{
     var root= claimsProject(tmp, """
 Foo:Main, OpenWith[lib.IconsLib]{s->base.Debug#(`foo`)}
