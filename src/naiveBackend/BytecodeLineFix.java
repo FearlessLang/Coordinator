@@ -36,7 +36,7 @@ final class BytecodeLineFix implements Consumer<Path>{
     return this;
   }
   BytecodeLineFix a(String s, Pos p){//this call == s contains exactly 1 method call located in pos
-    int fl= p.line();
+    var fl= p.line();
     assert fl >= 1 && fl <= 65535; // LineNumberTable uses u2
     var prev= lineMap.putIfAbsent(javaLine, fl);
     assert prev == null || prev.intValue() == fl :

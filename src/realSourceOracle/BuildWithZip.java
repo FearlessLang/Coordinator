@@ -120,7 +120,7 @@ public final class BuildWithZip{
   public static void checkIndividualVisibleSegment(RefParent kid){
     checkTooLong(kid);
     var name= Fs.fileNameWithExtension(kid.fearPath());
-    int d0= name.indexOf('.');
+    var d0= name.indexOf('.');
     if (d0 == 0){ checkIndividualInvisibleSegment(kid); return; }
     var split= d0 > 0 && kid instanceof Ref;
     checkVisibleAtom(kid, split ? name.substring(0, d0) : name);
@@ -128,7 +128,7 @@ public final class BuildWithZip{
     if (kid instanceof Ref && !Report.allowedNoExtFiles.contains(name)){ throw Report.needsExtension(kid); }
   }
   private static void checkVisibleAtom(RefParent kid, String atom){
-    char c0= atom.charAt(0);
+    var c0= atom.charAt(0);
     if (c0 != '_' && !('a' <= c0 && c0 <= 'z')){ throw Report.visibleMustStartWithLetterOrUnderscore(kid); }
     atom.chars().skip(1).filter(c -> c != '_' && !Fs.isExtSegChar((char)c)).findFirst().ifPresent(c -> { throw Report.visibleInvalidChar(kid, (char)c); });
     if (winReserved.contains(atom)){ throw Report.windowsReservedName(kid); }
@@ -157,7 +157,7 @@ public final class BuildWithZip{
       if (Character.isISOControl(cp)){ throw Report.invisibleNoControlChars(kid, cp, name); }
       if (winBadChars.indexOf(cp) >= 0){ throw Report.invisibleNoWindowsBadChars(kid, (char)cp, name); }
     }
-    int d= name.indexOf('.');
+    var d= name.indexOf('.');
     var base= (d < 0 ? name : name.substring(0, d)).toLowerCase(Locale.ROOT);
     if (winReserved.contains(base)){ throw Report.invisibleWindowsReservedDeviceName(kid, base, name); }
   }
@@ -174,8 +174,8 @@ public final class BuildWithZip{
     if (prev == null){ return; }
     var lowPrev= prev.toLowerCase(Locale.ROOT);
     var prevNfc= Normalizer.normalize(prev, Form.NFC);
-    boolean caseOnly= lowPrev.equals(lowName) && !prevNfc.equals(nfc);
-    boolean nfcOnly= prevNfc.equals(nfc) && !lowPrev.equals(lowName);
+    var caseOnly= lowPrev.equals(lowName) && !prevNfc.equals(nfc);
+    var nfcOnly= prevNfc.equals(nfc) && !lowPrev.equals(lowName);
     throw Report.invisibleSiblingNamesCollide(kid, prev, name, caseOnly, nfcOnly);
   }
   private static void checkCollectiveVisible(Set<RefParent> kids){

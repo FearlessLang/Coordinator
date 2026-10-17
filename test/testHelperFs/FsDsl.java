@@ -42,7 +42,7 @@ public final class FsDsl{
 
   private static void addItem(ArrayList<Item> out, ArrayList<String> lines){
     if (lines.isEmpty()){ return; }
-    int i= 0;
+    var i= 0;
     for (; i < lines.size(); i += 1){ if (lines.get(i).equals("iii")){ break; } }
     assert i < lines.size() : "Missing iii separator";
     var name= Join.of(lines.subList(0, i), "", "\n", "", "");
@@ -63,11 +63,11 @@ public final class FsDsl{
 
   private static void emit(Path root, LinkedHashMap<Path,ZipNode> zips, Item it){
     var name= it.name();
-    boolean isDir= name.endsWith("/");
+    var isDir= name.endsWith("/");
     if (isDir){ name = name.substring(0, name.length()-1); }
     var segs= name.split("/", -1);
 
-    int zi= firstZipSeg(segs);
+    var zi= firstZipSeg(segs);
     if (zi < 0){ emitDisk(root, segs, isDir, it.content()); return; }
 
     var diskZip= root;
@@ -98,9 +98,9 @@ public final class FsDsl{
       assert !isDir : "Use path ending with .zip (no trailing /) to declare empty zip";
       return; // declaration only: empty zip is fine
     }
-    int from= 0;
+    var from= 0;
     while (true){
-      int next= nextZipIndex(after, from);
+      var next= nextZipIndex(after, from);
       if (next < 0){ break; }
       var step= Join.of(after.subList(from, next+1), "", "/", "");
       root = root.nested.computeIfAbsent(step, _ -> new ZipNode());

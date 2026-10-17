@@ -385,7 +385,7 @@ code{
     var text= toStr.sig(m.main().sig());
     var bound= Stream.concat(m.owner.main().bs().stream(), m.main().sig().bs().stream()).map(B::x).collect(Collectors.toSet());
     var sb= new StringBuilder();
-    int i= 0;
+    var i= 0;
     for (var f : DocRefScanner.signatureTypes(text)){
       var t= (DocRef.TypeName)f.ref();
       if (bound.contains(t.simpleName())){ continue; }
@@ -432,7 +432,7 @@ code{
     var text= occ.text();
     var linked= spans.getOrDefault(occ, Map.of());
     var sb= new StringBuilder();
-    int i= 0;
+    var i= 0;
     for (var cs : DocRefScanner.codeSpans(text)){
       sb.append(h(text.substring(i, cs.start()-cs.fence())));
       sb.append("<code>").append(renderCode(text, cs, linked)).append("</code>");
