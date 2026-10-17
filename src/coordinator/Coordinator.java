@@ -39,7 +39,7 @@ import utils.Push;
 
 public interface Coordinator{
   default String runAllMains(String pkgName, OutputOracle out) throws InterruptedException{
-    return runMains(runData(out.rootDir().getParent(), stdLibBase()), Push.of(out.rootDir().resolve("gen_java"), sharedClasspath()), "_"+pkgName+".Main");
+    return runMains(runData(out.rootDir().getParent(), stdLibBase()), Push.of(genJava(out.rootDir()), sharedClasspath()), "_"+pkgName+".Main");
   }
   static String runMains(List<String> jvmArgs, List<Path> jarDirs, String mainClass) throws InterruptedException{
     var sb= new StringBuilder();
@@ -101,9 +101,9 @@ public interface Coordinator{
     return Optional.of(Collections.unmodifiableMap(res));
   }
   static ChildJvm startMain(Path project, Path base, String main, List<Path> sharedClasspath, Consumer<String> out){
-    return JavaTool.startMainFromJars(runData(project, base), Push.of(genJava(project), sharedClasspath), "_"+main.substring(0, main.indexOf('.'))+".Main", out, main);
+    return JavaTool.startMainFromJars(runData(project, base), Push.of(genJava(project.resolve(outDir)), sharedClasspath), "_"+main.substring(0, main.indexOf('.'))+".Main", out, main);
   }
-  static Path genJava(Path project){ return project.resolve(outDir).resolve("gen_java"); }
+  static Path genJava(Path outRoot){ return outRoot.resolve("gen_java"); }
   String outDir= ".fearless_out";
 
   default List<Literal> frontend(String pkgName, List<Ref> files, SourceOracle oracle, OtherPackages other, Map<String,String> vres, CapabilityEnvironment capabilities){

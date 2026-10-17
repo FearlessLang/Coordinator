@@ -5,12 +5,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 
+import coordinator.Coordinator;
 import tools.Fs;
 import tools.JavacTool;
 
 public final class NaiveBackendLogicMain{
   public void of(BackendTools tools, List<Path> extraClasspathDirs){
-    var genJava= tools.rootDir().resolve("gen_java");
+    var genJava= Coordinator.genJava(tools.rootDir());
     var outPath= genJava.resolve(tools.pkgName());
     var fixers= new Backend(outPath, tools).produceJavaCode();
     var classes= genJava.resolve("_classes");

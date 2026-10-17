@@ -80,13 +80,13 @@ final class RunIntegration{
         return BackendTools.of(pkgName, oracle, other, core, project.resolve(Coordinator.outDir), baseCachePath(), ResolveResource.stLibRTPath, capabilities);
       }
       @Override public String runAllMains(String pkgName, OutputOracle out) throws InterruptedException{
-        return Coordinator.runMains(Push.of(Coordinator.runData(out.rootDir().getParent(), stdLibBase()), jvmArgs), Push.of(out.rootDir().resolve("gen_java"), sharedClasspath()), "_"+pkgName+".Main");
+        return Coordinator.runMains(Push.of(Coordinator.runData(out.rootDir().getParent(), stdLibBase()), jvmArgs), Push.of(Coordinator.genJava(out.rootDir()), sharedClasspath()), "_"+pkgName+".Main");
       }
     };
   }
   static Path freshIntegrationRoot(String name){
     var root= ResolveResource.integrationTests.resolve(name);
-    Fs.rmTree(root.resolve(".fearless_out"));
+    Fs.rmTree(root.resolve(Coordinator.outDir));
     return root;
   }
   String run(String name){ return main(freshIntegrationRoot(name), List.of()); }
@@ -328,8 +328,8 @@ App:Main, lib.Lib{s->base.Debug#(`app`)}
     assertEquals(Map.of("app", false), Coordinator.pkgsBuilt(root, baseCache));
     var ex= assertThrows(UserError.class, () -> main(root, List.of()));
     utils.Err.strCmp("[###]lib.Lib[###]", ex.getMessage());
-    assertFalse(Files.exists(root.resolve(".fearless_out", "gen_java", "lib.jar")));
-    assertFalse(Files.exists(root.resolve(".fearless_out", "lib.built")));
+    assertFalse(Files.exists(Coordinator.genJava(root.resolve(Coordinator.outDir)).resolve("lib.jar")));
+    assertFalse(Files.exists(root.resolve(Coordinator.outDir).resolve("lib.built")));
   }
   @Test void onlyImmCapture(@TempDir Path tmp){
     var root= tmp.resolve("root");
@@ -1388,7 +1388,7 @@ Hello:Main{s->base.Debug#(Greeting.hi)}
 """);
     var c= coordinator(root);
     c.main(root, stLib);
-    var out= root.resolve(".fearless_out");
+    var out= root.resolve(Coordinator.outDir);
     long aBuilt= Fs.lastModified(out.resolve("a.built"));
     long aJson= Fs.lastModified(out.resolve("a.json"));
     long bBuilt= Fs.lastModified(out.resolve("b.built"));
@@ -1567,7 +1567,7 @@ boom
 imm A.main(_) error line: 2 in file _col/_rank_app.fear
 b
 """, c.main(root, stLib));
-    var cp= Push.of(Coordinator.genJava(root), c.sharedClasspath());
+    var cp= Push.of(Coordinator.genJava(root.resolve(Coordinator.outDir)), c.sharedClasspath());
     var out= new StringBuilder();
     assertEquals(1, JavaTool.startMainFromJars(Coordinator.runData(root, c.stdLibBase()), cp, "_col.Main", out::append).await(), out::toString);
     assertEquals(1, Coordinator.startMain(root, c.stdLibBase(), "col.A", c.sharedClasspath(), out::append).await(), out::toString);
