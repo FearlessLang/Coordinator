@@ -3,7 +3,7 @@ package scripts;
 
 public final class TestAllFrontend{
   public static void main(String[] args) throws InterruptedException{
-    ModularBuild.commons();
+    TestAllCommons.main(args);
     ModularBuild.frontendMain();
     ModularBuild.runJUnit(ModularBuild.frontendTest(), "--exclude-package=instantiationSweep");
   }
