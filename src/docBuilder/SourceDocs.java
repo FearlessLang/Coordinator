@@ -16,7 +16,7 @@ import utils.Pos;
 final class SourceDocs{
   SourceDocs(URI uri, String text){
     this.uri= uri;
-    this.lines= text.lines().toList();
+    lines= text.lines().toList();
     scan();
   }
 

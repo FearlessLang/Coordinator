@@ -32,8 +32,8 @@ final class HtmlDocRenderer{
     this.types= types;
     this.spans= spans;
     this.baseDocLocation= baseDocLocation;
-    this.toStr= new ExportedToStr(pkgName, uses);
-    this.resolver= new DocResolver(pkgName, types, other);
+    toStr= new ExportedToStr(pkgName, uses);
+    resolver= new DocResolver(pkgName, types, other);
   }
 
   final String pkgName;
