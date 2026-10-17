@@ -33,6 +33,11 @@ public final class ModularBuild{
   static void coordinatorMain(){
     buildJar("Coordinator", List.of(ResolveResource.coordinatorSrc, ResolveResource.coordinatorSrcModule));
   }
+  static Path commonsTest(){
+    var tests= ResolveResource.frontendSrc.getParent().resolveSibling("commons_tests");
+    JavacTool.javac(List.of(tests.resolve("test"), tests.resolve("testModule")), out.resolve("commons-test"), mods);
+    return out.resolve("commons-test");
+  }
   static Path frontendTest(){ return test(ResolveResource.frontendSrc, "frontend-test"); }
   static Path coordinatorTest(){ return test(ResolveResource.coordinatorSrc, "coordinator-test", resources); }
   static Path controllerTest(){ return test(ResolveResource.controllerSrc, "controller-test", resources); }
