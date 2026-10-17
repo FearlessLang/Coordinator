@@ -681,7 +681,7 @@ Add an arity when the name alone matches several declarations:
 
 To show code that is not a name, use two backticks or more:
   ``this.foo(x)``   shown as code, never checked, never a link
-""".formatted(String.join("\n\n", problems)));
+""".formatted(Join.of(problems, "", "\n\n", "")));
   }
 
   public static UserError generatedTestNameReserved(String problem, String topName){ return new UserError("""

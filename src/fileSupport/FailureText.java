@@ -7,13 +7,13 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import fileSupport.ByteFiles.Op;
 import metaParser.Message;
 import offensiveUtils.Require;
 import tools.Fs;
 import utils.Bug;
+import utils.Join;
 
 // Style rule for those helpers:
 // - call the Java/NIO operations directly;
@@ -228,7 +228,7 @@ final class Holders{
     catch (IOException e){ return "\n<reading programs holding this file open failed>"+suppressed.mark(e)+"\n"; }
     if (holders.isEmpty()){ return whenNone; }
     return intro+holders.size()+(holders.size() == 1 ? " program" : " programs")+" currently holding this file open:\n\n"
-      +holders.stream().map(h -> "  "+h+"\n").collect(Collectors.joining())+outro;
+      +Join.of(holders.stream().map(h -> "  "+h+"\n"), "", "", "")+outro;
   }
   private static final String exampleWord= """
 Microsoft Word

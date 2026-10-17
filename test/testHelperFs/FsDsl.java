@@ -19,6 +19,7 @@ import org.junit.jupiter.api.Assumptions;
 import realSourceOracle.RealSourceOracleWithZip;
 import tools.SourceOracle;
 import userMessages.UserError;
+import utils.Join;
 
 public final class FsDsl{
   record Item(String name, String content){}
@@ -44,8 +45,8 @@ public final class FsDsl{
     int i= 0;
     for (; i < lines.size(); i += 1){ if (lines.get(i).equals("iii")){ break; } }
     assert i < lines.size() : "Missing iii separator";
-    var name= String.join("\n", lines.subList(0, i));
-    var content= String.join("\n", lines.subList(i+1, lines.size()));
+    var name= Join.of(lines.subList(0, i), "", "\n", "", "");
+    var content= Join.of(lines.subList(i+1, lines.size()), "", "\n", "", "");
     out.add(new Item(name, content));
   }
 
@@ -101,11 +102,11 @@ public final class FsDsl{
     while (true){
       int next= nextZipIndex(after, from);
       if (next < 0){ break; }
-      var step= String.join("/", after.subList(from, next+1));
+      var step= Join.of(after.subList(from, next+1), "", "/", "");
       root = root.nested.computeIfAbsent(step, _ -> new ZipNode());
       from = next+1;
     }
-    var entry= String.join("/", after.subList(from, after.size()));
+    var entry= Join.of(after.subList(from, after.size()), "", "/", "", "");
     if (entry.isEmpty()){ return; } // declaration only at this zip level
     root.leafs.add(new Leaf(entry, content, isDir));
   }
