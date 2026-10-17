@@ -19,6 +19,14 @@ import tools.Fs;
 
 final class UserErrorTest{
   static{ utils.Err.setUp(AssertionFailedError.class, Assertions::assertEquals, Assertions::assertTrue); }
+  @Test void followedByKeepsTheRecovery() throws ReflectiveOperationException{
+    Runnable action= () -> {};
+    var e= new UserError("a").withRecovery("Fix", action).followedBy("b");
+    var recovery= UserError.class.getDeclaredField("recovery");
+    recovery.setAccessible(true);
+    assertEquals(action, recovery.get(e));
+    assertEquals("ab", e.getMessage());
+  }
   @Test void pathIsUnchangedForPlainAscii(){
     assertEquals("  C:\\data\\proj", UserError.path("C:\\data\\proj"));
   }

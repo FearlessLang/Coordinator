@@ -236,7 +236,7 @@ removed HKCU\\...\\UserChoice, but restoring the previous ProgId failed""", Viol
 Build cache is missing a generated package API file.
 That metadata should be stored in:
   C:\\Users\\ada\\projects\\myproject\\.fearless_out\\core.json
-Delete this project's .fearless_out folder, then recompile.
+Fearless deleted this project's .fearless_out folder: compile again to rebuild it.
 """, Violation.cacheMissingPkgApiFile(apiJson).getMessage());
   }
   @Test void cacheInvalidFile(){
@@ -250,6 +250,8 @@ but the file content is not valid.
 
 Parse error:
   Unexpected end of input at offset 4096
+
+Fearless deleted this project's .fearless_out folder: compile again to rebuild it.
 """, Violation.cacheInvalidFile(mapJson, "Unexpected end of input at offset 4096").getMessage());
   }
   @Test void cacheCouldNotFindZipEntry(){

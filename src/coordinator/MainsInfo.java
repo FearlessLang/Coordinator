@@ -22,6 +22,7 @@ import tools.Fs;
 import tools.SourceOracle;
 import userMessages.Report;
 import userMessages.UserError;
+import userMessages.Violation;
 import utils.Pos;
 
 public record MainsInfo(Map<String,Main> mains){
@@ -43,8 +44,9 @@ public record MainsInfo(Map<String,Main> mains){
   private static Info str(String s){ return new Info.Str(s, Info.noSpan); }
   private static Info lst(List<Info> items){ return new Info.Lst(items, Info.noSpan); }
   static MainsInfo parse(Path file){
-    var text= Fs.readUtf8(file);
-    return new Shape(text).all(Info.parse(text, file.toUri()));
+    var text= OutputHelper.readAllowed(file).orElseThrow();
+    try{ return new Shape(text).all(Info.parse(text, file.toUri())); }
+    catch (UserError e){ throw OutputHelper.dropCache(file, Violation.cacheInvalidFile(file, e.getMessage())); }
   }
   private record Shape(String text){
     MainsInfo all(Info i){

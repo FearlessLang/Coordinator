@@ -1,5 +1,6 @@
 package coordinator;
 
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
@@ -20,6 +21,7 @@ import core.TName;
 import metaParser.Message;
 import tools.Fs;
 import tools.SourceOracle.Ref;
+import userMessages.UserError;
 import userMessages.Violation;
 import utils.Join;
 
@@ -33,7 +35,7 @@ public interface OutputOracle{
   default long mapStamp(){ return Fs.lastModified(mapPath()); }
   default long pkgApiStamp(String pkg){ return Fs.lastModified(pkgApiPath(pkg)); }
   default boolean stillBuilt(String pkg, List<Ref> files, List<String> below, long minMillis){
-    return Fs.lastModified(builtPath(pkg)) >= minMillis && Fs.readUtf8(builtPath(pkg)).equals(OutputHelper.built(files, below)) && Files.exists(mainsPath(pkg));
+    return Fs.lastModified(builtPath(pkg)) >= minMillis && OutputHelper.readAllowed(builtPath(pkg)).orElseThrow().equals(OutputHelper.built(files, below)) && Files.exists(mainsPath(pkg));
   }
   default void forgetAllBut(List<String> pkgs){
     if (!Files.isDirectory(rootDir())){ return; }
@@ -84,19 +86,25 @@ final class OutputHelper{
     return obj(map, m -> obj(m, s -> "\""+s+"\""));
   }
   static Optional<Map<TName,Literal>> pkgApiFromJson(Path p){ return readAllowed(p).map(s -> new LimitedJsonParser(s, p).apiJsonToMap()); }
-  static Map<TName,Literal> cachedPkgApi(Path p){ return pkgApiFromJson(p).orElseThrow(() -> Violation.cacheMissingPkgApiFile(p)); }
+  static Map<TName,Literal> cachedPkgApi(Path p){ return pkgApiFromJson(p).orElseThrow(() -> dropCache(p, Violation.cacheMissingPkgApiFile(p))); }
   private static <T> String obj(Map<String,T> m, Function<T,String> v){
     return Join.of(m.entrySet().stream()
       .map(e -> "\""+e.getKey()+"\":"+v.apply(e.getValue())),
       "{", ",\n", "}\n");//correctly throw for empty
   }
   static Optional<Map<String,Map<String,String>>> mapFromJson(Path p){ return readAllowed(p).map(s -> new LimitedJsonParser(s, p).obj2()); }
-  private static Optional<String> readAllowed(Path p){
+  static Optional<String> readAllowed(Path p){
     if (!Files.exists(p)){ return Optional.empty(); }
-    var s= Fs.readUtf8(p);
-    var bad= IntStream.range(0, s.length()).filter(i -> Fs.allowed.indexOf(s.charAt(i)) < 0).findFirst();
-    if (bad.isPresent()){ throw Violation.cacheInvalidFile(p, "Unexpected character "+Message.displayChar(s.charAt(bad.getAsInt()))+" at "+bad.getAsInt()); }
-    return Optional.of(s);
+    var bs= Fs.of(() -> Files.readAllBytes(p));
+    var bad= IntStream.range(0, bs.length).filter(i -> Fs.allowed.indexOf(bs[i]) < 0).findFirst();
+    if (bad.isPresent()){ throw dropCache(p, Violation.cacheInvalidFile(p, "Unexpected character "+Message.displayChar((char)(bs[bad.getAsInt()] & 0xff))+" at "+bad.getAsInt())); }
+    return Optional.of(new String(bs, StandardCharsets.US_ASCII));
+  }
+  static UserError dropCache(Path file, UserError err){
+    var out= file.getParent();
+    assert out.getFileName().toString().equals(Coordinator.outDir);
+    Fs.rmTree(out);
+    return err;
   }
   static boolean consistent(Map<TName,Literal> map, List<Literal> core){
     //Not filtered to public-only: privates can still be mentioned in meth parameters and ret types.
