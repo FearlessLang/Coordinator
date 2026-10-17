@@ -114,7 +114,7 @@ Error: Fearless crashed (this is a bug).
   Please report this error and include the details below.
 
 Details:
-""" + sw;
+"""+sw;
   }
   //A bug still has to reach the user of a windowed program. Wrapping it here is only
   //about how it is shown: what it MEANS is still utils.Bug.

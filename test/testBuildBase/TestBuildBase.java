@@ -44,7 +44,7 @@ final class TestBuildBase{
     }
   };
   @Test void test(){
-    try{ c.main(ResolveResource.stLibPath, c.sourceOracle(ResolveResource.stLibPath));}
-    catch (InterruptedException e){ fail(e);}
+    try{ c.main(ResolveResource.stLibPath, c.sourceOracle(ResolveResource.stLibPath)); }
+    catch (InterruptedException e){ fail(e); }
   }
 }

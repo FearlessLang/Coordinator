@@ -15,7 +15,7 @@ import tools.SourceOracle.Ref;
 import userMessages.Violation;
 
 public interface Layer{
-  default LinkedHashMap<String,List<Ref>> pkgs(){ return new LinkedHashMap<>();}
+  default LinkedHashMap<String,List<Ref>> pkgs(){ return new LinkedHashMap<>(); }
   default List<String> pkgNames(){ return List.of("base"); }
   OtherPackages compile(SourceOracle src, OutputOracle out);
   SourceOracle stLib();
