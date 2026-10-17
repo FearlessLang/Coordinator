@@ -34,6 +34,7 @@ import tools.SourceOracle;
 import tools.SourceOracle.Ref;
 import userMessages.Report;
 import userMessages.Violation;
+import utils.Join;
 import utils.OneOr;
 import utils.Push;
 
@@ -45,7 +46,7 @@ public interface Coordinator{
     var sb= new StringBuilder();
     var jvm= JavaTool.startMainFromJars(jvmArgs, jarDirs, mainClass, s -> { sb.append(s); System.out.print(s); });
     var ec= jvm.await();
-    Require.check(ec == 0 || ec == 1, "Exit code "+ec+" from\n"+String.join("\n", jvm.cmd())+"\nOutput:\n"+sb);
+    Require.check(ec == 0 || ec == 1, "Exit code "+ec+" from\n"+Join.of(jvm.cmd(), "", "\n", "")+"\nOutput:\n"+sb);
     return sb.toString();
   }
   static List<String> runData(Path project, Path base){
@@ -169,7 +170,7 @@ final class Helper{
   }
   private static final List<String> ranks= List.of(
     "_rank_base", "_rank_core", "_rank_driver", "_rank_worker", "_rank_framework", "_rank_accumulator", "_rank_tool", "_rank_app");
-  private static final Pattern rankName= Pattern.compile("("+String.join("|", ranks)+")(\\d{3})?");
+  private static final Pattern rankName= Pattern.compile(Join.of(ranks, "(", "|", ")")+"(\\d{3})?");
 
   static boolean hasReservedRankPrefix(Ref u){ return Fs.fileNameWithExtension(u.fearPath()).startsWith("_rank_"); }
   static Ref okPkgContent(List<Ref> u){

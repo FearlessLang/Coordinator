@@ -6,7 +6,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.TreeMap;
 import java.util.function.Consumer;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -114,7 +113,7 @@ public final class Backend{
   String decTypeName(TName n){ return encodeTrailingPrimes(n.simpleName())+"$"+caseTag(n.simpleName())+"$"+n.arity(); }
   String typeName(TName n){ return "_"+encodeTrailingPrimes(n.s())+"$"+caseTag(n.simpleName())+"$"+n.arity(); }
   static String caseTag(String s){
-    var bits= s.chars().filter(c -> 'A' <= c && c <= 'Z' || 'a' <= c && c <= 'z').mapToObj(c -> c < 'a' ? "1" : "0").collect(Collectors.joining());
+    var bits= Join.of(s.chars().filter(c -> 'A' <= c && c <= 'Z' || 'a' <= c && c <= 'z').mapToObj(c -> c < 'a' ? "1" : "0"), "", "", "", "");
     return new BigInteger("1"+bits, 2).toString(36);
   }
   String mangledMethodName(RC rc, MName m){
@@ -146,7 +145,7 @@ public final class Backend{
     assert s.indexOf('"') < 0 && s.indexOf('\\') < 0 && s.indexOf('\n') < 0 && s.indexOf('\r') < 0;
     return "\""+s+"\"";
   }
-  String mangleOp(String op){ return op.chars().mapToObj(c -> opNames.get(opChars.indexOf(c))).collect(Collectors.joining("_")); }
+  String mangleOp(String op){ return Join.of(op.chars().mapToObj(c -> opNames.get(opChars.indexOf(c))), "", "_", ""); }
   static final String opChars= "+-*/%<>=!&|^~?#\\";
   static final List<String> opNames= List.of("plus", "dash", "star", "slash", "pct", "lt", "gt", "eq", "bang", "and", "or", "xor", "tilde", "q", "hash", "bslash");
 }

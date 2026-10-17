@@ -8,6 +8,7 @@ import java.util.stream.Stream;
 import tools.Fs;
 import tools.SourceOracle;
 import userMessages.Report;
+import utils.Join;
 import utils.Pop;
 import utils.Push;
 
@@ -19,7 +20,7 @@ import utils.Push;
 
 //Here Both PathEntry and ZipEntry can be used as Ref for a RealSourceOracle extends SourceOracle
 public record ZipEntry(Path root, Path local, List<String> segments, List<String> zips, String lastZips) implements SourceOracle.Ref{
-  @Override public String fearPath(){ return SourceOracle.root+String.join("/", Push.of(dropZipExt(PathEntry.localSegments(local)), segments)); }
+  @Override public String fearPath(){ return Join.of(Push.of(dropZipExt(PathEntry.localSegments(local)), segments), SourceOracle.root, "/", ""); }
   @Override public byte[] loadBytes(){ return ZipLocator.entryBytes(root.resolve(local), zips, lastZips); }
   @Override public long lastModified(){ return Fs.lastModified(root.resolve(local)); }
   @Override public String toString(){ return fearPath(); }
@@ -44,7 +45,7 @@ public record ZipEntry(Path root, Path local, List<String> segments, List<String
       var nested= out.stream().filter(o -> isProperPrefix(e.segments(), o.segments())).findFirst();
       if (nested.isEmpty()){ continue; }
       var extra= nested.get().segments().subList(e.segments().size(), nested.get().segments().size());
-      var nestedDisplay= e.lastZips()+"/"+String.join("/", extra);
+      var nestedDisplay= Join.of(extra, e.lastZips()+"/", "/", "");
       throw Report.zipFileUsedAsDirectory(e.root().resolve(e.local()), e.zips(), e.lastZips(), nestedDisplay);
     }
   }

@@ -428,7 +428,7 @@ code{
   //of them are one paragraph, kept on their own lines so that a list stays a list and
   //an indented line stays indented (the doc block is rendered with pre-wrap).
   void renderProse(StringBuilder sb, List<DocOcc> prose){
-    var lines= prose.stream().map(o -> o.text().isBlank() ? "" : renderText(o)).collect(Collectors.joining("\n"));
+    var lines= Join.of(prose.stream().map(o -> o.text().isBlank() ? "" : renderText(o)), "", "\n", "", "");
     paragraph.matcher(lines).results().forEach(p -> sb.append("<p>").append(p.group()).append("</p>\n"));
   }
   private static final Pattern paragraph= Pattern.compile("(?dm)^.+(\n.+)*");

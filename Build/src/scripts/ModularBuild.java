@@ -11,6 +11,7 @@ import tools.Fs;
 import tools.JavaTool;
 import tools.JavacTool;
 import tools.PortableApp;
+import utils.Join;
 import utils.OneOr;
 import utils.Push;
 
@@ -98,7 +99,7 @@ public final class ModularBuild{
     var args= new ArrayList<>(JavacTool.javacArgs);
     args.addAll(List.of("--release", ResolveResource.eclipseJavaVersion, "-Xlint:-path",
       "-d", classes.toString(),
-      "-cp", String.join(File.pathSeparator, bundles)));
+      "-cp", Join.of(bundles, "", File.pathSeparator, "")));
     List.of(plugin.resolve("src"), ResolveResource.controllerSrc.resolve("suggest")).forEach(src ->
       Fs.walkV(src, s -> s.filter(p -> p.toString().endsWith(".java")).forEach(p -> args.add(p.toString()))));
     Fs.runTool("javac", args);

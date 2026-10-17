@@ -54,6 +54,7 @@ import tools.JavacTool;
 import tools.SourceOracle;
 import tools.SourceOracle.Ref;
 import userMessages.UserError;
+import utils.Join;
 import utils.Push;
 
 final class RunIntegration{
@@ -100,7 +101,7 @@ final class RunIntegration{
     var out= main(root, List.of("-Dfearless.endMarker="+marker));
     writeJUnitReport(name, root);
     var fails= out.lines().filter(l -> l.startsWith("Test failure ")).toList();
-    assertTrue(fails.isEmpty(), () -> "Fearless unit tests failed in "+name+":\n"+String.join("\n", fails));
+    assertTrue(fails.isEmpty(), () -> Join.of(fails, "Fearless unit tests failed in "+name+":\n", "\n", ""));
     var lines= out.lines().toList();
     var mains= coordinator(root).mains(root, stLib).orElseThrow().size();
     var allCompleted= lines.stream().filter(marker::equals).count() == mains && lines.getLast().equals(marker);
@@ -111,7 +112,7 @@ final class RunIntegration{
     var one= JUnitReport.suite(name, root);
     if (one.isEmpty()){ return; }
     suites.add(one);
-    Fs.writeUtf8(reportsFile, JUnitReport.document(String.join("", suites)));
+    Fs.writeUtf8(reportsFile, JUnitReport.document(Join.of(suites, "", "", "", "")));
   }
   @Test void helloWorld(){
     utils.Err.strCmp("""
@@ -156,7 +157,7 @@ top level main
     var out= Coordinator.runMains(Coordinator.runData(tmp, ResolveResource.stLibPath), List.of(ResolveResource.coordinatorJars, baseCache), "_base.Main");
     writeJUnitReport("baseGeneratedExamples", tmp);
     var fails= out.lines().filter(l -> l.startsWith("Test failure ")).toList();
-    assertTrue(fails.isEmpty(), () -> "The doc examples of base failed:\n"+String.join("\n", fails));
+    assertTrue(fails.isEmpty(), () -> Join.of(fails, "The doc examples of base failed:\n", "\n", ""));
   }
   @Test void testDocs(){
     utils.Err.strCmp("""
@@ -391,7 +392,7 @@ App:Main, lib.Lib{s->base.Debug#(`app`)}
       _DCase$1k$0.java only imm
       _FCase$1k$0.java only imm
       _GCase$1k$0.java only imm
-      """, String.join("\n", got)+"\n");
+      """, Join.of(got, "", "\n", "\n"));
   }
   @Test void testAssets(){ testOk("testAssets");}
   private Path theOneLogFile(Path dir, String prefix) throws IOException{
