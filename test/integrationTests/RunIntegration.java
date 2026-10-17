@@ -1256,7 +1256,7 @@ A:Main{s->base.Debug#(pkb.B.text)}
 """);
     utils.Err.strCmp("c\n", main(root, List.of()));
     editAndTouch(root.resolve("_pka", "_rank_app999.fear"), "map a as pkc", "map a as pkd");
-    assertEquals(Map.of("pka", false, "pkb", false, "pkc", true, "pkd", true), Coordinator.pkgsBuilt(root, baseCache));
+    assertEquals(Map.of("pka", false, "pkb", false, "pkc", false, "pkd", false), Coordinator.pkgsBuilt(root, baseCache));
     utils.Err.strCmp("d\n", main(root, List.of()));
   }
   @Test void aMovedIconOfALowerRankPackageIsFollowed(@TempDir Path tmp) throws Exception{

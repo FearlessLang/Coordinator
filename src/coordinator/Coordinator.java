@@ -57,10 +57,12 @@ public interface Coordinator{
   static URI testsUri(String pkg, List<Ref> files){ return OneOr.of("One rank file per package", files.stream().filter(Helper::hasReservedRankPrefix)).fearURI().resolve("auto_tests/"+pkg+"_test.fear"); }
   default SourceOracle sourceOracle(Path path){ return new RealSourceOracleWithZip(path); }
   static Map<String,Boolean> pkgsBuilt(Path path, Path baseCache){
-    var map= Helper.pkgMap(new RealSourceOracleWithZip(path), path);
+    var o= new RealSourceOracleWithZip(path);
+    var map= Helper.pkgMap(o, path);
     var baseApi= Fs.lastModified(baseCache.resolve("base.json"));
     var ranks= map.values().stream().map(Helper::okPkgContent).toList();
     var out= Helper.out(path);
+    var mapCommitted= OutputHelper.mapFromJson(out.mapPath()).filter(Helper.rankMap(o, ranks)::equals).isPresent();
     var top= ranks.stream().mapToInt(Helper::rankNumber).max().getAsInt();
     var listed= Files.exists(out.mainsPath());
     var res= new LinkedHashMap<String,Boolean>();
@@ -69,7 +71,7 @@ public interface Coordinator{
       var lower= ranks.stream().filter(d -> Helper.rankNumber(d) < Helper.rankNumber(r)).map(Helper::pkgName).toList();
       var below= lower.stream().mapToLong(out::pkgApiStamp);
       var maxIn= LongStream.concat(LongStream.concat(map.get(pkg).stream().mapToLong(Ref::lastModified), below), LongStream.of(out.mapStamp(), baseApi)).max().getAsLong();
-      res.put(pkg, out.stillBuilt(pkg, map.get(pkg), Push.of(lower, "base"), maxIn) && (listed || Helper.rankNumber(r) != top));
+      res.put(pkg, mapCommitted && out.stillBuilt(pkg, map.get(pkg), Push.of(lower, "base"), maxIn) && (listed || Helper.rankNumber(r) != top));
     }
     return Collections.unmodifiableMap(res);
   }
@@ -142,9 +144,7 @@ final class Helper{
   static Layer layerOf(Coordinator coordinator, SourceOracle o, Path project, OutputOracle out, SourceOracle stLib){
     var map= pkgMap(o, project);
     var allRanks= map.values().stream().map(Helper::okPkgContent).toList();
-    Map<String,Map<String,String>> res; try{res= new FrontendLogicMain()
-      .parseRankFiles(allRanks, Comparator.comparingInt(Helper::rankNumber), Push.of(allRanks.stream().map(Helper::pkgName).toList(), "base"));}
-    catch (FearlessException e){ throw Report.sourceError(e.render(o)); }
+    var res= rankMap(o, allRanks);
     Layer l= new BaseLayer(coordinator, res, out.commitMap(res, allRanks.stream().mapToLong(Ref::lastModified).max().getAsLong()), stLib);
     var byRank= new TreeMap<Integer,LinkedHashMap<String,List<Ref>>>();
     for (var r : allRanks.stream().sorted(Comparator.comparing(Ref::fearPath)).toList()){
@@ -152,6 +152,10 @@ final class Helper{
     }
     for (var pkgs : byRank.values()){ l = new MiddleLayer(coordinator, l, pkgs); }
     return l;
+  }
+  static Map<String,Map<String,String>> rankMap(SourceOracle o, List<Ref> allRanks){
+    try{ return new FrontendLogicMain().parseRankFiles(allRanks, Comparator.comparingInt(Helper::rankNumber), Push.of(allRanks.stream().map(Helper::pkgName).toList(), "base")); }
+    catch (FearlessException e){ throw Report.sourceError(e.render(o)); }
   }
   static LinkedHashMap<String,List<Ref>> pkgMap(SourceOracle o, Path path){
     if (o.allFiles().stream().noneMatch(Helper::isFear)){ throw Report.projectEmpty(path); }

@@ -87,8 +87,13 @@ final class HtmlDocRenderer{
     var shown= testableTypes();
     return new GeneratedTestNames(
       "AllAutoTests_"+pkgName,
-      shown.stream().map(t -> "_"+t.main().name().simpleName()+"_Examples").toList()
+      shown.stream().map(t -> suiteName(t.main().name())).toList()
     );
+  }
+  static String suiteName(TName n){
+    var s= n.simpleName();
+    var noPrimes= s.replaceAll("'+$", "");
+    return "_"+noPrimes+"_Examples"+(n.arity() == 0 ? "" : "_"+n.arity())+s.substring(noPrimes.length());
   }
 
   String renderTest(){
