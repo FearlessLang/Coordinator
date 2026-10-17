@@ -272,6 +272,44 @@ In file: fear:/_p/auto_tests/p_test.fear
     utils.Err.strCmp("hi\n", main(root, List.of()));
     assertFalse(Files.exists(generatedTests(root)));
   }
+  @Test void docExamplesOfTwoTypesSharingASimpleNameWithDifferentAritiesRun(@TempDir Path tmp){
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_p/_rank_app.fear
+iii
+use base.Main as Main;
+use base.Nat as Nat;
+use base.Debug as Debug;
+Box:{
+  //> .check{Box.one .assertEq 1}
+  .one: Nat -> 1;
+  }
+Box[X:imm]:{
+  //> .check{Box.one .assertEq 1}
+  .two: Nat -> 2;
+  }
+App:Main{s->Debug#("hi")}
+""");
+    utils.Err.strCmp("hi\n", main(root, List.of()));
+  }
+  @Test void docExamplesOfATypeNameEndingWithAPrimeRun(@TempDir Path tmp){
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_p/_rank_app.fear
+iii
+use base.Main as Main;
+use base.Nat as Nat;
+use base.Debug as Debug;
+Box':{
+  //> .check{Box'.one .assertEq 1}
+  .one: Nat -> 1;
+  }
+App:Main{s->Debug#("hi")}
+""");
+    utils.Err.strCmp("hi\n", main(root, List.of()));
+  }
   @Test void aDeletedLowerPackageIsNoticedByThePackagesBuiltOnIt(@TempDir Path tmp){
     var root= tmp.resolve("root");
     UserError.root = root;
