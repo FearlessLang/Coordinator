@@ -37,7 +37,7 @@ public final class HtmlDocBuilder{
     this.oracle= oracle;
     this.other= other;
     this.baseDocLocation= baseDocLocation;
-    this.currentByName= core.stream().collect(Collectors.toUnmodifiableMap(Literal::name, l -> l));
+    currentByName= core.stream().collect(Collectors.toUnmodifiableMap(Literal::name, l -> l));
   }
   final Optional<Path> baseDocLocation;
 

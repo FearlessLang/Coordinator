@@ -15,7 +15,7 @@ public final class MagicConsistency{
   private static final TName magicName= new TName("base._Magic", 0, Pos.unknown);
   private final Optional<NativeOverrides> natives;
   MagicConsistency(String pkgName, Path rtPath){
-    this.natives= pkgName.equals("base") ? Optional.of(NativeOverrides.scan(rtPath)) : Optional.empty();
+    natives= pkgName.equals("base") ? Optional.of(NativeOverrides.scan(rtPath)) : Optional.empty();
   }
   private boolean isMagicBody(M m){
     return m.e().get() instanceof Call c && c.e() instanceof Type t && t.type().c().name().equals(magicName);
