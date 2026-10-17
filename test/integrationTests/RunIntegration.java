@@ -73,7 +73,7 @@ final class RunIntegration{
     System.setProperty(JavacTool.appDirKey, ResolveResource.stLibPath.getParent()
       .resolve("fearlessArtefact", "fearless", "app").toString());
     return new Coordinator(){
-      @Override public Path modsPath(){  return ResolveResource.coordinatorJars; }
+      @Override public Path modsPath(){ return ResolveResource.coordinatorJars; }
       @Override public Optional<Path> baseCachePath(){ return Optional.of(baseCache); }
       @Override public Path stdLibBase(){ return ResolveResource.stLibPath; }
       @Override public BackendTools backendTools(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, CapabilityEnvironment capabilities){
@@ -91,8 +91,8 @@ final class RunIntegration{
   }
   String run(String name){ return main(freshIntegrationRoot(name), List.of()); }
   String main(Path project, List<String> jvmArgs){
-    try{ return coordinator(project, jvmArgs).main(project, stLib);}
-    catch (InterruptedException e){ return fail(e);}
+    try{ return coordinator(project, jvmArgs).main(project, stLib); }
+    catch (InterruptedException e){ return fail(e); }
   }
   void testOk(String name){ unitTestsOk(name, freshIntegrationRoot(name)); }
   void unitTestsOk(String name, Path root){

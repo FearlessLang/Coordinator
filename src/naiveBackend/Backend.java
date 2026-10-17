@@ -35,7 +35,7 @@ public final class Backend{
   boolean isRepr(Literal l){ return l.name().equals(new TName("base.Repr", 1, Pos.unknown)); }
   public List<Consumer<Path>> produceJavaCode(){
     Fs.cleanDir(out);
-    tools.decs().forEach(d -> {generateInterface(d, false); tools.checks().checkFileReplacement(d, decTypeName(d.name()));});
+    for (var d : tools.decs()){ generateInterface(d, false); tools.checks().checkFileReplacement(d, decTypeName(d.name())); }
     writeMainJava();
     return List.copyOf(fixers);
   }
@@ -86,7 +86,7 @@ public final class Backend{
     "(", ", ", ")", "()"
   );}
   void emitTopMethod(BytecodeLineFix sb, Literal l, M m, boolean abstractOnly){
-    if (!m.sig().origin().equals(l.name())){ return ; }
+    if (!m.sig().origin().equals(l.name())){ return; }
     var jName= mangledMethodName(m.sig().rc(), m.sig().m());
     sb.a("  default Object "+jName+paramsSig(m)+"{\n");
     if (abstractOnly || m.sig().abs()){
@@ -109,7 +109,7 @@ public final class Backend{
     if (k == 0){ return s; }
     var head= s.substring(0, s.length() - k);
     assert head.indexOf('\'') < 0: "prime (') must be trailing only: "+s;
-    return head + "$p" + k;
+    return head+"$p"+k;
   }
   String decTypeName(TName n){ return encodeTrailingPrimes(n.simpleName())+"$"+caseTag(n.simpleName())+"$"+n.arity(); }
   String typeName(TName n){ return "_"+encodeTrailingPrimes(n.s())+"$"+caseTag(n.simpleName())+"$"+n.arity(); }

@@ -25,7 +25,7 @@ final class DocRefScanner{
   }
 
   static List<CodeSpan> refSpans(String text){
-    return codeSpans(text).stream().filter(sp -> sp.fence()==1).toList();
+    return codeSpans(text).stream().filter(sp -> sp.fence() == 1).toList();
   }
 
   //the whole span must be the name: "`Foo.bar`" is one, "`this.foo(x)`" is not, and

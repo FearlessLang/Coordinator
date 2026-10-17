@@ -105,7 +105,7 @@ public final class BuildWithZip{
     }
   }
   private void addKids(RefParent leaf){
-    for (var p= leaf; p.parent()!=p; p = p.parent()){
+    for (var p= leaf; p.parent() != p; p = p.parent()){
       var m= isInvisible(p.parent()) ? dotKidsByDir : visKidsByDir;
       m.computeIfAbsent(p.parent(), _ -> new LinkedHashSet<>()).add(p);
     }

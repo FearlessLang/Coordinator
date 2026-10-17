@@ -142,8 +142,8 @@ final class Helper{
   static Layer layerOf(Coordinator coordinator, SourceOracle o, Path project, OutputOracle out, SourceOracle stLib){
     var map= pkgMap(o, project);
     var allRanks= map.values().stream().map(Helper::okPkgContent).toList();
-    Map<String,Map<String,String>> res; try{res= new FrontendLogicMain()
-      .parseRankFiles(allRanks, Comparator.comparingInt(Helper::rankNumber), Push.of(allRanks.stream().map(Helper::pkgName).toList(), "base"));}
+    Map<String,Map<String,String>> res;
+    try{ res= new FrontendLogicMain().parseRankFiles(allRanks, Comparator.comparingInt(Helper::rankNumber), Push.of(allRanks.stream().map(Helper::pkgName).toList(), "base")); }
     catch (FearlessException e){ throw Report.sourceError(e.render(o)); }
     Layer l= new BaseLayer(coordinator, res, out.commitMap(res, allRanks.stream().mapToLong(Ref::lastModified).max().getAsLong()), stLib);
     var byRank= new TreeMap<Integer,LinkedHashMap<String,List<Ref>>>();
