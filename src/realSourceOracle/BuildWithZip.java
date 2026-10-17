@@ -31,8 +31,8 @@ public final class BuildWithZip{
   }
   private final Path root;
   private final ArrayList<Ref> visibleFiles= new ArrayList<>();
-  private final LinkedHashMap<RefParent,Set<RefParent>> visKidsByDir= new LinkedHashMap<>();
-  private final LinkedHashMap<RefParent,Set<RefParent>> dotKidsByDir= new LinkedHashMap<>();
+  private final LinkedHashMap<RefParent,LinkedHashSet<RefParent>> visKidsByDir= new LinkedHashMap<>();
+  private final LinkedHashMap<RefParent,LinkedHashSet<RefParent>> dotKidsByDir= new LinkedHashMap<>();
   BuildWithZip(Path root){ this.root= root.toAbsolutePath().normalize(); }
   List<Ref> build(){
     reqNoEmptyDirs();

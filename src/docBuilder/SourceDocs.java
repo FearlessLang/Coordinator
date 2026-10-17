@@ -22,7 +22,7 @@ final class SourceDocs{
 
   final URI uri;
   final List<String> lines;
-  final HashMap<Integer,List<DocOcc>> docsByLine= new HashMap<>();
+  final HashMap<Integer,ArrayList<DocOcc>> docsByLine= new HashMap<>();
   final HashMap<Integer,int[]> depthByLine= new HashMap<>();
   final Set<DocOcc> attached= Collections.newSetFromMap(new IdentityHashMap<>());
   final IdentityHashMap<DocOcc,Integer> inlineClaimedFromColumn= new IdentityHashMap<>();
@@ -55,13 +55,13 @@ final class SourceDocs{
       .filter(d -> !attached.contains(d))
       .sorted(Comparator.comparingInt(DocOcc::line).thenComparingInt(DocOcc::column))
       .toList();
-    var res= new ArrayList<List<DocOcc>>();
+    var res= new ArrayList<ArrayList<DocOcc>>();
     for (var d : lost){
       var last= res.isEmpty() ? null : res.getLast().getLast();
       if (last != null && d.line()-last.line() <= 1){ res.getLast().add(d); continue; }
       res.add(new ArrayList<>(List.of(d)));
     }
-    return res;
+    return List.copyOf(res);
   }
 
   //An empty line inside a block reads as an empty doc line of whatever kind surrounds
@@ -94,13 +94,13 @@ final class SourceDocs{
   }
 
   List<DocOcc> pureDocs(int line){
-    return docsByLine.getOrDefault(line, List.of()).stream()
+    return docsByLine.getOrDefault(line, new ArrayList<>()).stream()
       .filter(DocOcc::pureLine)
       .toList();
   }
 
   Optional<DocOcc> inlineAfter(int line, int column){
-    return docsByLine.getOrDefault(line, List.of()).stream()
+    return docsByLine.getOrDefault(line, new ArrayList<>()).stream()
       .filter(c -> !c.pureLine() && c.column() >= column)
       .findFirst();
   }
