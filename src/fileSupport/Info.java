@@ -103,7 +103,7 @@ public sealed interface Info{
       var key= str();
       if (!seen.add(key.value())){ throw err(key.span(), "Duplicate key \""+key.value()+"\": this object already has this key."); }
       ws();
-      if (!more() || peek() != ':'){ throw err(here(), "Expected ':' after the key \""+key.value()+"\"."); }
+      if (!more() || peek()!=':'){ throw err(here(), "Expected ':' after the key \""+key.value()+"\"."); }
       advance();
       return new Obj.Field(key.value(), key.span(), value());
     }
@@ -115,7 +115,7 @@ public sealed interface Info{
       while (true){
         ws();
         if (!more()){ throw err(from(start), "This "+what+" is never closed with a matching "+close+"."); }
-        if (peek() == close && (afterItem || items.isEmpty())){ var span= from(start); advance(); return make.apply(items, span); }
+        if (peek()==close && (afterItem || items.isEmpty())){ var span= from(start); advance(); return make.apply(items, span); }
         if (!afterItem){ items.add(item.get()); afterItem = true; continue; }
         if (peek() != ','){ throw err(here(), "Expected ',' or '"+close+"' here, to continue or to close the "+what+"."); }
         advance();
@@ -124,9 +124,9 @@ public sealed interface Info{
     }
     private void ws(){
       while (more()){
-        if (peek() == ' ' || peek() == '\n'){ advance(); continue; }
+        if (peek()==' ' || peek()=='\n'){ advance(); continue; }
         if (!text.startsWith("//", i)){ return; }
-        while (more() && peek() != '\n'){ advance(); }
+        while (more() && peek()!='\n'){ advance(); }
       }
     }
     private boolean more(){ return i < text.length(); }

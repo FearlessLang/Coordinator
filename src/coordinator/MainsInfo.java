@@ -121,7 +121,7 @@ public record MainsInfo(Map<String,Main> mains){
         .map(this::claim).toList();
     }
     Claim claim(T.C c){
-      var lit= c.ts().size() == 1 ? "" : name(c.ts().get(1)).simpleName();
+      var lit= c.ts().size()==1 ? "" : name(c.ts().get(1)).simpleName();
       return claim(name(c.ts().getFirst()), lit.isEmpty() ? "" : lit.substring(1, lit.length()-1)).orElseThrow();
     }
     Optional<Claim> claim(TName icon, String ext){

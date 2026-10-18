@@ -50,7 +50,7 @@ public final class Backend{
       sb.a("  default java.util.ArrayList<Object> _log(){ return _logStore; }\n");
     }
     if (hasInstance && implementsType(l, "base.FileLog", 0)){
-      sb.a(l.name().arity() == 0
+      sb.a(l.name().arity()==0
         ? "  _base.AppLog _appLog= _base.AppLog.open(java.nio.file.Path.of(\".out\",\"logs\",\""+tools.pkgName()+"\",\""+l.name().simpleName()+".log\"), false);\n  default _base.AppLog _log(){ return _appLog; }\n"
         : "  default _base.AppLog _log(){ return null; }\n");
     }
@@ -104,7 +104,7 @@ public final class Backend{
   }
   String encodeTrailingPrimes(String s){
     var k= 0;
-    while (k < s.length() && s.charAt(s.length() - 1 - k) == '\''){ k += 1; }
+    while (k<s.length() && s.charAt(s.length() - 1 - k)=='\''){ k += 1; }
     if (k == 0){ return s; }
     var head= s.substring(0, s.length() - k);
     assert head.indexOf('\'') < 0 : "prime (') must be trailing only: "+s;
@@ -142,7 +142,7 @@ public final class Backend{
     return "{"+javaStrLit(t.diskPath())+","+javaStrLit(t.zipSteps())+","+javaStrLit(t.zipEntry())+"}";
   }
   static String javaStrLit(String s){
-    assert s.indexOf('"') < 0 && s.indexOf('\\') < 0 && s.indexOf('\n') < 0 && s.indexOf('\r') < 0;
+    assert s.indexOf('"')<0 && s.indexOf('\\')<0 && s.indexOf('\n')<0 && s.indexOf('\r')<0;
     return "\""+s+"\"";
   }
   String mangleOp(String op){ return Join.of(op.chars().mapToObj(c -> opNames.get(opChars.indexOf(c))), "", "_", ""); }

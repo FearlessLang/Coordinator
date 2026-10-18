@@ -36,7 +36,7 @@ final class SourceDocs{
       .filter(occ -> depthAt(occ.line(), occ.column()) >= depthAt(pos.line(), pos.column()))
       .ifPresent(occ -> {
         var firstColumn= inlineClaimedFromColumn.putIfAbsent(occ, pos.column());
-        if (firstColumn != null && firstColumn != pos.column()){ ambiguousInline.add(occ); }
+        if (firstColumn!=null && firstColumn!=pos.column()){ ambiguousInline.add(occ); }
         res.add(occ);
       });
     attached.addAll(res);
@@ -45,7 +45,7 @@ final class SourceDocs{
 
   int depthAt(int line, int column){
     var arr= depthByLine.get(line);
-    return arr == null || column > arr.length ? 0 : arr[column-1];
+    return (arr==null || column>arr.length) ? 0 : arr[column-1];
   }
 
   //every /// and //> that no declaration took, as runs of consecutive lines
@@ -58,7 +58,7 @@ final class SourceDocs{
     var res= new ArrayList<ArrayList<DocOcc>>();
     for (var d : lost){
       var last= res.isEmpty() ? null : res.getLast().getLast();
-      if (last != null && d.line()-last.line() <= 1){ res.getLast().add(d); continue; }
+      if (last!=null && d.line()-last.line()<=1){ res.getLast().add(d); continue; }
       res.add(new ArrayList<>(List.of(d)));
     }
     return List.copyOf(res);
@@ -88,8 +88,8 @@ final class SourceDocs{
   static List<DocOcc> trimBlanks(List<DocOcc> ds){
     var from= 0;
     var to= ds.size();
-    while (from < to && ds.get(from).text().isBlank()){ from += 1; }
-    while (to > from && ds.get(to-1).text().isBlank()){ to -= 1; }
+    while (from<to && ds.get(from).text().isBlank()){ from += 1; }
+    while (to>from && ds.get(to-1).text().isBlank()){ to -= 1; }
     return ds.subList(from, to);
   }
 
@@ -101,7 +101,7 @@ final class SourceDocs{
 
   Optional<DocOcc> inlineAfter(int line, int column){
     return docsByLine.getOrDefault(line, List.of()).stream()
-      .filter(c -> !c.pureLine() && c.column() >= column)
+      .filter(c -> !c.pureLine() && c.column()>=column)
       .findFirst();
   }
 
@@ -118,13 +118,13 @@ final class SourceDocs{
           else{ i += 1; }
         }
         else if (s.startsWith("//", i)){
-          var k= s.length() > i+2 ? s.charAt(i+2) : ' ';
-          if (k == '/' || k == '>' || k == '-'){ add(l, i+1, s.substring(i+3), s.substring(0, i).isBlank(), k == '>', k == '-'); }
+          var k= s.length()>i+2 ? s.charAt(i+2) : ' ';
+          if (k=='/' || k=='>' || k=='-'){ add(l, i+1, s.substring(i+3), s.substring(0, i).isBlank(), k == '>', k == '-'); }
           i = s.length();
         }
         else if (s.startsWith("/*", i)){ closer = "*/"; i += 2; }
-        else if (s.charAt(i) == '"' || s.charAt(i) == '`'){ closer = s.substring(i, i+1); i += 1; }
-        else{ depth += s.charAt(i) == '{' ? 1 : s.charAt(i) == '}' ? -1 : 0; i += 1; }
+        else if (s.charAt(i)=='"' || s.charAt(i)=='`'){ closer = s.substring(i, i+1); i += 1; }
+        else{ depth += s.charAt(i)=='{' ? 1 : s.charAt(i)=='}' ? -1 : 0; i += 1; }
         Arrays.fill(arr, start, i, depth);
       }
       depthByLine.put(l, arr);

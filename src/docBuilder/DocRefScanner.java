@@ -33,7 +33,7 @@ final class DocRefScanner{
   static Optional<DocRef> wholeRef(String text, CodeSpan sp){
     var p= new Parse(text.substring(sp.start(), sp.end()));
     var res= p.ref();
-    return p.ok && p.i == p.s.length() ? res : Optional.empty();
+    return (p.ok && p.i==p.s.length()) ? res : Optional.empty();
   }
 
   //a rendered signature is code, not prose: every maximal word that is a type name is
@@ -68,7 +68,7 @@ final class DocRefScanner{
     //so "Foo++(_,_)" reads the same way as "Foo.foo(_,_)".
     Optional<String> selector(){
       if (!startsSelector()){ return Optional.empty(); }
-      var sel= s.charAt(i) == '.' ? "."+word(i+1) : ops(i);
+      var sel= s.charAt(i)=='.' ? "."+word(i+1) : ops(i);
       if (!MName.isMethodName(sel)){ ok = false; return Optional.empty(); }
       i += sel.length();
       return Optional.of(sel);
@@ -101,7 +101,7 @@ final class DocRefScanner{
       var m= p.matcher(s).region(i, s.length());
       if (!m.lookingAt()){ return OptionalInt.empty(); }
       i = m.end();
-      return OptionalInt.of(m.group(1) == null ? 0 : (m.group(1).length()+1)/2);
+      return OptionalInt.of(m.group(1)==null ? 0 : (m.group(1).length()+1)/2);
     }
     private static final Pattern typeArity= Pattern.compile("\\[(_(,_)*)?]");
     private static final Pattern callArity= Pattern.compile("\\((_(,_)*)?\\)");

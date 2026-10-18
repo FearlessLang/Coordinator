@@ -37,7 +37,7 @@ final class BytecodeLineFix implements Consumer<Path>{
   }
   BytecodeLineFix a(String s, Pos p){//this call == s contains exactly 1 method call located in pos
     var fl= p.line();
-    assert fl >= 1 && fl <= 65535; // LineNumberTable uses u2
+    assert fl>=1 && fl<=65535; // LineNumberTable uses u2
     var prev= lineMap.putIfAbsent(javaLine, fl);
     assert prev==null || prev.intValue()==fl :
       "Two fearless lines on one java line "+javaLine+": "+prev+" vs "+fl
@@ -52,7 +52,7 @@ final class BytecodeLineFix implements Consumer<Path>{
     );
   }
   private boolean matches(String n){
-    return n.equals(base+".class") || n.endsWith(".class") && n.startsWith(base+"$"); // anon/inner: Foo$1.class etc
+    return n.equals(base+".class") || (n.endsWith(".class") && n.startsWith(base+"$")); // anon/inner: Foo$1.class etc
   }
   private void patchOne(ClassFile cf, Path classFile){
     var xform= ClassTransform
@@ -73,6 +73,6 @@ final class BytecodeLineFix implements Consumer<Path>{
   private int fearlessLine(int jl){
     var near= lineMap.ceilingEntry(jl);
     if (near == null){ near = lineMap.floorEntry(jl); }
-    return near != null ? near.getValue() : 1000;
+    return near!=null ? near.getValue() : 1000;
   }
 }

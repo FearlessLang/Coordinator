@@ -136,7 +136,7 @@ public final class ByteFiles{
   }
   private static <T,X extends Throwable> T classifyError(Op op, Path path, Throwable firstFailure, Handler<T,X> handler) throws X{
     var kind= kindFromFailure(firstFailure);
-    if ((kind == AccessDenied || kind == UnknownFailureAfterSuccessfulOpen) && Files.isDirectory(path)){ return handler.failure(PathIsFolder, firstFailure); }
+    if ((kind==AccessDenied || kind==UnknownFailureAfterSuccessfulOpen) && Files.isDirectory(path)){ return handler.failure(PathIsFolder, firstFailure); }
     if (kind != UnknownFailureAfterSuccessfulOpen){ return handler.failure(kind, firstFailure); }
     FileChannel channel;
     try{ channel= FileChannel.open(path, op.probeOptions); }
@@ -165,7 +165,7 @@ public final class ByteFiles{
   }
   public static String text(Throwable e){
     if (e == null){ return ""; }
-    var text= e instanceof FileSystemException fs && fs.getReason() != null ? fs.getReason() : e.getMessage();
+    var text= (e instanceof FileSystemException fs && fs.getReason()!=null) ? fs.getReason() : e.getMessage();
     return (text==null ? "" : " "+text.toLowerCase(Locale.ROOT))+text(e.getCause())+Join.of(Arrays.stream(e.getSuppressed()).map(ByteFiles::text), "", "", "", "");
   }
 }

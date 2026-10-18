@@ -50,7 +50,7 @@ public final class JUnitReport{
   private static String complete(Path log){
     var bytes= Fs.of(() -> Files.readAllBytes(log));
     var end= bytes.length;
-    while (end > 0 && bytes[end-1] != '\n'){ end -= 1; }
+    while (end>0 && bytes[end-1]!='\n'){ end -= 1; }
     var whole= ByteBuffer.wrap(bytes, 0, end);
     var text= Fs.of(() -> UTF_8.newDecoder().decode(whole).toString());
     var open= Pattern.compile("(?dm)^<testcase ").matcher(text);

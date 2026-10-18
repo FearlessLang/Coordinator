@@ -100,7 +100,7 @@ public final class UserError extends RuntimeException{
   public static String showZipRel(Path diskZip, List<String> steps, String entryName){
     assert diskZip.isAbsolute();
     var zipPath= root.relativize(diskZip).toString().replace("\\", "/")+Join.of(steps, "/", "/", "", "");
-    var simple= entryName.codePoints().allMatch(cp -> cp < 128 && Fs.allowed.indexOf((char)cp) >= 0);
+    var simple= entryName.codePoints().allMatch(cp -> cp<128 && Fs.allowed.indexOf((char)cp)>=0);
     return showRelText(zipPath)+(simple ? "Entry: " : "Entry contains non-standard characters.\nShown as: ")+disp(entryName)+"\n";
   }
   public static String path(String path){ return "  "+PrettyFileName.sanitizeAscii(path); }
@@ -137,7 +137,7 @@ Details:
     catch (InvocationTargetException e){ displayStderr(e.getCause()); }//Rare, could be a memory overflow or other JVM stuff?
   }
   private void displayNow(){
-    var options= recovery == null ? null : new Object[]{"OK", recoveryLabel};
+    var options= recovery==null ? null : new Object[]{"OK", recoveryLabel};
     var pane= new JOptionPane(displayText(), JOptionPane.ERROR_MESSAGE, JOptionPane.DEFAULT_OPTION, null, options, null);
     var dialog= new JDialog(owner, "Fearless", Dialog.ModalityType.APPLICATION_MODAL);
     dialog.setUndecorated(bare);
@@ -146,7 +146,7 @@ Details:
     dialog.pack();
     dialog.setLocationRelativeTo(owner);
     dialog.setVisible(true);
-    if (recovery != null && recoveryLabel.equals(pane.getValue())){ recovery.run(); }
+    if (recovery!=null && recoveryLabel.equals(pane.getValue())){ recovery.run(); }
   }
   public void displayStderr(Throwable displayFailure){
     System.err.print(displayText()+"\n\n");
