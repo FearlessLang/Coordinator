@@ -20,7 +20,8 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.Arrays;
 import java.util.Locale;
-import java.util.stream.Collectors;
+
+import utils.Join;
 
 public final class ByteFiles{
   public enum Op{
@@ -165,6 +166,6 @@ public final class ByteFiles{
   public static String text(Throwable e){
     if (e == null){ return ""; }
     var text= e instanceof FileSystemException fs && fs.getReason() != null ? fs.getReason() : e.getMessage();
-    return (text == null ? "" : " "+text.toLowerCase(Locale.ROOT))+text(e.getCause())+Arrays.stream(e.getSuppressed()).map(ByteFiles::text).collect(Collectors.joining());
+    return (text==null ? "" : " "+text.toLowerCase(Locale.ROOT))+text(e.getCause())+Join.of(Arrays.stream(e.getSuppressed()).map(ByteFiles::text), "", "", "", "");
   }
 }

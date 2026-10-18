@@ -34,18 +34,19 @@ import tools.SourceOracle;
 import tools.SourceOracle.Ref;
 import userMessages.Report;
 import userMessages.Violation;
+import utils.Join;
 import utils.OneOr;
 import utils.Push;
 
 public interface Coordinator{
   default String runAllMains(String pkgName, OutputOracle out) throws InterruptedException{
-    return runMains(runData(out.rootDir().getParent(), stdLibBase()), Push.of(out.rootDir().resolve("gen_java"), sharedClasspath()), "_"+pkgName+".Main");
+    return runMains(runData(out.rootDir().getParent(), stdLibBase()), Push.of(genJava(out.rootDir()), sharedClasspath()), "_"+pkgName+".Main");
   }
   static String runMains(List<String> jvmArgs, List<Path> jarDirs, String mainClass) throws InterruptedException{
     var sb= new StringBuilder();
     var jvm= JavaTool.startMainFromJars(jvmArgs, jarDirs, mainClass, s -> { sb.append(s); System.out.print(s); });
     var ec= jvm.await();
-    Require.check(ec == 0 || ec == 1, "Exit code "+ec+" from\n"+String.join("\n", jvm.cmd())+"\nOutput:\n"+sb);
+    Require.check(ec==0 || ec==1, "Exit code "+ec+" from\n"+Join.of(jvm.cmd(), "", "\n", "")+"\nOutput:\n"+sb);
     return sb.toString();
   }
   static List<String> runData(Path project, Path base){
@@ -101,9 +102,9 @@ public interface Coordinator{
     return Optional.of(Collections.unmodifiableMap(res));
   }
   static ChildJvm startMain(Path project, Path base, String main, List<Path> sharedClasspath, Consumer<String> out){
-    return JavaTool.startMainFromJars(runData(project, base), Push.of(genJava(project), sharedClasspath), "_"+main.substring(0, main.indexOf('.'))+".Main", out, main);
+    return JavaTool.startMainFromJars(runData(project, base), Push.of(genJava(project.resolve(outDir)), sharedClasspath), "_"+main.substring(0, main.indexOf('.'))+".Main", out, main);
   }
-  static Path genJava(Path project){ return project.resolve(outDir).resolve("gen_java"); }
+  static Path genJava(Path outRoot){ return outRoot.resolve("gen_java"); }
   String outDir= ".fearless_out";
 
   default List<Literal> frontend(String pkgName, List<Ref> files, SourceOracle oracle, OtherPackages other, Map<String,String> vres, CapabilityEnvironment capabilities){
@@ -169,7 +170,7 @@ final class Helper{
   }
   private static final List<String> ranks= List.of(
     "_rank_base", "_rank_core", "_rank_driver", "_rank_worker", "_rank_framework", "_rank_accumulator", "_rank_tool", "_rank_app");
-  private static final Pattern rankName= Pattern.compile("("+String.join("|", ranks)+")(\\d{3})?");
+  private static final Pattern rankName= Pattern.compile(Join.of(ranks, "(", "|", ")")+"(\\d{3})?");
 
   static boolean hasReservedRankPrefix(Ref u){ return Fs.fileNameWithExtension(u.fearPath()).startsWith("_rank_"); }
   static Ref okPkgContent(List<Ref> u){

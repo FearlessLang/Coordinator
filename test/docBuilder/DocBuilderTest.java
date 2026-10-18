@@ -211,8 +211,7 @@ final class DocBuilderTest{
     var renderer= new HtmlDocRenderer("pkg", Map.of(), List.of(), OtherPackages.empty(), Map.of(), Optional.empty());
     renderer.renderExamples(sb, List.of(".check{1.assertEq(1)}"));
     var rendered= sb.toString();
-    assertTrue(rendered.contains("<details class=\"examples\">"), "examples must render as an expandable details block: "+rendered);
-    utils.Err.strCmp("[###]<pre class=\"example\">.check{1.assertEq(1)}</pre>[###]", rendered);
+    utils.Err.strCmp("<details class=\"examples\">[###]<pre class=\"example\">.check{1.assertEq(1)}</pre>[###]", rendered);
   }
 
   @Test void renderExamplesRendersNothingWhenThereAreNoExamples(){
@@ -285,7 +284,7 @@ final class DocBuilderTest{
     var refs= builder.inheritedMethods(sub, subMut);
 
     assertEquals(1, refs.size());
-    assertTrue(refs.getFirst().method()==supMut);
+    assertTrue(refs.getFirst().method() == supMut);
   }
 
   @Test void inheritedMethodsListsEveryProviderAlongAnOverrideChainEvenTheShadowedOne(){
@@ -303,8 +302,8 @@ final class DocBuilderTest{
     var refs= builder.inheritedMethods(top, midSame);
 
     assertEquals(2, refs.size());
-    assertTrue(refs.stream().anyMatch(r -> r.method()==midSame));
-    assertTrue(refs.stream().anyMatch(r -> r.method()==baseSame));
+    assertTrue(refs.stream().anyMatch(r -> r.method() == midSame));
+    assertTrue(refs.stream().anyMatch(r -> r.method() == baseSame));
   }
 
   @Test void aSingleDeclarationWithNoExplicitRcIsDuplicatedPerRequiredRcAndEachVariantMatchesItsOwnSupertypeCounterpart(){
@@ -327,8 +326,8 @@ final class DocBuilderTest{
     assertEquals(1, builder.type(sub).methods.size());
     assertEquals(2, doc.variants.size());
     assertEquals(2, doc.inheritedFrom.size());
-    assertTrue(doc.inheritedFrom.stream().anyMatch(r -> r.method()==supMut));
-    assertTrue(doc.inheritedFrom.stream().anyMatch(r -> r.method()==supImm));
+    assertTrue(doc.inheritedFrom.stream().anyMatch(r -> r.method() == supMut));
+    assertTrue(doc.inheritedFrom.stream().anyMatch(r -> r.method() == supImm));
   }
 
   @Test void aBareTypeNameThatMatchesTwoLocalArityVariantsIsAmbiguous(){

@@ -6,13 +6,13 @@ import java.util.Locale;
 import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import core.TName;
 import tools.SourceOracle;
 import userMessages.Report;
 import utils.Bug;
+import utils.Join;
 
 public record AutoloadHandler(Predicate<String> matches, String baseType){
   String generate(SourceOracleWithAutoload.Triple t, String path, String type){
@@ -27,13 +27,13 @@ public record AutoloadHandler(Predicate<String> matches, String baseType){
   static SourceOracleWithAutoload.Triple triple(SourceOracle.Ref ref){ return switch (ref){
     case PathEntry p -> new SourceOracleWithAutoload.Triple(localPath(p.local()), "", "");
     case ZipEntry z -> new SourceOracleWithAutoload.Triple(localPath(z.local()),
-      z.zips().stream().map(AutoloadHandler::portableZipPath).collect(Collectors.joining(";")),
+      Join.of(z.zips().stream().map(AutoloadHandler::portableZipPath), "", ";", "", ""),
       portableZipPath(z.lastZips()));
     default -> throw Bug.unreachable();
   };}
   private static String localPath(Path local){
     if (local.isAbsolute() || !local.normalize().equals(local)){ throw Bug.of(""+local); }
-    return portableZipPath(String.join("/", PathEntry.localSegments(local)));
+    return portableZipPath(Join.of(PathEntry.localSegments(local), "", "/", ""));
   }
   private static String portableZipPath(String path){
     Stream.of(path.split("/", -1))
@@ -45,12 +45,12 @@ public record AutoloadHandler(Predicate<String> matches, String baseType){
     assert path.startsWith(SourceOracle.root);
     return Stream.of(path.substring(SourceOracle.root.length()).split("/")).toList();
   }
-  public static String dropExt(String name){ int dot= name.lastIndexOf('.'); assert dot > 0; return name.substring(0, dot); }
+  public static String dropExt(String name){ var dot= name.lastIndexOf('.'); assert dot > 0; return name.substring(0, dot); }
   static String standardTypeName(String pkgName, SourceOracle.Ref ref, String path){
     var all= components(dropExt(path));
-    int i= all.indexOf(pkgName);
+    var i= all.indexOf(pkgName);
     assert i >= 0 && i + 1 < all.size();
-    var res= all.subList(i + 1, all.size()).stream().map(AutoloadHandler::capFirst).collect(Collectors.joining());
+    var res= Join.of(all.subList(i + 1, all.size()).stream().map(AutoloadHandler::capFirst), "", "", "");
     if (!TName.isTypeName(res)){ throw Report.autoloadedNameNotAType(ref, res); }
     return res;
   }

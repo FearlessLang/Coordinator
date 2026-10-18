@@ -54,6 +54,7 @@ import tools.JavacTool;
 import tools.SourceOracle;
 import tools.SourceOracle.Ref;
 import userMessages.UserError;
+import utils.Join;
 import utils.Push;
 
 final class RunIntegration{
@@ -73,26 +74,26 @@ final class RunIntegration{
     System.setProperty(JavacTool.appDirKey, ResolveResource.stLibPath.getParent()
       .resolve("fearlessArtefact", "fearless", "app").toString());
     return new Coordinator(){
-      @Override public Path modsPath(){  return ResolveResource.coordinatorJars; }
+      @Override public Path modsPath(){ return ResolveResource.coordinatorJars; }
       @Override public Optional<Path> baseCachePath(){ return Optional.of(baseCache); }
       @Override public Path stdLibBase(){ return ResolveResource.stLibPath; }
       @Override public BackendTools backendTools(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, CapabilityEnvironment capabilities){
         return BackendTools.of(pkgName, oracle, other, core, project.resolve(Coordinator.outDir), baseCachePath(), ResolveResource.stLibRTPath, capabilities);
       }
       @Override public String runAllMains(String pkgName, OutputOracle out) throws InterruptedException{
-        return Coordinator.runMains(Push.of(Coordinator.runData(out.rootDir().getParent(), stdLibBase()), jvmArgs), Push.of(out.rootDir().resolve("gen_java"), sharedClasspath()), "_"+pkgName+".Main");
+        return Coordinator.runMains(Push.of(Coordinator.runData(out.rootDir().getParent(), stdLibBase()), jvmArgs), Push.of(Coordinator.genJava(out.rootDir()), sharedClasspath()), "_"+pkgName+".Main");
       }
     };
   }
   static Path freshIntegrationRoot(String name){
     var root= ResolveResource.integrationTests.resolve(name);
-    Fs.rmTree(root.resolve(".fearless_out"));
+    Fs.rmTree(root.resolve(Coordinator.outDir));
     return root;
   }
   String run(String name){ return main(freshIntegrationRoot(name), List.of()); }
   String main(Path project, List<String> jvmArgs){
-    try{ return coordinator(project, jvmArgs).main(project, stLib);}
-    catch (InterruptedException e){ return fail(e);}
+    try{ return coordinator(project, jvmArgs).main(project, stLib); }
+    catch (InterruptedException e){ return fail(e); }
   }
   void testOk(String name){ unitTestsOk(name, freshIntegrationRoot(name)); }
   void unitTestsOk(String name, Path root){
@@ -100,7 +101,7 @@ final class RunIntegration{
     var out= main(root, List.of("-Dfearless.endMarker="+marker));
     writeJUnitReport(name, root);
     var fails= out.lines().filter(l -> l.startsWith("Test failure ")).toList();
-    assertTrue(fails.isEmpty(), () -> "Fearless unit tests failed in "+name+":\n"+String.join("\n", fails));
+    assertTrue(fails.isEmpty(), () -> Join.of(fails, "Fearless unit tests failed in "+name+":\n", "\n", ""));
     var lines= out.lines().toList();
     var mains= coordinator(root).mains(root, stLib).orElseThrow().size();
     var allCompleted= lines.stream().filter(marker::equals).count() == mains && lines.getLast().equals(marker);
@@ -111,7 +112,7 @@ final class RunIntegration{
     var one= JUnitReport.suite(name, root);
     if (one.isEmpty()){ return; }
     suites.add(one);
-    Fs.writeUtf8(reportsFile, JUnitReport.document(String.join("", suites)));
+    Fs.writeUtf8(reportsFile, JUnitReport.document(Join.of(suites, "", "", "", "")));
   }
   @Test void helloWorld(){
     utils.Err.strCmp("""
@@ -156,7 +157,7 @@ top level main
     var out= Coordinator.runMains(Coordinator.runData(tmp, ResolveResource.stLibPath), List.of(ResolveResource.coordinatorJars, baseCache), "_base.Main");
     writeJUnitReport("baseGeneratedExamples", tmp);
     var fails= out.lines().filter(l -> l.startsWith("Test failure ")).toList();
-    assertTrue(fails.isEmpty(), () -> "The doc examples of base failed:\n"+String.join("\n", fails));
+    assertTrue(fails.isEmpty(), () -> Join.of(fails, "The doc examples of base failed:\n", "\n", ""));
   }
   @Test void testDocs(){
     utils.Err.strCmp("""
@@ -328,8 +329,8 @@ App:Main, lib.Lib{s->base.Debug#(`app`)}
     assertEquals(Map.of("app", false), Coordinator.pkgsBuilt(root, baseCache));
     var ex= assertThrows(UserError.class, () -> main(root, List.of()));
     utils.Err.strCmp("[###]lib.Lib[###]", ex.getMessage());
-    assertFalse(Files.exists(root.resolve(".fearless_out", "gen_java", "lib.jar")));
-    assertFalse(Files.exists(root.resolve(".fearless_out", "lib.built")));
+    assertFalse(Files.exists(Coordinator.genJava(root.resolve(Coordinator.outDir)).resolve("lib.jar")));
+    assertFalse(Files.exists(root.resolve(Coordinator.outDir).resolve("lib.built")));
   }
   @Test void onlyImmCapture(@TempDir Path tmp){
     var root= tmp.resolve("root");
@@ -391,7 +392,7 @@ App:Main, lib.Lib{s->base.Debug#(`app`)}
       _DCase$1k$0.java only imm
       _FCase$1k$0.java only imm
       _GCase$1k$0.java only imm
-      """, String.join("\n", got)+"\n");
+      """, Join.of(got, "", "\n", "\n"));
   }
   @Test void testAssets(){ testOk("testAssets");}
   private Path theOneLogFile(Path dir, String prefix) throws IOException{
@@ -1388,10 +1389,10 @@ Hello:Main{s->base.Debug#(Greeting.hi)}
 """);
     var c= coordinator(root);
     c.main(root, stLib);
-    var out= root.resolve(".fearless_out");
-    long aBuilt= Fs.lastModified(out.resolve("a.built"));
-    long aJson= Fs.lastModified(out.resolve("a.json"));
-    long bBuilt= Fs.lastModified(out.resolve("b.built"));
+    var out= root.resolve(Coordinator.outDir);
+    var aBuilt= Fs.lastModified(out.resolve("a.built"));
+    var aJson= Fs.lastModified(out.resolve("a.json"));
+    var bBuilt= Fs.lastModified(out.resolve("b.built"));
     editAndTouch(root.resolve("_a/_rank_core.fear"), "\"hi\"", "\"ho\"");
     c.main(root, stLib);
 
@@ -1470,9 +1471,9 @@ Hello:Main{s->base.Debug#("from z")}
     utils.Err.strCmp("[###]java.lang.StackOverflowError[###]", runRecursionMain("rec.NaiveSum"));
   }
   @Test void runRecursionOnEveryStepIsDeepAndFast() throws InterruptedException{
-    long start= System.nanoTime();
+    var start= System.nanoTime();
     utils.Err.strCmp("500000500000", runRecursionMain("rec.DeepSum"));
-    long millis= (System.nanoTime()-start)/1_000_000;
+    var millis= (System.nanoTime()-start)/1_000_000;
     assertTrue(millis < 20_000, "one million steps took "+millis+"ms");
   }
   @Test void aFamilyNestingTooManyCallsOnOneThreadOverflows() throws InterruptedException{
@@ -1567,7 +1568,7 @@ boom
 imm A.main(_) error line: 2 in file _col/_rank_app.fear
 b
 """, c.main(root, stLib));
-    var cp= Push.of(Coordinator.genJava(root), c.sharedClasspath());
+    var cp= Push.of(Coordinator.genJava(root.resolve(Coordinator.outDir)), c.sharedClasspath());
     var out= new StringBuilder();
     assertEquals(1, JavaTool.startMainFromJars(Coordinator.runData(root, c.stdLibBase()), cp, "_col.Main", out::append).await(), out::toString);
     assertEquals(1, Coordinator.startMain(root, c.stdLibBase(), "col.A", c.sharedClasspath(), out::append).await(), out::toString);

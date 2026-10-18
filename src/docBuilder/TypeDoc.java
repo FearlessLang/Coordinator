@@ -32,7 +32,7 @@ final class TypeDoc{
   boolean visible(){ return !main().infName() || !docs.isEmpty() || methods.stream().anyMatch(MethodDoc::hasDocs); }
 
   void addVariant(Literal l){
-    assert variants.stream().noneMatch(v -> v.name().equals(l.name())):
+    assert variants.stream().noneMatch(v -> v.name().equals(l.name())) :
       "Repeated literal source with same name: "+l.pos()+" "+l.name();
     variants.add(l);
   }

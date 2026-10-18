@@ -14,13 +14,13 @@ import java.util.EnumSet;
 import java.util.HexFormat;
 import java.util.Set;
 import java.util.function.BiConsumer;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import fileSupport.ByteFiles.Kind;
 import fileSupport.ByteFiles.Op;
 import metaParser.Message;
 import utils.Bug;
+import utils.Join;
 
 public final class StringFiles{
   public static String read(Path path, BiConsumer<String,String> onError){
@@ -62,7 +62,7 @@ public final class StringFiles{
       Throwable cause){
     var errors= explanation.suppressed();
     var details= !report && errors.isEmpty() ? "" : "\nOriginal failure:\n"+stackTrace(cause)
-      +IntStream.range(0, errors.size()).mapToObj(i -> "\nSuppressed error "+i+":\n"+stackTrace(errors.get(i))).collect(Collectors.joining());
+      +Join.of(IntStream.range(0, errors.size()).mapToObj(i -> "\nSuppressed error "+i+":\n"+stackTrace(errors.get(i))), "", "", "", "");
     onError.accept(report ? "" : explanation.text(), (report ? explanation.text() : "")+details);
     throw Bug.unreachable();
   }

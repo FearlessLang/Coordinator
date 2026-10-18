@@ -9,7 +9,6 @@ import java.lang.reflect.InvocationTargetException;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.function.BiConsumer;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import javax.swing.JDialog;
@@ -21,6 +20,7 @@ import metaParser.PrettyFileName;
 import tools.Fs;
 import tools.SourceOracle;
 import tools.SourceOracle.RefParent;
+import utils.Join;
 
 /// UserError is the ONLY exception that means "this text is for the user".
 /// Everything else that goes wrong is a bug and travels as utils.Bug.
@@ -73,7 +73,7 @@ public final class UserError extends RuntimeException{
 
   //-- building
   static UserError die(String first, String... more){
-    return new UserError("Error: "+first+"\n"+Stream.of(more).map(s -> "  "+s+"\n").collect(Collectors.joining()));
+    return new UserError("Error: "+first+"\n"+Join.of(Stream.of(more).map(s -> "  "+s+"\n"), "", "", "", ""));
   }
   //Handler for StringFiles.read/writeNew. StringFiles hands over (actionTxt, reportTxt);
   //their emptiness encodes the three outcomes below. A file operation we delegated
@@ -99,7 +99,7 @@ public final class UserError extends RuntimeException{
   private static String showRelText(String p){ return "Root: "+PrettyFileName.displayFileName(root.toUri())+"\nPath: "+disp(p)+"\n"; }
   public static String showZipRel(Path diskZip, List<String> steps, String entryName){
     assert diskZip.isAbsolute();
-    var zipPath= root.relativize(diskZip).toString().replace("\\", "/")+steps.stream().map(s -> "/"+s).collect(Collectors.joining());
+    var zipPath= root.relativize(diskZip).toString().replace("\\", "/")+Join.of(steps, "/", "/", "", "");
     var simple= entryName.codePoints().allMatch(cp -> cp < 128 && Fs.allowed.indexOf((char)cp) >= 0);
     return showRelText(zipPath)+(simple ? "Entry: " : "Entry contains non-standard characters.\nShown as: ")+disp(entryName)+"\n";
   }
@@ -114,7 +114,7 @@ Error: Fearless crashed (this is a bug).
   Please report this error and include the details below.
 
 Details:
-""" + sw;
+"""+sw;
   }
   //A bug still has to reach the user of a windowed program. Wrapping it here is only
   //about how it is shown: what it MEANS is still utils.Bug.

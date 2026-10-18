@@ -19,6 +19,7 @@ import org.junit.jupiter.api.Assumptions;
 import realSourceOracle.RealSourceOracleWithZip;
 import tools.SourceOracle;
 import userMessages.UserError;
+import utils.Join;
 
 public final class FsDsl{
   record Item(String name, String content){}
@@ -41,11 +42,11 @@ public final class FsDsl{
 
   private static void addItem(ArrayList<Item> out, ArrayList<String> lines){
     if (lines.isEmpty()){ return; }
-    int i= 0;
+    var i= 0;
     for (; i < lines.size(); i += 1){ if (lines.get(i).equals("iii")){ break; } }
     assert i < lines.size() : "Missing iii separator";
-    var name= String.join("\n", lines.subList(0, i));
-    var content= String.join("\n", lines.subList(i+1, lines.size()));
+    var name= Join.of(lines.subList(0, i), "", "\n", "", "");
+    var content= Join.of(lines.subList(i+1, lines.size()), "", "\n", "", "");
     out.add(new Item(name, content));
   }
 
@@ -62,11 +63,11 @@ public final class FsDsl{
 
   private static void emit(Path root, LinkedHashMap<Path,ZipNode> zips, Item it){
     var name= it.name();
-    boolean isDir= name.endsWith("/");
+    var isDir= name.endsWith("/");
     if (isDir){ name = name.substring(0, name.length()-1); }
     var segs= name.split("/", -1);
 
-    int zi= firstZipSeg(segs);
+    var zi= firstZipSeg(segs);
     if (zi < 0){ emitDisk(root, segs, isDir, it.content()); return; }
 
     var diskZip= root;
@@ -97,15 +98,15 @@ public final class FsDsl{
       assert !isDir : "Use path ending with .zip (no trailing /) to declare empty zip";
       return; // declaration only: empty zip is fine
     }
-    int from= 0;
+    var from= 0;
     while (true){
-      int next= nextZipIndex(after, from);
+      var next= nextZipIndex(after, from);
       if (next < 0){ break; }
-      var step= String.join("/", after.subList(from, next+1));
+      var step= Join.of(after.subList(from, next+1), "", "/", "");
       root = root.nested.computeIfAbsent(step, _ -> new ZipNode());
       from = next+1;
     }
-    var entry= String.join("/", after.subList(from, after.size()));
+    var entry= Join.of(after.subList(from, after.size()), "", "/", "", "");
     if (entry.isEmpty()){ return; } // declaration only at this zip level
     root.leafs.add(new Leaf(entry, content, isDir));
   }
@@ -140,7 +141,7 @@ public final class FsDsl{
 
   private static void putDir(ZipOutputStream zos, String name){
     try{
-      zos.putNextEntry(new ZipEntry(name.endsWith("/") ? name : name + "/"));
+      zos.putNextEntry(new ZipEntry(name.endsWith("/") ? name : name+"/"));
       zos.closeEntry();
     }
     catch (Exception e){ throw new AssertionError(e); }

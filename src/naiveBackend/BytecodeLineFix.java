@@ -14,6 +14,7 @@ import java.util.function.Consumer;
 
 import offensiveUtils.Require;
 import tools.Fs;
+import tools.SourceOracle;
 import utils.Pos;
 
 final class BytecodeLineFix implements Consumer<Path>{
@@ -22,7 +23,7 @@ final class BytecodeLineFix implements Consumer<Path>{
   private final String sourceFile;
   private final TreeMap<Integer,Integer> lineMap= new TreeMap<>();
   private int javaLine= 1;
-  BytecodeLineFix(String base, URI sourceFile){ this(base, sourceFile.toString().substring("fear:/".length())); }
+  BytecodeLineFix(String base, URI sourceFile){ this(base, sourceFile.toString().substring(SourceOracle.root.length())); }
   BytecodeLineFix(String base, String sourceFile){
     assert Require.nonNull(base, sourceFile);
     this.base= base;
@@ -35,10 +36,10 @@ final class BytecodeLineFix implements Consumer<Path>{
     return this;
   }
   BytecodeLineFix a(String s, Pos p){//this call == s contains exactly 1 method call located in pos
-    int fl= p.line();
+    var fl= p.line();
     assert fl >= 1 && fl <= 65535; // LineNumberTable uses u2
     var prev= lineMap.putIfAbsent(javaLine, fl);
-    assert prev == null || prev.intValue() == fl:
+    assert prev==null || prev.intValue()==fl :
       "Two fearless lines on one java line "+javaLine+": "+prev+" vs "+fl
       + sb.toString();
     return a(s);

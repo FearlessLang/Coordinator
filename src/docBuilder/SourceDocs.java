@@ -16,7 +16,7 @@ import utils.Pos;
 final class SourceDocs{
   SourceDocs(URI uri, String text){
     this.uri= uri;
-    this.lines= text.lines().toList();
+    lines= text.lines().toList();
     scan();
   }
 
@@ -29,7 +29,7 @@ final class SourceDocs{
   final Set<DocOcc> ambiguousInline= Collections.newSetFromMap(new IdentityHashMap<>());
 
   List<DocOcc> docsAt(Pos pos, boolean includeBefore){
-    assert pos.line() > 0 && pos.line() <= lines.size(): pos;
+    assert pos.line()>0 && pos.line()<=lines.size() : pos;
     var res= new ArrayList<DocOcc>();
     if (includeBefore){ collectBefore(pos.line(), res); }
     inlineAfter(pos.line(), pos.column())
@@ -55,13 +55,13 @@ final class SourceDocs{
       .filter(d -> !attached.contains(d))
       .sorted(Comparator.comparingInt(DocOcc::line).thenComparingInt(DocOcc::column))
       .toList();
-    var res= new ArrayList<List<DocOcc>>();
+    var res= new ArrayList<ArrayList<DocOcc>>();
     for (var d : lost){
       var last= res.isEmpty() ? null : res.getLast().getLast();
       if (last != null && d.line()-last.line() <= 1){ res.getLast().add(d); continue; }
       res.add(new ArrayList<>(List.of(d)));
     }
-    return res;
+    return List.copyOf(res);
   }
 
   //An empty line inside a block reads as an empty doc line of whatever kind surrounds
@@ -86,8 +86,8 @@ final class SourceDocs{
   }
 
   static List<DocOcc> trimBlanks(List<DocOcc> ds){
-    int from= 0;
-    int to= ds.size();
+    var from= 0;
+    var to= ds.size();
     while (from < to && ds.get(from).text().isBlank()){ from += 1; }
     while (to > from && ds.get(to-1).text().isBlank()){ to -= 1; }
     return ds.subList(from, to);

@@ -129,7 +129,8 @@ public final class Main{
   private static boolean hasConsoleFlag(){ return JavacTool.consoleKey.equals(System.getProperty(JavacTool.launcherKey)); }
   private static Path normalize(String s){
     assert !s.isEmpty();
-    Path p; try{ p= s.startsWith("file:")?Path.of(URI.create(s)):Path.of(s); }
+    Path p;
+    try{ p= s.startsWith("file:") ? Path.of(URI.create(s)) : Path.of(s); }
     catch (RuntimeException _){ throw Violation.badLaunchArg(s, hasConsoleFlag()); }
     return p.toAbsolutePath().normalize();
   }

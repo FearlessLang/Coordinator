@@ -76,9 +76,9 @@ final class LimitedJsonParser{
     var ts= asArr(a.get(3)).stream().map(x -> tFrom(asArr(x))).toList();
     var ret= tFrom(asArr(a.get(4)));
     var originS= asStr(a.get(5));
-    int originA= nat(a.get(6));
+    var originA= nat(a.get(6));
     var tag= asStr(a.get(7));
-    boolean abs= tag.equals("abs");
+    var abs= tag.equals("abs");
     if (!abs && !tag.equals("concrete")){ throw err("Bad abs/concrete tag"); }
     return new M(new Sig(rc, new MName(nameS, ts.size()), bs, ts, ret, new TName(originS, originA, Pos.unknown), abs, dummySpan()),
       IntStream.range(0, ts.size()).mapToObj(j -> "x"+j).toList(), Optional.empty());
@@ -125,7 +125,7 @@ final class LimitedJsonParser{
   }
   private String str(){
     req('"');
-    int j= i;
+    var j= i;
     for (; i < s.length() && s.charAt(i) != '"'; i += s.charAt(i) == '\\' ? 2 : 1){}
     if (i >= s.length()){ throw err("Unterminated string"); }
     return s.substring(j, i++).replaceAll("\\\\(.)", "$1");
@@ -141,7 +141,7 @@ final class LimitedJsonParser{
   }
   private TSpan dummySpan(){ return TSpan.fromPos(Pos.unknown, 1); }
 
-  void ws(){ for (; i < s.length() && (s.charAt(i)==' ' || s.charAt(i)=='\n'); i += 1); }
+  void ws(){ for (; i<s.length() && (s.charAt(i)==' ' || s.charAt(i)=='\n'); i += 1){} }
   private void req(char c){ if (!eat(c)){ throw err("Expected '"+c+"'"); } }
   private boolean eat(char c){
     ws();
