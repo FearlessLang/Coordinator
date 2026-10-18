@@ -171,7 +171,7 @@ final class CommonInfo{
   }
   private static String rootOf(Path path){
     var root= path.toAbsolutePath().getRoot();//getRoot() may be null when the path has no root component (documented normal result)
-    return root != null ? root.toString() : "<no root>";
+    return root!=null ? root.toString() : "<no root>";
   }
   private static String located(Path path, Suppressed suppressed){
     return "Path: "+Message.displayString(path.toString())
@@ -227,7 +227,7 @@ final class Holders{
     try{ holders= enumerate(path, suppressed); }
     catch (IOException e){ return "\n<reading programs holding this file open failed>"+suppressed.mark(e)+"\n"; }
     if (holders.isEmpty()){ return whenNone; }
-    return intro+holders.size()+(holders.size() == 1 ? " program" : " programs")+" currently holding this file open:\n\n"
+    return intro+holders.size()+(holders.size()==1 ? " program" : " programs")+" currently holding this file open:\n\n"
       +Join.of(holders.stream().map(h -> "  "+h+"\n"), "", "", "")+outro;
   }
   private static final String exampleWord= """
@@ -725,7 +725,7 @@ final class FileTooLargeForByteArray{
 //[any OS]
 final class PathResolutionFileNotFound{
   static String of(Op op, Path path, Suppressed suppressed){
-    return (op == Op.Read ? msgRead : msgWrite)+FolderInfo.similarNames(path, suppressed);
+    return (op==Op.Read ? msgRead : msgWrite)+FolderInfo.similarNames(path, suppressed);
   }
   //The MEANING forks on the operation, so this branches instead of using `..`:
   //- read: the file itself is missing;
@@ -893,7 +893,7 @@ should be (error 27, ERROR_SECTOR_NOT_FOUND). That part of the medium is unreada
   //The CONTENT forks on the operation - a write fault during a write is the plain
   //event; during a read it needs the "surprising but not impossible" paragraph - so
   //this branches instead of using `..`.
-  static String writeFault(Op op){ return op == Op.Write ? writeFaultOnWrite : writeFaultOnRead; }
+  static String writeFault(Op op){ return op==Op.Write ? writeFaultOnWrite : writeFaultOnRead; }
   private static final String writeFaultOnRead= """
 The device named above reported a write failure (error 29, ERROR_WRITE_FAULT).
 A write failure during a read is surprising but not impossible:

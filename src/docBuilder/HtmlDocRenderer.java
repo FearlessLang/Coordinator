@@ -93,7 +93,7 @@ final class HtmlDocRenderer{
   static String suiteName(TName n){
     var s= n.simpleName();
     var noPrimes= s.replaceAll("'+$", "");
-    return "_"+noPrimes+"_Examples"+(n.arity() == 0 ? "" : "_"+n.arity())+s.substring(noPrimes.length());
+    return "_"+noPrimes+"_Examples"+(n.arity()==0 ? "" : "_"+n.arity())+s.substring(noPrimes.length());
   }
 
   String renderTest(){
@@ -128,7 +128,7 @@ final class HtmlDocRenderer{
   }
 
   static List<DocOcc> visibleDocs(Object owner, List<DocOcc> docs, Map<DocOcc,Object> claims){
-    return docs.stream().filter(c -> !c.inline() || claims.get(c) == owner).filter(c -> !c.testOnly()).toList();
+    return docs.stream().filter(c -> !c.inline() || claims.get(c)==owner).filter(c -> !c.testOnly()).toList();
   }
 
   void renderDocText(StringBuilder sb, String indent, Object owner, List<DocOcc> docs, Map<DocOcc,Object> claims){
@@ -450,7 +450,7 @@ code{
   String renderCode(String text, DocRefScanner.CodeSpan cs, Map<Integer,DocLink> linked){
     var body= h(text.substring(cs.start(), cs.end()));
     var link= linked.get(cs.start());
-    return link == null || link instanceof DocLink.NoLink ? body : "<a href=\""+h(href(link))+"\">"+body+"</a>";
+    return (link==null || link instanceof DocLink.NoLink) ? body : "<a href=\""+h(href(link))+"\">"+body+"</a>";
   }
 
   void renderPage(StringBuilder sb, DocLink.Ambiguous p, String anchor){

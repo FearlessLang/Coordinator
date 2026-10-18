@@ -61,7 +61,7 @@ public final class StringFiles{
       Explanation explanation,
       Throwable cause){
     var errors= explanation.suppressed();
-    var details= !report && errors.isEmpty() ? "" : "\nOriginal failure:\n"+stackTrace(cause)
+    var details= (!report && errors.isEmpty()) ? "" : "\nOriginal failure:\n"+stackTrace(cause)
       +Join.of(IntStream.range(0, errors.size()).mapToObj(i -> "\nSuppressed error "+i+":\n"+stackTrace(errors.get(i))), "", "", "", "");
     onError.accept(report ? "" : explanation.text(), (report ? explanation.text() : "")+details);
     throw Bug.unreachable();

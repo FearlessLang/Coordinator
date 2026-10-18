@@ -60,7 +60,7 @@ public record ZipEntry(Path root, Path local, List<String> segments, List<String
     }
   }
   private static boolean isProperPrefix(List<String> prefix, List<String> full){
-    return full.size() > prefix.size() && full.subList(0, prefix.size()).equals(prefix);
+    return full.size()>prefix.size() && full.subList(0, prefix.size()).equals(prefix);
   }
   private static List<String> zipsToSegments(List<String> steps, String name){
     assert steps.stream().allMatch(e -> e.endsWith(".zip"));

@@ -134,7 +134,7 @@ public final class InitialSupportGuiMain{
     p.setFont(uiFont);
     p.setBorder(new EmptyBorder(10, 10, 10, 10));
     p.addHyperlinkListener(e -> {
-      if (e.getEventType() == HyperlinkEvent.EventType.ACTIVATED){ openUri(e.getURL() != null ? e.getURL().toString() : e.getDescription()); }
+      if (e.getEventType() == HyperlinkEvent.EventType.ACTIVATED){ openUri(e.getURL()!=null ? e.getURL().toString() : e.getDescription()); }
     });
     return p;
   }

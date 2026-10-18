@@ -72,7 +72,7 @@ public interface Coordinator{
       var lower= ranks.stream().filter(d -> Helper.rankNumber(d) < Helper.rankNumber(r)).map(Helper::pkgName).toList();
       var below= lower.stream().mapToLong(out::pkgApiStamp);
       var maxIn= LongStream.concat(LongStream.concat(map.get(pkg).stream().mapToLong(Ref::lastModified), below), LongStream.of(out.mapStamp(), baseApi)).max().getAsLong();
-      res.put(pkg, mapCommitted && out.stillBuilt(pkg, map.get(pkg), Push.of(lower, "base"), maxIn) && (listed || Helper.rankNumber(r) != top));
+      res.put(pkg, mapCommitted && out.stillBuilt(pkg, map.get(pkg), Push.of(lower, "base"), maxIn) && (listed || Helper.rankNumber(r)!=top));
     }
     return Collections.unmodifiableMap(res);
   }
@@ -166,7 +166,7 @@ final class Helper{
   static int rankNumber(Ref u){
     var m= rankName.matcher(isFear(u) ? Fs.fileNameWithoutExtension(u.fearPath()) : "");
     if (!m.matches()){ throw Report.projectMalformedRankFileName(u); }
-    return (ranks.indexOf(m.group(1))+1)*1000+(m.group(2) == null ? 999 : Integer.parseInt(m.group(2))); // shortcut: _rank_app.fear == _rank_app999.fear
+    return (ranks.indexOf(m.group(1))+1)*1000+(m.group(2)==null ? 999 : Integer.parseInt(m.group(2))); // shortcut: _rank_app.fear == _rank_app999.fear
   }
   private static final List<String> ranks= List.of(
     "_rank_base", "_rank_core", "_rank_driver", "_rank_worker", "_rank_framework", "_rank_accumulator", "_rank_tool", "_rank_app");

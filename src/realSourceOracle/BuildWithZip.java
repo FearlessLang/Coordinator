@@ -116,21 +116,21 @@ public final class BuildWithZip{
     var now= System.currentTimeMillis();
     if (t > now+futureTolerance){ throw future.apply(now); }
   }
-  static void checkTooLong(RefParent kid){ if (kid.fearPath().length() > 200 + SourceOracle.root.length()){ throw Report.pathTooLong(kid); } }
+  static void checkTooLong(RefParent kid){ if (kid.fearPath().length() > 200+SourceOracle.root.length()){ throw Report.pathTooLong(kid); } }
   public static void checkIndividualVisibleSegment(RefParent kid){
     checkTooLong(kid);
     var name= Fs.fileNameWithExtension(kid.fearPath());
     var d0= name.indexOf('.');
     if (d0 == 0){ checkIndividualInvisibleSegment(kid); return; }
-    var split= d0 > 0 && kid instanceof Ref;
+    var split= d0>0 && kid instanceof Ref;
     checkVisibleAtom(kid, split ? name.substring(0, d0) : name);
     if (split){ checkExt(kid, name.substring(d0 + 1)); return; }
     if (kid instanceof Ref && !Report.allowedNoExtFiles.contains(name)){ throw Report.needsExtension(kid); }
   }
   private static void checkVisibleAtom(RefParent kid, String atom){
     var c0= atom.charAt(0);
-    if (c0 != '_' && !('a' <= c0 && c0 <= 'z')){ throw Report.visibleMustStartWithLetterOrUnderscore(kid); }
-    atom.chars().skip(1).filter(c -> c != '_' && !Fs.isExtSegChar((char)c)).findFirst().ifPresent(c -> { throw Report.visibleInvalidChar(kid, (char)c); });
+    if (c0!='_' && !('a'<=c0 && c0<='z')){ throw Report.visibleMustStartWithLetterOrUnderscore(kid); }
+    atom.chars().skip(1).filter(c -> c!='_' && !Fs.isExtSegChar((char)c)).findFirst().ifPresent(c -> { throw Report.visibleInvalidChar(kid, (char)c); });
     if (winReserved.contains(atom)){ throw Report.windowsReservedName(kid); }
   }
   private static void checkExt(RefParent kid, String tail){
@@ -153,12 +153,12 @@ public final class BuildWithZip{
     var name= Fs.fileNameWithExtension(kid.fearPath());
     if (name.endsWith(".") || name.endsWith(" ")){ throw Report.invisibleNoTrailingDotOrSpace(kid, name); }
     for (int cp : name.codePoints().toArray()){
-      if (0xD800 <= cp && cp <= 0xDFFF){ throw Report.invisibleInvalidSurrogate(kid, name); }
+      if (0xD800<=cp && cp<=0xDFFF){ throw Report.invisibleInvalidSurrogate(kid, name); }
       if (Character.isISOControl(cp)){ throw Report.invisibleNoControlChars(kid, cp, name); }
       if (winBadChars.indexOf(cp) >= 0){ throw Report.invisibleNoWindowsBadChars(kid, (char)cp, name); }
     }
     var d= name.indexOf('.');
-    var base= (d < 0 ? name : name.substring(0, d)).toLowerCase(Locale.ROOT);
+    var base= (d<0 ? name : name.substring(0, d)).toLowerCase(Locale.ROOT);
     if (winReserved.contains(base)){ throw Report.invisibleWindowsReservedDeviceName(kid, base, name); }
   }
   private static void checkCollectiveInvisible(Collection<RefParent> kids){

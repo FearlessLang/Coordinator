@@ -37,7 +37,7 @@ public record AutoloadHandler(Predicate<String> matches, String baseType){
   }
   private static String portableZipPath(String path){
     Stream.of(path.split("/", -1))
-      .filter(s -> s.isEmpty() || s.startsWith(".") || s.indexOf('\\') >= 0 || s.indexOf(';') >= 0)
+      .filter(s -> s.isEmpty() || s.startsWith(".") || s.indexOf('\\')>=0 || s.indexOf(';')>=0)
       .findFirst().ifPresent(s -> { throw Bug.of(s); });
     return path;
   }
@@ -49,14 +49,14 @@ public record AutoloadHandler(Predicate<String> matches, String baseType){
   static String standardTypeName(String pkgName, SourceOracle.Ref ref, String path){
     var all= components(dropExt(path));
     var i= all.indexOf(pkgName);
-    assert i >= 0 && i + 1 < all.size();
+    assert i>=0 && i+1<all.size();
     var res= Join.of(all.subList(i + 1, all.size()).stream().map(AutoloadHandler::capFirst), "", "", "");
     if (!TName.isTypeName(res)){ throw Report.autoloadedNameNotAType(ref, res); }
     return res;
   }
   static final Pattern capitals= Pattern.compile("^(_*[a-z])|_([a-z])");
   public static String capFirst(String s){
-    return capitals.matcher(s).replaceAll(r -> (r.group(1) == null ? r.group(2) : r.group(1)).toUpperCase(Locale.ROOT));
+    return capitals.matcher(s).replaceAll(r -> (r.group(1)==null ? r.group(2) : r.group(1)).toUpperCase(Locale.ROOT));
   }
   static final Pattern upper= Pattern.compile("[A-Z]");
   public static Optional<String> fileName(String type){

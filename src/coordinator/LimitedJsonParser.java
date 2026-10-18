@@ -126,7 +126,7 @@ final class LimitedJsonParser{
   private String str(){
     req('"');
     var j= i;
-    for (; i < s.length() && s.charAt(i) != '"'; i += s.charAt(i) == '\\' ? 2 : 1){}
+    for (; i<s.length() && s.charAt(i)!='"'; i += s.charAt(i)=='\\' ? 2 : 1){}
     if (i >= s.length()){ throw err("Unterminated string"); }
     return s.substring(j, i++).replaceAll("\\\\(.)", "$1");
   }
@@ -145,7 +145,7 @@ final class LimitedJsonParser{
   private void req(char c){ if (!eat(c)){ throw err("Expected '"+c+"'"); } }
   private boolean eat(char c){
     ws();
-    if (i >= s.length() || s.charAt(i) != c){ return false; }
+    if (i>=s.length() || s.charAt(i)!=c){ return false; }
     i += 1; return true;
   }
   private RuntimeException err(String msg){
