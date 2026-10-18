@@ -39,7 +39,7 @@ final class BytecodeLineFix implements Consumer<Path>{
     var fl= p.line();
     assert fl >= 1 && fl <= 65535; // LineNumberTable uses u2
     var prev= lineMap.putIfAbsent(javaLine, fl);
-    assert prev == null || prev.intValue() == fl :
+    assert prev==null || prev.intValue()==fl :
       "Two fearless lines on one java line "+javaLine+": "+prev+" vs "+fl
       + sb.toString();
     return a(s);

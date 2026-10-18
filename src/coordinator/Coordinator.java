@@ -46,7 +46,7 @@ public interface Coordinator{
     var sb= new StringBuilder();
     var jvm= JavaTool.startMainFromJars(jvmArgs, jarDirs, mainClass, s -> { sb.append(s); System.out.print(s); });
     var ec= jvm.await();
-    Require.check(ec == 0 || ec == 1, "Exit code "+ec+" from\n"+Join.of(jvm.cmd(), "", "\n", "")+"\nOutput:\n"+sb);
+    Require.check(ec==0 || ec==1, "Exit code "+ec+" from\n"+Join.of(jvm.cmd(), "", "\n", "")+"\nOutput:\n"+sb);
     return sb.toString();
   }
   static List<String> runData(Path project, Path base){

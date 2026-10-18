@@ -50,7 +50,7 @@ final class DocBuilderTest{
       + "Foo: Bar {\n"
       + "}\n";
     var docs= new SourceDocs(file, text);
-    var atLine2= docs.docsByLine.getOrDefault(2, new ArrayList<>());
+    var atLine2= docs.docsByLine.getOrDefault(2, List.of());
     assertEquals(1, atLine2.size(), "the /// doc comment on line 2 must be recognized as a doc comment");
     assertEquals("this is meant to be a doc comment", atLine2.getFirst().text());
   }
@@ -62,7 +62,7 @@ final class DocBuilderTest{
       + "Foo: Bar {\n"
       + "}\n";
     var docs= new SourceDocs(file, text);
-    var atLine2= docs.docsByLine.getOrDefault(2, new ArrayList<>());
+    var atLine2= docs.docsByLine.getOrDefault(2, List.of());
     assertEquals(1, atLine2.size(), "the /// doc comment on line 2 must be recognized as a doc comment");
     assertEquals("this doc should still be found", atLine2.getFirst().text());
   }

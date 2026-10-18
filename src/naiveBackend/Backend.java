@@ -113,7 +113,7 @@ public final class Backend{
   String decTypeName(TName n){ return encodeTrailingPrimes(n.simpleName())+"$"+caseTag(n.simpleName())+"$"+n.arity(); }
   String typeName(TName n){ return "_"+encodeTrailingPrimes(n.s())+"$"+caseTag(n.simpleName())+"$"+n.arity(); }
   static String caseTag(String s){
-    var bits= Join.of(s.chars().filter(c -> 'A' <= c && c <= 'Z' || 'a' <= c && c <= 'z').mapToObj(c -> c < 'a' ? "1" : "0"), "", "", "", "");
+    var bits= Join.of(s.chars().filter(c -> ('A'<=c && c<='Z') || ('a'<=c && c<='z')).mapToObj(c -> c<'a' ? "1" : "0"), "", "", "", "");
     return new BigInteger("1"+bits, 2).toString(36);
   }
   String mangledMethodName(RC rc, MName m){

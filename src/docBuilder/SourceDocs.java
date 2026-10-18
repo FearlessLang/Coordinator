@@ -22,14 +22,14 @@ final class SourceDocs{
 
   final URI uri;
   final List<String> lines;
-  final HashMap<Integer,ArrayList<DocOcc>> docsByLine= new HashMap<>();
+  final HashMap<Integer,List<DocOcc>> docsByLine= new HashMap<>();
   final HashMap<Integer,int[]> depthByLine= new HashMap<>();
   final Set<DocOcc> attached= Collections.newSetFromMap(new IdentityHashMap<>());
   final IdentityHashMap<DocOcc,Integer> inlineClaimedFromColumn= new IdentityHashMap<>();
   final Set<DocOcc> ambiguousInline= Collections.newSetFromMap(new IdentityHashMap<>());
 
   List<DocOcc> docsAt(Pos pos, boolean includeBefore){
-    assert pos.line() > 0 && pos.line() <= lines.size() : pos;
+    assert pos.line()>0 && pos.line()<=lines.size() : pos;
     var res= new ArrayList<DocOcc>();
     if (includeBefore){ collectBefore(pos.line(), res); }
     inlineAfter(pos.line(), pos.column())
@@ -94,13 +94,13 @@ final class SourceDocs{
   }
 
   List<DocOcc> pureDocs(int line){
-    return docsByLine.getOrDefault(line, new ArrayList<>()).stream()
+    return docsByLine.getOrDefault(line, List.of()).stream()
       .filter(DocOcc::pureLine)
       .toList();
   }
 
   Optional<DocOcc> inlineAfter(int line, int column){
-    return docsByLine.getOrDefault(line, new ArrayList<>()).stream()
+    return docsByLine.getOrDefault(line, List.of()).stream()
       .filter(c -> !c.pureLine() && c.column() >= column)
       .findFirst();
   }

@@ -72,7 +72,7 @@ record DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other){
   private List<TName> matching(Stream<TName> names, DocRef.TypeName ref){
     return names
       .filter(n -> n.simpleName().equals(ref.simpleName()))
-      .filter(n -> ref.arity().isEmpty() || n.arity() == ref.arity().getAsInt())
+      .filter(n -> ref.arity().isEmpty() || n.arity()==ref.arity().getAsInt())
       .toList();
   }
 
@@ -145,7 +145,7 @@ record DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other){
   }
 
   private static boolean named(M m, String selector, OptionalInt arity){
-    return m.sig().m().s().equals(selector) && (arity.isEmpty() || m.sig().m().arity() == arity.getAsInt());
+    return m.sig().m().s().equals(selector) && (arity.isEmpty() || m.sig().m().arity()==arity.getAsInt());
   }
 
   static String shape(OptionalInt arity, String open, String close){

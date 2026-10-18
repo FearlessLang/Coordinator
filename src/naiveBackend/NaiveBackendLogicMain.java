@@ -33,7 +33,7 @@ public final class NaiveBackendLogicMain{
   }
   private static boolean foldFree(HashMap<String,String> seen, String name){
     var prev= seen.putIfAbsent(name.toLowerCase(Locale.ROOT), name);
-    assert prev == null || prev.equals(name) :
+    assert prev==null || prev.equals(name) :
       "Generated names differ only by case, so they are one file on Windows and macOS: "+prev+" and "+name;
     return true;
   }

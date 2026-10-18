@@ -166,6 +166,6 @@ public final class ByteFiles{
   public static String text(Throwable e){
     if (e == null){ return ""; }
     var text= e instanceof FileSystemException fs && fs.getReason() != null ? fs.getReason() : e.getMessage();
-    return (text == null ? "" : " "+text.toLowerCase(Locale.ROOT))+text(e.getCause())+Join.of(Arrays.stream(e.getSuppressed()).map(ByteFiles::text), "", "", "", "");
+    return (text==null ? "" : " "+text.toLowerCase(Locale.ROOT))+text(e.getCause())+Join.of(Arrays.stream(e.getSuppressed()).map(ByteFiles::text), "", "", "", "");
   }
 }
