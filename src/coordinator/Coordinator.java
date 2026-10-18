@@ -54,7 +54,7 @@ public interface Coordinator{
       "--enable-native-access=ALL-UNNAMED",
       "--add-opens=java.desktop/java.awt=ALL-UNNAMED",
       "--add-exports=java.desktop/sun.awt=ALL-UNNAMED",
-      Fs.isWindows() ? "--add-opens=java.desktop/sun.awt.windows=ALL-UNNAMED" : "--add-exports=java.desktop/sun.awt.X11=ALL-UNNAMED",
+      Fs.isWindows() ? "--add-opens=java.desktop/sun.awt.windows=ALL-UNNAMED" : "--add-opens=java.desktop/sun.awt.X11=ALL-UNNAMED",
       "-Dsun.java2d.d3d=false",
       "-DfearlessUser.dir="+project,
       "-DfearlessBase.dir="+base);
@@ -105,8 +105,8 @@ public interface Coordinator{
     out.mains(l.pkgs().keySet()).mains().forEach((k,v) -> res.put(k, v.file()));
     return Optional.of(Collections.unmodifiableMap(res));
   }
-  static ChildJvm startMain(Path project, Path base, String main, Optional<Path> input, List<Path> sharedClasspath, Consumer<String> out){
-    var jvmArgs= Stream.concat(runData(project, base).stream(), input.map(i -> "-DfearlessInput.file="+i).stream()).toList();
+  static ChildJvm startMain(Path project, Path base, String main, Optional<Path> input, List<String> desk, List<Path> sharedClasspath, Consumer<String> out){
+    var jvmArgs= Stream.of(runData(project, base).stream(), input.map(i -> "-DfearlessInput.file="+i).stream(), desk.stream()).flatMap(s -> s).toList();
     return JavaTool.startMainFromJars(jvmArgs, Push.of(genJava(project.resolve(outDir)), sharedClasspath), "_"+main.substring(0, main.indexOf('.'))+".Main", out, main);
   }
   static Path genJava(Path outRoot){ return outRoot.resolve("gen_java"); }

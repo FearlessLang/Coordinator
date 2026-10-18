@@ -550,8 +550,8 @@ Again:Main{s->base.Debug#("again")}
     coordinator(root).compile(root, stLib);
     utils.Err.strCmp("""
 {
-  "col.Again": ["_col/more.fear", [], []],
-  "col.Hello": ["_col/_rank_app.fear", [], []]
+  "col.Again": ["_col/more.fear", [], [], [["base.IconsFearless", "icons/fearless.png", "", "", ""]]],
+  "col.Hello": ["_col/_rank_app.fear", [], [], [["base.IconsFearless", "icons/fearless.png", "", "", ""]]]
 }
 """, Fs.readUtf8(mainsInfo(root)));
     assertEquals(Map.of("col.Again", "_col/more.fear", "col.Hello", "_col/_rank_app.fear"), coordinator(root).mains(root, stLib).orElseThrow());
@@ -722,16 +722,18 @@ M:Main{}
 Inherited:M, Shortcut[IconsFoo,"fapp042"]{s->base.Debug#(`inherited`)}
 Exts:Main, OpenWith[IconsFoo,"fear"], Shortcut[IconsFoo,"fapp123"], OpenWith[IconsFoo,`ffile123`], OpenWith[IconsFoo,"abcdefghij012345"], OpenWith[IconsFoo,"doc"], OpenWith[IconsFoo,`htm`]{s->base.Debug#(`exts`)}
 Test:{ #: I -> I: Main, Shortcut[IconsFoo]{s->base.Debug#(`i`)} }
+Pre:Main, base.PreLoadIcon[base.IconsConflict], base.PreLoadIcon[IconsFoo]{s->base.Debug#(`pre`)}
 """);
     coordinator(root).compile(root, stLib);
     utils.Err.strCmp("""
 {
-  "col.Again": ["_col/_rank_app.fear", [["col.IconsFoo", "_col/icons/foo.png", "", "", ""]], [["col.IconsFoo", "_col/icons/foo.png", "", "", "q"]]],
-  "col.Exts": ["_col/_rank_app.fear", [["col.IconsFoo", "_col/icons/foo.png", "", "", "fapp123"]], [["col.IconsFoo", "_col/icons/foo.png", "", "", "fear"], ["col.IconsFoo", "_col/icons/foo.png", "", "", "ffile123"], ["col.IconsFoo", "_col/icons/foo.png", "", "", "abcdefghij012345"], ["col.IconsFoo", "_col/icons/foo.png", "", "", "doc"], ["col.IconsFoo", "_col/icons/foo.png", "", "", "htm"]]],
-  "col.Foo": ["_col/_rank_app.fear", [["col.IconsFoo", "_col/icons/foo.png", "", "", "fapp001"], ["col.IconsFoo", "_col/icons/foo.png", "", "", ""]], [["col.IconsFoo", "_col/icons/foo.png", "", "", "q"], ["col.IconsFoo", "_col/icons/foo.png", "", "", ""]]],
-  "col.Inherited": ["_col/_rank_app.fear", [["col.IconsFoo", "_col/icons/foo.png", "", "", "fapp042"]], []],
-  "col.Paths": ["_col/_rank_app.fear", [["col.IconsFoo", "_col/icons/foo.png", "", "", ""]], [["col.IconsFoo", "_col/icons/foo.png", "", "", "q"]]],
-  "col.Two": ["_col/_rank_app.fear", [], [["col.IconsFoo", "_col/icons/foo.png", "", "", "q"], ["base.IconsConflict", "icons/conflict.png", "", "", "b"]]]
+  "col.Again": ["_col/_rank_app.fear", [["col.IconsFoo", "_col/icons/foo.png", "", "", ""]], [["col.IconsFoo", "_col/icons/foo.png", "", "", "q"]], [["col.IconsFoo", "_col/icons/foo.png", "", "", ""], ["base.IconsFearless", "icons/fearless.png", "", "", ""]]],
+  "col.Exts": ["_col/_rank_app.fear", [["col.IconsFoo", "_col/icons/foo.png", "", "", "fapp123"]], [["col.IconsFoo", "_col/icons/foo.png", "", "", "fear"], ["col.IconsFoo", "_col/icons/foo.png", "", "", "ffile123"], ["col.IconsFoo", "_col/icons/foo.png", "", "", "abcdefghij012345"], ["col.IconsFoo", "_col/icons/foo.png", "", "", "doc"], ["col.IconsFoo", "_col/icons/foo.png", "", "", "htm"]], [["col.IconsFoo", "_col/icons/foo.png", "", "", ""], ["base.IconsFearless", "icons/fearless.png", "", "", ""]]],
+  "col.Foo": ["_col/_rank_app.fear", [["col.IconsFoo", "_col/icons/foo.png", "", "", "fapp001"], ["col.IconsFoo", "_col/icons/foo.png", "", "", ""]], [["col.IconsFoo", "_col/icons/foo.png", "", "", "q"], ["col.IconsFoo", "_col/icons/foo.png", "", "", ""]], [["col.IconsFoo", "_col/icons/foo.png", "", "", ""], ["base.IconsFearless", "icons/fearless.png", "", "", ""]]],
+  "col.Inherited": ["_col/_rank_app.fear", [["col.IconsFoo", "_col/icons/foo.png", "", "", "fapp042"]], [], [["col.IconsFoo", "_col/icons/foo.png", "", "", ""], ["base.IconsFearless", "icons/fearless.png", "", "", ""]]],
+  "col.Paths": ["_col/_rank_app.fear", [["col.IconsFoo", "_col/icons/foo.png", "", "", ""]], [["col.IconsFoo", "_col/icons/foo.png", "", "", "q"]], [["col.IconsFoo", "_col/icons/foo.png", "", "", ""], ["base.IconsFearless", "icons/fearless.png", "", "", ""]]],
+  "col.Pre": ["_col/_rank_app.fear", [], [], [["base.IconsFearless", "icons/fearless.png", "", "", ""], ["base.IconsConflict", "icons/conflict.png", "", "", ""], ["col.IconsFoo", "_col/icons/foo.png", "", "", ""]]],
+  "col.Two": ["_col/_rank_app.fear", [], [["col.IconsFoo", "_col/icons/foo.png", "", "", "q"], ["base.IconsConflict", "icons/conflict.png", "", "", "b"]], [["base.IconsFearless", "icons/fearless.png", "", "", ""], ["col.IconsFoo", "_col/icons/foo.png", "", "", ""], ["base.IconsConflict", "icons/conflict.png", "", "", ""]]]
 }
 """, Fs.readUtf8(mainsInfo(root)));
   }
@@ -745,7 +747,7 @@ In file: fear:/_col/_rank_app.fear
 
 While inspecting type declaration "col.Assoc"
 Type declaration "col.Assoc" implements "base.OpenWith[_,_]".
-Only a main can open files: type declaration "col.Assoc" must also implement "base.Main", directly or through one of its supertypes."""); }
+Only a main can implement "base.OpenWith[_,_]": type declaration "col.Assoc" must also implement "base.Main", directly or through one of its supertypes."""); }
   @Test void aClaimOnANamedObjectLiteralWithoutMainIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 Test:{ #: I -> I: Shortcut[IconsFoo]{} }
 """, """
@@ -756,7 +758,7 @@ In file: fear:/_col/_rank_app.fear
 
 While inspecting object literal "col.I"
 Object literal "col.I" implements "base.Shortcut[_]".
-Only a main can open files: object literal "col.I" must also implement "base.Main", directly or through one of its supertypes."""); }
+Only a main can implement "base.Shortcut[_]": object literal "col.I" must also implement "base.Main", directly or through one of its supertypes."""); }
   @Test void aClaimOnAnAnonymousObjectLiteralWithoutMainIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 Test:{ #: Shortcut[IconsFoo] -> { .foo: base.Void -> base.Void } }
 """, """
@@ -767,7 +769,7 @@ In file: fear:/_col/_rank_app.fear
 
 While inspecting object literal instance of "base.Shortcut[_]"
 Object literal instance of "base.Shortcut[_]" implements "base.Shortcut[_]".
-Only a main can open files: object literal instance of "base.Shortcut[_]" must also implement "base.Main", directly or through one of its supertypes."""); }
+Only a main can implement "base.Shortcut[_]": object literal instance of "base.Shortcut[_]" must also implement "base.Main", directly or through one of its supertypes."""); }
   @Test void aClaimWithoutMainBlamesTheDeclarationAddingIt(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 B:A{}
 A:OpenWith[IconsFoo,"q"]{}
@@ -780,7 +782,7 @@ In file: fear:/_col/_rank_app.fear
 
 While inspecting type declaration "col.A"
 Type declaration "col.A" implements "base.OpenWith[_,_]".
-Only a main can open files: type declaration "col.A" must also implement "base.Main", directly or through one of its supertypes."""); }
+Only a main can implement "base.OpenWith[_,_]": type declaration "col.A" must also implement "base.Main", directly or through one of its supertypes."""); }
   @Test void aClaimWithoutMainInALowerRankPackageIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 Foo:Main{s->base.Debug#(`foo`)}
 jjj
@@ -795,7 +797,7 @@ In file: fear:/_lib/_rank_core.fear
 
 While inspecting type declaration "lib.Lib"
 Type declaration "lib.Lib" implements "base.Shortcut[_]".
-Only a main can open files: type declaration "lib.Lib" must also implement "base.Main", directly or through one of its supertypes."""); }
+Only a main can implement "base.Shortcut[_]": type declaration "lib.Lib" must also implement "base.Main", directly or through one of its supertypes."""); }
   @Test void aClaimWithATypeVariableIconIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 A[X:imm]:Main,OpenWith[X,"q"]{}
 """, """
@@ -1163,7 +1165,7 @@ not read by the compiler
     coordinator(root).compile(root, stLib);
     utils.Err.strCmp("""
 {
-  "col.Foo": ["_col/_rank_app.fear", [["base.IconsConflict", "icons/conflict.png", "", "", "fapp042"], ["col.ZInBar", "_col/z.zip", "", "in/bar.png", ""]], [["col.IconsFoo", "_col/icons/foo.png", "", "", "foo"], ["lib.IconsLib", "_lib/icons/lib.png", "", "", ""]]]
+  "col.Foo": ["_col/_rank_app.fear", [["base.IconsConflict", "icons/conflict.png", "", "", "fapp042"], ["col.ZInBar", "_col/z.zip", "", "in/bar.png", ""]], [["col.IconsFoo", "_col/icons/foo.png", "", "", "foo"], ["lib.IconsLib", "_lib/icons/lib.png", "", "", ""]], [["base.IconsConflict", "icons/conflict.png", "", "", ""], ["col.ZInBar", "_col/z.zip", "", "in/bar.png", ""], ["base.IconsFearless", "icons/fearless.png", "", "", ""], ["col.IconsFoo", "_col/icons/foo.png", "", "", ""], ["lib.IconsLib", "_lib/icons/lib.png", "", "", ""]]]
 }
 """, Fs.readUtf8(mainsInfo(root)));
   }
@@ -1191,9 +1193,9 @@ B:Main{s->base.Debug#(`b`)}
     coordinator(root).compile(root, stLib);
     utils.Err.strCmp("""
 {
-  "a.A": ["_a/_rank_app.fear", [], [["a.IconsA", "_a/icons/a.png", "", "", ""]]],
-  "b.B": ["_b/_rank_app.fear", [], []],
-  "b.C": ["_b/_rank_app.fear", [], []]
+  "a.A": ["_a/_rank_app.fear", [], [["a.IconsA", "_a/icons/a.png", "", "", ""]], [["base.IconsFearless", "icons/fearless.png", "", "", ""], ["a.IconsA", "_a/icons/a.png", "", "", ""]]],
+  "b.B": ["_b/_rank_app.fear", [], [], [["base.IconsFearless", "icons/fearless.png", "", "", ""]]],
+  "b.C": ["_b/_rank_app.fear", [], [], [["base.IconsFearless", "icons/fearless.png", "", "", ""]]]
 }
 """, Fs.readUtf8(mainsInfo(root)));
   }
@@ -1226,7 +1228,7 @@ Lib:base.Main, base.OpenWith[base.IconsConflict,"fear"]{s->base.Debug#(`lib`)}
     utils.Err.strCmp("lib\n", coordinator(root).main(root, stLib));
     utils.Err.strCmp("""
 {
-  "lib.Lib": ["_lib/_rank_core.fear", [], [["base.IconsConflict", "icons/conflict.png", "", "", "fear"]]]
+  "lib.Lib": ["_lib/_rank_core.fear", [], [["base.IconsConflict", "icons/conflict.png", "", "", "fear"]], [["base.IconsFearless", "icons/fearless.png", "", "", ""], ["base.IconsConflict", "icons/conflict.png", "", "", ""]]]
 }
 """, Fs.readUtf8(mainsInfo(root)));
   }
@@ -1335,7 +1337,7 @@ not read by the compiler
     coordinator(root).compile(root, stLib);
     utils.Err.strCmp("""
 {
-  "col.Foo": ["_col/_rank_app.fear", [], [["lib.IconsLib", "_lib/icons/lib.gif", "", "", ""]]]
+  "col.Foo": ["_col/_rank_app.fear", [], [["lib.IconsLib", "_lib/icons/lib.gif", "", "", ""]], [["base.IconsFearless", "icons/fearless.png", "", "", ""], ["lib.IconsLib", "_lib/icons/lib.gif", "", "", ""]]]
 }
 """, Fs.readUtf8(mainsInfo(root)));
   }
@@ -1348,7 +1350,7 @@ Foo:Opener, Other, Shortcut[base.IconsConflict,"fapp042"], OpenWith[IconsFoo]{s-
     coordinator(root).compile(root, stLib);
     utils.Err.strCmp("""
 {
-  "col.Foo": ["_col/_rank_app.fear", [["base.IconsConflict", "icons/conflict.png", "", "", "fapp042"], ["col.IconsFoo", "_col/icons/foo.png", "", "", ""]], [["col.IconsFoo", "_col/icons/foo.png", "", "", ""], ["col.IconsFoo", "_col/icons/foo.png", "", "", "foo"]]]
+  "col.Foo": ["_col/_rank_app.fear", [["base.IconsConflict", "icons/conflict.png", "", "", "fapp042"], ["col.IconsFoo", "_col/icons/foo.png", "", "", ""]], [["col.IconsFoo", "_col/icons/foo.png", "", "", ""], ["col.IconsFoo", "_col/icons/foo.png", "", "", "foo"]], [["base.IconsConflict", "icons/conflict.png", "", "", ""], ["col.IconsFoo", "_col/icons/foo.png", "", "", ""], ["base.IconsFearless", "icons/fearless.png", "", "", ""]]]
 }
 """, Fs.readUtf8(mainsInfo(root)));
   }
@@ -1480,7 +1482,7 @@ Hello:Main{s->base.Debug#("from z")}
     var c= coordinator(project);
     c.compile(project, stLib);
     var out= new StringBuilder();
-    var child= Coordinator.startMain(project, ResolveResource.stLibPath, "term.FirstDoesNotWaitForTheRest", Optional.empty(), c.sharedClasspath(), out::append);
+    var child= Coordinator.startMain(project, ResolveResource.stLibPath, "term.FirstDoesNotWaitForTheRest", Optional.empty(), List.of(), c.sharedClasspath(), out::append);
     var waiter= new Thread(() -> {
       try{ child.await(); }
       catch (InterruptedException _){ child.kill(); }
@@ -1495,7 +1497,7 @@ Hello:Main{s->base.Debug#("from z")}
     var root= ResolveResource.integrationTests.resolve("runRecursion");
     if (!recursionCompiled){ compileOk("runRecursion"); recursionCompiled = true; }
     var out= new StringBuilder();
-    Coordinator.startMain(root, ResolveResource.stLibPath, main, Optional.empty(), coordinator(root).sharedClasspath(), out::append).await();
+    Coordinator.startMain(root, ResolveResource.stLibPath, main, Optional.empty(), List.of(), coordinator(root).sharedClasspath(), out::append).await();
     return out.toString();
   }
   @Test void aDeepRecursionOverflowsTheStackOfMain() throws InterruptedException{
@@ -1602,14 +1604,14 @@ b
     var cp= Push.of(Coordinator.genJava(root.resolve(Coordinator.outDir)), c.sharedClasspath());
     var out= new StringBuilder();
     assertEquals(1, JavaTool.startMainFromJars(Coordinator.runData(root, c.stdLibBase()), cp, "_col.Main", out::append).await(), out::toString);
-    assertEquals(1, Coordinator.startMain(root, c.stdLibBase(), "col.A", Optional.empty(), c.sharedClasspath(), out::append).await(), out::toString);
-    assertEquals(0, Coordinator.startMain(root, c.stdLibBase(), "col.B", Optional.empty(), c.sharedClasspath(), out::append).await(), out::toString);
+    assertEquals(1, Coordinator.startMain(root, c.stdLibBase(), "col.A", Optional.empty(), List.of(), c.sharedClasspath(), out::append).await(), out::toString);
+    assertEquals(0, Coordinator.startMain(root, c.stdLibBase(), "col.B", Optional.empty(), List.of(), c.sharedClasspath(), out::append).await(), out::toString);
   }
   @Test void aMainEndingWithAJavaErrorExitsWith1() throws InterruptedException{
     var root= ResolveResource.integrationTests.resolve("runRecursion");
     if (!recursionCompiled){ compileOk("runRecursion"); recursionCompiled = true; }
     var out= new StringBuilder();
-    assertEquals(1, Coordinator.startMain(root, ResolveResource.stLibPath, "rec.NaiveSum", Optional.empty(), coordinator(root).sharedClasspath(), out::append).await(), out::toString);
+    assertEquals(1, Coordinator.startMain(root, ResolveResource.stLibPath, "rec.NaiveSum", Optional.empty(), List.of(), coordinator(root).sharedClasspath(), out::append).await(), out::toString);
     utils.Err.strCmp("[###]java.lang.StackOverflowError[###]", out.toString());
   }
 

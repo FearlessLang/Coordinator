@@ -623,7 +623,7 @@ File:
   }
   public static UserError claimNotMain(SourceOracle src, Literal l, TName claim){
     return claim(src, l, " implements "+disp(withArity(claim))+".\n"
-    + "Only a main can open files: "+owner(l)+" must also implement \"base.Main\", directly or through one of its supertypes.");
+    + "Only a main can implement "+disp(withArity(claim))+": "+owner(l)+" must also implement \"base.Main\", directly or through one of its supertypes.");
   }
   public static UserError claimIconNotConcrete(SourceOracle src, Literal l, T.C c){
     return claim(src, l, c, "The icon "+disp(repr(c.ts().getFirst()))+" is not a concrete type name.\n"
