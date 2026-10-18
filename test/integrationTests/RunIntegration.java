@@ -722,52 +722,64 @@ Recover: base.BadStrUnitRecover { reason, byteOffset, byteLength, rejectedValue 
 Ls: { #(a: mut base.Action[base.List[base.Str]]): base.Str -> a.run{.ok xs -> xs.str{::}; .info i -> i.getMsg} }
 Rd: { #(a: mut base.Action[mut base.InputCursorNode]): base.Str -> a.run{.ok n -> n.label+": "+(n.readStrUtf8 Recover); .info i -> i.getMsg} }
 Wr: { #(a: mut base.Action[base.Void]): base.Str -> a.run{.ok _ -> "ok"; .info i -> i.getMsg} }
+Sz: { #(a: mut base.Action[mut base.InputCursorNode]): base.Str -> a.run{.ok n -> n.readBytes.size.str; .info i -> i.getMsg} }
+Q: base.UnencodableRecover{ scalar, index -> L#(63.getByte) }
 """+main);
     return main(root, links);
   }
   static List<String> dataLinks(Path pub, Path notes){ return List.of("-DfearlessDataRead.Pub="+pub, "-DfearlessDataWrite.Notes="+notes); }
   static List<String> fearPaths(Path data){ return new RealSourceOracleWithZip(data).allFiles().stream().map(Ref::fearPath).toList(); }
   static String fearFile(Path data, String fearPath){ return OneOr.of(fearPath, new RealSourceOracleWithZip(data).allFiles().stream().filter(r -> r.fearPath().equals(fearPath))).loadString(); }
-  @Test void aDataProjectIsReadThroughTheNamesOfItsLinksAndAZipFileIsAFolder(@TempDir Path tmp){
+  @Test void aDataProjectIsReadThroughTheRootsOfACapabilityAndAZipIsAFolder(@TempDir Path tmp){
     var data= dataProject(tmp);
     utils.Err.strCmp("""
+[Pub]
+[Notes]
 [data.fearless, notes, pics, readme, todo]
 [deep, inner, one.txt]
 [three.txt]
-The path "readme" of "Pub" names a file, not a folder.
+The path "readme" of "Pub" names a resource, not a folder.
 The path "none" of "Pub" names no folder.
 The path ".hidden" of "Pub" is not valid: ".hidden" is not a valid folder name. A folder name uses only lowercase letters, digits and underscores, starts with a letter or an underscore, and is not "con", "prn", "aux", "nul", "com1" to "com9" or "lpt1" to "lpt9".
-"Nope" names no data project of this program. Its data projects are named "Notes", "Pub".
+"Nope" is not a root of this capability. Its roots are "Pub".
+"Notes" is not a root of this capability. Its roots are "Pub".
+"Pub" is not a root of this capability. Its roots are "Notes".
 Pub/readme: hi
+2
 Pub/pics/deep/two.txt: deeper
-Pub/pics/inner/three.txt: nested
+Notes/pics/inner/three.txt: nested
 
 Notes/notes/a.txt: first
-The path "notes/b.txt" of "Pub" names no file.
-The path "todo" of "Pub" names a folder, not a file.
-The path "" of "Pub" names the root folder, not a file.
+The path "notes/b.txt" of "Pub" names no resource.
+The path "todo" of "Pub" names a folder, not a resource.
+The path "" of "Pub" names the root folder, not a resource.
 """, dataRun(tmp, """
 Reads: Main{s -> base.Block#
+  .do{Debug#(s.dataRead.roots.str{::})}
+  .do{Debug#(s.dataReadWrite.roots.str{::})}
   .do{Debug#(Ls#(s.dataRead.paths("Pub", {})))}
   .do{Debug#(Ls#(s.dataRead.paths("Pub", L#("pics"))))}
-  .do{Debug#(Ls#(s.dataReadWrite.paths("Pub", L#("pics", "inner"))))}
+  .do{Debug#(Ls#(s.dataReadWrite.paths("Notes", L#("pics", "inner"))))}
   .do{Debug#(Ls#(s.dataRead.paths("Pub", L#("readme"))))}
   .do{Debug#(Ls#(s.dataRead.paths("Pub", L#("none"))))}
   .do{Debug#(Ls#(s.dataRead.paths("Pub", L#(".hidden"))))}
   .do{Debug#(Ls#(s.dataRead.paths("Nope", {})))}
+  .do{Debug#(Rd#(s.dataRead.read("Notes", L#("readme"))))}
+  .do{Debug#(Rd#(s.dataReadWrite.read("Pub", L#("readme"))))}
   .do{Debug#(Rd#(s.dataRead.read("Pub", L#("readme"))))}
+  .do{Debug#(Sz#(s.dataRead.read("Pub", L#("readme"))))}
   .do{Debug#(Rd#(s.dataRead.read("Pub", L#("pics", "deep", "two.txt"))))}
-  .do{Debug#(Rd#(s.dataReadWrite.read("Pub", L#("pics", "inner", "three.txt"))))}
-  .do{Debug#(Rd#(s.dataRead.read("Notes", L#("notes", "a.txt"))))}
+  .do{Debug#(Rd#(s.dataReadWrite.read("Notes", L#("pics", "inner", "three.txt"))))}
+  .do{Debug#(Rd#(s.dataReadWrite.read("Notes", L#("notes", "a.txt"))))}
   .do{Debug#(Rd#(s.dataRead.read("Pub", L#("notes", "b.txt"))))}
   .do{Debug#(Rd#(s.dataRead.read("Pub", L#("todo"))))}
   .return{Debug#(Rd#(s.dataRead.read("Pub", {})))}
   }
 """, dataLinks(data, data)));
   }
-  @Test void aWriteKeepsTheDataProjectValidAndRewritesTheZipFilesItEnters(@TempDir Path tmp){
+  @Test void aWriteKeepsTheDataProjectValidAndRewritesTheZipsItEnters(@TempDir Path tmp){
     var data= dataProject(tmp);
-    var fileName= "is not a valid file name. A file name is a valid folder name, a dot and an extension of 1 to 16 lowercase letters or digits, other than \"zip\" (a zip file is a folder); a few well known names, like \"readme\", have no extension, and a few well known extensions, like \"tar.gz\", have two parts.";
+    var resourceName= "is not a valid resource name. A resource name is a valid folder name, a dot and an extension of 1 to 16 lowercase letters or digits, other than \"zip\" (a zip is a folder); a few well known names, like \"readme\", have no extension, and a few well known extensions, like \"tar.gz\", have two parts.";
     utils.Err.strCmp("""
 ok
 ok
@@ -777,45 +789,48 @@ ok
 ok
 ok
 ok
-"Pub" names a data project this program reads, but does not write. The data projects it writes are named "Notes".
+ok
+ok
+"Pub" is not a root of this capability. Its roots are "Notes".
 The path "Bad.txt" of "Notes" is not valid: "Bad.txt" %s
 The path "pics/x.zip" of "Notes" is not valid: "x.zip" %s
-The path "other.fearless" of "Notes" is not written or deleted: a file with the extension "fearless" at the top of a data project is its marker file.
-The path "readme/x.txt" of "Notes" is not valid: "readme" is a file, not a folder.
-The path "readme.md" of "Notes" is not written: its folder holds "readme", and a file without extension can not share its name with a file with an extension.
-The path "todo" of "Notes" names a folder, not a file.
-The path "a.txt" of "Notes" is not written: US-ASCII does not encode the character U+00E9 at index 3 of the text.
-""".formatted(fileName, fileName), dataRun(tmp, """
+The path "other.fearless" of "Notes" is not written or deleted: a resource with the extension "fearless" at the top of a data project is its marker.
+The path "readme/x.txt" of "Notes" is not valid: "readme" is a resource, not a folder.
+The path "readme.md" of "Notes" is not written: its folder holds "readme", and a resource without extension can not share its name with a resource with an extension.
+The path "todo" of "Notes" names a folder, not a resource.
+""".formatted(resourceName, resourceName), dataRun(tmp, """
 Writes: Main{s -> base.Block#
   .let w= {s.dataReadWrite}
-  .do{Debug#(Wr#(w.writeStr("Notes", L#("notes", "b.txt"), "second")))}
-  .do{Debug#(Wr#(w.writeStr("Notes", L#("fresh", "deeper", "c.txt"), "third")))}
-  .do{Debug#(Wr#(w.writeStr("Notes", L#("pics", "deep", "four.txt"), "zipped")))}
-  .do{Debug#(Wr#(w.writeStr("Notes", L#("pics", "inner", "three.txt"), "renested")))}
-  .do{Debug#(Wr#(w.writeStr("Notes", L#("pics", "new", "five.txt"), "in a new folder of a zip")))}
+  .do{Debug#(Wr#(w.writeStrUtf8("Notes", L#("notes", "b.txt"), "second")))}
+  .do{Debug#(Wr#(w.writeStrAscii("Notes", L#("fresh", "deeper", "c.txt"), "third")))}
+  .do{Debug#(Wr#(w.writeStrLatin1("Notes", L#("pics", "deep", "four.txt"), "zipped")))}
+  .do{Debug#(Wr#(w.writeStrUtf8("Notes", L#("pics", "inner", "three.txt"), "renested")))}
+  .do{Debug#(Wr#(w.writeStrUtf8("Notes", L#("pics", "new", "five.txt"), "in a new folder of a zip")))}
   .do{Debug#(Wr#(w.writeUStrUtf16Le("Notes", L#("u16.txt"), "caf".u("00E9"))))}
   .do{Debug#(Wr#(w.writeBytes("Notes", L#("raw.bin"), L#(72.getByte, 105.getByte))))}
   .do{Debug#(Wr#(w.writeStrUtf32Be("Notes", L#("u32.txt"), "A")))}
-  .do{Debug#(Wr#(w.writeStr("Pub", L#("x.txt"), "no")))}
-  .do{Debug#(Wr#(w.writeStr("Notes", L#("Bad.txt"), "no")))}
-  .do{Debug#(Wr#(w.writeStr("Notes", L#("pics", "x.zip"), "no")))}
-  .do{Debug#(Wr#(w.writeStr("Notes", L#("other.fearless"), "no")))}
-  .do{Debug#(Wr#(w.writeStr("Notes", L#("readme", "x.txt"), "no")))}
-  .do{Debug#(Wr#(w.writeStr("Notes", L#("readme.md"), "no")))}
-  .do{Debug#(Wr#(w.writeStr("Notes", L#("todo"), "no")))}
-  .return{Debug#(Wr#(w.writeUStrAscii("Notes", L#("a.txt"), "caf".u("00E9"))))}
+  .do{Debug#(Wr#(w.writeUStrAscii("Notes", L#("ascii.txt"), "caf".u("00E9"), Q)))}
+  .do{Debug#(Wr#(w.writeUStrLatin1("Notes", L#("latin1.txt"), "caf".u("00E9 1F600"), Q)))}
+  .do{Debug#(Wr#(w.writeStrUtf8("Pub", L#("x.txt"), "no")))}
+  .do{Debug#(Wr#(w.writeStrUtf8("Notes", L#("Bad.txt"), "no")))}
+  .do{Debug#(Wr#(w.writeStrUtf8("Notes", L#("pics", "x.zip"), "no")))}
+  .do{Debug#(Wr#(w.writeStrUtf8("Notes", L#("other.fearless"), "no")))}
+  .do{Debug#(Wr#(w.writeStrUtf8("Notes", L#("readme", "x.txt"), "no")))}
+  .do{Debug#(Wr#(w.writeStrUtf8("Notes", L#("readme.md"), "no")))}
+  .return{Debug#(Wr#(w.writeStrUtf8("Notes", L#("todo"), "no")))}
   }
 """, dataLinks(data, data)));
-    assertEquals(List.of("fear:/data.fearless", "fear:/fresh/deeper/c.txt", "fear:/notes/a.txt", "fear:/notes/b.txt",
+    assertEquals(List.of("fear:/ascii.txt", "fear:/data.fearless", "fear:/fresh/deeper/c.txt", "fear:/latin1.txt", "fear:/notes/a.txt", "fear:/notes/b.txt",
       "fear:/pics/deep/four.txt", "fear:/pics/deep/two.txt", "fear:/pics/inner/three.txt", "fear:/pics/new/five.txt", "fear:/pics/one.txt",
       "fear:/raw.bin", "fear:/readme", "fear:/todo/item.txt", "fear:/u16.txt", "fear:/u32.txt"), fearPaths(data));
-    assertEquals(List.of("second", "third", "zipped", "renested", "in a new folder of a zip", "deeper", "Hi"),
-      Stream.of("notes/b.txt", "fresh/deeper/c.txt", "pics/deep/four.txt", "pics/inner/three.txt", "pics/new/five.txt", "pics/deep/two.txt", "raw.bin").map(p -> fearFile(data, "fear:/"+p)).toList());
+    assertEquals(List.of("second", "third", "zipped", "renested", "in a new folder of a zip", "deeper", "Hi", "caf?"),
+      Stream.of("notes/b.txt", "fresh/deeper/c.txt", "pics/deep/four.txt", "pics/inner/three.txt", "pics/new/five.txt", "pics/deep/two.txt", "raw.bin", "ascii.txt").map(p -> fearFile(data, "fear:/"+p)).toList());
     assertArrayEquals(new byte[]{'c', 0, 'a', 0, 'f', 0, (byte)0xE9, 0}, Fs.of(() -> Files.readAllBytes(data.resolve("u16.txt"))));
     assertArrayEquals(new byte[]{0, 0, 0, 'A'}, Fs.of(() -> Files.readAllBytes(data.resolve("u32.txt"))));
+    assertArrayEquals(new byte[]{'c', 'a', 'f', (byte)0xE9, '?'}, Fs.of(() -> Files.readAllBytes(data.resolve("latin1.txt"))));
     assertFalse(Files.exists(data.resolve("pics")));
   }
-  @Test void aDeleteRemovesTheFoldersAndTheZipFilesItLeavesEmpty(@TempDir Path tmp){
+  @Test void aDeleteRemovesTheFoldersAndTheZipsItLeavesEmpty(@TempDir Path tmp){
     var data= dataProject(tmp);
     utils.Err.strCmp("""
 ok
@@ -823,9 +838,9 @@ ok
 ok
 ok
 ok
-The path "notes/a.txt" of "Notes" names no file.
-The path "data.fearless" of "Notes" is not written or deleted: a file with the extension "fearless" at the top of a data project is its marker file.
-"Pub" names a data project this program reads, but does not write. The data projects it writes are named "Notes".
+The path "notes/a.txt" of "Notes" names no resource.
+The path "data.fearless" of "Notes" is not written or deleted: a resource with the extension "fearless" at the top of a data project is its marker.
+"Pub" is not a root of this capability. Its roots are "Notes".
 [data.fearless, readme, todo]
 """, dataRun(tmp, """
 Deletes: Main{s -> base.Block#
@@ -866,9 +881,9 @@ Images: Main{s -> base.Block#
     var data= dataProject(tmp);
     utils.Err.strCmp("""
 ok
-[###]The input file "Notes/readme" could not be read: NoSuchFileException[###]""", dataRun(tmp, """
+[###]The resource "Notes/readme" could not be read: NoSuchFileException[###]""", dataRun(tmp, """
 Gone: Main{s -> base.Block#
-  .let n= {s.dataRead.read("Notes", L#("readme")).run{.ok n -> n; .info i -> base.Error!i}}
+  .let n= {s.dataReadWrite.read("Notes", L#("readme")).run{.ok n -> n; .info i -> base.Error!i}}
   .do{Debug#(Wr#(s.dataReadWrite.delete("Notes", L#("readme"))))}
   .return{Debug#(n.readStrUtf8 Recover)}
   }
@@ -877,14 +892,16 @@ Gone: Main{s -> base.Block#
 Gone: Main{s -> Debug#(Ls#(s.dataRead.paths("Pub", {})))}
 """, dataLinks(tmp.resolve("gone"), data)));
   }
-  @Test void aProgramWithNoLinksHasNoDataProject(@TempDir Path tmp){
+  @Test void aProgramWithNoLinksHasNoRoot(@TempDir Path tmp){
     utils.Err.strCmp("""
-"Pub" names no data project of this program. This program has no data project.
-"Notes" names no data project of this program. This program has no data project.
+[]
+"Pub" is not a root of this capability. This capability has no root.
+"Notes" is not a root of this capability. This capability has no root.
 """, dataRun(tmp, """
 NoLinks: Main{s -> base.Block#
+  .do{Debug#(s.dataRead.roots.str{::})}
   .do{Debug#(Ls#(s.dataRead.paths("Pub", {})))}
-  .return{Debug#(Wr#(s.dataReadWrite.writeStr("Notes", L#("a.txt"), "no")))}
+  .return{Debug#(Wr#(s.dataReadWrite.writeStrUtf8("Notes", L#("a.txt"), "no")))}
   }
 """, List.of()));
   }
