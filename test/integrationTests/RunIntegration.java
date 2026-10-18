@@ -490,7 +490,7 @@ zeroMemo
   //@Test void testGui1(){ testOk("testGui1");}
   void compileOk(String name){ var project= freshIntegrationRoot(name); coordinator(project).compile(project, stLib); }
   @Test void theInteractiveProjectsStillCompile(){
-    for (var name : List.of("testGui1", "testGui2", "testGuiImg", "testGuiLive", "testBasketball", "testTicTacToe")){ compileOk(name); }
+    for (var name : List.of("testGui1", "testGui2", "testGuiImg", "testGuiLive", "testGuiInput", "testBasketball", "testTicTacToe")){ compileOk(name); }
   }
 
   // Two assets that generate the same auto-loaded type name (here "foo.txt" and "foo.png",
@@ -638,6 +638,37 @@ REAL ASSET CONTENT
     utils.Err.strCmp("[###]REAL ASSET CONTENT[###]", out);
   }
 
+  static Path inputProject(Path tmp){
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_col/_rank_app.fear
+iii
+use base.Main as Main;
+use base.Debug as Debug;
+Recover: base.BadStrUnitRecover { reason, byteOffset, byteLength, rejectedValue -> "?" }
+First: Main{s -> base.Block#
+  .let in= {s.inputCursor}
+  .do{Debug#(in#.isSome)}
+  .do{Debug#(in#.match{.some n -> n.label+": "+(n.readStrUtf8 Recover); .empty -> "none"})}
+  .return{Debug#(in.next#.isSome)}
+  }
+""");
+    return root;
+  }
+  @Test void theOpenedFileIsTheFirstInputFile(@TempDir Path tmp) throws InterruptedException{
+    var root= inputProject(tmp);
+    var file= tmp.resolve("not\ts.txt");
+    Fs.writeUtf8(file, "caf\u00e9 time");
+    utils.Err.strCmp("True\nnot?s.txt: caf? time\nFalse\n", main(root, List.of("-DfearlessInput.file="+file)));
+  }
+  @Test void withNoOpenedFileTheInputFilesStartEmpty(@TempDir Path tmp) throws InterruptedException{
+    utils.Err.strCmp("False\nnone\nFalse\n", main(inputProject(tmp), List.of()));
+  }
+  @Test void anInputFileThatCanNotBeReadIsANonDeterministicError(@TempDir Path tmp) throws InterruptedException{
+    var root= inputProject(tmp);
+    utils.Err.strCmp("True\n[###]The input file \"gone.txt\" could not be read: NoSuchFileException[###]", main(root, List.of("-DfearlessInput.file="+tmp.resolve("gone.txt"))));
+  }
   @Test void aBaseAssetIsReadFromTheStdLibBase(@TempDir Path tmp) throws InterruptedException{
     var root= tmp.resolve("root");
     UserError.root = root;
@@ -1449,7 +1480,7 @@ Hello:Main{s->base.Debug#("from z")}
     var c= coordinator(project);
     c.compile(project, stLib);
     var out= new StringBuilder();
-    var child= Coordinator.startMain(project, ResolveResource.stLibPath, "term.FirstDoesNotWaitForTheRest", c.sharedClasspath(), out::append);
+    var child= Coordinator.startMain(project, ResolveResource.stLibPath, "term.FirstDoesNotWaitForTheRest", Optional.empty(), c.sharedClasspath(), out::append);
     var waiter= new Thread(() -> {
       try{ child.await(); }
       catch (InterruptedException _){ child.kill(); }
@@ -1464,7 +1495,7 @@ Hello:Main{s->base.Debug#("from z")}
     var root= ResolveResource.integrationTests.resolve("runRecursion");
     if (!recursionCompiled){ compileOk("runRecursion"); recursionCompiled = true; }
     var out= new StringBuilder();
-    Coordinator.startMain(root, ResolveResource.stLibPath, main, coordinator(root).sharedClasspath(), out::append).await();
+    Coordinator.startMain(root, ResolveResource.stLibPath, main, Optional.empty(), coordinator(root).sharedClasspath(), out::append).await();
     return out.toString();
   }
   @Test void aDeepRecursionOverflowsTheStackOfMain() throws InterruptedException{
@@ -1571,14 +1602,14 @@ b
     var cp= Push.of(Coordinator.genJava(root.resolve(Coordinator.outDir)), c.sharedClasspath());
     var out= new StringBuilder();
     assertEquals(1, JavaTool.startMainFromJars(Coordinator.runData(root, c.stdLibBase()), cp, "_col.Main", out::append).await(), out::toString);
-    assertEquals(1, Coordinator.startMain(root, c.stdLibBase(), "col.A", c.sharedClasspath(), out::append).await(), out::toString);
-    assertEquals(0, Coordinator.startMain(root, c.stdLibBase(), "col.B", c.sharedClasspath(), out::append).await(), out::toString);
+    assertEquals(1, Coordinator.startMain(root, c.stdLibBase(), "col.A", Optional.empty(), c.sharedClasspath(), out::append).await(), out::toString);
+    assertEquals(0, Coordinator.startMain(root, c.stdLibBase(), "col.B", Optional.empty(), c.sharedClasspath(), out::append).await(), out::toString);
   }
   @Test void aMainEndingWithAJavaErrorExitsWith1() throws InterruptedException{
     var root= ResolveResource.integrationTests.resolve("runRecursion");
     if (!recursionCompiled){ compileOk("runRecursion"); recursionCompiled = true; }
     var out= new StringBuilder();
-    assertEquals(1, Coordinator.startMain(root, ResolveResource.stLibPath, "rec.NaiveSum", coordinator(root).sharedClasspath(), out::append).await(), out::toString);
+    assertEquals(1, Coordinator.startMain(root, ResolveResource.stLibPath, "rec.NaiveSum", Optional.empty(), coordinator(root).sharedClasspath(), out::append).await(), out::toString);
     utils.Err.strCmp("[###]java.lang.StackOverflowError[###]", out.toString());
   }
 
