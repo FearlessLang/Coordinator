@@ -735,7 +735,7 @@ Q: base.UnencodableRecover{ scalar, index -> L#(63.getByte) }
     utils.Err.strCmp("""
 [Pub]
 [Notes]
-[data.fearless, notes, pics, readme, todo]
+[notes, pics, readme, todo]
 [deep, inner, one.txt]
 [three.txt]
 The path "readme" of "Pub" names a resource, not a folder.
@@ -753,6 +753,7 @@ Notes/notes/a.txt: first
 The path "notes/b.txt" of "Pub" names no resource.
 The path "todo" of "Pub" names a folder, not a resource.
 The path "" of "Pub" names the root folder, not a resource.
+The path "data.fearless" of "Pub" is not valid: the top of a data project holds no resource with the extension "fearless": that is the place of the marker of the project, which is not part of the data project.
 """, dataRun(tmp, """
 Reads: Main{s -> base.Block#
   .do{Debug#(s.dataRead.roots.str{::})}
@@ -773,7 +774,8 @@ Reads: Main{s -> base.Block#
   .do{Debug#(Rd#(s.dataReadWrite.read("Notes", L#("notes", "a.txt"))))}
   .do{Debug#(Rd#(s.dataRead.read("Pub", L#("notes", "b.txt"))))}
   .do{Debug#(Rd#(s.dataRead.read("Pub", L#("todo"))))}
-  .return{Debug#(Rd#(s.dataRead.read("Pub", {})))}
+  .do{Debug#(Rd#(s.dataRead.read("Pub", {})))}
+  .return{Debug#(Rd#(s.dataRead.read("Pub", L#("data.fearless"))))}
   }
 """, dataLinks(data, data)));
   }
@@ -794,7 +796,7 @@ ok
 "Pub" is not a root of this capability. Its roots are "Notes".
 The path "Bad.txt" of "Notes" is not valid: "Bad.txt" %s
 The path "pics/x.zip" of "Notes" is not valid: "x.zip" %s
-The path "other.fearless" of "Notes" is not written or deleted: a resource with the extension "fearless" at the top of a data project is its marker.
+The path "other.fearless" of "Notes" is not valid: the top of a data project holds no resource with the extension "fearless": that is the place of the marker of the project, which is not part of the data project.
 The path "readme/x.txt" of "Notes" is not valid: "readme" is a resource, not a folder.
 The path "readme.md" of "Notes" is not written: its folder holds "readme", and a resource without extension can not share its name with a resource with an extension.
 The path "todo" of "Notes" names a folder, not a resource.
@@ -839,9 +841,9 @@ ok
 ok
 ok
 The path "notes/a.txt" of "Notes" names no resource.
-The path "data.fearless" of "Notes" is not written or deleted: a resource with the extension "fearless" at the top of a data project is its marker.
+The path "data.fearless" of "Notes" is not valid: the top of a data project holds no resource with the extension "fearless": that is the place of the marker of the project, which is not part of the data project.
 "Pub" is not a root of this capability. Its roots are "Notes".
-[data.fearless, readme, todo]
+[readme, todo]
 """, dataRun(tmp, """
 Deletes: Main{s -> base.Block#
   .let w= {s.dataReadWrite}
