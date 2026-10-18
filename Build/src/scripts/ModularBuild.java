@@ -39,7 +39,11 @@ public final class ModularBuild{
     JavacTool.javac(List.of(tests.resolve("test"), tests.resolve("testModule")), out.resolve("commons-test"), mods);
     return out.resolve("commons-test");
   }
-  static Path frontendTest(){ return test(ResolveResource.frontendSrc, "frontend-test"); }
+  static Path frontendTest(){
+    var compact= ResolveResource.frontendSrc.getParent().resolveSibling("compact_frontend");
+    buildJar("CompactFrontend", List.of(compact.resolve("src"), compact.resolve("srcModule")));
+    return test(ResolveResource.frontendSrc, "frontend-test");
+  }
   static Path coordinatorTest(){ return test(ResolveResource.coordinatorSrc, "coordinator-test", resources); }
   static Path controllerTest(){ return test(ResolveResource.controllerSrc, "controller-test", resources); }
   static Path test(Path src, String name, Path... extra){
