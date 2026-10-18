@@ -14,6 +14,7 @@ import core.LiteralDeclarations;
 import core.M;
 import core.MName;
 import core.RC;
+import core.T;
 import core.TName;
 import offensiveUtils.Require;
 import realSourceOracle.SourceOracleWithAutoload;
@@ -60,8 +61,13 @@ public final class Backend{
     }
     if (hasInstance){ sb.a("  "+iface+" instance= new "+iface+"(){};"+cacheField(l)); }
     Fs.writeUtf8(out.resolve(iface+".java"), sb.a("}").toString());
-    if (hasInstance && implementsType(l, "base.Main", 0)){ mains.put(l.name().s(), iface); }
+    if (hasInstance && implementsType(l, "base.Main", 0)){ mains.put(l.name().s(), iface); mainIcons.put(l.name().s(), mainIcon(l)); }
     fixers.add(sb);
+  }
+  private String mainIcon(Literal l){
+    return l.cs().stream()
+      .filter(c -> c.name().equals(new TName("base.Shortcut", 1, Pos.unknown)) || c.name().equals(new TName("base.Shortcut", 2, Pos.unknown)))
+      .findFirst().map(c -> typeName(((T.RCC) c.ts().getFirst()).c().name())+".instance").orElse("null");
   }
   private static boolean implementsType(Literal l, String name, int arity){ return LiteralDeclarations.has(l.cs(), new TName(name, arity, Pos.unknown)); }
   private static String cacheField(Literal l){
@@ -121,6 +127,7 @@ public final class Backend{
     return rc.name()+"$"+(s.startsWith(".") ? encodeTrailingPrimes(s.substring(1)) : "$"+mangleOp(s))+"$"+m.arity();
   }
   final TreeMap<String,String> mains= new TreeMap<>();
+  final TreeMap<String,String> mainIcons= new TreeMap<>();
   void writeMainJava(){
     var all= Join.of(mains.keySet().stream().map(n -> "\""+n+"\""), "{", ",", "}", "{}");
     var assets= Join.of(tools.capabilities().autoloadedAssets().values().stream().map(Backend::assetLiteral), "{", ",", "}", "{}");
@@ -133,7 +140,7 @@ public final class Backend{
       .append("  public static void main(String[] args){ var ok= true; for (String n: args.length == 0 ? all : args){ ok&= run(n); } if (!ok){ System.exit(1); } }\n")
       .append("  static boolean run(String n){\n");
     mains.forEach((n,iface) -> sb
-      .append("    if (n.equals(\"").append(n).append("\")){ return _base.Util.topLevel(()->")
+      .append("    if (n.equals(\"").append(n).append("\")){ _base._FluentGUI.mainIcon= ").append(mainIcons.get(n)).append("; return _base.Util.topLevel(()->")
       .append(iface).append(".instance.imm$main$1(new ").append(typeName(new TName("base._System", 0, Pos.unknown))).append("())); }\n"));
     sb.append("    throw new AssertionError(\"No main called \"+n+\" in package ").append(tools.pkgName()).append("\");\n  }\n}\n");
     Fs.writeUtf8(out.resolve("Main.java"), sb.toString());
