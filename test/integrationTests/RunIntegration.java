@@ -661,7 +661,7 @@ First: Main{s -> base.Block#
   }
   @Test void theOpenedFileIsTheFirstInputFile(@TempDir Path tmp) throws InterruptedException{
     var root= inputProject(tmp);
-    var file= tmp.resolve("not\ts.txt");
+    var file= tmp.resolve("not"+(Fs.isWindows() ? "é" : "\t")+"s.txt");
     Fs.writeUtf8(file, "caf\u00e9 time");
     utils.Err.strCmp("True\nnot?s.txt: caf? time\nFalse\n", main(root, List.of("-DfearlessInput.file="+file)));
   }
