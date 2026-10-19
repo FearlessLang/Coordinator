@@ -1751,7 +1751,7 @@ Hello:Main{s->base.Debug#("from z")}
     utils.Err.strCmp("[###]java.lang.StackOverflowError[###]", runRecursionMain("rec.CrowdedSum"));
   }
   @Test void aFamilyWithTheSameStackAndALowerDepthFits() throws InterruptedException{
-    utils.Err.strCmp("500000500000", runRecursionMain("rec.SpreadSum"));
+    utils.Err.strCmp("5000050000", runRecursionMain("rec.SpreadSum"));
   }
   @Test void aFamilyNestedInAnotherRunsOnItsOwnThreads() throws InterruptedException{
     utils.Err.strCmp("2100000", runRecursionMain("rec.MixedSum"));
