@@ -24,16 +24,17 @@ final class MainsInfoTest{
   static{ utils.Err.setUp(AssertionFailedError.class, Assertions::assertEquals, Assertions::assertTrue); }
   static final String text= """
 {
-  "hello.Bar": ["_hello/bar.fear", [["hello.IconsBar", "_hello/icons/bar.png", "", "", "bar"]], [["base.IconsConflict", "icons/conflict.png", "", "", ""], ["hello.ZInFoo", "_hello/z.zip", "y.zip", "in/foo.png", "ffile042"]]],
-  "hello.Beer": ["_hello/beer.fear", [], []]
+  "hello.Bar": ["_hello/bar.fear", [["hello.IconsBar", "_hello/icons/bar.png", "", "", "bar"]], [["base.IconsConflict", "icons/conflict.png", "", "", ""], ["hello.ZInFoo", "_hello/z.zip", "y.zip", "in/foo.png", "ffile042"]], [["hello.IconsBar", "_hello/icons/bar.png", "", "", ""], ["base.IconsFearless", "icons/fearless.png", "", "", ""]]],
+  "hello.Beer": ["_hello/beer.fear", [], [], [["base.IconsFearless", "icons/fearless.png", "", "", ""]]]
 }
 """;
   @Test void printsSortedAndReadsBack(@TempDir Path project){
     var info= new MainsInfo(Map.of(
-      "hello.Beer", new Main("_hello/beer.fear", List.of(), List.of()),
+      "hello.Beer", new Main("_hello/beer.fear", List.of(), List.of(), List.of(new Claim("base.IconsFearless", "icons/fearless.png", "", "", ""))),
       "hello.Bar", new Main("_hello/bar.fear",
         List.of(new Claim("hello.IconsBar", "_hello/icons/bar.png", "", "", "bar")),
-        List.of(new Claim("base.IconsConflict", "icons/conflict.png", "", "", ""), new Claim("hello.ZInFoo", "_hello/z.zip", "y.zip", "in/foo.png", "ffile042")))));
+        List.of(new Claim("base.IconsConflict", "icons/conflict.png", "", "", ""), new Claim("hello.ZInFoo", "_hello/z.zip", "y.zip", "in/foo.png", "ffile042")),
+        List.of(new Claim("hello.IconsBar", "_hello/icons/bar.png", "", "", ""), new Claim("base.IconsFearless", "icons/fearless.png", "", "", "")))));
     utils.Err.strCmp(text, info.print());
     Fs.writeUtf8(project.resolve(Coordinator.outDir).resolve("mains.info"), info.print());
     var back= MainsInfo.read(project).orElseThrow();
@@ -44,7 +45,7 @@ final class MainsInfoTest{
   @Test void aClaimWithFourStringsIsRefused(@TempDir Path project){
     Fs.writeUtf8(project.resolve(Coordinator.outDir).resolve("mains.info"), """
 {
-  "hello.Beer": ["_hello/beer.fear", [["hello.IconsBar", "_hello/icons/bar.png", "", ""]], []]
+  "hello.Beer": ["_hello/beer.fear", [["hello.IconsBar", "_hello/icons/bar.png", "", ""]], [], []]
 }
 """);
     var ex= assertThrows(UserError.class, () -> MainsInfo.read(project));
@@ -54,7 +55,7 @@ Build cache contains an invalid cached file.
 Parse error:
   In file: [###]mains.info
 
-002|   "hello.Beer": ["_hello/beer.fear", [["hello.IconsBar", "_hello/icons/bar.png", "", ""]], []]
+002|   "hello.Beer": ["_hello/beer.fear", [["hello.IconsBar", "_hello/icons/bar.png", "", ""]], [], []]
    |                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 While inspecting the file

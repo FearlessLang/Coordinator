@@ -83,7 +83,7 @@ public final class Main{
     var identity= l.getFileName().toString().replaceFirst("\\.[^.]*$", "");
     if (!belongsToFamily.test(identity)){ return; }
     var icon= appDir.resolve("icon.png");
-    FileAssociations.reconcile(identity, belongsToFamily, l, List.of(new Icon(".fearless", l, icon)), l, icon,
+    FileAssociations.reconcile(identity, belongsToFamily, l, List.of(new Icon(".fearless", l, icon)), List.of(), l, icon,
       reported -> Violation.associationsAmbiguous(reported).withRecovery(
         "Remove all Fearless registrations", () -> FileAssociations.eradicateAll(belongsToFamily, Violation::associationLeftHalfDone)),
       locked -> Violation.associationUserLocked(locked, e -> ""),
