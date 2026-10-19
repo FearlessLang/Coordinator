@@ -4,6 +4,6 @@ package scripts;
 public final class TestAllController{
   public static void main(String[] args) throws InterruptedException{
     ModularBuild.mainJars();
-    ModularBuild.runJUnit(ModularBuild.controllerTest(), "--exclude-package=agentTools");
+    ModularBuild.runJUnit(args, ModularBuild.controllerTest(), "--exclude-package=agentTools");
   }
 }

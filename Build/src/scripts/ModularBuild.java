@@ -68,11 +68,14 @@ public final class ModularBuild{
     buildJar("FearlessTour", List.of(tour.resolve("src"), resources), List.of("-requires-automatic"));
   }
 
-  static void runJUnit(Path testClasses, String... extraArgs) throws InterruptedException{
+  static void runJUnit(String[] scriptArgs, Path testClasses, String... extraArgs) throws InterruptedException{
+    var compact= List.of(scriptArgs).equals(List.of("compact"));
+    if (!compact && scriptArgs.length != 0){ throw new IllegalArgumentException("Expected no arguments or the single argument compact, got "+List.of(scriptArgs)); }
+    var jvmArgs= compact ? List.of("-ea", "-Dcompact=true") : List.of("-ea");
     var args= Push.<String>of(List.of("execute",
       "--class-path", testClasses.toString(), "--scan-class-path="+testClasses,
       "--include-classname=.*", "--details=summary", "--disable-ansi-colors"), List.of(extraArgs));
-    JavaTool.runMain(List.of("-ea"), testClasses, mods, "org.junit.platform.console.ConsoleLauncher", args.toArray(String[]::new));
+    JavaTool.runMain(jvmArgs, testClasses, mods, "org.junit.platform.console.ConsoleLauncher", args.toArray(String[]::new));
   }
 
   static void deploy(Path folderOut, List<List<Path>> srcs, String binName, String mainClass, boolean eclipsePlugin) throws InterruptedException{

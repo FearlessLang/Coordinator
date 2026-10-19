@@ -10,6 +10,6 @@ public final class TestFearlessTour{
     ModularBuild.coordinatorMain();
     ModularBuild.fearlessTour();
     Fs.copyTreeFlat(ResolveResource.coordinatorTestJars, ModularBuild.mods);
-    ModularBuild.runJUnit(ModularBuild.out.resolve("FearlessTour"));
+    ModularBuild.runJUnit(args, ModularBuild.out.resolve("FearlessTour"));
   }
 }
