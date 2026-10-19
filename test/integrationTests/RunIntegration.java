@@ -733,7 +733,7 @@ Q: base.UnencodableRecover{ scalar, index -> L#(63.getByte) }
   @Test void aDataProjectIsReadThroughTheRootsOfACapabilityAndAZipIsAFolder(@TempDir Path tmp){
     var data= dataProject(tmp);
     utils.Err.strCmp("""
-[Pub]
+[Notes, Pub]
 [Notes]
 [notes, pics, readme, todo]
 [deep, inner, one.txt]
@@ -741,8 +741,8 @@ Q: base.UnencodableRecover{ scalar, index -> L#(63.getByte) }
 The path "readme" of "Pub" names a resource, not a folder.
 The path "none" of "Pub" names no folder.
 The path ".hidden" of "Pub" is not valid: ".hidden" is not a valid folder name. A folder name uses only lowercase letters, digits and underscores, starts with a letter or an underscore, and is not "con", "prn", "aux", "nul", "com1" to "com9" or "lpt1" to "lpt9".
-"Nope" is not a root of this capability. Its roots are "Pub".
-"Notes" is not a root of this capability. Its roots are "Pub".
+"Nope" is not a root of this capability. Its roots are "Notes", "Pub".
+Notes/readme: hi
 "Pub" is not a root of this capability. Its roots are "Notes".
 Pub/readme: hi
 2
