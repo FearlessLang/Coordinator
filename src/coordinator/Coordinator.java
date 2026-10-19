@@ -105,8 +105,12 @@ public interface Coordinator{
     out.mains(l.pkgs().keySet()).mains().forEach((k,v) -> res.put(k, v.file()));
     return Optional.of(Collections.unmodifiableMap(res));
   }
-  static ChildJvm startMain(Path project, Path base, String main, Optional<Path> input, List<String> desk, List<Path> sharedClasspath, Consumer<String> out){
-    var jvmArgs= Stream.of(runData(project, base).stream(), input.map(i -> "-DfearlessInput.file="+i).stream(), desk.stream()).flatMap(s -> s).toList();
+  static ChildJvm startMain(Path project, Path base, String main, Optional<Path> input, Map<String,Path> reads, Map<String,Path> edits, List<String> desk, List<Path> sharedClasspath, Consumer<String> out){
+    var jvmArgs= new ArrayList<>(runData(project, base));
+    input.ifPresent(i -> jvmArgs.add("-DfearlessInput.file="+i));
+    reads.forEach((k,v) -> jvmArgs.add("-DfearlessDataRead."+k+"="+v));
+    edits.forEach((k,v) -> jvmArgs.add("-DfearlessDataWrite."+k+"="+v));
+    jvmArgs.addAll(desk);
     return JavaTool.startMainFromJars(jvmArgs, Push.of(genJava(project.resolve(outDir)), sharedClasspath), "_"+main.substring(0, main.indexOf('.'))+".Main", out, main);
   }
   static Path genJava(Path outRoot){ return outRoot.resolve("gen_java"); }

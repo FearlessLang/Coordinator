@@ -1,6 +1,7 @@
 package integrationTests;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -22,6 +23,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import javax.imageio.ImageIO;
 
@@ -55,6 +57,7 @@ import tools.SourceOracle;
 import tools.SourceOracle.Ref;
 import userMessages.UserError;
 import utils.Join;
+import utils.OneOr;
 import utils.Push;
 
 final class RunIntegration{
@@ -668,6 +671,241 @@ First: Main{s -> base.Block#
   @Test void anInputFileThatCanNotBeReadIsANonDeterministicError(@TempDir Path tmp) throws InterruptedException{
     var root= inputProject(tmp);
     utils.Err.strCmp("True\n[###]The input file \"gone.txt\" could not be read: NoSuchFileException[###]", main(root, List.of("-DfearlessInput.file="+tmp.resolve("gone.txt"))));
+  }
+  static Path dataProject(Path tmp){
+    var data= tmp.resolve("data");
+    FsDsl.materialize(data, """
+data.fearless
+iii
+
+jjj
+readme
+iii
+hi
+jjj
+notes/a.txt
+iii
+first
+jjj
+todo/item.txt
+iii
+milk
+jjj
+.hidden/secret.txt
+iii
+secret
+jjj
+pics.zip/one.txt
+iii
+inside
+jjj
+pics.zip/deep/two.txt
+iii
+deeper
+jjj
+pics.zip/inner.zip/three.txt
+iii
+nested
+""");
+    return data;
+  }
+  String dataRun(Path tmp, String main, List<String> links){
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_col/_rank_app.fear
+iii
+use base.Main as Main;
+use base.Debug as Debug;
+use base.Lists as L;
+Recover: base.BadStrUnitRecover { reason, byteOffset, byteLength, rejectedValue -> "?" }
+Ls: { #(a: mut base.Action[base.List[base.Str]]): base.Str -> a.run{.ok xs -> xs.str{::}; .info i -> i.getMsg} }
+Rd: { #(a: mut base.Action[mut base.InputCursorNode]): base.Str -> a.run{.ok n -> n.label+": "+(n.readStrUtf8 Recover); .info i -> i.getMsg} }
+Wr: { #(a: mut base.Action[base.Void]): base.Str -> a.run{.ok _ -> "ok"; .info i -> i.getMsg} }
+Sz: { #(a: mut base.Action[mut base.InputCursorNode]): base.Str -> a.run{.ok n -> n.readBytes.size.str; .info i -> i.getMsg} }
+Q: base.UnencodableRecover{ scalar, index -> L#(63.getByte) }
+"""+main);
+    return main(root, links);
+  }
+  static List<String> dataLinks(Path pub, Path notes){ return List.of("-DfearlessDataRead.Pub="+pub, "-DfearlessDataWrite.Notes="+notes); }
+  static List<String> fearPaths(Path data){ return new RealSourceOracleWithZip(data).allFiles().stream().map(Ref::fearPath).toList(); }
+  static String fearFile(Path data, String fearPath){ return OneOr.of(fearPath, new RealSourceOracleWithZip(data).allFiles().stream().filter(r -> r.fearPath().equals(fearPath))).loadString(); }
+  @Test void aDataProjectIsReadThroughTheRootsOfACapabilityAndAZipIsAFolder(@TempDir Path tmp){
+    var data= dataProject(tmp);
+    utils.Err.strCmp("""
+[Notes, Pub]
+[Notes]
+[notes, pics, readme, todo]
+[deep, inner, one.txt]
+[three.txt]
+The path "readme" of "Pub" names a resource, not a folder.
+The path "none" of "Pub" names no folder.
+The path ".hidden" of "Pub" is not valid: ".hidden" is not a valid folder name. A folder name uses only lowercase letters, digits and underscores, starts with a letter or an underscore, and is not "con", "prn", "aux", "nul", "com1" to "com9" or "lpt1" to "lpt9".
+"Nope" is not a root of this capability. Its roots are "Notes", "Pub".
+Notes/readme: hi
+"Pub" is not a root of this capability. Its roots are "Notes".
+Pub/readme: hi
+2
+Pub/pics/deep/two.txt: deeper
+Notes/pics/inner/three.txt: nested
+
+Notes/notes/a.txt: first
+The path "notes/b.txt" of "Pub" names no resource.
+The path "todo" of "Pub" names a folder, not a resource.
+The path "" of "Pub" names the root folder, not a resource.
+The path "data.fearless" of "Pub" is not valid: the top of a data project holds no resource with the extension "fearless": that is the place of the marker of the project, which is not part of the data project.
+""", dataRun(tmp, """
+Reads: Main{s -> base.Block#
+  .do{Debug#(s.dataRead.roots.str{::})}
+  .do{Debug#(s.dataReadWrite.roots.str{::})}
+  .do{Debug#(Ls#(s.dataRead.paths("Pub", {})))}
+  .do{Debug#(Ls#(s.dataRead.paths("Pub", L#("pics"))))}
+  .do{Debug#(Ls#(s.dataReadWrite.paths("Notes", L#("pics", "inner"))))}
+  .do{Debug#(Ls#(s.dataRead.paths("Pub", L#("readme"))))}
+  .do{Debug#(Ls#(s.dataRead.paths("Pub", L#("none"))))}
+  .do{Debug#(Ls#(s.dataRead.paths("Pub", L#(".hidden"))))}
+  .do{Debug#(Ls#(s.dataRead.paths("Nope", {})))}
+  .do{Debug#(Rd#(s.dataRead.read("Notes", L#("readme"))))}
+  .do{Debug#(Rd#(s.dataReadWrite.read("Pub", L#("readme"))))}
+  .do{Debug#(Rd#(s.dataRead.read("Pub", L#("readme"))))}
+  .do{Debug#(Sz#(s.dataRead.read("Pub", L#("readme"))))}
+  .do{Debug#(Rd#(s.dataRead.read("Pub", L#("pics", "deep", "two.txt"))))}
+  .do{Debug#(Rd#(s.dataReadWrite.read("Notes", L#("pics", "inner", "three.txt"))))}
+  .do{Debug#(Rd#(s.dataReadWrite.read("Notes", L#("notes", "a.txt"))))}
+  .do{Debug#(Rd#(s.dataRead.read("Pub", L#("notes", "b.txt"))))}
+  .do{Debug#(Rd#(s.dataRead.read("Pub", L#("todo"))))}
+  .do{Debug#(Rd#(s.dataRead.read("Pub", {})))}
+  .return{Debug#(Rd#(s.dataRead.read("Pub", L#("data.fearless"))))}
+  }
+""", dataLinks(data, data)));
+  }
+  @Test void aWriteKeepsTheDataProjectValidAndRewritesTheZipsItEnters(@TempDir Path tmp){
+    var data= dataProject(tmp);
+    var resourceName= "is not a valid resource name. A resource name is a valid folder name, a dot and an extension of 1 to 16 lowercase letters or digits, other than \"zip\" (a zip is a folder); a few well known names, like \"readme\", have no extension, and a few well known extensions, like \"tar.gz\", have two parts.";
+    utils.Err.strCmp("""
+ok
+ok
+ok
+ok
+ok
+ok
+ok
+ok
+ok
+ok
+"Pub" is not a root of this capability. Its roots are "Notes".
+The path "Bad.txt" of "Notes" is not valid: "Bad.txt" %s
+The path "pics/x.zip" of "Notes" is not valid: "x.zip" %s
+The path "other.fearless" of "Notes" is not valid: the top of a data project holds no resource with the extension "fearless": that is the place of the marker of the project, which is not part of the data project.
+The path "readme/x.txt" of "Notes" is not valid: "readme" is a resource, not a folder.
+The path "readme.md" of "Notes" is not written: its folder holds "readme", and a resource without extension can not share its name with a resource with an extension.
+The path "todo" of "Notes" names a folder, not a resource.
+""".formatted(resourceName, resourceName), dataRun(tmp, """
+Writes: Main{s -> base.Block#
+  .let w= {s.dataReadWrite}
+  .do{Debug#(Wr#(w.writeStrUtf8("Notes", L#("notes", "b.txt"), "second")))}
+  .do{Debug#(Wr#(w.writeStrAscii("Notes", L#("fresh", "deeper", "c.txt"), "third")))}
+  .do{Debug#(Wr#(w.writeStrLatin1("Notes", L#("pics", "deep", "four.txt"), "zipped")))}
+  .do{Debug#(Wr#(w.writeStrUtf8("Notes", L#("pics", "inner", "three.txt"), "renested")))}
+  .do{Debug#(Wr#(w.writeStrUtf8("Notes", L#("pics", "new", "five.txt"), "in a new folder of a zip")))}
+  .do{Debug#(Wr#(w.writeUStrUtf16Le("Notes", L#("u16.txt"), "caf".u("00E9"))))}
+  .do{Debug#(Wr#(w.writeBytes("Notes", L#("raw.bin"), L#(72.getByte, 105.getByte))))}
+  .do{Debug#(Wr#(w.writeStrUtf32Be("Notes", L#("u32.txt"), "A")))}
+  .do{Debug#(Wr#(w.writeUStrAscii("Notes", L#("ascii.txt"), "caf".u("00E9"), Q)))}
+  .do{Debug#(Wr#(w.writeUStrLatin1("Notes", L#("latin1.txt"), "caf".u("00E9 1F600"), Q)))}
+  .do{Debug#(Wr#(w.writeStrUtf8("Pub", L#("x.txt"), "no")))}
+  .do{Debug#(Wr#(w.writeStrUtf8("Notes", L#("Bad.txt"), "no")))}
+  .do{Debug#(Wr#(w.writeStrUtf8("Notes", L#("pics", "x.zip"), "no")))}
+  .do{Debug#(Wr#(w.writeStrUtf8("Notes", L#("other.fearless"), "no")))}
+  .do{Debug#(Wr#(w.writeStrUtf8("Notes", L#("readme", "x.txt"), "no")))}
+  .do{Debug#(Wr#(w.writeStrUtf8("Notes", L#("readme.md"), "no")))}
+  .return{Debug#(Wr#(w.writeStrUtf8("Notes", L#("todo"), "no")))}
+  }
+""", dataLinks(data, data)));
+    assertEquals(List.of("fear:/ascii.txt", "fear:/data.fearless", "fear:/fresh/deeper/c.txt", "fear:/latin1.txt", "fear:/notes/a.txt", "fear:/notes/b.txt",
+      "fear:/pics/deep/four.txt", "fear:/pics/deep/two.txt", "fear:/pics/inner/three.txt", "fear:/pics/new/five.txt", "fear:/pics/one.txt",
+      "fear:/raw.bin", "fear:/readme", "fear:/todo/item.txt", "fear:/u16.txt", "fear:/u32.txt"), fearPaths(data));
+    assertEquals(List.of("second", "third", "zipped", "renested", "in a new folder of a zip", "deeper", "Hi", "caf?"),
+      Stream.of("notes/b.txt", "fresh/deeper/c.txt", "pics/deep/four.txt", "pics/inner/three.txt", "pics/new/five.txt", "pics/deep/two.txt", "raw.bin", "ascii.txt").map(p -> fearFile(data, "fear:/"+p)).toList());
+    assertArrayEquals(new byte[]{'c', 0, 'a', 0, 'f', 0, (byte)0xE9, 0}, Fs.of(() -> Files.readAllBytes(data.resolve("u16.txt"))));
+    assertArrayEquals(new byte[]{0, 0, 0, 'A'}, Fs.of(() -> Files.readAllBytes(data.resolve("u32.txt"))));
+    assertArrayEquals(new byte[]{'c', 'a', 'f', (byte)0xE9, '?'}, Fs.of(() -> Files.readAllBytes(data.resolve("latin1.txt"))));
+    assertFalse(Files.exists(data.resolve("pics")));
+  }
+  @Test void aDeleteRemovesTheFoldersAndTheZipsItLeavesEmpty(@TempDir Path tmp){
+    var data= dataProject(tmp);
+    utils.Err.strCmp("""
+ok
+[deep, one.txt]
+ok
+ok
+ok
+The path "notes/a.txt" of "Notes" names no resource.
+The path "data.fearless" of "Notes" is not valid: the top of a data project holds no resource with the extension "fearless": that is the place of the marker of the project, which is not part of the data project.
+"Pub" is not a root of this capability. Its roots are "Notes".
+[readme, todo]
+""", dataRun(tmp, """
+Deletes: Main{s -> base.Block#
+  .let w= {s.dataReadWrite}
+  .do{Debug#(Wr#(w.delete("Notes", L#("pics", "inner", "three.txt"))))}
+  .do{Debug#(Ls#(w.paths("Notes", L#("pics"))))}
+  .do{Debug#(Wr#(w.delete("Notes", L#("pics", "deep", "two.txt"))))}
+  .do{Debug#(Wr#(w.delete("Notes", L#("pics", "one.txt"))))}
+  .do{Debug#(Wr#(w.delete("Notes", L#("notes", "a.txt"))))}
+  .do{Debug#(Wr#(w.delete("Notes", L#("notes", "a.txt"))))}
+  .do{Debug#(Wr#(w.delete("Notes", L#("data.fearless"))))}
+  .do{Debug#(Wr#(w.delete("Pub", L#("readme"))))}
+  .return{Debug#(Ls#(w.paths("Notes", {})))}
+  }
+""", dataLinks(data, data)));
+    assertEquals(List.of("fear:/data.fearless", "fear:/readme", "fear:/todo/item.txt"), fearPaths(data));
+    assertTrue(Files.isDirectory(data.resolve(".hidden")));
+    assertFalse(Files.exists(data.resolve("pics.zip")));
+    assertFalse(Files.exists(data.resolve("notes")));
+  }
+  @Test void anImageIsWrittenAsAPng(@TempDir Path tmp) throws IOException{
+    var data= dataProject(tmp);
+    var img= new BufferedImage(2, 3, BufferedImage.TYPE_INT_ARGB);
+    img.setRGB(1, 2, 0xFF336699);
+    var bout= new ByteArrayOutputStream();
+    ImageIO.write(img, "png", bout);
+    Files.write(data.resolve("pic.png"), bout.toByteArray());
+    utils.Err.strCmp("ok\n", dataRun(tmp, """
+Images: Main{s -> base.Block#
+  .let img= {s.dataRead.read("Pub", L#("pic.png")).run{.ok n -> n.readImage(1000); .info i -> base.Error!i}}
+  .return{Debug#(Wr#(s.dataReadWrite.writeImagePng("Notes", L#("copy.png"), img)))}
+  }
+""", dataLinks(data, data)));
+    var copy= ImageIO.read(data.resolve("copy.png").toFile());
+    assertEquals(List.of(2, 3, 0xFF336699, 0), List.of(copy.getWidth(), copy.getHeight(), copy.getRGB(1, 2), copy.getRGB(0, 0)));
+  }
+  @Test void aDataProjectThatChangedOnDiskIsANonDeterministicError(@TempDir Path tmp){
+    var data= dataProject(tmp);
+    utils.Err.strCmp("""
+ok
+[###]The resource "Notes/readme" could not be read: NoSuchFileException[###]""", dataRun(tmp, """
+Gone: Main{s -> base.Block#
+  .let n= {s.dataReadWrite.read("Notes", L#("readme")).run{.ok n -> n; .info i -> base.Error!i}}
+  .do{Debug#(Wr#(s.dataReadWrite.delete("Notes", L#("readme"))))}
+  .return{Debug#(n.readStrUtf8 Recover)}
+  }
+""", dataLinks(data, data)));
+    utils.Err.strCmp("[###]The path \"\" of \"Pub\" could not be read: NoSuchFileException[###]", dataRun(tmp, """
+Gone: Main{s -> Debug#(Ls#(s.dataRead.paths("Pub", {})))}
+""", dataLinks(tmp.resolve("gone"), data)));
+  }
+  @Test void aProgramWithNoLinksHasNoRoot(@TempDir Path tmp){
+    utils.Err.strCmp("""
+[]
+"Pub" is not a root of this capability. This capability has no root.
+"Notes" is not a root of this capability. This capability has no root.
+""", dataRun(tmp, """
+NoLinks: Main{s -> base.Block#
+  .do{Debug#(s.dataRead.roots.str{::})}
+  .do{Debug#(Ls#(s.dataRead.paths("Pub", {})))}
+  .return{Debug#(Wr#(s.dataReadWrite.writeStrUtf8("Notes", L#("a.txt"), "no")))}
+  }
+""", List.of()));
   }
   @Test void aBaseAssetIsReadFromTheStdLibBase(@TempDir Path tmp) throws InterruptedException{
     var root= tmp.resolve("root");
@@ -1482,7 +1720,7 @@ Hello:Main{s->base.Debug#("from z")}
     var c= coordinator(project);
     c.compile(project, stLib);
     var out= new StringBuilder();
-    var child= Coordinator.startMain(project, ResolveResource.stLibPath, "term.FirstDoesNotWaitForTheRest", Optional.empty(), List.of(), c.sharedClasspath(), out::append);
+    var child= Coordinator.startMain(project, ResolveResource.stLibPath, "term.FirstDoesNotWaitForTheRest", Optional.empty(), Map.of(), Map.of(), List.of(), c.sharedClasspath(), out::append);
     var waiter= new Thread(() -> {
       try{ child.await(); }
       catch (InterruptedException _){ child.kill(); }
@@ -1497,7 +1735,7 @@ Hello:Main{s->base.Debug#("from z")}
     var root= ResolveResource.integrationTests.resolve("runRecursion");
     if (!recursionCompiled){ compileOk("runRecursion"); recursionCompiled = true; }
     var out= new StringBuilder();
-    Coordinator.startMain(root, ResolveResource.stLibPath, main, Optional.empty(), List.of(), coordinator(root).sharedClasspath(), out::append).await();
+    Coordinator.startMain(root, ResolveResource.stLibPath, main, Optional.empty(), Map.of(), Map.of(), List.of(), coordinator(root).sharedClasspath(), out::append).await();
     return out.toString();
   }
   @Test void aDeepRecursionOverflowsTheStackOfMain() throws InterruptedException{
@@ -1604,14 +1842,14 @@ b
     var cp= Push.of(Coordinator.genJava(root.resolve(Coordinator.outDir)), c.sharedClasspath());
     var out= new StringBuilder();
     assertEquals(1, JavaTool.startMainFromJars(Coordinator.runData(root, c.stdLibBase()), cp, "_col.Main", out::append).await(), out::toString);
-    assertEquals(1, Coordinator.startMain(root, c.stdLibBase(), "col.A", Optional.empty(), List.of(), c.sharedClasspath(), out::append).await(), out::toString);
-    assertEquals(0, Coordinator.startMain(root, c.stdLibBase(), "col.B", Optional.empty(), List.of(), c.sharedClasspath(), out::append).await(), out::toString);
+    assertEquals(1, Coordinator.startMain(root, c.stdLibBase(), "col.A", Optional.empty(), Map.of(), Map.of(), List.of(), c.sharedClasspath(), out::append).await(), out::toString);
+    assertEquals(0, Coordinator.startMain(root, c.stdLibBase(), "col.B", Optional.empty(), Map.of(), Map.of(), List.of(), c.sharedClasspath(), out::append).await(), out::toString);
   }
   @Test void aMainEndingWithAJavaErrorExitsWith1() throws InterruptedException{
     var root= ResolveResource.integrationTests.resolve("runRecursion");
     if (!recursionCompiled){ compileOk("runRecursion"); recursionCompiled = true; }
     var out= new StringBuilder();
-    assertEquals(1, Coordinator.startMain(root, ResolveResource.stLibPath, "rec.NaiveSum", Optional.empty(), List.of(), coordinator(root).sharedClasspath(), out::append).await(), out::toString);
+    assertEquals(1, Coordinator.startMain(root, ResolveResource.stLibPath, "rec.NaiveSum", Optional.empty(), Map.of(), Map.of(), List.of(), coordinator(root).sharedClasspath(), out::append).await(), out::toString);
     utils.Err.strCmp("[###]java.lang.StackOverflowError[###]", out.toString());
   }
 
