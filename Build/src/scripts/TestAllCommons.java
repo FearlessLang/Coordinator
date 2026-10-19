@@ -4,6 +4,6 @@ package scripts;
 public final class TestAllCommons{
   public static void main(String[] args) throws InterruptedException{
     ModularBuild.commons();
-    ModularBuild.runJUnit(ModularBuild.commonsTest());
+    ModularBuild.runJUnit(args, ModularBuild.commonsTest());
   }
 }

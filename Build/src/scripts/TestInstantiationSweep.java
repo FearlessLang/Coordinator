@@ -5,6 +5,6 @@ public final class TestInstantiationSweep{
   public static void main(String[] args) throws InterruptedException{
     ModularBuild.commons();
     ModularBuild.frontendMain();
-    ModularBuild.runJUnit(ModularBuild.frontendTest(), "--include-package=instantiationSweep");
+    ModularBuild.runJUnit(args, ModularBuild.frontendTest(), "--include-package=instantiationSweep");
   }
 }
