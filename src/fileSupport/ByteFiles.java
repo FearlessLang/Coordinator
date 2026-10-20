@@ -13,7 +13,6 @@ import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.FileSystemException;
 import java.nio.file.FileSystemLoopException;
 import java.nio.file.FileSystemNotFoundException;
-import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.NotDirectoryException;
 import java.nio.file.Path;
@@ -22,6 +21,7 @@ import java.util.Arrays;
 import java.util.Locale;
 
 import utils.Join;
+import tools.Fs;
 
 public final class ByteFiles{
   public enum Op{
@@ -119,12 +119,12 @@ public final class ByteFiles{
   private interface IoOperation<T>{ T run() throws IOException; }
 
   public static <X extends Throwable> byte[] read(Path path, Handler<byte[],X> handler) throws X{
-    return attempt(Op.Read, path, () -> Files.readAllBytes(path), handler);
+    return attempt(Op.Read, path, () -> Fs.readAllBytes(path), handler);
   }
   // Whole-file create: refuses to touch anything already at the location
   // (CREATE_NEW); the refusal classifies as Kind.FileAlreadyExists.
   public static <X extends Throwable> void writeNew(Path path, byte[] bytes, Handler<Void,X> handler) throws X{
-    attempt(Op.Write, path, () -> { Files.write(path, bytes, StandardOpenOption.WRITE, StandardOpenOption.CREATE_NEW); return null; }, handler);
+    attempt(Op.Write, path, () -> { Fs.write(path, bytes, StandardOpenOption.WRITE, StandardOpenOption.CREATE_NEW); return null; }, handler);
   }
   private static <T,X extends Throwable> T attempt(Op op, Path path, IoOperation<T> operation, Handler<T,X> handler) throws X{
     try{ return operation.run(); }
@@ -136,10 +136,10 @@ public final class ByteFiles{
   }
   private static <T,X extends Throwable> T classifyError(Op op, Path path, Throwable firstFailure, Handler<T,X> handler) throws X{
     var kind= kindFromFailure(firstFailure);
-    if ((kind==AccessDenied || kind==UnknownFailureAfterSuccessfulOpen) && Files.isDirectory(path)){ return handler.failure(PathIsFolder, firstFailure); }
+    if ((kind==AccessDenied || kind==UnknownFailureAfterSuccessfulOpen) && Fs.isDirectory(path)){ return handler.failure(PathIsFolder, firstFailure); }
     if (kind != UnknownFailureAfterSuccessfulOpen){ return handler.failure(kind, firstFailure); }
     FileChannel channel;
-    try{ channel= FileChannel.open(path, op.probeOptions); }
+    try{ channel= Fs.openChannel(path, op.probeOptions); }
     catch (IOException|UnsupportedOperationException|ClosedFileSystemException|FileSystemNotFoundException e){
       e.addSuppressed(firstFailure);
       return handler.failure(UnknownOpenFailure, e);

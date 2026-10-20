@@ -9,7 +9,6 @@ import java.awt.Taskbar;
 import java.io.PrintStream;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URI;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
@@ -60,9 +59,9 @@ public final class Main{
       return;
     }
     var l= launch.get();
-    if (!Files.exists(l)){ throw Report.launchPathNotFound(l); }
+    if (!Fs.exists(l)){ throw Report.launchPathNotFound(l); }
     var stdLib= appDir.resolve("stdLib");
-    run(Files.isDirectory(l) ? l : l.getParent(), stdLib.resolve("base"), stdLib.resolve("rt"));
+    run(Fs.isDirectory(l) ? l : l.getParent(), stdLib.resolve("base"), stdLib.resolve("rt"));
   }
   public static void run(Path project, Path base, Path rt) throws InterruptedException{
     UserError.root = project;

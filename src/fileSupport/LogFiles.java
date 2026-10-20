@@ -1,6 +1,5 @@
 package fileSupport;
 
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.time.ZoneId;
@@ -22,9 +21,9 @@ public final class LogFiles{
   }
   public static List<Entry> list(Path folder){
     var dir= folder.resolve(runDir).resolve("logs");
-    if (!Files.isDirectory(dir)){ return List.of(); }
+    if (!Fs.isDirectory(dir)){ return List.of(); }
     return Fs.walk(dir, s -> s
-      .filter(Files::isRegularFile)
+      .filter(Fs::isRegularFile)
       .filter(p -> p.getFileName().toString().endsWith(".log"))
       .map(LogFiles::entry)
       .sorted()

@@ -1,6 +1,5 @@
 package naiveBackend;
 
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
@@ -12,12 +11,13 @@ import core.OtherPackages;
 import docBuilder.HtmlDocBuilder;
 import offensiveUtils.Require;
 import tools.SourceOracle;
+import tools.Fs;
 
 public record BackendTools(String pkgName, List<Literal> decs, Path rootDir, HtmlDocBuilder docs, MagicConsistency checks, CapabilityEnvironment capabilities, Path rtPath){
   public BackendTools{
     assert Require.nonNull(pkgName, rootDir, docs, checks, capabilities);
     assert Require.unmodifiable(decs, "decs");
-    assert Files.exists(rtPath);
+    assert Fs.exists(rtPath);
   }
   public static BackendTools of(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, Path rootDir, Optional<Path> baseCachePath, Path rtPath, CapabilityEnvironment capabilities){
     return of(pkgName, oracle, other, core, rootDir, baseCachePath, Optional.of(rootDir.getParent()), rtPath, capabilities);

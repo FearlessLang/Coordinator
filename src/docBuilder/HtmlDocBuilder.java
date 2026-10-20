@@ -1,7 +1,6 @@
 package docBuilder;
 
 import java.net.URI;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -100,7 +99,7 @@ public final class HtmlDocBuilder{
 
   Optional<Ref> writeTest(HtmlDocRenderer renderer, PathEntry tests){
     var path= tests.root().resolve(tests.local());
-    var old= Files.exists(path) ? Fs.readUtf8(path) : generatedMark;
+    var old= Fs.exists(path) ? Fs.readUtf8(path) : generatedMark;
     if (!generated(old)){ return Optional.empty(); }
     var names= renderer.testNames();
     var declared= types.stream().map(TypeDoc::main).collect(Collectors.toMap(l -> l.name().simpleName(), l -> l, (a,_) -> a));
@@ -113,10 +112,10 @@ public final class HtmlDocBuilder{
   }
 
   private static void remove(Path file){
-    if (!Files.exists(file)){ return; }
-    Fs.ofV(() -> Files.delete(file));
-    var empty= Fs.of(() -> { try (var s= Files.list(file.getParent())){ return s.findAny().isEmpty(); } });
-    if (empty){ Fs.ofV(() -> Files.delete(file.getParent())); }
+    if (!Fs.exists(file)){ return; }
+    Fs.ofV(() -> Fs.delete(file));
+    var empty= Fs.of(() -> { try (var s= Fs.list(file.getParent())){ return s.findAny().isEmpty(); } });
+    if (empty){ Fs.ofV(() -> Fs.delete(file.getParent())); }
   }
   String reservedNameProblem(Literal owner){
     var p= owner.pos();

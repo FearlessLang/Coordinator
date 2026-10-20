@@ -4,7 +4,6 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
@@ -37,7 +36,7 @@ public final class ZipLocator{
   }
   private static List<String> reqEntries(Path diskZip, List<String> steps, byte[] bytes, List<String> names){
     if (!names.isEmpty()){ return names; }
-    var head= bytes!=null ? bytes : Fs.of(() -> { try (var in= Files.newInputStream(diskZip)){ return in.readNBytes(4); } });
+    var head= bytes!=null ? bytes : Fs.of(() -> { try (var in= Fs.newInputStream(diskZip)){ return in.readNBytes(4); } });
     var empty= head.length>=4 && Arrays.equals(head, 0, 4, emptyZipSignature, 0, 4);
     throw empty ? Report.zipNoEntries(diskZip, steps) : Report.zipNotAZip(diskZip, steps);
   }
@@ -53,7 +52,7 @@ public final class ZipLocator{
   }
   private static ZipInputStream zipStream(Path diskZip, byte[] bytes) throws IOException{
     return bytes==null
-      ? new ZipInputStream(Files.newInputStream(diskZip), UTF_8)
+      ? new ZipInputStream(Fs.newInputStream(diskZip), UTF_8)
       : new ZipInputStream(new ByteArrayInputStream(bytes), UTF_8);
   }
   private static <T> T fetch(Path diskZip, List<String> steps, Function<byte[],T> onFinal){

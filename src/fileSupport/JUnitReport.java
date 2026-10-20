@@ -4,7 +4,6 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 
 import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
-import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.time.Instant;
@@ -48,7 +47,7 @@ public final class JUnitReport{
 """.formatted(name, count(body, "<testcase "), count(body, "<failure>"), body);
   }
   private static String complete(Path log){
-    var bytes= Fs.of(() -> Files.readAllBytes(log));
+    var bytes= Fs.of(() -> Fs.readAllBytes(log));
     var end= bytes.length;
     while (end>0 && bytes[end-1]!='\n'){ end -= 1; }
     var whole= ByteBuffer.wrap(bytes, 0, end);

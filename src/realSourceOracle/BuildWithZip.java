@@ -1,7 +1,5 @@
 package realSourceOracle;
 
-import java.nio.file.Files;
-import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.text.Normalizer;
 import java.text.Normalizer.Form;
@@ -38,7 +36,7 @@ public final class BuildWithZip{
     reqNoEmptyDirs();
     Fs.walkV(root, s -> s
       .filter(p -> !p.equals(root))
-      .filter(p -> !isDirectory(p))
+      .filter(p -> !Fs.isDirectory(p))
       .forEach(this::collectFile)
     );
     visKidsByDir.forEach((_,kids) -> {
@@ -56,7 +54,7 @@ public final class BuildWithZip{
     var pe= new PathEntry(root, rel);
     var invisible= isInvisible(pe);
     if (isGeneratedTests(abs)){ return; }
-    if (!isRegularFile(abs)){ throw invisible
+    if (!Fs.isRegularFile(abs)){ throw invisible
       ? Report.invisibleOnlyRegularFilesAndDirs(abs)
       : Report.onlyRegularFilesAndDirs(abs);
     }
@@ -68,8 +66,8 @@ public final class BuildWithZip{
   private void reqNoSiblingForZipName(Path rel){
     var siblingRel= Path.of(AutoloadHandler.dropExt(rel.toString()));
     var sibling= root.resolve(siblingRel);
-    if (!Files.exists(sibling, LinkOption.NOFOLLOW_LINKS)){ return; }
-    throw Report.zipNameClashes(new PathEntry(root, rel), new PathEntry(root, siblingRel), isDirectory(sibling) ? "folder" : "plain file");
+    if (!Fs.exists(sibling)){ return; }
+    throw Report.zipNameClashes(new PathEntry(root, rel), new PathEntry(root, siblingRel), Fs.isDirectory(sibling) ? "folder" : "plain file");
   }
   private void reqNoEmptyDirs(){
     var dirs= new LinkedHashSet<Path>();
@@ -79,20 +77,18 @@ public final class BuildWithZip{
       var rel= root.relativize(abs);
       nonEmpty.add(rel.resolveSibling(""));
       if (isInvisible(new PathEntry(root, rel))){ return; }
-      if (isDirectory(abs)){ dirs.add(rel); }
+      if (Fs.isDirectory(abs)){ dirs.add(rel); }
     }));
     for (var d : dirs){ if (!nonEmpty.contains(d)){ throw Report.emptyDirectory(d); } }
   }
-  private static boolean isDirectory(Path abs){ return Files.isDirectory(abs, LinkOption.NOFOLLOW_LINKS); }
   private static void reqTime(Path abs, Path rel){
     var t= Fs.lastModified(abs);
     BuildWithZip.reqTime(t, () -> Report.dateUnset(rel, t), now -> Report.dateInTheFuture(rel, t, now));
   }
   private static boolean isGeneratedTests(Path abs){
     var shape= abs.getParent().getFileName().toString().equals("auto_tests") && abs.getFileName().toString().endsWith("_test.fear");
-    return shape && isRegularFile(abs) && HtmlDocBuilder.generated(Fs.readUtf8(abs));
+    return shape && Fs.isRegularFile(abs) && HtmlDocBuilder.generated(Fs.readUtf8(abs));
   }
-  private static boolean isRegularFile(Path abs){ return Files.isRegularFile(abs, LinkOption.NOFOLLOW_LINKS); }
   private void collectBodyDiskZip(Path rel){
     for (var e : ZipEntry.allEntryPaths(root, rel)){
       if (e.segments().getLast().endsWith(".zip")){ continue; }//expanded

@@ -1,7 +1,6 @@
 package realSourceOracle;
 
 import java.net.URI;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
@@ -9,12 +8,13 @@ import java.util.stream.Collectors;
 
 import tools.SourceOracle;
 import userMessages.Report;
+import tools.Fs;
 
 public final class RealSourceOracleWithZip implements SourceOracle{
   private final List<Ref> allFiles;
   private final Map<URI,Ref> byUri;
   public RealSourceOracleWithZip(Path root){
-    if (!Files.isDirectory(root)){ throw Report.rootNotDirectory(); }
+    if (!Fs.isDirectory(root)){ throw Report.rootNotDirectory(); }
     allFiles= new BuildWithZip(root).build();
     byUri= allFiles.stream().collect(Collectors.toUnmodifiableMap(r -> r.fearURI().normalize(), r -> r));
   }

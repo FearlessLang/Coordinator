@@ -5,7 +5,6 @@ import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 
 import fileSupport.ByteFiles.Op;
@@ -163,11 +162,9 @@ final class Suppressed{
   List<Throwable> toList(){ return List.copyOf(errors); }
 }
 final class CommonInfo{
-  private static final int portableLinkDepth= 8;  // POSIX guarantees only SYMLOOP_MAX >= 8
-  private static final int maxLinkFollowed= 64;   // backstop so the walk always terminates
 
   static String of(Op op, Path path, Suppressed suppressed){
-    return "Fearless could not "+op.verb+" this file:\n\n  "+located(path, suppressed)+"\n\n"+chain(path, suppressed);
+    return "Fearless could not "+op.verb+" this file:\n\n  "+located(path, suppressed);
   }
   private static String rootOf(Path path){
     var root= path.toAbsolutePath().getRoot();//getRoot() may be null when the path has no root component (documented normal result)
@@ -185,26 +182,10 @@ final class CommonInfo{
   }
   private static String volumeOf(Path path, Suppressed suppressed){
     try{
-      var store= Files.getFileStore(path);
+      var store= Fs.getFileStore(path);
       return Message.displayString(store.name())+"  "+Message.displayString(store.type());
     }
     catch (IOException e){ return "<reading volume failed>"+suppressed.mark(e); }//documented: getFileStore throws when the file/volume cannot be read
-  }
-  private static String chain(Path path, Suppressed suppressed){
-    var visited= new HashSet<Path>();
-    var out= new StringBuilder();
-    var current= path.toAbsolutePath().normalize();//normalize is lexical, no I/O
-    try{
-      while (Files.isSymbolicLink(current)){//returns false (not throws) on error, ending the walk
-        if (visited.size() >= maxLinkFollowed){ return out.append("\nChain exceeds ").append(maxLinkFollowed).append(" links; not followed further.\n").toString(); }
-        if (!visited.add(current)){ return out.append("\nChain loops back to ").append(Message.displayString(current.toString())).append(".\n").toString(); }
-        current = current.getParent().resolve(Files.readSymbolicLink(current)).normalize();//read to advance; relative to the link's own dir; current is absolute and a root cannot be a symlink, so getParent()!=null
-        out.append("\n  ").append(located(current, suppressed)).append("\n");//either last is final location or a dedicated message is present
-      }
-    }
-    catch (IOException e){ return out.append("\n<reading next failed>").append(suppressed.mark(e)).append("\n").toString(); }
-    if (visited.size() > portableLinkDepth){ out.append("\nWarning: ").append(visited.size()).append(" links deep; some systems may cap it at 8.\n"); }
-    return out.toString();
   }
 }
 
@@ -715,7 +696,7 @@ This describes a momentary state of the whole computer, not a property of this f
 final class FileTooLargeForByteArray{
   static String of(Path path, Suppressed suppressed){
     String size;
-    try{ size= String.format("%,d bytes", Files.size(path)); }
+    try{ size= String.format("%,d bytes", Fs.size(path)); }
     catch (IOException e){ size = "<reading the size failed>"+suppressed.mark(e); }//documented: Files.size throws when the file cannot be read
     return "This file is "+size+" long. Fearless reads a file into one block of memory, and\n"
       +"one block can hold at most 2,147,483,647 bytes (about 2 GB).\n";
