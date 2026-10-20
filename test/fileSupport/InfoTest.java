@@ -39,13 +39,13 @@ final class InfoTest{
     assertEquals(List.of("x", "y"), ((Info.Lst)obj.field("a").orElseThrow().value()).items().stream().map(i -> ((Info.Str)i).value()).toList());
     assertTrue(((Info.Obj)obj.field("b").orElseThrow().value()).fields().isEmpty());
   }
-  @Test void lineCommentsAreSkipped(){
-    var obj= (Info.Obj)parse("{\n  \"a\": \"x\" // a comment\n}");
-    assertEquals("x", ((Info.Str)obj.field("a").orElseThrow().value()).value());
+  @Test void aCommentIsRejected(){
+    err("[###]Expected ',' or '}' here, to continue or to close the object.[###]", () -> parse("{\n  \"a\": \"x\" // a comment\n}"));
+    err("[###]Unexpected extra text after the end of the value[###]", () -> parse("{}\n// a comment\n"));
   }
-  @Test void wholeWhitespaceAndCommentsRoundTripToTheSameStructure(){
+  @Test void wholeWhitespaceRoundTripsToTheSameStructure(){
     var a= parse("{\"a\":\"1\",\"b\":[\"2\",\"3\"]}");
-    var b= parse("{\n  \"a\" : \"1\" ,\n  \"b\" : [ \"2\" , \"3\" ]\n}\n// trailing comment is not even reached\n");
+    var b= parse("{\n  \"a\" : \"1\" ,\n  \"b\" : [ \"2\" , \"3\" ]\n}\n");
     assertEquals(Info.print(a), Info.print(b));
   }
   @Test void anUnclosedStringPointsAtWhereItStarted(){
