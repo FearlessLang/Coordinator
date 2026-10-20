@@ -55,10 +55,6 @@ public final class BuildWithZip{
     var rel= root.relativize(abs);
     var pe= new PathEntry(root, rel);
     var invisible= isInvisible(pe);
-    if (Files.isSymbolicLink(abs)){
-      if (invisible){ return; }
-      throw Report.symlinkForbidden(abs);
-    }
     if (isGeneratedTests(abs)){ return; }
     if (!isRegularFile(abs)){ throw invisible
       ? Report.invisibleOnlyRegularFilesAndDirs(abs)
