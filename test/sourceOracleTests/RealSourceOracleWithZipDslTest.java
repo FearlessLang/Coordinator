@@ -1307,6 +1307,7 @@ We check this so that you[###]
   @Test void errVisibleSymlinkForbidden(@TempDir Path tmp) throws Exception{
     var root= tmp.resolve("root").toAbsolutePath().normalize();
     UserError.root = root;
+    Fs.onSymbolicLink= Report::symlinkForbidden;
     Files.createDirectories(root.resolve("_pkg"));
     createSymbolicLinkOrSkip(root.resolve("_pkg/link.fear"), root.resolve("_pkg/missing.fear"));
     var ex= assertThrows(UserError.class, () -> new RealSourceOracleWithZip(root));
@@ -1328,17 +1329,30 @@ We check this so that you[###]
 """, FsDsl.dumpErr(root, ex));
   }
 
-  @Test void okInvisibleSymlinkIsIgnored(@TempDir Path tmp) throws Exception{
+  @Test void errInvisibleSymlinkForbidden(@TempDir Path tmp) throws Exception{
     var root= tmp.resolve("root").toAbsolutePath().normalize();
     UserError.root = root;
+    Fs.onSymbolicLink= Report::symlinkForbidden;
     Files.createDirectories(root.resolve("_pkg/.d"));
     Files.writeString(root.resolve("_pkg/a.fear"), "A");
-    Files.writeString(root.resolve("_pkg/.d/real.txt"), "R");
     createSymbolicLinkOrSkip(root.resolve("_pkg/.d/link"), root.resolve("_pkg/.d/missing"));
-    assertEquals("""
---- fear:/_pkg/a.fear
-A
-""", FsDsl.dump(new RealSourceOracleWithZip(root)));
+    var ex= assertThrows(UserError.class, () -> new RealSourceOracleWithZip(root));
+    utils.Err.strCmp("""
+Invalid path in this project folder.
+
+Root: [###]
+Path: "<root>/_pkg/.d/link"
+
+What went wrong
+- This path is a symbolic link.
+  Symbolic links behave differently across systems and tools, so we forbid them.
+
+How to fix
+- Replace the symbolic link with a real file/folder.
+- If you need the linked content, copy it into the repository.
+
+We check this so that you[###]
+""", FsDsl.dumpErr(root, ex));
   }
 
   @Test void errExtensionlessMasksExtension(@TempDir Path tmp){ runErrIOE(tmp, """

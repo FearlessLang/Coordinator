@@ -62,10 +62,11 @@ public final class Main{
     var l= launch.get();
     if (!Files.exists(l)){ throw Report.launchPathNotFound(l); }
     var stdLib= appDir.resolve("stdLib");
-    run(Files.isDirectory(l) ? l : l.getParent(), stdLib.resolve("base"), stdLib.resolve("rt"));
+    run(Fs.of((Files.isDirectory(l) ? l : l.getParent())::toRealPath), stdLib.resolve("base"), stdLib.resolve("rt"));
   }
   public static void run(Path project, Path base, Path rt) throws InterruptedException{
     UserError.root = project;
+    Fs.onSymbolicLink= Report::symlinkForbidden;
     var c= new Coordinator(){
       @Override public Optional<Path> baseCachePath(){ return Optional.of(base.getParent().resolve("baseCache")); }
       @Override public BackendTools backendTools(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, CapabilityEnvironment capabilities){

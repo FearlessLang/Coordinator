@@ -1,6 +1,5 @@
 package mainCoordinator;
 
-import java.nio.file.Files;
 import java.nio.file.Path;
 
 import tools.Fs;
@@ -10,13 +9,13 @@ public final class MakeDemo{
   public static final String markerContent= "\n";
   public static void of(Path projectDir){
     hello(projectDir, "demo", "Hello");
-    if (!Files.exists(projectDir.resolve("start.fearless"))){ Fs.writeUtf8(projectDir.resolve("start.fearless"), markerContent); }
+    if (!Fs.exists(projectDir.resolve("start.fearless"))){ Fs.writeUtf8(projectDir.resolve("start.fearless"), markerContent); }
     OpenPath.open(projectDir);
   }
   public static void hello(Path projectDir, String pkg, String type){
     var pkgDir= projectDir.resolve("_"+pkg);
     Fs.ensureDir(pkgDir);
-    if (!Files.exists(pkgDir.resolve("_rank_app.fear"))){ Fs.writeUtf8(pkgDir.resolve("_rank_app.fear"), rankAppFear.formatted(type)); }
+    if (!Fs.exists(pkgDir.resolve("_rank_app.fear"))){ Fs.writeUtf8(pkgDir.resolve("_rank_app.fear"), rankAppFear.formatted(type)); }
   }
 
   private static final String rankAppFear= """

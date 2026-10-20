@@ -1,7 +1,6 @@
 package coordinator;
 
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
 import java.util.Collection;
@@ -35,10 +34,10 @@ public interface OutputOracle{
   default long mapStamp(){ return Fs.lastModified(mapPath()); }
   default long pkgApiStamp(String pkg){ return Fs.lastModified(pkgApiPath(pkg)); }
   default boolean stillBuilt(String pkg, List<Ref> files, List<String> below, long minMillis){
-    return Fs.lastModified(builtPath(pkg))>=minMillis && OutputHelper.readAllowed(builtPath(pkg)).orElseThrow().equals(OutputHelper.built(files, below)) && Files.exists(mainsPath(pkg));
+    return Fs.lastModified(builtPath(pkg))>=minMillis && OutputHelper.readAllowed(builtPath(pkg)).orElseThrow().equals(OutputHelper.built(files, below)) && Fs.exists(mainsPath(pkg));
   }
   default void forgetAllBut(List<String> pkgs){
-    if (!Files.isDirectory(rootDir())){ return; }
+    if (!Fs.isDirectory(rootDir())){ return; }
     var gone= Fs.walk(rootDir(), s -> s.map(Path::getFileName).map(Path::toString)
       .filter(n -> n.endsWith(".built")).map(n -> n.substring(0, n.length()-6)).filter(p -> !pkgs.contains(p)).toList());
     gone.forEach(this::forget);
@@ -58,12 +57,12 @@ public interface OutputOracle{
     if (res.isPresent() && OutputHelper.consistent(res.get(), core)){ return pkgApiStamp(pkg); }
     return Fs.writeUtf8(pkgApiPath(pkg), ApiJson.toJson(core), res.isEmpty() ? -1 : minExclusiveMillis);
   }
-  default Optional<MainsInfo> mainsInfo(){ return Optional.of(mainsPath()).filter(Files::exists).map(MainsInfo::parse); }
+  default Optional<MainsInfo> mainsInfo(){ return Optional.of(mainsPath()).filter(Fs::exists).map(MainsInfo::parse); }
   default long commit(String pkg, List<Literal> core, Map<String,MainsInfo.Main> mains, List<Ref> files, List<String> below, long inputsStamp){
     var newStamp= commitPkgApi(pkg, core, inputsStamp);
     Fs.writeUtf8(mainsPath(pkg), new MainsInfo(mains).print());
     Fs.writeUtf8(builtPath(pkg), OutputHelper.built(files, below));
-    Fs.ofV(() -> Files.setLastModifiedTime(builtPath(pkg), FileTime.fromMillis(inputsStamp)));
+    Fs.ofV(() -> Fs.setLastModifiedTime(builtPath(pkg), FileTime.fromMillis(inputsStamp)));
     return newStamp;
   }
   default MainsInfo mains(Collection<String> pkgs){
@@ -94,8 +93,8 @@ final class OutputHelper{
   }
   static Optional<Map<String,Map<String,String>>> mapFromJson(Path p){ return readAllowed(p).map(s -> new LimitedJsonParser(s, p).obj2()); }
   static Optional<String> readAllowed(Path p){
-    if (!Files.exists(p)){ return Optional.empty(); }
-    var bs= Fs.of(() -> Files.readAllBytes(p));
+    if (!Fs.exists(p)){ return Optional.empty(); }
+    var bs= Fs.of(() -> Fs.readAllBytes(p));
     var bad= IntStream.range(0, bs.length).filter(i -> Fs.allowed.indexOf(bs[i]) < 0).findFirst();
     if (bad.isPresent()){ throw dropCache(p, Violation.cacheInvalidFile(p, "Unexpected character "+Message.displayChar((char)(bs[bad.getAsInt()] & 0xff))+" at "+bad.getAsInt())); }
     return Optional.of(new String(bs, StandardCharsets.US_ASCII));

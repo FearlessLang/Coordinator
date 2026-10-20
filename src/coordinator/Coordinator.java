@@ -1,7 +1,6 @@
 package coordinator;
 
 import java.net.URI;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -69,7 +68,7 @@ public interface Coordinator{
     var out= Helper.out(path);
     var mapCommitted= OutputHelper.mapFromJson(out.mapPath()).filter(Helper.rankMap(o, ranks)::equals).isPresent();
     var top= ranks.stream().mapToInt(Helper::rankNumber).max().getAsInt();
-    var listed= Files.exists(out.mainsPath());
+    var listed= Fs.exists(out.mainsPath());
     var res= new LinkedHashMap<String,Boolean>();
     for (var r : ranks){
       var pkg= Helper.pkgName(r);

@@ -7,7 +7,6 @@ import java.lang.classfile.CodeElement;
 import java.lang.classfile.attribute.SourceFileAttribute;
 import java.lang.classfile.instruction.LineNumber;
 import java.net.URI;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.TreeMap;
 import java.util.function.Consumer;
@@ -59,8 +58,8 @@ final class BytecodeLineFix implements Consumer<Path>{
       .dropping(e -> e instanceof SourceFileAttribute)
       .andThen(ClassTransform.endHandler(b -> b.with(SourceFileAttribute.of(sourceFile))))
       .andThen(ClassTransform.transformingMethodBodies(this::patchCode));
-    var out= cf.transformClass(cf.parse(Fs.of(() -> Files.readAllBytes(classFile))), xform);
-    Fs.ofV(() -> Files.write(classFile, out));
+    var out= cf.transformClass(cf.parse(Fs.of(() -> Fs.readAllBytes(classFile))), xform);
+    Fs.ofV(() -> Fs.write(classFile, out));
   }
   private void patchCode(CodeBuilder cb, CodeElement ce){
     cb.with(ce instanceof LineNumber ln ? LineNumber.of(fearlessLine(ln.line())) : ce);
