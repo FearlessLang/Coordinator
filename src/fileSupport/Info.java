@@ -122,13 +122,7 @@ public sealed interface Info{
         afterItem = false;
       }
     }
-    private void ws(){
-      while (more()){
-        if (peek()==' ' || peek()=='\n'){ advance(); continue; }
-        if (!text.startsWith("//", i)){ return; }
-        while (more() && peek()!='\n'){ advance(); }
-      }
-    }
+    private void ws(){ while (more() && (peek()==' ' || peek()=='\n')){ advance(); } }
     private boolean more(){ return i < text.length(); }
     private char peek(){ return text.charAt(i); }
     private char advance(){
