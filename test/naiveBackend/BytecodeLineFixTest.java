@@ -9,6 +9,7 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -51,7 +52,7 @@ final class BytecodeLineFixTest{
     Fs.writeUtf8(srcFile, fix.toString());
     Fs.ensureDir(classesDir);
     Fs.runTool("javac", List.of("-d", classesDir.toString(), srcFile.toString()));
-    fix.accept(Fs.walk(classesDir, s -> s.toList()));
+    fix.accept(Fs.walk(classesDir, Stream::toList));
     try (var loader= new URLClassLoader(new URL[]{classesDir.toUri().toURL()})){
       var cls= Class.forName("generated.Greet", true, loader);
       var instance= cls.getField("instance").get(null);

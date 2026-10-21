@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.function.Consumer;
+import java.util.stream.Stream;
 
 import coordinator.Coordinator;
 import tools.Fs;
@@ -29,7 +30,7 @@ public final class NaiveBackendLogicMain{
     Fs.rmTree(outPath); Fs.rmTree(classes);//comment out this line to keep the generated .java and .class files for debugging
   }
   private static void fix(List<Consumer<List<Path>>> fixers, Path pkgPath){
-    var files= Fs.walk(pkgPath, s -> s.toList());
+    var files= Fs.walk(pkgPath, Stream::toList);
     fixers.forEach(f -> f.accept(files));
   }
   private static boolean foldDistinct(Path dir){
