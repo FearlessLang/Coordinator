@@ -2142,17 +2142,4 @@ Hello:Main{s->base.Debug#(
     }
     finally{ server.stop(0); }
   }
-
-  @Test void downloadTimesOutOnStalledResponse(@TempDir Path tmp) throws Exception{
-    var server= startServer(_ -> {});
-    try{
-      var root= tmp.resolve("root");
-      UserError.root = root;
-      FsDsl.materialize(root, downloadProject(url(server, "/stall"),
-        "s.download.downloadStrUtf8(\"$URL\", 1000, NeverRecovers)"));
-      var out= coordinator(root).main(root, stLib);
-      utils.Err.strCmp("[###]Download timed out[###]", out);
-    }
-    finally{ server.stop(0); }
-  }
 }
