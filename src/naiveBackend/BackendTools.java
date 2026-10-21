@@ -10,8 +10,8 @@ import core.E.Literal;
 import core.OtherPackages;
 import docBuilder.HtmlDocBuilder;
 import offensiveUtils.Require;
-import tools.SourceOracle;
 import tools.Fs;
+import tools.SourceOracle;
 
 public record BackendTools(String pkgName, List<Literal> decs, Path rootDir, HtmlDocBuilder docs, MagicConsistency checks, CapabilityEnvironment capabilities, Path rtPath){
   public BackendTools{

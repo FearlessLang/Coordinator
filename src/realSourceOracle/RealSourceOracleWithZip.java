@@ -6,9 +6,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import tools.Fs;
 import tools.SourceOracle;
 import userMessages.Report;
-import tools.Fs;
 
 public final class RealSourceOracleWithZip implements SourceOracle{
   private final List<Ref> allFiles;

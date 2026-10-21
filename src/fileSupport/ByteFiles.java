@@ -20,8 +20,8 @@ import java.nio.file.StandardOpenOption;
 import java.util.Arrays;
 import java.util.Locale;
 
-import utils.Join;
 import tools.Fs;
+import utils.Join;
 
 public final class ByteFiles{
   public enum Op{
