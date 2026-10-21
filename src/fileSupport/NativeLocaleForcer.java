@@ -65,7 +65,7 @@ public final class NativeLocaleForcer{
       linker.defaultLookup().findOrThrow("setlocale"),
       FunctionDescriptor.of(ADDRESS, JAVA_INT, ADDRESS));
     try (var arena= Arena.ofConfined()){
-      var res= (MemorySegment) setlocale.invokeExact(lcAll, arena.allocateFrom("C"));
+      var res= (MemorySegment)setlocale.invokeExact(lcAll, arena.allocateFrom("C"));
       if (MemorySegment.NULL.equals(res)){ throw Violation.couldNotForceEnglish("The C runtime rejected setlocale(LC_ALL, \"C\")"); }
     }
   }
@@ -97,7 +97,7 @@ public final class NativeLocaleForcer{
     // exactly "en-US\0\0".
     var languages= arena.allocateFrom(enUs+"\0", StandardCharsets.UTF_16LE);
     var count= arena.allocate(JAVA_INT);
-    var ok= (int) set.invokeExact(callState, 8/*MUI_LANGUAGE_NAME*/, languages, count);
+    var ok= (int)set.invokeExact(callState, 8/*MUI_LANGUAGE_NAME*/, languages, count);
     if (ok == 0){ throw Violation.couldNotForceEnglish("Windows rejected the process UI language call (GetLastError="+lastError(callState)+")"); }
     if (count.get(JAVA_INT, 0) != 1){ throw Violation.couldNotForceEnglish("Windows accepted process UI language call but did not set exactly one language"); }
   }
@@ -105,7 +105,7 @@ public final class NativeLocaleForcer{
     var count= arena.allocate(JAVA_INT);
     var buffer= arena.allocate(JAVA_CHAR, maxProcessUiLanguageChars);
     var bufferChars= arena.allocateFrom(JAVA_INT, maxProcessUiLanguageChars);
-    var ok= (int) get.invokeExact(callState, 8/*MUI_LANGUAGE_NAME*/, count, buffer, bufferChars);
+    var ok= (int)get.invokeExact(callState, 8/*MUI_LANGUAGE_NAME*/, count, buffer, bufferChars);
     if (ok == 0){
       throw Violation.couldNotForceEnglish("Windows process UI language read failed (GetLastError="+lastError(callState)+")");
     }
@@ -114,7 +114,7 @@ public final class NativeLocaleForcer{
     throw Violation.couldNotForceEnglish("Fearless set the Windows process UI language to en-US, but Windows reported the language as "+languages+" instead");
   }
   private static int lastError(MemorySegment callState){
-    return (int) Linker.Option.captureStateLayout().varHandle(MemoryLayout.PathElement.groupElement("GetLastError")).get(callState, 0L);
+    return (int)Linker.Option.captureStateLayout().varHandle(MemoryLayout.PathElement.groupElement("GetLastError")).get(callState, 0L);
   }
   private static List<String> parseDoubleNullTerminatedUtf16(MemorySegment wideList){
     var out= new ArrayList<String>();
