@@ -14,12 +14,6 @@ import java.util.Optional;
 import utils.Pos;
 
 final class SourceDocs{
-  SourceDocs(URI uri, String text){
-    this.uri= uri;
-    lines= text.lines().toList();
-    scan();
-  }
-
   final URI uri;
   final List<String> lines;
   final HashMap<Integer,List<DocOcc>> docsByLine= new HashMap<>();
@@ -27,6 +21,12 @@ final class SourceDocs{
   final HashSet<DocOcc> attached= new HashSet<>();
   final HashMap<DocOcc,Integer> inlineClaimedFromColumn= new HashMap<>();
   final LinkedHashSet<DocOcc> ambiguousInline= new LinkedHashSet<>();
+
+  SourceDocs(URI uri, String text){
+    this.uri= uri;
+    lines= text.lines().toList();
+    scan();
+  }
 
   List<DocOcc> docsAt(Pos pos, boolean includeBefore){
     assert pos.line()>0 && pos.line()<=lines.size() : pos;

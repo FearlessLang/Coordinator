@@ -44,12 +44,12 @@ import utils.Join;
 /// really used, the path rendering helpers, and how the text reaches a human.
 @SuppressWarnings("serial")
 public final class UserError extends RuntimeException{
-  public UserError(String msg){ super(msg); }
-  public UserError(String msg, Throwable cause){ super(msg, cause); }
-
   private String recoveryLabel;
   private Runnable recovery;
   private boolean bare;
+  public UserError(String msg){ super(msg); }
+  public UserError(String msg, Throwable cause){ super(msg, cause); }
+
   public UserError withRecovery(String label, Runnable action){
     recoveryLabel = label; recovery = action;
     return this;

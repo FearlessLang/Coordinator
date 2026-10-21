@@ -26,6 +26,16 @@ import utils.Join;
 import utils.Range;
 
 final class HtmlDocRenderer{
+  final String pkgName;
+  final List<TypeDoc> types;
+  final Map<DocOcc,Map<Integer,DocLink>> spans;
+  final Optional<Path> baseDocLocation;
+  //filled by href() as links are emitted, so every ambiguous link that reaches the
+  //page also gets its landing section; rendered after all types, when it is complete.
+  final LinkedHashMap<DocLink.Ambiguous,String> pages= new LinkedHashMap<>();
+  final ExportedToStr toStr;
+  final DocResolver resolver;
+
   HtmlDocRenderer(String pkgName, Map<String,String> uses, List<TypeDoc> types, OtherPackages other,
       Map<DocOcc,Map<Integer,DocLink>> spans, Optional<Path> baseDocLocation){
     assert Require.nonNull(pkgName, uses, types, other, spans, baseDocLocation);
@@ -36,16 +46,6 @@ final class HtmlDocRenderer{
     toStr= new ExportedToStr(pkgName, uses);
     resolver= new DocResolver(pkgName, types, other);
   }
-
-  final String pkgName;
-  final List<TypeDoc> types;
-  final Map<DocOcc,Map<Integer,DocLink>> spans;
-  final Optional<Path> baseDocLocation;
-  //filled by href() as links are emitted, so every ambiguous link that reaches the
-  //page also gets its landing section; rendered after all types, when it is complete.
-  final LinkedHashMap<DocLink.Ambiguous,String> pages= new LinkedHashMap<>();
-  final ExportedToStr toStr;
-  final DocResolver resolver;
 
   String render(){
     var shown= visibleTypes();

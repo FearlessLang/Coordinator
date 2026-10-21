@@ -50,10 +50,10 @@ final class DocRefScanner{
   /// One reference, read left to right: an optional receiver, then an optional
   /// selector. Each name is handed to core to be judged.
   private static final class Parse{
-    Parse(String s){ this.s= s; }
     final String s;
     int i= 0;
     boolean ok= true;
+    Parse(String s){ this.s= s; }
 
     Optional<DocRef> ref(){
       var receiver= startsSelector() ? Optional.<DocRef.Receiver>empty() : receiver();

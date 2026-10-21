@@ -32,13 +32,6 @@ import userMessages.Report;
 import utils.Pos;
 
 public final class HtmlDocBuilder{
-  public HtmlDocBuilder(SourceOracle oracle, OtherPackages other, List<Literal> core, Optional<Path> baseDocLocation){
-    assert Require.nonNull(oracle, other, core, baseDocLocation);
-    this.oracle= oracle;
-    this.other= other;
-    this.baseDocLocation= baseDocLocation;
-    currentByName= core.stream().collect(Collectors.toUnmodifiableMap(Literal::name, l -> l));
-  }
   final Optional<Path> baseDocLocation;
 
   final SourceOracle oracle;
@@ -52,6 +45,14 @@ public final class HtmlDocBuilder{
   final ArrayList<TypeDoc> types= new ArrayList<>();
   final IdentityHashMap<Src,TypeDoc> typeBySrc= new IdentityHashMap<>();
   final LinkedHashMap<URI,SourceDocs> sources= new LinkedHashMap<>();
+
+  public HtmlDocBuilder(SourceOracle oracle, OtherPackages other, List<Literal> core, Optional<Path> baseDocLocation){
+    assert Require.nonNull(oracle, other, core, baseDocLocation);
+    this.oracle= oracle;
+    this.other= other;
+    this.baseDocLocation= baseDocLocation;
+    currentByName= core.stream().collect(Collectors.toUnmodifiableMap(Literal::name, l -> l));
+  }
 
   public void packageLocation(String pkgName, Path htmlPath, Optional<Path> testsRoot){
     assert Require.nonNull(pkgName, htmlPath, testsRoot);
