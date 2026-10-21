@@ -27,10 +27,8 @@ import userMessages.Violation;
 // No code will set up thread-specific languages.
 // Code should fail instead of gracefully degrading.
 //
-// Native access is now the JDK's own java.lang.foreign (FFM) API; the os.Os
-// abstraction is gone. The launcher flags stay the same:
-// --enable-native-access=<your.module.name> added by jpackage
-// --illegal-native-access=deny
+// Native access is the JDK's own java.lang.foreign (FFM) API, granted by the launcher flag
+// --enable-native-access=Commons,Coordinator (tools.JavacTool.javaOptions, added by jpackage)
 //
 // Symbol sources:
 // - setlocale: the C runtime. Linker.nativeLinker().defaultLookup() exposes it on
@@ -57,8 +55,7 @@ public final class NativeLocaleForcer{
     catch (Throwable e){ throw Violation.couldNotForceEnglish("The call into the operating system failed.", e); }
   }
   // char* setlocale(int category, const char* locale);
-  // Returns NULL when the request is rejected; per the fail-loudly policy (and unlike
-  // the old Os version, which never looked at the result) NULL is now an Error.
+  // Returns NULL when the request is rejected; per the fail-loudly policy NULL is an Error.
   @SuppressWarnings("restricted")
   private static void setCLocale(int lcAll) throws Throwable{
     var setlocale= linker.downcallHandle(

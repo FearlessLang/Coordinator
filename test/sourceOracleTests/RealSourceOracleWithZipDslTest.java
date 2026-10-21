@@ -806,10 +806,10 @@ How to fix
 We check this so that you[###]
 """);}
 
-  //Same name, same rule, but the protected path is a zip sitting on disk: Tree.collectFile
-  //returns on a protected zip BEFORE addKid, so that zip is never a kid of its folder and
-  //none of the protected-name checks (characters, reserved device names, case/NFC sibling
-  //collisions, path length) ever see it. ".a:b.txt" is rejected, ".a:b.zip" is accepted.
+  //Same name, same rule, but the protected path is a zip sitting on disk: BuildWithZip.collectFile
+  //makes a protected zip a kid of its folder like any other protected file, so the
+  //protected-name checks (characters, reserved device names, case/NFC sibling collisions,
+  //path length) see it too. ".a:b.zip" is rejected like ".a:b.txt".
   @Test void errInvisibleDiskZipWindowsBadCharColon(@TempDir Path tmp){ runErrIOE(tmp, """
 .a:b.zip/x.txt
 iii

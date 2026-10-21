@@ -62,7 +62,7 @@ public final class UserError extends RuntimeException{
   //keeps the default, since Fearless is launched from inside the project folder.
   public static Path root= Path.of(".").toAbsolutePath();
 
-  //Set by ManagerMain at the single point where this process becomes the manager
+  //Set by controller.Main at the single point where this process becomes the manager
   //owner. Read only when a message is displayed: what this process is about to do is
   //known then, and is not a property of what went wrong.
   private static boolean managerOwner= false;
