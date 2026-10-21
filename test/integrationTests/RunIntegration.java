@@ -1878,7 +1878,7 @@ Error 7 WellFormedness
 """, ex.getMessage());
   }
 
-  @Test void useOfAHigherRankPackageIsReportedAsUndeclaredNotAsAnOrderingProblem(@TempDir Path tmp) throws InterruptedException{
+  @Test void useOfAHigherRankPackageIsReportedAsARankProblem(@TempDir Path tmp) throws InterruptedException{
     var root= tmp.resolve("root");
     UserError.root = root;
     FsDsl.materialize(root, """
@@ -1901,7 +1901,9 @@ In file: fear:/_a/_rank_core.fear
    |     ^^^^^^^^^^
 
 While inspecting package header
-"use" directive refers to undeclared name: type "Greeting" is not declared in package "z".
+"use" directive refers to type "Greeting" of package "z", which has a higher rank than package "a".
+Package "a" has rank "core" ("_rank_core.fear") and package "z" has rank "app" ("_rank_app.fear").
+A package can only use the packages of the same rank or of a lower rank.
 Error 7 WellFormedness
 """, ex.getMessage());
   }
