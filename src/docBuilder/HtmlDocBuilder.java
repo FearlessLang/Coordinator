@@ -105,8 +105,8 @@ public final class HtmlDocBuilder{
     var names= renderer.testNames();
     var declared= types.stream().map(TypeDoc::main).collect(Collectors.toMap(l -> l.name().simpleName(), l -> l, (a,_) -> a));
     if (names.perType().isEmpty() || declared.containsKey(names.top())){ remove(path); return Optional.empty(); }
-    var collided= names.perType().stream().filter(declared::containsKey).findFirst();
-    if (collided.isPresent()){ throw Report.generatedTestNameReserved(reservedNameProblem(declared.get(collided.get())), names.top()); }
+    names.perType().stream().filter(declared::containsKey).findFirst()
+      .ifPresent(n -> { throw Report.generatedTestNameReserved(reservedNameProblem(declared.get(n)), names.top()); });
     var test= renderer.renderTest();
     if (!old.equals(test)){ Fs.writeUtf8(path, test); }
     return Optional.of(tests);

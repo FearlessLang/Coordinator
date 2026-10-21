@@ -95,8 +95,8 @@ final class OutputHelper{
   static Optional<String> readAllowed(Path p){
     if (!Fs.exists(p)){ return Optional.empty(); }
     var bs= Fs.of(() -> Fs.readAllBytes(p));
-    var bad= IntStream.range(0, bs.length).filter(i -> Fs.allowed.indexOf(bs[i]) < 0).findFirst();
-    if (bad.isPresent()){ throw dropCache(p, Violation.cacheInvalidFile(p, "Unexpected character "+Message.displayChar((char)(bs[bad.getAsInt()] & 0xff))+" at "+bad.getAsInt())); }
+    IntStream.range(0, bs.length).filter(i -> Fs.allowed.indexOf(bs[i]) < 0).findFirst()
+      .ifPresent(i -> { throw dropCache(p, Violation.cacheInvalidFile(p, "Unexpected character "+Message.displayChar((char)(bs[i] & 0xff))+" at "+i)); });
     return Optional.of(new String(bs, StandardCharsets.US_ASCII));
   }
   static UserError dropCache(Path file, UserError err){
