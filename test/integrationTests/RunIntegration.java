@@ -293,6 +293,28 @@ App:Main{s->Debug#("hi")}
     utils.Err.strCmp("hi\n", main(root, List.of()));
     utils.Err.strCmp("hi\n", main(root, List.of()));
   }
+  @Test void aDocExampleOfATypeRuns(@TempDir Path tmp){
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_p/_rank_app.fear
+iii
+use base.Main as Main;
+use base.Nat as Nat;
+use base.Debug as Debug;
+///Counts.
+//> .check{Calc.inc(1) .assertEq 5}
+Calc:{
+  .inc(n: Nat): Nat -> n + 1;
+  }
+App:Main{s->Debug#("hi")}
+""");
+    utils.Err.strCmp("""
+Test failure _Calc_Examples at line: [###] in file: _p/auto_tests/p_test.fear
+[###]
+hi
+""", main(root, List.of()));
+  }
   @Test void docExamplesOfTwoTypesSharingASimpleNameWithDifferentAritiesRun(@TempDir Path tmp){
     var root= tmp.resolve("root");
     UserError.root = root;
