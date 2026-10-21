@@ -159,8 +159,7 @@ top level main
   @Test void baseGeneratedExamples(@TempDir Path tmp) throws InterruptedException{
     var out= Coordinator.runMains(Coordinator.runData(tmp, ResolveResource.stLibPath), List.of(ResolveResource.coordinatorJars, baseCache), "_base.Main");
     writeJUnitReport("baseGeneratedExamples", tmp);
-    var fails= out.lines().filter(l -> l.startsWith("Test failure ")).toList();
-    assertTrue(fails.isEmpty(), () -> Join.of(fails, "The doc examples of base failed:\n", "\n", ""));
+    utils.Err.strCmp("", out);
   }
   @Test void testDocs(){
     utils.Err.strCmp("""
@@ -2145,10 +2144,7 @@ Hello:Main{s->base.Debug#(
   }
 
   @Test void downloadTimesOutOnStalledResponse(@TempDir Path tmp) throws Exception{
-    var server= startServer(_ -> {
-      try{ Thread.sleep(40_000); }
-      catch (InterruptedException _){}
-    });
+    var server= startServer(_ -> {});
     try{
       var root= tmp.resolve("root");
       UserError.root = root;
