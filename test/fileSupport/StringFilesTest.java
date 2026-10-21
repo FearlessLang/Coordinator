@@ -4,7 +4,6 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 
@@ -26,7 +25,7 @@ final class StringFilesTest{
     var bytes= Arrays.copyOf(prefix, prefix.length+1);
     bytes[prefix.length] = (byte)0xFF;
     var file= tmp.resolve("bad.fear");
-    Files.write(file, bytes);
+    Fs.write(file, bytes);
     var captured= new Box<String>(null);
     assertThrows(Marker.class, () ->
       StringFiles.read(file, (actionTxt,_) -> { captured.set(actionTxt); throw new Marker(); }));

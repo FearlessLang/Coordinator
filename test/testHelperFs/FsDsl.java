@@ -4,7 +4,6 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.ByteArrayOutputStream;
-import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -17,6 +16,7 @@ import java.util.zip.ZipOutputStream;
 import org.junit.jupiter.api.Assumptions;
 
 import realSourceOracle.RealSourceOracleWithZip;
+import tools.Fs;
 import tools.SourceOracle;
 import userMessages.UserError;
 import utils.Join;
@@ -177,17 +177,17 @@ public final class FsDsl{
 
   private static void mkdirs(Path p){
     if (p == null){ return; }
-    try{ Files.createDirectories(p); }
+    try{ Fs.createDirectories(p); }
     catch (Exception e){ throw new AssertionError(e); }
   }
 
   private static void writeString(Path p, String s){
-    try{ Files.writeString(p, s, UTF_8); }
+    try{ Fs.writeString(p, s); }
     catch (Exception e){ throw new AssertionError(e); }
   }
 
   private static void writeBytes(Path p, byte[] bs){
-    try{ Files.write(p, bs); }
+    try{ Fs.write(p, bs); }
     catch (Exception e){ throw new AssertionError(e); }
   }
   public static String runOk(Path tmp, String spec){
