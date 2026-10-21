@@ -499,7 +499,7 @@ code{
   String shortTitle(TypeDoc t){
     if (!t.main().infName()){ return typeTitle(t); }
     var p= t.main().pos();
-    return "Anon@"+Fs.fileNameWithExtension(p.fileName().toString()).replaceFirst("\\.fear$", "")+":"+p.line();
+    return "Anon@"+Fs.fileNameWithoutExtension(p.fileName().toString())+":"+p.line();
   }
 
   String typeLink(T.C c){
