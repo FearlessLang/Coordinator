@@ -8,6 +8,7 @@ import java.lang.classfile.attribute.SourceFileAttribute;
 import java.lang.classfile.instruction.LineNumber;
 import java.net.URI;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.TreeMap;
 import java.util.function.Consumer;
 
@@ -16,7 +17,7 @@ import tools.Fs;
 import tools.SourceOracle;
 import utils.Pos;
 
-final class BytecodeLineFix implements Consumer<Path>{
+final class BytecodeLineFix implements Consumer<List<Path>>{
   final StringBuilder sb= new StringBuilder(8_000);
   private final String base;
   private final String sourceFile;
@@ -43,12 +44,11 @@ final class BytecodeLineFix implements Consumer<Path>{
       + sb.toString();
     return a(s);
   }
-  @Override public void accept(Path classesDir){
+  @Override public void accept(List<Path> classFiles){
     var cf= ClassFile.of();
-    Fs.walkV(classesDir, s -> s
+    classFiles.stream()
       .filter(p -> matches(p.getFileName().toString()))
-      .forEach(p -> patchOne(cf, p))
-    );
+      .forEach(p -> patchOne(cf, p));
   }
   private boolean matches(String n){
     return n.equals(base+".class") || (n.endsWith(".class") && n.startsWith(base+"$")); // anon/inner: Foo$1.class etc

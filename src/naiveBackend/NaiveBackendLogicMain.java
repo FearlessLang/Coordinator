@@ -4,6 +4,7 @@ import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.function.Consumer;
 
 import coordinator.Coordinator;
 import tools.Fs;
@@ -22,10 +23,14 @@ public final class NaiveBackendLogicMain{
       Fs.copyTreeFlat(tools.rtPath().resolveSibling("fonts"), pkgPath);
     }
     assert foldDistinct(outPath);
-    Runnable post= () -> fixers.forEach(f -> f.accept(pkgPath));
+    Runnable post= () -> fix(fixers, pkgPath);
     var javacOut= Fs.of(() -> JavacTool.compileTree(outPath, classes, post, genJava.resolve(tools.pkgName()+".jar"), extraClasspathDirs));
     assert javacOut.isEmpty() : javacOut;
     Fs.rmTree(outPath); Fs.rmTree(classes);//comment out this line to keep the generated .java and .class files for debugging
+  }
+  private static void fix(List<Consumer<List<Path>>> fixers, Path pkgPath){
+    var files= Fs.walk(pkgPath, s -> s.toList());
+    fixers.forEach(f -> f.accept(files));
   }
   private static boolean foldDistinct(Path dir){
     var seen= new HashMap<String,String>();

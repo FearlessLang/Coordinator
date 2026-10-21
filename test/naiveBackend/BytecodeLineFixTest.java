@@ -51,7 +51,7 @@ final class BytecodeLineFixTest{
     Fs.writeUtf8(srcFile, fix.toString());
     Fs.ensureDir(classesDir);
     Fs.runTool("javac", List.of("-d", classesDir.toString(), srcFile.toString()));
-    fix.accept(classesDir);
+    fix.accept(Fs.walk(classesDir, s -> s.toList()));
     try (var loader= new URLClassLoader(new URL[]{classesDir.toUri().toURL()})){
       var cls= Class.forName("generated.Greet", true, loader);
       var instance= cls.getField("instance").get(null);
