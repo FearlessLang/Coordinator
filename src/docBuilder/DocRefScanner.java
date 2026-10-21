@@ -16,7 +16,7 @@ import utils.Join;
 /// What counts as a name is asked of core (TName.isTypeName, TName.isPkgName,
 /// MName.isMethodName), so this never grows its own idea of the grammar.
 final class DocRefScanner{
-  record Found(int start, int end, DocRef ref){}
+  record Found(int start, int end, DocRef.TypeName ref){}
   record CodeSpan(int start, int end, int fence){}
 
   private static final Pattern fenced= Pattern.compile("(?s)(?<!`)(`+)(?!`)(.*?)(?<!`)\\1(?!`)");

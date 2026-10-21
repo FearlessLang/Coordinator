@@ -21,6 +21,7 @@ import core.T;
 import core.TName;
 import offensiveUtils.Require;
 import tools.Fs;
+import utils.Bug;
 import utils.Join;
 import utils.Range;
 
@@ -392,9 +393,8 @@ code{
     var sb= new StringBuilder();
     var i= 0;
     for (var f : DocRefScanner.signatureTypes(text)){
-      var t= (DocRef.TypeName)f.ref();
-      if (bound.contains(t.simpleName())){ continue; }
-      var link= resolver.resolveType(t);
+      if (bound.contains(f.ref().simpleName())){ continue; }
+      var link= resolver.resolveType(f.ref());
       if (link.isEmpty()){ continue; }
       sb.append(h(text.substring(i, f.start())));
       sb.append("<a href=\"").append(h(href(link.get()))).append("\">")
@@ -471,10 +471,11 @@ code{
   }
 
   String href(DocLink link){
-    if (link instanceof DocLink.Ambiguous a){
-      return "#"+pages.computeIfAbsent(a, _ -> "disambig-"+id(a.title())+"-"+pages.size());
-    }
-    return candidateHref(((DocLink.Resolved)link).hit());
+    return switch (link){
+      case DocLink.Ambiguous a -> "#"+pages.computeIfAbsent(a, _ -> "disambig-"+id(a.title())+"-"+pages.size());
+      case DocLink.Resolved r -> candidateHref(r.hit());
+      case DocLink.NoLink _ -> throw Bug.unreachable();
+    };
   }
 
   String candidateHref(Candidate c){

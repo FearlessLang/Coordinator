@@ -144,12 +144,12 @@ final class DocRefScannerTest{
   //can be an error.
   @Test void aSignatureOffersEveryTypeNameItContains(){
     var names= DocRefScanner.signatureTypes("read .foo(read Bar):Baz").stream()
-      .map(f -> ((DocRef.TypeName)f.ref()).simpleName()).toList();
+      .map(f -> f.ref().simpleName()).toList();
     assertEquals(List.of("Bar", "Baz"), names);
   }
 
   @Test void aSignatureDoesNotSeeATypeInsideALongerWord(){
     assertTrue(DocRefScanner.signatureTypes("read .ieeeEq(x)").stream()
-      .noneMatch(f -> ((DocRef.TypeName)f.ref()).simpleName().equals("Eq")));
+      .noneMatch(f -> f.ref().simpleName().equals("Eq")));
   }
 }
