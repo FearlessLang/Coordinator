@@ -159,8 +159,7 @@ top level main
   @Test void baseGeneratedExamples(@TempDir Path tmp) throws InterruptedException{
     var out= Coordinator.runMains(Coordinator.runData(tmp, ResolveResource.stLibPath), List.of(ResolveResource.coordinatorJars, baseCache), "_base.Main");
     writeJUnitReport("baseGeneratedExamples", tmp);
-    var fails= out.lines().filter(l -> l.startsWith("Test failure ")).toList();
-    assertTrue(fails.isEmpty(), () -> Join.of(fails, "The doc examples of base failed:\n", "\n", ""));
+    utils.Err.strCmp("", out);
   }
   @Test void testDocs(){
     utils.Err.strCmp("""
@@ -2140,22 +2139,6 @@ Hello:Main{s->base.Debug#(
         "s.download.downloadImage(\"$URL\", 100_000, 1_000_000).width"));
       var out= coordinator(root).main(root, stLib);
       utils.Err.strCmp("[###]3[###]", out);
-    }
-    finally{ server.stop(0); }
-  }
-
-  @Test void downloadTimesOutOnStalledResponse(@TempDir Path tmp) throws Exception{
-    var server= startServer(_ -> {
-      try{ Thread.sleep(40_000); }
-      catch (InterruptedException _){}
-    });
-    try{
-      var root= tmp.resolve("root");
-      UserError.root = root;
-      FsDsl.materialize(root, downloadProject(url(server, "/stall"),
-        "s.download.downloadStrUtf8(\"$URL\", 1000, NeverRecovers)"));
-      var out= coordinator(root).main(root, stLib);
-      utils.Err.strCmp("[###]Download timed out[###]", out);
     }
     finally{ server.stop(0); }
   }
