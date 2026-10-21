@@ -163,7 +163,9 @@ final class Helper{
     return l;
   }
   static Map<String,Map<String,String>> rankMap(SourceOracle o, List<Ref> allRanks){
-    try{ return new FrontendLogicMain().parseRankFiles(allRanks, Comparator.comparingInt(Helper::rankNumber), Push.of(allRanks.stream().map(Helper::pkgName).toList(), "base")); }
+    var ranks= new LinkedHashMap<String,Ref>();
+    allRanks.forEach(r -> ranks.put(pkgName(r), r));
+    try{ return new FrontendLogicMain().parseRankFiles(ranks, Comparator.comparingInt(Helper::rankNumber)); }
     catch (FearlessException e){ throw Report.sourceError(e.render(o)); }
   }
   static LinkedHashMap<String,List<Ref>> pkgMap(SourceOracle o, Path path){
