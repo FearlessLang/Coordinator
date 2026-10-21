@@ -1,5 +1,6 @@
 package integrationTests;
 
+import static java.nio.charset.StandardCharsets.UTF_16LE;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -20,6 +21,7 @@ import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
 import java.security.SecureRandom;
 import java.util.ArrayList;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -905,6 +907,60 @@ NoLinks: Main{s -> base.Block#
   .return{Debug#(Wr#(s.dataReadWrite.writeStrUtf8("Notes", L#("a.txt"), "no")))}
   }
 """, List.of()));
+  }
+  static String pathEncoding(){ return Fs.isWindows() ? "utf16Le" : "utf8"; }
+  @Test void aProgramStartedWithoutTheManagerSendsNoMessage(@TempDir Path tmp){
+    utils.Err.strCmp("""
+The message "Show" is not sent: this program was not started by the Fearless manager.
+The message "Register" is not sent: this program was not started by the Fearless manager.
+""", dataRun(tmp, """
+NoManager: Main{s -> base.Block#
+  .do{Debug#(Wr#(s.manager.show))}
+  .return{Debug#(Wr#(s.manager.register("%s".u.%s)))}
+  }
+""".formatted(tmp.toAbsolutePath(), pathEncoding()), List.of()));
+  }
+  @Test void aMessageRunsTheManagerProgramWithTheVerbAndItsArguments(@TempDir Path tmp){
+    var log= tmp.resolve("log.txt");
+    var launcher= tmp.resolve(Fs.isWindows() ? "launcher.cmd" : "launcher");
+    Fs.writeUtf8(launcher, Fs.isWindows() ? "@echo off\n>>\""+log+"\" echo %*\n" : "#!/bin/sh\necho \"$@\" >> '"+log+"'\n");
+    assertTrue(launcher.toFile().setExecutable(true));
+    var path= tmp.toAbsolutePath().toString();
+    var base16= "Base16:"+HexFormat.of().withUpperCase().formatHex(path.getBytes(Fs.isWindows() ? UTF_16LE : UTF_8));
+    utils.Err.strCmp("""
+ok
+ok
+ok
+ok
+ok
+ok
+ok
+ok
+The path "relative" of the message "Register" is not an absolute path of this system.
+""", dataRun(tmp, """
+Send: Main{s -> base.Block#
+  .let m= {s.manager}
+  .do{Debug#(Wr#(m.register("%1$s".u.%2$s)))}
+  .do{Debug#(Wr#(m.show))}
+  .do{Debug#(Wr#(m.show "hello"))}
+  .do{Debug#(Wr#(m.run("hello", L#("hello.A", "hello.B"))))}
+  .do{Debug#(Wr#(m.kindDataReadOnly "hello"))}
+  .do{Debug#(Wr#(m.linkWrite("hello", "notes", L#("Notes", "Pub"))))}
+  .do{Debug#(Wr#(m.linkRead("hello", "pub", {})))}
+  .do{Debug#(Wr#(m.openWithOrShortcut("%1$s".u.%2$s, "hello", "hello.A")))}
+  .return{Debug#(Wr#(m.register("relative".u.%2$s)))}
+  }
+""".formatted(path, pathEncoding()), List.of("-DfearlessManager.launcher="+launcher)));
+    utils.Err.strCmp("""
+FearlessCommandRegister %1$s
+FearlessCommandShow
+FearlessCommandShow hello
+FearlessCommandRun hello hello.A hello.B
+FearlessCommandKind hello data:readOnly
+FearlessCommandLink hello notes write Notes Pub
+FearlessCommandLink hello pub read
+FearlessCommandOpenWithOrShortcut %1$s hello hello.A
+""".formatted(base16), Fs.readUtf8(log).replace("\r\n", "\n"));
   }
   @Test void aBaseAssetIsReadFromTheStdLibBase(@TempDir Path tmp) throws InterruptedException{
     var root= tmp.resolve("root");
