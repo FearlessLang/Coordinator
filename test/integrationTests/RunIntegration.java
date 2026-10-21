@@ -1901,9 +1901,39 @@ In file: fear:/_a/_rank_core.fear
    |     ^^^^^^^^^^
 
 While inspecting package header
-"use" directive refers to type "Greeting" of package "z", which has a higher rank than package "a".
+"use" directive refers to package "z", which has a higher rank than package "a".
 Package "a" has rank "core" ("_rank_core.fear") and package "z" has rank "app" ("_rank_app.fear").
-A package can only use the packages of the same rank or of a lower rank.
+A package can only use packages of a lower rank.
+Error 7 WellFormedness
+""", ex.getMessage());
+  }
+
+  @Test void useOfASameRankPackageIsReportedAsARankProblem(@TempDir Path tmp) throws InterruptedException{
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_a/_rank_core.fear
+iii
+use base.Main as Main;
+use z.Greeting as Greeting;
+Hello:Main{s->base.Debug#(Greeting.hi)}
+jjj
+_z/_rank_core.fear
+iii
+use base.Str as Str;
+Greeting:{ .hi: Str -> "hi" }
+""");
+    var ex= assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib));
+    utils.Err.strCmp("""
+In file: fear:/_a/_rank_core.fear
+
+002| use z.Greeting as Greeting;
+   |     ^^^^^^^^^^
+
+While inspecting package header
+"use" directive refers to package "z", which has the same rank as package "a".
+Package "a" has rank "core" ("_rank_core.fear") and package "z" has rank "core" ("_rank_core.fear").
+A package can only use packages of a lower rank.
 Error 7 WellFormedness
 """, ex.getMessage());
   }
