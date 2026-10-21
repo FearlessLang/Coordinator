@@ -196,7 +196,7 @@ final class Holders{
   // Contract: an EMPTY list means "confirmed: no program currently holds this file open".
   // A failure of the enumeration itself must be reported by throwing IOException.
   // Per-field failures inside one entry adds to suppressed.
-  private static List<String> enumerate(Path path, Suppressed suppressed)throws IOException{
+  private static List<String> enumerate(Path path, Suppressed suppressed) throws IOException{
     return List.of(exampleWord, exampleDefender);//example data; the real implementation queries the OS
   }
   // intro: shown only when at least one holder was found, before the list.
