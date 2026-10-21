@@ -12,7 +12,7 @@ import utils.Range;
 import utils.Streams;
 
 record ProduceBody(BytecodeLineFix sb, Backend b, String thisName, M m){
-  public void emitBody(){
+  void emitBody(){
     if (!thisName.equals("_")){ sb.a("    var ").a(thisName).a("$= this;\n"); }
     Streams.zipI(m.xs(), m.sig().ts())
       .filter((_,x,_) -> !x.equals("_"))
