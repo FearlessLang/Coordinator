@@ -1307,7 +1307,7 @@ We check this so that you[###]
   @Test void errVisibleSymlinkForbidden(@TempDir Path tmp) throws Exception{
     var root= tmp.resolve("root").toAbsolutePath().normalize();
     UserError.root = root;
-    Fs.onSymbolicLink= Report::symlinkForbidden;
+    Fs.onSymbolicLink = Report::symlinkForbidden;
     Files.createDirectories(root.resolve("_pkg"));
     createSymbolicLinkOrSkip(root.resolve("_pkg/link.fear"), root.resolve("_pkg/missing.fear"));
     var ex= assertThrows(UserError.class, () -> new RealSourceOracleWithZip(root));
@@ -1332,7 +1332,7 @@ We check this so that you[###]
   @Test void errInvisibleSymlinkForbidden(@TempDir Path tmp) throws Exception{
     var root= tmp.resolve("root").toAbsolutePath().normalize();
     UserError.root = root;
-    Fs.onSymbolicLink= Report::symlinkForbidden;
+    Fs.onSymbolicLink = Report::symlinkForbidden;
     Files.createDirectories(root.resolve("_pkg/.d"));
     Files.writeString(root.resolve("_pkg/a.fear"), "A");
     createSymbolicLinkOrSkip(root.resolve("_pkg/.d/link"), root.resolve("_pkg/.d/missing"));
@@ -1657,7 +1657,7 @@ Optional.empty
   // whether it came from disk or from inside a zip, so silently swallowing the invalid
   // bytes into U+FFFD instead of failing would feed corrupted source text to the parser.
   @Test void errZipEntryInvalidUtf8MatchesDiskEntry(@TempDir Path tmp) throws Exception{
-    byte[] bad= { (byte)0xFF, (byte)0xFE, 'X' };
+    byte[] bad= {(byte)0xFF, (byte)0xFE, 'X'};
 
     var diskRoot= tmp.resolve("disk").toAbsolutePath().normalize();
     UserError.root = diskRoot;
