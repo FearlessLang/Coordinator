@@ -61,7 +61,7 @@ public final class Backend{
     }
     if (hasInstance){ sb.a("  "+iface+" instance= new "+iface+"(){};"+cacheField(l)); }
     Fs.writeUtf8(out.resolve(iface+".java"), sb.a("}").toString());
-    if (hasInstance && implementsType(l, "base.Main", 0)){ mains.put(l.name().s(), iface); preloaded.put(l.name().s(), preloaded(l)); }
+    if (hasInstance && MainsInfo.isMain(l)){ mains.put(l.name().s(), iface); preloaded.put(l.name().s(), preloaded(l)); }
     fixers.add(sb);
   }
   private String preloaded(Literal l){ return Join.of(MainsInfo.icons(l.cs()).stream().map(n -> javaStrLit(n.s())+", "+typeName(n)+".instance"), "", ", ", ""); }

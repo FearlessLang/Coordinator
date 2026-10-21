@@ -94,7 +94,7 @@ public record MainsInfo(Map<String,Main> mains){
     return Stream.concat(core.stream(), nested).filter(MainsInfo::isMain).distinct()
       .collect(Collectors.toUnmodifiableMap(l -> l.name().s(), of::main));
   }
-  private static boolean isMain(Literal l){
+  public static boolean isMain(Literal l){
     return LiteralDeclarations.has(l.cs(), main)
       && l.ms().stream().noneMatch(m -> m.sig().abs());
   }
