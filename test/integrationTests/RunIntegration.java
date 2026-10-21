@@ -1882,7 +1882,7 @@ Error 7 WellFormedness
     var root= tmp.resolve("root");
     UserError.root = root;
     FsDsl.materialize(root, """
-_a/_rank_core.fear
+_a/_rank_core345.fear
 iii
 use base.Main as Main;
 use z.Greeting as Greeting;
@@ -1895,14 +1895,14 @@ Greeting:{ .hi: Str -> "hi" }
 """);
     var ex= assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib));
     utils.Err.strCmp("""
-In file: fear:/_a/_rank_core.fear
+In file: fear:/_a/_rank_core345.fear
 
 002| use z.Greeting as Greeting;
    |     ^^^^^^^^^^
 
 While inspecting package header
 "use" directive refers to package "z", which has a higher rank than package "a".
-Package "a" has rank "core" ("_rank_core.fear") and package "z" has rank "app" ("_rank_app.fear").
+Package "a" has rank "core345" ("_rank_core345.fear") and package "z" has rank "app999" ("_rank_app.fear").
 A package can only use packages of a lower rank.
 Error 7 WellFormedness
 """, ex.getMessage());
@@ -1918,7 +1918,7 @@ use base.Main as Main;
 use z.Greeting as Greeting;
 Hello:Main{s->base.Debug#(Greeting.hi)}
 jjj
-_z/_rank_core.fear
+_z/_rank_core999.fear
 iii
 use base.Str as Str;
 Greeting:{ .hi: Str -> "hi" }
@@ -1932,7 +1932,7 @@ In file: fear:/_a/_rank_core.fear
 
 While inspecting package header
 "use" directive refers to package "z", which has the same rank as package "a".
-Package "a" has rank "core" ("_rank_core.fear") and package "z" has rank "core" ("_rank_core.fear").
+Package "a" has rank "core999" ("_rank_core.fear") and package "z" has rank "core999" ("_rank_core999.fear").
 A package can only use packages of a lower rank.
 Error 7 WellFormedness
 """, ex.getMessage());
