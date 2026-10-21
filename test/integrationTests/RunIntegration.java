@@ -922,8 +922,21 @@ NoManager: Main{s -> base.Block#
   }
   @Test void aMessageRunsTheManagerProgramWithTheVerbAndItsArguments(@TempDir Path tmp){
     var log= tmp.resolve("log.txt");
+    var manager= tmp.resolve("Manager.java");
+    Fs.writeUtf8(manager, """
+import java.net.*;
+import java.nio.file.*;
+import java.util.*;
+void main(String[] args) throws Exception{
+  var words= List.of(args);
+  Files.writeString(Path.of(words.getFirst()), String.join(" ", words.subList(1, words.size()-1))+"\\n", StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+  var out= words.get(1).equals("FearlessCommandForget") ? "Refused\\nThe manager refuses to forget "+words.get(2)+"." : "Output of "+words.get(1);
+  try (var s= new Socket(InetAddress.getLoopbackAddress(), Integer.parseInt(words.getLast().substring("Port:".length())))){ s.getOutputStream().write(out.getBytes()); }
+}
+""");
+    var java= Path.of(System.getProperty("java.home"), "bin", "java");
     var launcher= tmp.resolve(Fs.isWindows() ? "launcher.cmd" : "launcher");
-    Fs.writeUtf8(launcher, Fs.isWindows() ? "@echo off\n>>\""+log+"\" echo %*\n" : "#!/bin/sh\necho \"$@\" >> '"+log+"'\n");
+    Fs.writeUtf8(launcher, Fs.isWindows() ? "@\""+java+"\" \""+manager+"\" \""+log+"\" %*\n" : "#!/bin/sh\nexec '"+java+"' '"+manager+"' '"+log+"' \"$@\"\n");
     assertTrue(launcher.toFile().setExecutable(true));
     var path= tmp.toAbsolutePath().toString();
     var base16= "Base16:"+HexFormat.of().withUpperCase().formatHex(path.getBytes(Fs.isWindows() ? UTF_16LE : UTF_8));
@@ -931,23 +944,28 @@ NoManager: Main{s -> base.Block#
 ok
 ok
 ok
+Output of FearlessCommandRun
+Output of FearlessCommandCompile
 ok
 ok
 ok
 ok
-ok
+The manager refuses to forget nope.
 The path "relative" of the message "Register" is not an absolute path of this system.
 """, dataRun(tmp, """
+Out: { #(a: mut base.Action[base.UStr]): base.Str -> a.run{.ok u -> u.tryGetStr.run{.ok o -> o; .info i -> i.getMsg}; .info i -> i.getMsg} }
 Send: Main{s -> base.Block#
   .let m= {s.manager}
   .do{Debug#(Wr#(m.register("%1$s".u.%2$s)))}
   .do{Debug#(Wr#(m.show))}
   .do{Debug#(Wr#(m.show "hello"))}
-  .do{Debug#(Wr#(m.run("hello", L#("hello.A", "hello.B"))))}
+  .do{Debug#(Out#(m.run("hello", L#("hello.A", "hello.B"))))}
+  .do{Debug#(Out#(m.compile "hello"))}
   .do{Debug#(Wr#(m.kindDataReadOnly "hello"))}
   .do{Debug#(Wr#(m.linkWrite("hello", "notes", L#("Notes", "Pub"))))}
   .do{Debug#(Wr#(m.linkRead("hello", "pub", {})))}
   .do{Debug#(Wr#(m.openWithOrShortcut("%1$s".u.%2$s, "hello", "hello.A")))}
+  .do{Debug#(Wr#(m.forget "nope"))}
   .return{Debug#(Wr#(m.register("relative".u.%2$s)))}
   }
 """.formatted(path, pathEncoding()), List.of("-DfearlessManager.launcher="+launcher)));
@@ -956,10 +974,12 @@ FearlessCommandRegister %1$s
 FearlessCommandShow
 FearlessCommandShow hello
 FearlessCommandRun hello hello.A hello.B
+FearlessCommandCompile hello
 FearlessCommandKind hello data:readOnly
 FearlessCommandLink hello notes write Notes Pub
 FearlessCommandLink hello pub read
 FearlessCommandOpenWithOrShortcut %1$s hello hello.A
+FearlessCommandForget nope
 """.formatted(base16), Fs.readUtf8(log).replace("\r\n", "\n"));
   }
   @Test void aBaseAssetIsReadFromTheStdLibBase(@TempDir Path tmp) throws InterruptedException{
