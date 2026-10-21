@@ -7,6 +7,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -26,7 +27,7 @@ final class SourceDocs{
   final HashMap<Integer,int[]> depthByLine= new HashMap<>();
   final Set<DocOcc> attached= Collections.newSetFromMap(new IdentityHashMap<>());
   final IdentityHashMap<DocOcc,Integer> inlineClaimedFromColumn= new IdentityHashMap<>();
-  final Set<DocOcc> ambiguousInline= Collections.newSetFromMap(new IdentityHashMap<>());
+  final LinkedHashSet<DocOcc> ambiguousInline= new LinkedHashSet<>();
 
   List<DocOcc> docsAt(Pos pos, boolean includeBefore){
     assert pos.line()>0 && pos.line()<=lines.size() : pos;

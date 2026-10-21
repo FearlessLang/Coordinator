@@ -5,6 +5,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -50,7 +51,7 @@ public final class HtmlDocBuilder{
 
   final ArrayList<TypeDoc> types= new ArrayList<>();
   final IdentityHashMap<Src,TypeDoc> typeBySrc= new IdentityHashMap<>();
-  final HashMap<URI,SourceDocs> sources= new HashMap<>();
+  final LinkedHashMap<URI,SourceDocs> sources= new LinkedHashMap<>();
 
   public void packageLocation(String pkgName, Path htmlPath, Optional<Path> testsRoot){
     assert Require.nonNull(pkgName, htmlPath, testsRoot);
