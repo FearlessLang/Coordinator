@@ -96,8 +96,8 @@ Nearby bytes:  %s
     return HexFormat.ofDelimiter(" ").withUpperCase().formatHex(bytes, from, to);
   }
   private static String stackTrace(Throwable error){
-    var out= new StringWriter();
-    error.printStackTrace(new PrintWriter(out));
-    return out.toString();
+    var sw= new StringWriter();
+    error.printStackTrace(new PrintWriter(sw));
+    return sw.toString();
   }
 }

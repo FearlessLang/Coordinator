@@ -58,7 +58,7 @@ public record SourceOracleWithAutoload(SourceOracle base, Ref autoload, URI auto
     return base.allFiles().stream().map(path).anyMatch(n -> n.endsWith(autoloadFileSuffix) && n.contains("/"+pkgName+"/"));
   }
   private static Generated generate(SourceOracle base, String pkgName, Function<Ref,String> path){
-    var out= new StringBuilder();
+    var sb= new StringBuilder();
     var declaredBy= new LinkedHashMap<String,Ref>();
     var assets= new LinkedHashMap<String,Triple>();
     for (var ref : base.allFiles()){
@@ -70,11 +70,11 @@ public record SourceOracleWithAutoload(SourceOracle base, Ref autoload, URI auto
         var prev= declaredBy.putIfAbsent(type, ref);
         if (prev != null){ throw Report.autoloadedNamesCollide(ref, prev.fearPath(), ref.fearPath(), type); }
         var t= AutoloadHandler.triple(ref);
-        out.append(h.generate(t, p, type));
+        sb.append(h.generate(t, p, type));
         assets.put(type, t);
       }
     }
-    return new Generated(out.toString(), Collections.unmodifiableMap(assets));
+    return new Generated(sb.toString(), Collections.unmodifiableMap(assets));
   }
   private record SyntheticRef(String fearPath, String text) implements Ref{
     @Override public byte[] loadBytes(){ return text.getBytes(UTF_8); }

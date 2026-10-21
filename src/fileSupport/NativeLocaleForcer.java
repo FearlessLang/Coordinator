@@ -117,12 +117,12 @@ public final class NativeLocaleForcer{
     return (int)Linker.Option.captureStateLayout().varHandle(MemoryLayout.PathElement.groupElement("GetLastError")).get(callState, 0L);
   }
   private static List<String> parseDoubleNullTerminatedUtf16(MemorySegment wideList){
-    var out= new ArrayList<String>();
+    var res= new ArrayList<String>();
     var offset= 0L;
     while (true){
       var s= wideList.getString(offset, StandardCharsets.UTF_16LE);//reads up to the next null terminator
-      if (s.isEmpty()){ return out; }//the empty string is the list terminator
-      out.add(s);
+      if (s.isEmpty()){ return res; }//the empty string is the list terminator
+      res.add(s);
       offset += (s.length()+1)*2L;//chars plus terminator, two bytes each
     }
   }
