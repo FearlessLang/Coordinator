@@ -18,7 +18,7 @@ import utils.Push;
 //     segments: a;b;foo;c;d;k.txt  //for the same example
 //     The last keeps the extension, even it is .zip
 
-//Here Both PathEntry and ZipEntry can be used as Ref for a RealSourceOracle extends SourceOracle
+//Here Both PathEntry and ZipEntry can be used as Ref for a RealSourceOracleWithZip implements SourceOracle
 public record ZipEntry(Path root, Path local, List<String> segments, List<String> zips, String lastZips) implements SourceOracle.Ref{
   @Override public String fearPath(){ return Join.of(Push.of(dropZipExt(PathEntry.localSegments(local)), segments), SourceOracle.root, "/", ""); }
   @Override public byte[] loadBytes(){ return ZipLocator.entryBytes(root.resolve(local), zips, lastZips); }

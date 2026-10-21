@@ -30,7 +30,7 @@ record MiddleLayer(Coordinator coordinator, Layer next, LinkedHashMap<String,Lis
     for (var pkg : pkgs.keySet()){
       var files= pkgs.get(pkg);
       var maxSrc= files.stream().mapToLong(Ref::lastModified).max().getAsLong();
-      var maxIn= Math.max(maxSrc, other.stamp());//out.mapStamp() must be <= then other.watermark() since it comes from next
+      var maxIn= Math.max(maxSrc, other.stamp());//out.mapStamp() must be <= other.stamp() since it comes from next
       if (out.stillBuilt(pkg, files, next.pkgNames(), maxIn)){ nextOther = out.addCachedPkgApi(nextOther, pkg); continue; }
       var rich= SourceOracleWithAutoload.of(src, "_"+pkg);
       var capabilities= new CapabilityEnvironment(rich.autoloadedAssets());
