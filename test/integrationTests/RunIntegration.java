@@ -20,6 +20,7 @@ import java.nio.file.attribute.FileTime;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -274,6 +275,24 @@ In file: fear:/_p/auto_tests/p_test.fear
     utils.Err.strCmp("hi\n", main(root, List.of()));
     assertFalse(Fs.exists(generatedTests(root)));
   }
+  @Test void aZippedPackageWithDocExamplesCompilesTwice(@TempDir Path tmp){
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_p.zip/_rank_app.fear
+iii
+use base.Main as Main;
+use base.Nat as Nat;
+use base.Debug as Debug;
+Calc:{
+  //> .check{Calc.inc(1) .assertEq 2}
+  .inc(n: Nat): Nat -> n + 1;
+  }
+App:Main{s->Debug#("hi")}
+""");
+    utils.Err.strCmp("hi\n", main(root, List.of()));
+    utils.Err.strCmp("hi\n", main(root, List.of()));
+  }
   @Test void docExamplesOfTwoTypesSharingASimpleNameWithDifferentAritiesRun(@TempDir Path tmp){
     var root= tmp.resolve("root");
     UserError.root = root;
@@ -394,6 +413,35 @@ App:Main, lib.Lib{s->base.Debug#(`app`)}
       _FCase$1k$0.java only imm
       _GCase$1k$0.java only imm
       """, Join.of(got, "", "\n", "\n"));
+  }
+  @Test void twoFileLogsWhoseNamesDifferOnlyByCaseWriteToFilesThatDifferNotOnlyByCase(@TempDir Path tmp){
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_p/_rank_app.fear
+iii
+use base.FileLog as FileLog;
+AppLog: FileLog{"a"}
+Applog: FileLog{"b"}
+""");
+    var genJava= tmp.resolve("genJava");
+    var base= coordinator(root);
+    new Coordinator(){
+      @Override public Path modsPath(){ return base.modsPath(); }
+      @Override public Optional<Path> baseCachePath(){ return base.baseCachePath(); }
+      @Override public Path stdLibBase(){ return base.stdLibBase(); }
+      @Override public BackendTools backendTools(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, CapabilityEnvironment capabilities){
+        return base.backendTools(pkgName, oracle, other, core, capabilities);
+      }
+      @Override public void backend(String pkgName, List<Literal> core, SourceOracle oracle, OtherPackages other, CapabilityEnvironment capabilities){
+        new Backend(genJava, base.backendTools(pkgName, oracle, other, core, capabilities)).produceJavaCode();
+      }
+    }.compile(root, stLib);
+    var logFiles= Fs.walk(genJava, s -> s.filter(Files::isRegularFile).sorted()
+      .flatMap(p -> Fs.readUtf8(p).lines().filter(l -> l.contains("_base.AppLog.open("))).toList());
+    assertEquals(2, logFiles.size(), logFiles.toString());
+    assertNotEquals(logFiles.get(0).toLowerCase(Locale.ROOT), logFiles.get(1).toLowerCase(Locale.ROOT),
+      "On a file system that ignores case, as the default ones of Windows and macOS, the two logs are one file");
   }
   @Test void testAssets(){ testOk("testAssets");}
   private Path theOneLogFile(Path dir, String prefix) throws IOException{
