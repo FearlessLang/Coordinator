@@ -930,7 +930,7 @@ import java.util.*;
 void main(String[] args) throws Exception{
   var words= List.of(args);
   Files.writeString(Path.of(words.getFirst()), String.join(" ", words.subList(1, words.size()-1))+"\\n", StandardOpenOption.CREATE, StandardOpenOption.APPEND);
-  var out= words.get(1).equals("FearlessCommandForget") ? "Refused\\nThe manager refuses to forget "+words.get(2)+"." : "Output of "+words.get(1);
+  var out= words.get(1).equals("FearlessCommandForget") ? "Refused\\nThe manager refuses to forget "+words.get(2)+"." : "Applied\\nOutput of "+words.get(1);
   try (var s= new Socket(InetAddress.getLoopbackAddress(), Integer.parseInt(words.getLast().substring("Port:".length())))){ s.getOutputStream().write(out.getBytes()); }
 }
 """);
