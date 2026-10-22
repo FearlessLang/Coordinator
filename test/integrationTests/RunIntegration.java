@@ -880,7 +880,10 @@ Images: Main{s -> base.Block#
   }
   @Test void aPaintedImageIsWrittenAsAPng(@TempDir Path tmp) throws IOException{
     var data= dataProject(tmp);
-    utils.Err.strCmp("ok\n", dataRun(tmp, """
+    utils.Err.strCmp("""
+Warning: the painter of an image of 4x3 draws past its bottom edge: the part outside the image is clipped
+ok
+""", dataRun(tmp, """
 Painted: Main{s -> base.Block#
   .let img= {base.Images#(base.WidthNat#4, base.HeightNat#3, base.Color.rgb(0, 0, 255))
     .paint{g -> g.color(base.Color.rgb(255, 0, 0)).position(base.XInt#(+1), base.YInt#(+1)).rect(base.WidthNat#2, base.HeightNat#5)}}
