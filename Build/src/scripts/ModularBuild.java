@@ -85,6 +85,7 @@ public final class ModularBuild{
     frontendMain();
     JavaTool.runMain(List.of("-ea"), coordinatorTest(), mods, "testBuildBase.BaseCacheBuilder", appRoot.toString());
     if (eclipsePlugin){ deployEclipsePlugin(appRoot); }
+    System.out.println("Deployed to "+appRoot);
   }
 
   static void deployEclipsePlugin(Path appRoot){

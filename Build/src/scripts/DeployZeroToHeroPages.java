@@ -13,5 +13,6 @@ public final class DeployZeroToHeroPages{
     ModularBuild.buildJar("ZeroToHeroGame", List.of(zeroToHero.resolve("src")), List.of("-requires-automatic"));
     JavaTool.runMain(List.of("-ea"), ModularBuild.out.resolve("FearlessTour"), ModularBuild.mods, "compileHtml.CompileHtml");
     JavaTool.runMain(List.of("-ea", "-Duser.dir="+zeroToHero), ModularBuild.out.resolve("ZeroToHeroGame"), ModularBuild.mods, "mainZeroToHero.Main");
+    System.out.println("Deployed to "+zeroToHero.resolve("src"));
   }
 }
