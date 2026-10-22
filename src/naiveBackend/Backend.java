@@ -4,6 +4,7 @@ import java.math.BigInteger;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.TreeMap;
 import java.util.function.Consumer;
 import java.util.stream.IntStream;
@@ -61,7 +62,7 @@ public final class Backend{
       sb.a("  Object _reprCacheGet(Object k, java.util.function.Supplier<Object> f, long time);\n");
       sb.a("  void _reprCacheFlush();\n");
     }
-    if (hasInstance){ sb.a("  "+iface+" instance= new "+iface+"(){};"+cacheField(l)); }
+    if (hasInstance){ sb.a("  "+iface+" instance= new _Instance();\n  final class _Instance implements "+iface+"{"+onceMethods(l, iface)+"}\n"+cacheField(l)); }
     Fs.writeUtf8(out.resolve(iface+".java"), sb.a("}").toString());
     if (hasInstance && MainsInfo.isMain(l)){ mains.put(l.name().s(), iface); preloaded.put(l.name().s(), preloaded(l)); }
     fixers.add(sb);
@@ -74,6 +75,14 @@ public final class Backend{
       if (implementsType(l, "base.CacheF", shape+1) || implementsType(l, "base.CacheMemo", shape+1)){ return "  "+t+" _cache= new "+t+"(1, instance);\n  default "+t+" _cache"+shape+"(){ return _cache; }\n"; }
     }
     return "";
+  }
+  private String onceMethods(Literal l, String iface){
+    if (implementsType(l, "base.CacheHandler", 0)){ return ""; }
+    return Join.of(l.ms().stream().filter(Backend::isOnce).map(m -> once(iface, mangledMethodName(m.sig().rc(), m.sig().m()))), "\n", "", "  ", "");
+  }
+  private static boolean isOnce(M m){ return m.sig().rc() == RC.imm && m.xs().isEmpty() && m.sig().ret().explicitRC().equals(Optional.of(RC.imm)); }
+  private static String once(String iface, String jName){
+    return "    volatile Object "+jName+";\n    public Object "+jName+"(){ if ("+jName+" == null){ "+jName+" = "+iface+".super."+jName+"(); } return "+jName+"; }\n";
   }
   private boolean hasInstance(Literal l){
     assert !l.thisName().isEmpty() || LiteralDeclarations.has(l.cs(), LiteralDeclarations.captureFree);
@@ -97,8 +106,6 @@ public final class Backend{
       return;
     }
     tools.checks().checkTopMethod(m, decTypeName(l.name()), jName, hasInstance(l));
-    //TODO: an imm method with no parameters and an imm result, of a type with an instance (a singleton, like Directions.map),
-    //always returns the same value: cache it, so that the body runs only one time.
     new ProduceBody(sb, this, l.thisName(), m).emitBody();
   }
   String ifaceNameFor(Literal l){
