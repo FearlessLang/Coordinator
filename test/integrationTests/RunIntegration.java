@@ -950,6 +950,21 @@ Images: Main{s -> base.Block#
     var copy= ImageIO.read(data.resolve("copy.png").toFile());
     assertEquals(List.of(2, 3, 0xFF336699, 0), List.of(copy.getWidth(), copy.getHeight(), copy.getRGB(1, 2), copy.getRGB(0, 0)));
   }
+  @Test void aPaintedImageIsWrittenAsAPng(@TempDir Path tmp) throws IOException{
+    var data= dataProject(tmp);
+    utils.Err.strCmp("""
+Warning: the painter of an image of 4x3 draws past its bottom edge: the part outside the image is clipped
+ok
+""", dataRun(tmp, """
+Painted: Main{s -> base.Block#
+  .let img= {base.Images#(base.WidthNat#4, base.HeightNat#3, base.Color.rgb(0, 0, 255))
+    .paint{g -> g.color(base.Color.rgb(255, 0, 0)).position(base.XInt#(+1), base.YInt#(+1)).rect(base.WidthNat#2, base.HeightNat#5)}}
+  .return{Debug#(Wr#(s.dataReadWrite.writeImagePng("Notes", L#("painted.png"), img)))}
+  }
+""", dataLinks(data, data)));
+    var png= ImageIO.read(data.resolve("painted.png").toFile());
+    assertEquals(List.of(4, 3, 0xFF0000FF, 0xFFFF0000, 0xFFFF0000, 0xFF0000FF, 0xFF0000FF), List.of(png.getWidth(), png.getHeight(), png.getRGB(0, 0), png.getRGB(1, 1), png.getRGB(2, 2), png.getRGB(3, 1), png.getRGB(1, 0)));
+  }
   @Test void aDataProjectThatChangedOnDiskIsANonDeterministicError(@TempDir Path tmp){
     var data= dataProject(tmp);
     utils.Err.strCmp("""
