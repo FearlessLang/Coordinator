@@ -25,6 +25,7 @@ import naiveBackend.BackendTools;
 import naiveBackend.NaiveBackendLogicMain;
 import offensiveUtils.Require;
 import realSourceOracle.RealSourceOracleWithZip;
+import realSourceOracle.ZipEntry;
 import tools.ChildJvm;
 import tools.Fs;
 import tools.JavaTool;
@@ -58,7 +59,11 @@ public interface Coordinator{
       "-DfearlessUser.dir="+project,
       "-DfearlessBase.dir="+base);
   }
-  static URI testsUri(String pkg, List<Ref> files){ return OneOr.of("One rank file per package", files.stream().filter(Helper::hasReservedRankPrefix)).fearURI().resolve("auto_tests/"+pkg+"_test.fear"); }
+  static Optional<URI> testsUri(String pkg, List<Ref> files){
+    var rank= OneOr.of("One rank file per package", files.stream().filter(Helper::hasReservedRankPrefix));
+    if (rank instanceof ZipEntry){ return Optional.empty(); }
+    return Optional.of(rank.fearURI().resolve("auto_tests/"+pkg+"_test.fear"));
+  }
   default SourceOracle sourceOracle(Path path){ return new RealSourceOracleWithZip(path); }
   static Map<String,Boolean> pkgsBuilt(Path path, Path baseCache){
     var o= new RealSourceOracleWithZip(path);
@@ -120,7 +125,7 @@ public interface Coordinator{
     try{ return new FrontendLogicMain().of(pkgName, vres, files, other, core -> docs(pkgName, testsUri(pkgName, files), oracle, other, core, capabilities, tests)); }
     catch (FearlessException e){ throw Report.sourceError(e.render(oracle.withFallback(() -> tests))); }
   }
-  private Optional<Ref> docs(String pkgName, URI testsUri, SourceOracle oracle, OtherPackages other, List<Literal> core, CapabilityEnvironment capabilities, ArrayList<Ref> tests){
+  private Optional<Ref> docs(String pkgName, Optional<URI> testsUri, SourceOracle oracle, OtherPackages other, List<Literal> core, CapabilityEnvironment capabilities, ArrayList<Ref> tests){
     var docs= backendTools(pkgName, oracle, other, core, capabilities).docs();
     core.forEach(docs::visitAll);
     var res= docs.complete(testsUri);

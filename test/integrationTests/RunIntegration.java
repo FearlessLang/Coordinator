@@ -275,7 +275,7 @@ In file: fear:/_p/auto_tests/p_test.fear
     utils.Err.strCmp("hi\n", main(root, List.of()));
     assertFalse(Fs.exists(generatedTests(root)));
   }
-  @Test void aZippedPackageWithDocExamplesCompilesTwice(@TempDir Path tmp){
+  @Test void aZippedPackageGetsNoGeneratedTests(@TempDir Path tmp){
     var root= tmp.resolve("root");
     UserError.root = root;
     FsDsl.materialize(root, """
@@ -285,13 +285,14 @@ use base.Main as Main;
 use base.Nat as Nat;
 use base.Debug as Debug;
 Calc:{
-  //> .check{Calc.inc(1) .assertEq 2}
+  //> .check{Calc.inc(1) .assertEq 5}
   .inc(n: Nat): Nat -> n + 1;
   }
 App:Main{s->Debug#("hi")}
 """);
     utils.Err.strCmp("hi\n", main(root, List.of()));
     utils.Err.strCmp("hi\n", main(root, List.of()));
+    assertFalse(Fs.exists(root.resolve("_p")));
   }
   @Test void aDocExampleOfATypeRuns(@TempDir Path tmp){
     var root= tmp.resolve("root");

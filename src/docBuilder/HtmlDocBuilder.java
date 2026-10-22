@@ -84,7 +84,7 @@ public final class HtmlDocBuilder{
     }
   }
 
-  public Optional<Ref> complete(URI testsUri){
+  public Optional<Ref> complete(Optional<URI> testsUri){
     assert Require.nonNull(pkgName, htmlPath);
     var resolver= new DocResolver(pkgName, types, other);
     var spans= new HashMap<DocOcc,Map<Integer,DocLink>>();
@@ -96,7 +96,7 @@ public final class HtmlDocBuilder{
     var renderer= new HtmlDocRenderer(pkgName, DocNames.uses(pkgName, currentByName.values()), types, other, spans, baseDocLocation);
     Fs.writeUtf8(htmlPath, renderer.render());
     Fs.writeUtf8(htmlPath.resolveSibling(pkgName+".txt"), renderer.renderText());
-    return testsRoot.flatMap(r -> writeTest(renderer, new PathEntry(r, Path.of(testsUri.getPath().substring(1)))));
+    return testsRoot.flatMap(r -> testsUri.flatMap(u -> writeTest(renderer, new PathEntry(r, Path.of(u.getPath().substring(1))))));
   }
 
   Optional<Ref> writeTest(HtmlDocRenderer renderer, PathEntry tests){
