@@ -59,7 +59,7 @@ final class HtmlDocRenderer{
     renderHeader(sb, shown);
     shown.forEach(t -> renderType(sb, t, claims));
     pages.forEach((p,id) -> renderPage(sb, p, id));
-    sb.append(router());
+    sb.append(router);
     return sb.append("</main>\n</div>\n</body>\n</html>\n").toString();
   }
   String renderText(){
@@ -142,15 +142,15 @@ final class HtmlDocRenderer{
   }
   //the Fearless mark: the blue to orange square of the icon, with its white F
   static final String mark= ""
-    + "<svg class=\"mark\" viewBox=\"0 0 64 64\" width=\"38\" height=\"38\" aria-hidden=\"true\">"
-    + "<defs><linearGradient id=\"fearless\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"0.3\">"
-    + "<stop offset=\"0\" stop-color=\"#2068a8\"/><stop offset=\"1\" stop-color=\"#e88028\"/>"
-    + "</linearGradient></defs>"
-    + "<rect x=\"1\" y=\"1\" width=\"62\" height=\"62\" rx=\"14\" fill=\"url(#fearless)\"/>"
-    + "<rect x=\"18\" y=\"12\" width=\"10\" height=\"40\" rx=\"5\" fill=\"#fff\"/>"
-    + "<rect x=\"18\" y=\"12\" width=\"30\" height=\"10\" rx=\"5\" fill=\"#fff\"/>"
-    + "<rect x=\"18\" y=\"27\" width=\"24\" height=\"10\" rx=\"5\" fill=\"#fff\"/>"
-    + "</svg>";
+    +"<svg class=\"mark\" viewBox=\"0 0 64 64\" width=\"38\" height=\"38\" aria-hidden=\"true\">"
+    +"<defs><linearGradient id=\"fearless\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"0.3\">"
+    +"<stop offset=\"0\" stop-color=\"#2068a8\"/><stop offset=\"1\" stop-color=\"#e88028\"/>"
+    +"</linearGradient></defs>"
+    +"<rect x=\"1\" y=\"1\" width=\"62\" height=\"62\" rx=\"14\" fill=\"url(#fearless)\"/>"
+    +"<rect x=\"18\" y=\"12\" width=\"10\" height=\"40\" rx=\"5\" fill=\"#fff\"/>"
+    +"<rect x=\"18\" y=\"12\" width=\"30\" height=\"10\" rx=\"5\" fill=\"#fff\"/>"
+    +"<rect x=\"18\" y=\"27\" width=\"24\" height=\"10\" rx=\"5\" fill=\"#fff\"/>"
+    +"</svg>";
   static final String css= """
 :root{
   --blue:#2068a8; --blue-deep:#1a5486; --orange:#c07020; --orange-bright:#e88028;
@@ -259,42 +259,42 @@ code{
 """;
   //a hash may name a section, or an id nested inside one: show the owning section,
   //then scroll to the precise target once it is no longer hidden.
-  static String router(){ return ""
-    + "<script>\n"
-    + "(function(){\n"
-    + "  var secs= document.querySelectorAll('.type');\n"
-    + "  var links= document.querySelectorAll('#toclist a');\n"
-    + "  var items= document.querySelectorAll('#toclist li');\n"
-    + "  var filter= document.getElementById('filter');\n"
-    + "  var welcome= document.getElementById('welcome');\n"
-    + "  function route(){\n"
-    + "    var hash= decodeURIComponent(location.hash.slice(1));\n"
-    + "    var target= hash ? document.getElementById(hash) : null;\n"
-    + "    var active= target && (target.classList.contains('type') ? target : target.closest('.type'));\n"
-    + "    secs.forEach(function(el){ el.classList.toggle('active', el===active); });\n"
-    + "    links.forEach(function(a){\n"
-    + "      a.classList.toggle('sel', !!active && a.getAttribute('href')==='#'+active.id);\n"
-    + "    });\n"
-    + "    welcome.style.display= active ? 'none' : '';\n"
-    + "    if (active && target!==active){ target.scrollIntoView(); }\n"
-    + "    else { window.scrollTo(0,0); }\n"
-    + "  }\n"
-    + "  window.addEventListener('hashchange', route);\n"
-    + "  route();\n"
-    + "  filter.addEventListener('input', function(){\n"
-    + "    var q= filter.value.toLowerCase();\n"
-    + "    items.forEach(function(li){\n"
-    + "      li.style.display= li.textContent.toLowerCase().indexOf(q) < 0 ? 'none' : '';\n"
-    + "    });\n"
-    + "  });\n"
-    + "  document.querySelectorAll('.method>summary').forEach(function(s){\n"
-    + "    s.addEventListener('click', function(e){\n"
-    + "      if (!e.target.closest('.disclosure') && !e.target.closest('a')){ e.preventDefault(); }\n"
-    + "    });\n"
-    + "  });\n"
-    + "})();\n"
-    + "</script>\n";
+  static final String router= """
+<script>
+(function(){
+  var secs= document.querySelectorAll('.type');
+  var links= document.querySelectorAll('#toclist a');
+  var items= document.querySelectorAll('#toclist li');
+  var filter= document.getElementById('filter');
+  var welcome= document.getElementById('welcome');
+  function route(){
+    var hash= decodeURIComponent(location.hash.slice(1));
+    var target= hash ? document.getElementById(hash) : null;
+    var active= target && (target.classList.contains('type') ? target : target.closest('.type'));
+    secs.forEach(function(el){ el.classList.toggle('active', el===active); });
+    links.forEach(function(a){
+      a.classList.toggle('sel', !!active && a.getAttribute('href')==='#'+active.id);
+    });
+    welcome.style.display= active ? 'none' : '';
+    if (active && target!==active){ target.scrollIntoView(); }
+    else { window.scrollTo(0,0); }
   }
+  window.addEventListener('hashchange', route);
+  route();
+  filter.addEventListener('input', function(){
+    var q= filter.value.toLowerCase();
+    items.forEach(function(li){
+      li.style.display= li.textContent.toLowerCase().indexOf(q) < 0 ? 'none' : '';
+    });
+  });
+  document.querySelectorAll('.method>summary').forEach(function(s){
+    s.addEventListener('click', function(e){
+      if (!e.target.closest('.disclosure') && !e.target.closest('a')){ e.preventDefault(); }
+    });
+  });
+})();
+</script>
+""";
   List<TypeDoc> visibleTypes(){
     return types.stream()
       .filter(TypeDoc::visible)

@@ -173,107 +173,107 @@ when deciding what needs compiling, so such a date can not be trusted.
   public static UserError pathTooLong(RefParent kid){
     return fail(showRel(kid),
       "- The path is longer than 200 characters.\n"
-    + "  Long paths often fail on Windows and in some tools.",
+    +"  Long paths often fail on Windows and in some tools.",
       "- Shorten folder/file names, or move this content closer to the project root."
     );
   }
   public static UserError symlinkForbidden(Path kid){
     return fail(showRel(kid),
       "- This path is a symbolic link.\n"
-    + "  Symbolic links behave differently across systems and tools, so we forbid them.",
+    +"  Symbolic links behave differently across systems and tools, so we forbid them.",
       "- Replace the symbolic link with a real file/folder.\n"
-    + "- If you need the linked content, copy it into the repository."
+    +"- If you need the linked content, copy it into the repository."
     );
   }
   public static UserError onlyRegularFilesAndDirs(Path kid){
     return fail(showRel(kid),
       "- This path is not a normal file or folder.",
       "- Remove it from the project folder.\n"
-    + "- Keep only normal files and folders here."
+    +"- Keep only normal files and folders here."
     );
   }
   public static UserError needsExtension(RefParent kid){
     return fail(showRel(kid),
       "- This file has no extension.\n"
-    + "  Files normally must be named like \"name.ext\" (one dot).",
+    +"  Files normally must be named like \"name.ext\" (one dot).",
       "- Rename it to have a single extension (example: \"foo.txt\", \"source.fear\").\n"
-    + "- Rename it to a well-known extensionless file (example: \"readme\")."
+    +"- Rename it to a well-known extensionless file (example: \"readme\")."
     );
   }
   public static UserError visibleMustStartWithLetterOrUnderscore(RefParent kid){
     return fail(showRel(kid),
       "- A visible folder/file name starts with an invalid character.\n"
-    + "  Visible names must start with a lowercase letter (a-z) or underscore (_).",
+    +"  Visible names must start with a lowercase letter (a-z) or underscore (_).",
       "- Rename it to start with a-z or _.\n"
-    + "  Examples: \"foo\", \"_tmp\", \"foo1\"."
+    +"  Examples: \"foo\", \"_tmp\", \"foo1\"."
     );
   }
   public static UserError visibleInvalidChar(RefParent kid, char c){
     return fail(showRel(kid),
       "- A visible folder/file name contains an unsupported character: "+Message.displayChar(c)+".\n"
-    + "  Visible names may use only lowercase letters (a-z), digits (0-9), and underscore (_).",
+    +"  Visible names may use only lowercase letters (a-z), digits (0-9), and underscore (_).",
       "- Rename it to use only lowercase letters, digits, and underscores.\n"
-    + "  Examples: \"foo_bar2\", \"src1\", \"_cache\"."
+    +"  Examples: \"foo_bar2\", \"src1\", \"_cache\"."
     );
   }
   public static UserError windowsReservedName(RefParent kid){
     return fail(showRel(kid),
       "- A visible folder/file name is reserved on Windows (device name).\n"
-    + "  Even if you add an extension, Windows treats it as the same reserved name.",
+    +"  Even if you add an extension, Windows treats it as the same reserved name.",
       "- Rename the folder/file so its base name is not a Windows device name.\n"
-    + "  Reserved device name: \"con\", \"prn\", \"aux\", \"nul\", \"com1\"..\"com9\", \"lpt1\"..\"lpt9\"."
+    +"  Reserved device name: \"con\", \"prn\", \"aux\", \"nul\", \"com1\"..\"com9\", \"lpt1\"..\"lpt9\"."
     );
   }
   public static UserError missingExtension(RefParent kid){
     return fail(showRel(kid),
       "- The file name ends with a dot.\n"
-    + "  That means the extension is missing.",
+    +"  That means the extension is missing.",
       "- Rename it to \"name.ext\" with one dot.\n"
-    + "  Example: change \"foo.\" to \"foo.txt\"."
+    +"  Example: change \"foo.\" to \"foo.txt\"."
     );
   }
   public static UserError multiDotExtNotAllowed(RefParent kid){
     return fail(showRel(kid),
       "- This file name has more than one dot in the extension part.\n"
-    + "  Most files must use exactly one dot: \"name.ext\".",
+    +"  Most files must use exactly one dot: \"name.ext\".",
       "- Rename it to use a single extension, OR\n"
-    + "- Rename it to use a well-known multi-part extension (example: \"tar.gz\")."
+    +"- Rename it to use a well-known multi-part extension (example: \"tar.gz\")."
     );
   }
   public static UserError extLenMustBe1To16(RefParent kid){
     return fail(showRel(kid),
       "- The file extension is too long.\n"
-    + "  Extensions must be 1..16 characters.",
+    +"  Extensions must be 1..16 characters.",
       "- Use a shorter extension (1..16 characters), using only lowercase letters and digits."
     );
   }
   public static UserError extInvalidChar(RefParent kid, char c){
     return fail(showRel(kid),
       "- The file extension contains an unsupported character: "+Message.displayChar(c)+".\n"
-    + "  Extensions may use only lowercase letters (a-z) and digits (0-9).",
+    +"  Extensions may use only lowercase letters (a-z) and digits (0-9).",
       "- Rename the file to use an extension made only of lowercase letters and digits.\n"
-    + "  Examples: \".txt\", \".fear\", \".md\", \".tar.gz\"."
+    +"  Examples: \".txt\", \".fear\", \".md\", \".tar.gz\"."
     );
   }
   private static String listed(String label, RefParent r){ return "  "+label+":\n  "+showRel(r).replace("\nPath:", "\n  Path:")+"\n"; }
   public static UserError extensionlessMaskExtension(RefParent kid, RefParent noExtKid){
     return fail(showRel(kid),
       "- Both an allowed extensionless file and an extended file share the same base name.\n"
-    + listed("Extensionless file", noExtKid)
-    + listed("Extended file", kid)
-    + "  This is confusing in file browsers (extensions may be hidden).",
+    +listed("Extensionless file", noExtKid)
+    +listed("Extended file", kid)
+    +"  This is confusing in file browsers (extensions may be hidden).",
       "- Rename one of them so they are clearly distinct."
     );
   }
   public static UserError zipNameClashes(RefParent zipKid, RefParent otherKid, String other){
     return fail(showRel(zipKid),
       "- A zip file and a "+other+" share the same base name.\n"
-    + listed("Zip file", zipKid)
-    + listed(Character.toUpperCase(other.charAt(0))+other.substring(1), otherKid)
-    + "  Fearless expands each zip file into a folder named after it (without the\n"
-    + "  \".zip\"); that folder would have the exact same name as this "+other+".",
+    +listed("Zip file", zipKid)
+    +listed(Character.toUpperCase(other.charAt(0))+other.substring(1), otherKid)
+    +"  Fearless expands each zip file into a folder named after it (without the\n"
+    +"  \".zip\"); that folder would have the exact same name as this "+other+".",
       "- Rename one of them, or move/rename the zip file, so this name is no longer\n"
-    + "  produced twice."
+    +"  produced twice."
     );
   }
   //-- protected ("dot") names: ignored by Fearless, but still checked out by other tools
@@ -286,40 +286,40 @@ when deciding what needs compiling, so such a date can not be trusted.
   public static UserError invisibleNoTrailingDotOrSpace(RefParent kid, String name){
     return fail(showRel(kid),
       "- A protected name segment ends with a dot or a space.\n"
-    + "  Some systems/tools trim these, which causes collisions.\n"
-    + "  Bad segment: "+disp(name),
+    +"  Some systems/tools trim these, which causes collisions.\n"
+    +"  Bad segment: "+disp(name),
       "- Rename the segment so it does not end with '.' or space."
     );
   }
   public static UserError invisibleInvalidSurrogate(RefParent kid, String name){
     return fail(showRel(kid),
       "- A protected name segment contains invalid Unicode.\n"
-    + "  Bad segment: "+disp(name),
+    +"  Bad segment: "+disp(name),
       "- Rename the segment to remove the invalid characters."
     );
   }
   public static UserError invisibleNoControlChars(RefParent kid, int cp, String name){
     return fail(showRel(kid),
       "- A protected name segment contains a control character.\n"
-    + "  Character: "+Message.displayChar(cp)+"\n"
-    + "  Segment: "+disp(name),
+    +"  Character: "+Message.displayChar(cp)+"\n"
+    +"  Segment: "+disp(name),
       "- Rename the segment to remove the control character."
     );}
   public static UserError invisibleNoWindowsBadChars(RefParent kid, char bad, String name){
     return fail(showRel(kid),
       "- A protected name segment contains a character that Windows forbids.\n"
-    + "  Bad char: `"+bad+"`\n"
-    + "  Segment: "+disp(name),
+    +"  Bad char: `"+bad+"`\n"
+    +"  Segment: "+disp(name),
       "- Rename the segment to remove Windows-forbidden characters.\n"
-    + "  Forbidden on Windows: < > : \" / \\ | ? *"
+    +"  Forbidden on Windows: < > : \" / \\ | ? *"
     );
   }
   public static UserError invisibleWindowsReservedDeviceName(RefParent kid, String base, String name){
     return fail(showRel(kid),
       "- A protected name segment uses a Windows reserved device name.\n"
-    + "  Bad base: "+disp(base)+" in segment: "+disp(name),
+    +"  Bad base: "+disp(base)+" in segment: "+disp(name),
       "- Rename it so the base name is not a Windows device name.\n"
-    + "  Reserved device name: \"con\", \"prn\", \"aux\", \"nul\", \"com1\"..\"com9\", \"lpt1\"..\"lpt9\"."
+    +"  Reserved device name: \"con\", \"prn\", \"aux\", \"nul\", \"com1\"..\"com9\", \"lpt1\"..\"lpt9\"."
     );
   }
   public static UserError invisibleSiblingNamesCollide(RefParent kid, String prev, String name, boolean caseOnly, boolean nfcOnly){
@@ -329,31 +329,31 @@ when deciding what needs compiling, so such a date can not be trusted.
       :            "Names collide after Unicode NFC normalization and case-folding.";
     return fail(showRel(kid),
       "- Two protected names in the same folder collide.\n"
-    + "  Name 1: "+disp(prev)+"\n"
-    + "  Name 2: "+disp(name)+"\n"
-    + "  Reason: "+reason,
+    +"  Name 1: "+disp(prev)+"\n"
+    +"  Name 2: "+disp(name)+"\n"
+    +"  Reason: "+reason,
       "- Rename one of them so they are clearly distinct.\n"
-    + "- Avoid differences that are only case changes or Unicode-equivalent spellings."
+    +"- Avoid differences that are only case changes or Unicode-equivalent spellings."
     );
   }
   //-- auto-loaded assets
   public static UserError autoloadedNamesCollide(RefParent kid, String prev, String name, String typeName){
     return fail(showRel(kid),
       "- Auto-loading both of these files would produce two declarations of the same type name.\n"
-    + "  Name 1: "+disp(prev)+"\n"
-    + "  Name 2: "+disp(name)+"\n"
-    + "  Reason: Both would auto-load as the type "+disp(typeName)+".",
+    +"  Name 1: "+disp(prev)+"\n"
+    +"  Name 2: "+disp(name)+"\n"
+    +"  Reason: Both would auto-load as the type "+disp(typeName)+".",
       "- Rename one of them so they are clearly distinct.\n"
-    + "- Avoid two assets whose folder and file name produce the same auto-loaded type name."
+    +"- Avoid two assets whose folder and file name produce the same auto-loaded type name."
     );
   }
   public static UserError autoloadedNameNotAType(RefParent kid, String typeName){
     return fail(showRel(kid),
       "- Auto-loading this file would declare a type called "+disp(typeName)+".\n"
-    + "  That is not a Fearless type name: after any leading underscores, a type name\n"
-    + "  must start with an uppercase letter.",
+    +"  That is not a Fearless type name: after any leading underscores, a type name\n"
+    +"  must start with an uppercase letter.",
       "- Rename the file so that its name starts with a letter.\n"
-    + "  Examples: \"my_notes.txt\" auto-loads as \"MyNotes\", \"_notes.txt\" as \"_Notes\"."
+    +"  Examples: \"my_notes.txt\" auto-loads as \"MyNotes\", \"_notes.txt\" as \"_Notes\"."
     );
   }
   //-- zips, which we read as if they were folders
@@ -610,36 +610,36 @@ File:
   }
   public static UserError claimNotMain(SourceOracle src, Literal l, TName claim){
     return claim(src, l, " implements "+disp(withArity(claim))+".\n"
-    + "Only a main can implement "+disp(withArity(claim))+": "+owner(l)+" must also implement \"base.Main\", directly or through one of its supertypes.");
+    +"Only a main can implement "+disp(withArity(claim))+": "+owner(l)+" must also implement \"base.Main\", directly or through one of its supertypes.");
   }
   public static UserError claimIconNotConcrete(SourceOracle src, Literal l, T.C c){
     return claim(src, l, c, "The icon "+disp(repr(c.ts().getFirst()))+" is not a concrete type name.\n"
-    + "An icon is a type name with no type variables and no generic arguments, like \"IconsFoo\".");
+    +"An icon is a type name with no type variables and no generic arguments, like \"IconsFoo\".");
   }
   public static UserError claimIconNotAsset(SourceOracle src, Literal l, T.C c){
     return claim(src, l, c, "The icon "+disp(repr(c.ts().getFirst()))+" is not the type generated for an image file.\n"
-    + "An icon is the type generated for an image file, like \"IconsFoo\" for \"_pkg/icons/foo.png\", or \"base.IconsConflict\".");
+    +"An icon is the type generated for an image file, like \"IconsFoo\" for \"_pkg/icons/foo.png\", or \"base.IconsConflict\".");
   }
   public static UserError claimExtNotStr(SourceOracle src, Literal l, T.C c){
     return claim(src, l, c, "The extension "+disp(repr(c.ts().get(1)))+" is not a string literal type.\n"
-    + "An extension is written as a string literal type, like "+disp("\"foo\"")+" or "+disp("`foo`")+".");
+    +"An extension is written as a string literal type, like "+disp("\"foo\"")+" or "+disp("`foo`")+".");
   }
   public static UserError claimExtInvalid(SourceOracle src, Literal l, T.C c, String ext){
     return claim(src, l, c, disp(ext)+" is not a valid extension.\n"
-    + "An extension is 1 to "+Fs.maxExtSeg+" characters, each a lowercase letter \"a\"-\"z\" or a digit \"0\"-\"9\", with no dot; \"fearless\" is reserved.");
+    +"An extension is 1 to "+Fs.maxExtSeg+" characters, each a lowercase letter \"a\"-\"z\" or a digit \"0\"-\"9\", with no dot; \"fearless\" is reserved.");
   }
   public static UserError claimShortcutNotFapp(SourceOracle src, Literal l, T.C c, String ext){
     return claim(src, l, c, disp(ext)+" is not a shortcut extension: a shortcut file only starts its main, so it must not look like a document of another program or a file of the project.\n"
-    + "A shortcut extension is \"fapp\" followed by three digits, like \"fapp042\"; or implement \"base.Shortcut[_]\" to let the Fearless manager choose one.");
+    +"A shortcut extension is \"fapp\" followed by three digits, like \"fapp042\"; or implement \"base.Shortcut[_]\" to let the Fearless manager choose one.");
   }
   public static UserError claimOpenWithFapp(SourceOracle src, Literal l, T.C c, String ext){
     return claim(src, l, c, disp(ext)+" is a shortcut extension: \"fapp\" followed by three digits names the shortcut files of the Fearless manager.\n"
-    + "Use an extension of the form \"ffile\" followed by three digits, like \"ffile042\", or a system extension, like \"htm\"; or implement \"base.OpenWith[_]\" to let the Fearless manager choose one.");
+    +"Use an extension of the form \"ffile\" followed by three digits, like \"ffile042\", or a system extension, like \"htm\"; or implement \"base.OpenWith[_]\" to let the Fearless manager choose one.");
   }
   public static UserError claimExtTwice(SourceOracle src, Literal l, T.C first, T.C second, String ext){
     return claim(src, l, " claims the extension "+disp(ext)+" more than once:\n"
-    + "both "+disp(repr(first))+" and "+disp(repr(second))+" claim it.\n"
-    + "A main can claim each extension at most once, across all its \"base.OpenWith[_,_]\" and \"base.Shortcut[_,_]\", since one extension has one icon.");
+    +"both "+disp(repr(first))+" and "+disp(repr(second))+" claim it.\n"
+    +"A main can claim each extension at most once, across all its \"base.OpenWith[_,_]\" and \"base.Shortcut[_,_]\", since one extension has one icon.");
   }
   public static UserError docReferences(List<String> problems){ return new UserError("""
 Broken reference in a doc comment.

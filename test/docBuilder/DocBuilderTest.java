@@ -42,51 +42,56 @@ final class DocBuilderTest{
   private static final URI file= URI.create("fear:/_pkg/a.fear");
   private static final URI tests= URI.create("fear:/auto_tests/pkg_test.fear");
   @Test void plainLineCommentWithAStrayQuoteDoesNotSwallowALaterDocComment(){
-    var text= ""
-      + "// a comment mentioning a quote: \"\n"
-      + "/// this is meant to be a doc comment\n"
-      + "Foo: Bar {\n"
-      + "}\n";
+    var text= """
+// a comment mentioning a quote: "
+/// this is meant to be a doc comment
+Foo: Bar {
+}
+""";
     var docs= new SourceDocs(file, text);
     var atLine2= docs.docsByLine.getOrDefault(2, List.of());
     assertEquals(1, atLine2.size(), "the /// doc comment on line 2 must be recognized as a doc comment");
     assertEquals("this is meant to be a doc comment", atLine2.getFirst().text());
   }
   @Test void plainLineCommentWithAStrayBacktickDoesNotSwallowALaterDocComment(){
-    var text= ""
-      + "// a comment mentioning a backtick: `\n"
-      + "/// this doc should still be found\n"
-      + "Foo: Bar {\n"
-      + "}\n";
+    var text= """
+// a comment mentioning a backtick: `
+/// this doc should still be found
+Foo: Bar {
+}
+""";
     var docs= new SourceDocs(file, text);
     var atLine2= docs.docsByLine.getOrDefault(2, List.of());
     assertEquals(1, atLine2.size(), "the /// doc comment on line 2 must be recognized as a doc comment");
     assertEquals("this doc should still be found", atLine2.getFirst().text());
   }
   @Test void aBlockCommentIsNeverTreatedAsADocCommentEvenIfItContainsTripleSlashLookingText(){
-    var text= ""
-      + "/* /// not a doc, just text inside a block comment */\n"
-      + "Foo: Bar {\n"
-      + "}\n";
+    var text= """
+/* /// not a doc, just text inside a block comment */
+Foo: Bar {
+}
+""";
     var docs= new SourceDocs(file, text);
     assertTrue(docs.docsByLine.isEmpty(), "a block comment must never register a doc occurrence: "+docs.docsByLine);
   }
   @Test void consecutivePureDocLinesAboveADeclarationAreCollectedInSourceOrder(){
-    var text= ""
-      + "/// first line of doc\n"
-      + "/// second line of doc\n"
-      + "Foo: Bar {\n"
-      + "}\n";
+    var text= """
+/// first line of doc
+/// second line of doc
+Foo: Bar {
+}
+""";
     var docs= new SourceDocs(file, text);
     var before= docs.docsAt(Pos.of(file, 3, 1), true);
     assertEquals(List.of("first line of doc", "second line of doc"), before.stream().map(DocOcc::text).toList());
   }
   @Test void aRunnableExampleLineBetweenAProseDocAndItsDeclarationIsStillReachedAsAPureDoc(){
-    var text= ""
-      + "/// description of foo\n"
-      + "//>   .check{foo.assertEq(1)}\n"
-      + "Foo: Bar {\n"
-      + "}\n";
+    var text= """
+/// description of foo
+//>   .check{foo.assertEq(1)}
+Foo: Bar {
+}
+""";
     var docs= new SourceDocs(file, text);
     var before= docs.docsAt(Pos.of(file, 3, 1), true);
     assertEquals(List.of("description of foo", "  .check{foo.assertEq(1)}"), before.stream().map(DocOcc::text).toList());
@@ -94,12 +99,13 @@ final class DocBuilderTest{
     assertTrue(before.get(1).example(), "the //> line is a runnable example");
   }
   @Test void severalRunnableExampleLinesAllReachTheDeclarationInSourceOrder(){
-    var text= ""
-      + "/// description of foo\n"
-      + "//>   .check{foo.assertEq(1)}\n"
-      + "//>   .checkDetErr({_ -> True}, {bar})\n"
-      + "Foo: Bar {\n"
-      + "}\n";
+    var text= """
+/// description of foo
+//>   .check{foo.assertEq(1)}
+//>   .checkDetErr({_ -> True}, {bar})
+Foo: Bar {
+}
+""";
     var docs= new SourceDocs(file, text);
     var before= docs.docsAt(Pos.of(file, 4, 1), true);
     assertEquals(
@@ -123,12 +129,13 @@ final class DocBuilderTest{
   //documentation that reaches no declaration is documentation nobody reads: the usual
   //cause is a /// or //> written with one mark too few, which ends the block silently.
   @Test void aDocCommentThatReachesNoDeclarationIsReported(){
-    var text= ""
-      + "/// orphaned by the line below\n"
-      + "//  one slash short\n"
-      + "/// attached\n"
-      + "Foo: Bar {\n"
-      + "}\n";
+    var text= """
+/// orphaned by the line below
+//  one slash short
+/// attached
+Foo: Bar {
+}
+""";
     var docs= new SourceDocs(file, text);
     docs.docsAt(Pos.of(file, 4, 1), true);
     var runs= docs.orphanRuns();
