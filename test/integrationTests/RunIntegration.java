@@ -157,6 +157,33 @@ top level main
 """, run("mainInMethod"));
   }
   @Test void testingStandardLibrary(){ testOk("testingStandardLibrary");}
+  //every main runs under proc.NoManager, Child and Failing on their own first; every process Parent starts keeps that attenuator and adds its own
+  @Test void testProcessAttenuation(){
+    utils.Err.strCmp("""
+child starts
+child: download ok
+child: manager revoked
+child ends
+the failing main throws
+imm Failing.main(_) error line: 37 in file _proc/_rank_app.fear
+parent starts
+parent: manager revoked
+child starts
+child: download ok
+child: manager revoked
+child ends
+parent: child ok
+child starts
+child: download revoked
+child: manager revoked
+child ends
+parent: child ok
+the failing main throws
+imm Failing.main(_) error line: 37 in file _proc/_rank_app.fear
+parent: failing failed: the failing main throws
+parent ends
+""", main(freshIntegrationRoot("testProcessAttenuation"), List.of("-DfearlessAttenuators=proc.NoManager")));
+  }
   @Test void baseGeneratedExamples(@TempDir Path tmp) throws InterruptedException{
     var out= Coordinator.runMains(Coordinator.runData(tmp, ResolveResource.stLibPath), List.of(ResolveResource.coordinatorJars, baseCache), "_base.Main");
     writeJUnitReport("baseGeneratedExamples", tmp);

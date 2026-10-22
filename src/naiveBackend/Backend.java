@@ -30,6 +30,7 @@ public final class Backend{
   final ArrayList<Consumer<List<Path>>> fixers= new ArrayList<>();
   final TreeMap<String,String> mains= new TreeMap<>();
   final TreeMap<String,String> preloaded= new TreeMap<>();
+  final TreeMap<String,String> attenuators= new TreeMap<>();
   public Backend(Path out, BackendTools tools){
     assert Require.nonNull(out, tools);
     this.out= out;
@@ -65,8 +66,10 @@ public final class Backend{
     if (hasInstance){ sb.a("  "+iface+" instance= new _Instance();\n  final class _Instance implements "+iface+"{"+onceMethods(l, iface)+"}\n"+cacheField(l)); }
     Fs.writeUtf8(out.resolve(iface+".java"), sb.a("}").toString());
     if (hasInstance && MainsInfo.isMain(l)){ mains.put(l.name().s(), iface); preloaded.put(l.name().s(), preloaded(l)); }
+    if (hasInstance && LiteralDeclarations.has(l.cs(), attenuator)){ attenuators.put(l.name().s(), iface); }
     fixers.add(sb);
   }
+  static final TName attenuator= new TName("base.Attenuator", 0, Pos.unknown);
   private String preloaded(Literal l){ return Join.of(MainsInfo.icons(l.cs()).stream().map(n -> javaStrLit(n.s())+", "+typeName(n)+".instance"), "", ", ", ""); }
   private static boolean implementsType(Literal l, String name, int arity){ return LiteralDeclarations.has(l.cs(), new TName(name, arity, Pos.unknown)); }
   private static String cacheField(Literal l){
@@ -132,22 +135,26 @@ public final class Backend{
     return rc.name()+"$"+(s.startsWith(".") ? encodeTrailingPrimes(s.substring(1)) : "$"+mangleOp(s))+"$"+m.arity();
   }
   void writeMainJava(){
-    var all= Join.of(mains.keySet().stream().map(n -> "\""+n+"\""), "{", ",", "}", "{}");
     var assets= Join.of(tools.capabilities().autoloadedAssets().values().stream().map(Backend::assetLiteral), "{", ",", "}", "{}");
     var sb= new StringBuilder(8_000)
       .append("package _").append(tools.pkgName()).append(";\n\n")
       .append("public final class Main{\n")
       .append("  static{ _base.Util.installParentLifeline(); }\n")
-      .append("  static final String[] all= ").append(all).append(";\n")
+      .append("  public static final String[] all= ").append(names(mains)).append(";\n")
+      .append("  public static final Object[] mainInstances= ").append(instances(mains)).append(";\n")
+      .append("  public static final String[] attenuators= ").append(names(attenuators)).append(";\n")
+      .append("  public static final Object[] attenuatorInstances= ").append(instances(attenuators)).append(";\n")
       .append("  public static final String[][] autoloadedAssets= ").append(assets).append(";\n")
       .append("  public static void main(String[] args){ var ok= true; for (String n: args.length == 0 ? all : args){ ok&= run(n); } if (!ok){ System.exit(1); } }\n")
       .append("  static boolean run(String n){\n");
     mains.forEach((n,iface) -> sb
       .append("    if (n.equals(\"").append(n).append("\")){ _base._FluentGUI.preload(").append(preloaded.get(n)).append("); return _base.Util.topLevel(()->")
-      .append(iface).append(".instance.imm$main$1(new ").append(typeName(new TName("base._System", 0, Pos.unknown))).append("())); }\n"));
+      .append(iface).append(".instance.imm$main$1(").append(typeName(new TName("base._CapProcess", 0, Pos.unknown))).append(".system())); }\n"));
     sb.append("    throw new AssertionError(\"No main called \"+n+\" in package ").append(tools.pkgName()).append("\");\n  }\n}\n");
     Fs.writeUtf8(out.resolve("Main.java"), sb.toString());
   }
+  static String names(TreeMap<String,String> table){ return Join.of(table.keySet().stream().map(Backend::javaStrLit), "{", ",", "}", "{}"); }
+  static String instances(TreeMap<String,String> table){ return Join.of(table.values().stream().map(i -> i+".instance"), "{", ",", "}", "{}"); }
   static String assetLiteral(SourceOracleWithAutoload.Triple t){
     return "{"+javaStrLit(t.diskPath())+","+javaStrLit(t.zipSteps())+","+javaStrLit(t.zipEntry())+"}";
   }
