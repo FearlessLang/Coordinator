@@ -461,8 +461,8 @@ Applog: FileLog{"b"}
         new Backend(genJava, base.backendTools(pkgName, oracle, other, core, capabilities)).produceJavaCode();
       }
     }.compile(root, stLib);
-    var logFiles= Fs.walk(genJava, s -> s.filter(Fs::isRegularFile).sorted()
-      .flatMap(p -> Fs.readUtf8(p).lines().filter(l -> l.contains("_base.AppLog.open("))).toList());
+    var logFiles= Fs.walk(genJava, s -> s.filter(Fs::isRegularFile)
+      .flatMap(p -> Fs.readUtf8(p).lines().filter(l -> l.contains("_base.AppLog.open("))).sorted().toList());
     utils.Err.strCmp("""
 [###]_base.AppLog.open(java.nio.file.Path.of(".out","logs","_p","app_log.log"), false);
 [###]_base.AppLog.open(java.nio.file.Path.of(".out","logs","_p","applog.log"), false);
