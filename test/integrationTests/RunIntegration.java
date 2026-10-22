@@ -20,7 +20,6 @@ import java.nio.file.attribute.FileTime;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -462,9 +461,10 @@ Applog: FileLog{"b"}
     }.compile(root, stLib);
     var logFiles= Fs.walk(genJava, s -> s.filter(Fs::isRegularFile).sorted()
       .flatMap(p -> Fs.readUtf8(p).lines().filter(l -> l.contains("_base.AppLog.open("))).toList());
-    assertEquals(2, logFiles.size(), logFiles.toString());
-    assertNotEquals(logFiles.get(0).toLowerCase(Locale.ROOT), logFiles.get(1).toLowerCase(Locale.ROOT),
-      "On a file system that ignores case, as the default ones of Windows and macOS, the two logs are one file");
+    utils.Err.strCmp("""
+[###]_base.AppLog.open(java.nio.file.Path.of(".out","logs","_p","app_log.log"), false);
+[###]_base.AppLog.open(java.nio.file.Path.of(".out","logs","_p","applog.log"), false);
+""", Join.of(logFiles, "", "\n", "\n"));
   }
   @Test void testAssets(){ testOk("testAssets");}
   private Path theOneLogFile(Path dir, String prefix) throws IOException{
@@ -487,7 +487,7 @@ Applog: FileLog{"b"}
 [###] processed item 3
 [###] finished
 """, content);
-    var pkgContent= Fs.readUtf8(theOneLogFile(logDir.resolve("logging"), "PkgLog$"));
+    var pkgContent= Fs.readUtf8(theOneLogFile(logDir.resolve("_logging"), "pkg_log$"));
     utils.Err.strCmp("[###] package-specific log entry\n", pkgContent);
   }
   // testingNorms holds no fearless unit tests: a cache hit and a recomputation return
