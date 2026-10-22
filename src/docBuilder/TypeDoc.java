@@ -17,15 +17,15 @@ import core.TName;
 import utils.Pos;
 
 final class TypeDoc{
-  TypeDoc(Literal l, List<DocOcc> docs){
-    this.docs= docs;
-    variants.add(l);
-  }
-
   final ArrayList<Literal> variants= new ArrayList<>();
   final List<DocOcc> docs;
   final LinkedHashMap<Object,MethodDoc> byKey= new LinkedHashMap<>();
   final SequencedCollection<MethodDoc> methods= byKey.sequencedValues();
+
+  TypeDoc(Literal l, List<DocOcc> docs){
+    this.docs= docs;
+    variants.add(l);
+  }
 
   Literal main(){ return variants.getFirst(); }
 
@@ -53,18 +53,18 @@ final class TypeDoc{
 }
 
 final class MethodDoc{
-  MethodDoc(TypeDoc owner, boolean declared, List<DocOcc> docs){
-    this.owner= owner;
-    this.declared= declared;
-    this.docs= docs;
-  }
-
   final TypeDoc owner;
   final boolean declared;
   final List<DocOcc> docs;
   final ArrayList<M> variants= new ArrayList<>();
   final LinkedHashMap<MethodRefKey,MethodRef> inheritedByKey= new LinkedHashMap<>();
   final Collection<MethodRef> inheritedFrom= inheritedByKey.values();
+
+  MethodDoc(TypeDoc owner, boolean declared, List<DocOcc> docs){
+    this.owner= owner;
+    this.declared= declared;
+    this.docs= docs;
+  }
 
   M main(){ return variants.getFirst(); }
   boolean hasDocs(){ return !docs.isEmpty(); }

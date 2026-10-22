@@ -21,10 +21,21 @@ import core.T;
 import core.TName;
 import offensiveUtils.Require;
 import tools.Fs;
+import utils.Bug;
 import utils.Join;
 import utils.Range;
 
 final class HtmlDocRenderer{
+  final String pkgName;
+  final List<TypeDoc> types;
+  final Map<DocOcc,Map<Integer,DocLink>> spans;
+  final Optional<Path> baseDocLocation;
+  //filled by href() as links are emitted, so every ambiguous link that reaches the
+  //page also gets its landing section; rendered after all types, when it is complete.
+  final LinkedHashMap<DocLink.Ambiguous,String> pages= new LinkedHashMap<>();
+  final ExportedToStr toStr;
+  final DocResolver resolver;
+
   HtmlDocRenderer(String pkgName, Map<String,String> uses, List<TypeDoc> types, OtherPackages other,
       Map<DocOcc,Map<Integer,DocLink>> spans, Optional<Path> baseDocLocation){
     assert Require.nonNull(pkgName, uses, types, other, spans, baseDocLocation);
@@ -35,16 +46,6 @@ final class HtmlDocRenderer{
     toStr= new ExportedToStr(pkgName, uses);
     resolver= new DocResolver(pkgName, types, other);
   }
-
-  final String pkgName;
-  final List<TypeDoc> types;
-  final Map<DocOcc,Map<Integer,DocLink>> spans;
-  final Optional<Path> baseDocLocation;
-  //filled by href() as links are emitted, so every ambiguous link that reaches the
-  //page also gets its landing section; rendered after all types, when it is complete.
-  final LinkedHashMap<DocLink.Ambiguous,String> pages= new LinkedHashMap<>();
-  final ExportedToStr toStr;
-  final DocResolver resolver;
 
   String render(){
     var shown= visibleTypes();
@@ -392,9 +393,8 @@ code{
     var sb= new StringBuilder();
     var i= 0;
     for (var f : DocRefScanner.signatureTypes(text)){
-      var t= (DocRef.TypeName)f.ref();
-      if (bound.contains(t.simpleName())){ continue; }
-      var link= resolver.resolveType(t);
+      if (bound.contains(f.ref().simpleName())){ continue; }
+      var link= resolver.resolveType(f.ref());
       if (link.isEmpty()){ continue; }
       sb.append(h(text.substring(i, f.start())));
       sb.append("<a href=\"").append(h(href(link.get()))).append("\">")
@@ -471,10 +471,11 @@ code{
   }
 
   String href(DocLink link){
-    if (link instanceof DocLink.Ambiguous a){
-      return "#"+pages.computeIfAbsent(a, _ -> "disambig-"+id(a.title())+"-"+pages.size());
-    }
-    return candidateHref(((DocLink.Resolved)link).hit());
+    return switch (link){
+      case DocLink.Ambiguous a -> "#"+pages.computeIfAbsent(a, _ -> "disambig-"+id(a.title())+"-"+pages.size());
+      case DocLink.Resolved r -> candidateHref(r.hit());
+      case DocLink.NoLink _ -> throw Bug.unreachable();
+    };
   }
 
   String candidateHref(Candidate c){
@@ -498,7 +499,7 @@ code{
   String shortTitle(TypeDoc t){
     if (!t.main().infName()){ return typeTitle(t); }
     var p= t.main().pos();
-    return "Anon@"+Fs.fileNameWithExtension(p.fileName().toString()).replaceFirst("\\.fear$", "")+":"+p.line();
+    return "Anon@"+Fs.fileNameWithoutExtension(p.fileName().toString())+":"+p.line();
   }
 
   String typeLink(T.C c){

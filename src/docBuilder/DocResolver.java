@@ -27,9 +27,11 @@ record Scope(Literal owner, Optional<M> method){
 record DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other){
 
   Optional<DocLink> resolve(DocRef ref, Scope scope){
-    if (ref instanceof DocRef.TypeName t){ return resolveType(t); }
-    if (ref instanceof DocRef.LocalName l){ return resolveLocal(l, scope); }
-    return resolveMethod((DocRef.MethodName)ref, scope);
+    return switch (ref){
+      case DocRef.TypeName t -> resolveType(t);
+      case DocRef.LocalName l -> resolveLocal(l, scope);
+      case DocRef.MethodName m -> resolveMethod(m, scope);
+    };
   }
 
   //"this" and the method's parameters. A parameter typed by a type variable is in
@@ -78,9 +80,10 @@ record DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other){
 
   private Optional<DocLink> resolveMethod(DocRef.MethodName ref, Scope scope){
     if (ref.owner().isEmpty()){ return resolveBareSelector(ref.selector(), ref.arity()); }
-    if (ref.owner().get() instanceof DocRef.LocalName l){ return onLocal(l, ref, scope); }
-    var t= (DocRef.TypeName)ref.owner().get();
-    return onOwners(t.simpleName(), typeCandidates(t), ref.selector(), ref.arity());
+    return switch (ref.owner().get()){
+      case DocRef.LocalName l -> onLocal(l, ref, scope);
+      case DocRef.TypeName t -> onOwners(t.simpleName(), typeCandidates(t), ref.selector(), ref.arity());
+    };
   }
 
   private Optional<DocLink> onLocal(DocRef.LocalName l, DocRef.MethodName ref, Scope scope){

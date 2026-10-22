@@ -15,7 +15,6 @@ import java.io.IOException;
 import java.math.BigInteger;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
 import java.security.SecureRandom;
@@ -230,11 +229,11 @@ AllAutoTests_p: base.UnitTests {::
   .test _Calc_Examples
   }
 """, Fs.readUtf8(generatedTests(root)));
-    var stamp= Files.getLastModifiedTime(generatedTests(root));
+    var stamp= Fs.getLastModifiedTime(generatedTests(root));
     assertEquals(Map.of("p", true), Coordinator.pkgsBuilt(root, baseCache));
     utils.Err.strCmp(expected, c.main(root, stLib));
     utils.Err.strCmp(expected, c.main(root, stLib));
-    assertEquals(stamp, Files.getLastModifiedTime(generatedTests(root)));
+    assertEquals(stamp, Fs.getLastModifiedTime(generatedTests(root)));
     assertEquals(Map.of("p", true), Coordinator.pkgsBuilt(root, baseCache));
     assertEquals(List.of("p"), frontends);
   }
@@ -270,10 +269,10 @@ In file: fear:/_p/auto_tests/p_test.fear
   @Test void aUserWrittenAllAutoTestsSuppressesGeneration(@TempDir Path tmp) throws IOException{
     var root= docExamplesProject(tmp);
     coordinator(root).compile(root, stLib);
-    assertTrue(Files.exists(generatedTests(root)));
+    assertTrue(Fs.exists(generatedTests(root)));
     editAndTouch(root.resolve("_p", "_rank_app.fear"), "App:Main", "AllAutoTests_p: base.UnitTests{t->t}\nApp:Main");
     utils.Err.strCmp("hi\n", main(root, List.of()));
-    assertFalse(Files.exists(generatedTests(root)));
+    assertFalse(Fs.exists(generatedTests(root)));
   }
   @Test void docExamplesOfTwoTypesSharingASimpleNameWithDifferentAritiesRun(@TempDir Path tmp){
     var root= tmp.resolve("root");
@@ -331,8 +330,8 @@ App:Main, lib.Lib{s->base.Debug#(`app`)}
     assertEquals(Map.of("app", false), Coordinator.pkgsBuilt(root, baseCache));
     var ex= assertThrows(UserError.class, () -> main(root, List.of()));
     utils.Err.strCmp("[###]lib.Lib[###]", ex.getMessage());
-    assertFalse(Files.exists(Coordinator.genJava(root.resolve(Coordinator.outDir)).resolve("lib.jar")));
-    assertFalse(Files.exists(root.resolve(Coordinator.outDir).resolve("lib.built")));
+    assertFalse(Fs.exists(Coordinator.genJava(root.resolve(Coordinator.outDir)).resolve("lib.jar")));
+    assertFalse(Fs.exists(root.resolve(Coordinator.outDir).resolve("lib.built")));
   }
   @Test void onlyImmCapture(@TempDir Path tmp){
     var root= tmp.resolve("root");
@@ -374,7 +373,7 @@ App:Main, lib.Lib{s->base.Debug#(`app`)}
         new Backend(genJava, base.backendTools(pkgName, oracle, other, core, capabilities)).produceJavaCode();
       }
     }.compile(root, stLib);
-    var got= Fs.walk(genJava, s -> s.filter(Files::isRegularFile).sorted().map(p -> p.getFileName()+(Fs.readUtf8(p).contains("_base.OnlyImmCapture") ? " only imm" : "")).toList());
+    var got= Fs.walk(genJava, s -> s.filter(Fs::isRegularFile).sorted().map(p -> p.getFileName()+(Fs.readUtf8(p).contains("_base.OnlyImmCapture") ? " only imm" : "")).toList());
     utils.Err.strCmp("""
       AnyX$p$1.java
       Cases$1c$0.java
@@ -398,7 +397,7 @@ App:Main, lib.Lib{s->base.Debug#(`app`)}
   }
   @Test void testAssets(){ testOk("testAssets");}
   private Path theOneLogFile(Path dir, String prefix) throws IOException{
-    try (var files= Files.list(dir)){
+    try (var files= Fs.list(dir)){
       var found= files.filter(p -> p.getFileName().toString().startsWith(prefix)).toList();
       assertEquals(1, found.size(), found.toString());
       return found.getFirst();
@@ -826,10 +825,10 @@ Writes: Main{s -> base.Block#
       "fear:/raw.bin", "fear:/readme", "fear:/todo/item.txt", "fear:/u16.txt", "fear:/u32.txt"), fearPaths(data));
     assertEquals(List.of("second", "third", "zipped", "renested", "in a new folder of a zip", "deeper", "Hi", "caf?"),
       Stream.of("notes/b.txt", "fresh/deeper/c.txt", "pics/deep/four.txt", "pics/inner/three.txt", "pics/new/five.txt", "pics/deep/two.txt", "raw.bin", "ascii.txt").map(p -> fearFile(data, "fear:/"+p)).toList());
-    assertArrayEquals(new byte[]{'c', 0, 'a', 0, 'f', 0, (byte)0xE9, 0}, Fs.of(() -> Files.readAllBytes(data.resolve("u16.txt"))));
-    assertArrayEquals(new byte[]{0, 0, 0, 'A'}, Fs.of(() -> Files.readAllBytes(data.resolve("u32.txt"))));
-    assertArrayEquals(new byte[]{'c', 'a', 'f', (byte)0xE9, '?'}, Fs.of(() -> Files.readAllBytes(data.resolve("latin1.txt"))));
-    assertFalse(Files.exists(data.resolve("pics")));
+    assertArrayEquals(new byte[]{'c', 0, 'a', 0, 'f', 0, (byte)0xE9, 0}, Fs.of(() -> Fs.readAllBytes(data.resolve("u16.txt"))));
+    assertArrayEquals(new byte[]{0, 0, 0, 'A'}, Fs.of(() -> Fs.readAllBytes(data.resolve("u32.txt"))));
+    assertArrayEquals(new byte[]{'c', 'a', 'f', (byte)0xE9, '?'}, Fs.of(() -> Fs.readAllBytes(data.resolve("latin1.txt"))));
+    assertFalse(Fs.exists(data.resolve("pics")));
   }
   @Test void aDeleteRemovesTheFoldersAndTheZipsItLeavesEmpty(@TempDir Path tmp){
     var data= dataProject(tmp);
@@ -858,9 +857,9 @@ Deletes: Main{s -> base.Block#
   }
 """, dataLinks(data, data)));
     assertEquals(List.of("fear:/data.fearless", "fear:/readme", "fear:/todo/item.txt"), fearPaths(data));
-    assertTrue(Files.isDirectory(data.resolve(".hidden")));
-    assertFalse(Files.exists(data.resolve("pics.zip")));
-    assertFalse(Files.exists(data.resolve("notes")));
+    assertTrue(Fs.isDirectory(data.resolve(".hidden")));
+    assertFalse(Fs.exists(data.resolve("pics.zip")));
+    assertFalse(Fs.exists(data.resolve("notes")));
   }
   @Test void anImageIsWrittenAsAPng(@TempDir Path tmp) throws IOException{
     var data= dataProject(tmp);
@@ -868,7 +867,7 @@ Deletes: Main{s -> base.Block#
     img.setRGB(1, 2, 0xFF336699);
     var bout= new ByteArrayOutputStream();
     ImageIO.write(img, "png", bout);
-    Files.write(data.resolve("pic.png"), bout.toByteArray());
+    Fs.write(data.resolve("pic.png"), bout.toByteArray());
     utils.Err.strCmp("ok\n", dataRun(tmp, """
 Images: Main{s -> base.Block#
   .let img= {s.dataRead.read("Pub", L#("pic.png")).run{.ok n -> n.readImage(1000); .info i -> base.Error!i}}
@@ -928,7 +927,7 @@ use base.OpenWith as OpenWith;
 use base.Shortcut as Shortcut;
 """+code);
     Fs.ensureDir(root.resolve("_col", "icons"));
-    Files.write(root.resolve("_col", "icons", "foo.png"), onePixelPng());
+    Fs.write(root.resolve("_col", "icons", "foo.png"), onePixelPng());
     return root;
   }
   @Test void mainsClaimingExtensionsRunOnThePortablePath(@TempDir Path tmp) throws Exception{
@@ -1356,7 +1355,7 @@ The icon "col.Fake" is not the type generated for an image file.
 An icon is the type generated for an image file, like "IconsFoo" for "_pkg/icons/foo.png", or "base.IconsConflict"."""); }
   static void editAndTouch(Path file, String from, String to) throws IOException{
     Fs.writeUtf8(file, Fs.readUtf8(file).replace(from, to));
-    Files.setLastModifiedTime(file, FileTime.fromMillis(System.currentTimeMillis()+500));
+    Fs.setLastModifiedTime(file, FileTime.fromMillis(System.currentTimeMillis()+500));
   }
   @Test void aClaimReadBackFromTheApiJsonOfALowerRankPackageIsChecked(@TempDir Path tmp) throws Exception{
     var root= claimsProject(tmp, """
@@ -1443,7 +1442,7 @@ Foo:Main, OpenWith[IconsFoo,"foo"]{s->base.Debug#(`foo`)}
     coordinator(root).compile(root, stLib);
     var text= Fs.readUtf8(mainsInfo(root));
     assertEquals(Map.of("col", true), Coordinator.pkgsBuilt(root, baseCache));
-    Files.delete(root.resolve(Coordinator.outDir).resolve("col.mains.info"));
+    Fs.delete(root.resolve(Coordinator.outDir).resolve("col.mains.info"));
     assertEquals(Map.of("col", false), Coordinator.pkgsBuilt(root, baseCache));
     assertEquals(Optional.empty(), coordinator(root).mains(root, stLib));
     coordinator(root).compile(root, stLib);
@@ -1479,7 +1478,7 @@ More:base.Main{s->base.Debug#(`more`)}
 """);
     coordinator(root).compile(root, stLib);
     var text= Fs.readUtf8(mainsInfo(root));
-    Files.delete(mainsInfo(root));
+    Fs.delete(mainsInfo(root));
     assertEquals(Map.of("col", false, "more", false), Coordinator.pkgsBuilt(root, baseCache));
     coordinator(root).compile(root, stLib);
     utils.Err.strCmp(text, Fs.readUtf8(mainsInfo(root)));
@@ -1492,13 +1491,13 @@ Foo:Main{s->base.Debug#(`foo`)}
     coordinator(root).compile(root, stLib);
     assertEquals(Map.of("col", true), Coordinator.pkgsBuilt(root, baseCache));
     var baseApi= baseCache.resolve("base.json");
-    var old= Files.getLastModifiedTime(baseApi);
+    var old= Fs.getLastModifiedTime(baseApi);
     try{
-      Files.setLastModifiedTime(baseApi, FileTime.fromMillis(System.currentTimeMillis()+1000));
+      Fs.setLastModifiedTime(baseApi, FileTime.fromMillis(System.currentTimeMillis()+1000));
       assertEquals(Optional.empty(), coordinator(root).mains(root, stLib));
       assertEquals(Map.of("col", false), Coordinator.pkgsBuilt(root, baseCache));
     }
-    finally{ Files.setLastModifiedTime(baseApi, old); }
+    finally{ Fs.setLastModifiedTime(baseApi, old); }
   }
   void aCorruptedCacheFileIsDeletedWithTheWholeCache(Path tmp, String file, java.util.function.UnaryOperator<byte[]> corrupt, String why){
     var root= tmp.resolve("root");
@@ -1512,10 +1511,10 @@ A:Main{s->base.Debug#(`hi`)}
     utils.Err.strCmp("hi\n", main(root, List.of()));
     var out= root.resolve(Coordinator.outDir);
     var cached= out.resolve(file);
-    Fs.ofV(() -> Files.write(cached, corrupt.apply(Files.readAllBytes(cached))));
+    Fs.ofV(() -> Fs.write(cached, corrupt.apply(Fs.readAllBytes(cached))));
     var ex= assertThrows(UserError.class, () -> main(root, List.of()));
     utils.Err.strCmp("Build cache contains an invalid cached file.[###]"+why+"[###]Fearless deleted this project's .fearless_out folder: compile again to rebuild it.\n", ex.getMessage());
-    assertFalse(Files.exists(out));
+    assertFalse(Fs.exists(out));
     utils.Err.strCmp("hi\n", main(root, List.of()));
   }
   @Test void aBuiltFileThatIsNotUtf8DeletesTheCache(@TempDir Path tmp){
@@ -1570,7 +1569,7 @@ iii
 not read by the compiler
 """);
     coordinator(root).compile(root, stLib);
-    Files.move(root.resolve("_lib", "icons", "lib.png"), root.resolve("_lib", "icons", "lib.gif"));
+    Fs.move(root.resolve("_lib", "icons", "lib.png"), root.resolve("_lib", "icons", "lib.gif"));
     coordinator(root).compile(root, stLib);
     utils.Err.strCmp("""
 {

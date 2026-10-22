@@ -38,12 +38,12 @@ final class LimitedJsonParser{
   }
   private <TT> Map<String,TT> obj(Supplier<TT> v){
     req('{'); if (eat('}')){ return Map.of(); }
-    var out= new LinkedHashMap<String,TT>();
+    var res= new LinkedHashMap<String,TT>();
     for (;;req(',')){
       var k= name();
       req(':');
-      if (out.put(k, v.get()) != null){ throw err("Duplicate key "+k); }
-      if (eat('}')){ return Collections.unmodifiableMap(out); }
+      if (res.put(k, v.get()) != null){ throw err("Duplicate key "+k); }
+      if (eat('}')){ return Collections.unmodifiableMap(res); }
     }
   }
   private String name(){
@@ -113,8 +113,8 @@ final class LimitedJsonParser{
   }
   private List<Object> arr(){
     req('['); if (eat(']')){ return List.of(); }
-    var out= new ArrayList<Object>();
-    for (;;req(',')){ out.add(val()); if (eat(']')){ return out; } }
+    var res= new ArrayList<Object>();
+    for (;;req(',')){ res.add(val()); if (eat(']')){ return res; } }
   }
   private Object val(){
     ws();

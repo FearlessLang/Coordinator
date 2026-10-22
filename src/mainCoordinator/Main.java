@@ -66,7 +66,7 @@ public final class Main{
   }
   public static void run(Path project, Path base, Path rt) throws InterruptedException{
     UserError.root = project;
-    Fs.onSymbolicLink= Report::symlinkForbidden;
+    Fs.onSymbolicLink = Report::symlinkForbidden;
     var c= new Coordinator(){
       @Override public Optional<Path> baseCachePath(){ return Optional.of(base.getParent().resolve("baseCache")); }
       @Override public BackendTools backendTools(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, CapabilityEnvironment capabilities){

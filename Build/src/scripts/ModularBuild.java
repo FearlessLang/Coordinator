@@ -1,7 +1,6 @@
 package scripts;
 
 import java.io.File;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -64,7 +63,7 @@ public final class ModularBuild{
     //module into the graph, so this shaded jar's bundled junit classes collide
     //with the real org.junit.jupiter.api module also sitting in mods
     var jars= Fs.walk(mods, s -> s.filter(p -> p.getFileName().toString().startsWith("junit-platform-console-standalone")).toList());
-    Fs.ofV(() -> Files.delete(OneOr.of("Expected exactly one junit console jar in "+mods, jars.stream())));
+    Fs.ofV(() -> Fs.delete(OneOr.of("Expected exactly one junit console jar in "+mods, jars.stream())));
     buildJar("FearlessTour", List.of(tour.resolve("src"), resources), List.of("-requires-automatic"));
   }
 
@@ -89,7 +88,7 @@ public final class ModularBuild{
   }
 
   static void deployEclipsePlugin(Path appRoot){
-    var found= Fs.walk(appRoot, s -> s.filter(Files::isDirectory).filter(p -> p.getFileName().toString().equals("mods")).toList());
+    var found= Fs.walk(appRoot, s -> s.filter(Fs::isDirectory).filter(p -> p.getFileName().toString().equals("mods")).toList());
     var appDir= OneOr.of("Expected exactly one 'mods' dir under "+appRoot, found.stream()).getParent();
     Fs.copyFresh(buildEclipsePlugin(), appDir.resolve("eclipsePlugin"));
   }

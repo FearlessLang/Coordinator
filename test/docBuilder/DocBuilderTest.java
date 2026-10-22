@@ -7,7 +7,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.net.URI;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.EnumSet;
@@ -121,6 +120,13 @@ final class DocBuilderTest{
     assertEquals(1, found.size());
     assertEquals("trailing doc", found.getFirst().text());
     assertTrue(found.getFirst().inline(), "a doc comment following code on the same line must be inline, not pure");
+  }
+
+  @Test void trailingDocsSharedByTwoDeclarationsAreAmbiguousInSourceOrder(){
+    var text= ".aaa->1;  .bbb->2 /// first note\n.ccc->3;  .ddd->4 /// second note\n";
+    var docs= new SourceDocs(file, text);
+    List.of(Pos.of(file, 1, 1), Pos.of(file, 1, 11), Pos.of(file, 2, 1), Pos.of(file, 2, 11)).forEach(p -> docs.docsAt(p, false));
+    assertEquals(List.of("first note", "second note"), docs.ambiguousInline.stream().map(DocOcc::text).toList());
   }
 
   //documentation that reaches no declaration is documentation nobody reads: the usual
@@ -772,7 +778,7 @@ Holder
     var renderer= new HtmlDocRenderer("pkg", Map.of(), builder.types, OtherPackages.empty(), Map.of(), Optional.empty());
     builder.writeTest(renderer, new PathEntry(tmp, Path.of("auto_tests", "pkg_test.fear")));
 
-    assertFalse(Files.exists(testPath), "a type matching the top-level generated name must suppress generation entirely");
+    assertFalse(Fs.exists(testPath), "a type matching the top-level generated name must suppress generation entirely");
   }
 
   private void writeSuppressed(Path tmp){
@@ -795,7 +801,7 @@ Holder
     var testPath= tmp.resolve("auto_tests", "pkg_test.fear");
     Fs.writeUtf8(testPath, HtmlDocBuilder.generatedMark+"pkg; any edit is overwritten\n");
     writeSuppressed(tmp);
-    assertFalse(Files.exists(testPath.getParent()));
+    assertFalse(Fs.exists(testPath.getParent()));
   }
   @Test void removingAGeneratedFileKeepsTheOtherFilesOfItsFolder(@TempDir Path tmp){
     var testPath= tmp.resolve("auto_tests", "pkg_test.fear");
@@ -803,7 +809,7 @@ Holder
     Fs.writeUtf8(testPath, HtmlDocBuilder.generatedMark+"pkg; any edit is overwritten\n");
     Fs.writeUtf8(notes, "mine\n");
     writeSuppressed(tmp);
-    assertFalse(Files.exists(testPath));
+    assertFalse(Fs.exists(testPath));
     assertEquals("mine\n", Fs.readUtf8(notes));
   }
   @Test void withNothingGeneratedTheOtherFilesOfTheFolderAreLeftAlone(@TempDir Path tmp){

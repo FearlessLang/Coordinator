@@ -24,14 +24,16 @@ import utils.Pos;
 import utils.Range;
 
 public final class Backend{
+  final Path out;
+  final BackendTools tools;
+  final ArrayList<Consumer<List<Path>>> fixers= new ArrayList<>();
+  final TreeMap<String,String> mains= new TreeMap<>();
+  final TreeMap<String,String> preloaded= new TreeMap<>();
   public Backend(Path out, BackendTools tools){
     assert Require.nonNull(out, tools);
     this.out= out;
     this.tools= tools;
   }
-  final Path out;
-  final BackendTools tools;
-  final ArrayList<Consumer<List<Path>>> fixers= new ArrayList<>();
   boolean isRepr(Literal l){ return l.name().equals(new TName("base.Repr", 1, Pos.unknown)); }
   public List<Consumer<List<Path>>> produceJavaCode(){
     Fs.cleanDir(out);
@@ -61,7 +63,7 @@ public final class Backend{
     }
     if (hasInstance){ sb.a("  "+iface+" instance= new "+iface+"(){};"+cacheField(l)); }
     Fs.writeUtf8(out.resolve(iface+".java"), sb.a("}").toString());
-    if (hasInstance && implementsType(l, "base.Main", 0)){ mains.put(l.name().s(), iface); preloaded.put(l.name().s(), preloaded(l)); }
+    if (hasInstance && MainsInfo.isMain(l)){ mains.put(l.name().s(), iface); preloaded.put(l.name().s(), preloaded(l)); }
     fixers.add(sb);
   }
   private String preloaded(Literal l){ return Join.of(MainsInfo.icons(l.cs()).stream().map(n -> javaStrLit(n.s())+", "+typeName(n)+".instance"), "", ", ", ""); }
@@ -122,8 +124,6 @@ public final class Backend{
     var s= m.s();
     return rc.name()+"$"+(s.startsWith(".") ? encodeTrailingPrimes(s.substring(1)) : "$"+mangleOp(s))+"$"+m.arity();
   }
-  final TreeMap<String,String> mains= new TreeMap<>();
-  final TreeMap<String,String> preloaded= new TreeMap<>();
   void writeMainJava(){
     var all= Join.of(mains.keySet().stream().map(n -> "\""+n+"\""), "{", ",", "}", "{}");
     var assets= Join.of(tools.capabilities().autoloadedAssets().values().stream().map(Backend::assetLiteral), "{", ",", "}", "{}");

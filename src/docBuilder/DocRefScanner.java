@@ -16,7 +16,7 @@ import utils.Join;
 /// What counts as a name is asked of core (TName.isTypeName, TName.isPkgName,
 /// MName.isMethodName), so this never grows its own idea of the grammar.
 final class DocRefScanner{
-  record Found(int start, int end, DocRef ref){}
+  record Found(int start, int end, DocRef.TypeName ref){}
   record CodeSpan(int start, int end, int fence){}
 
   private static final Pattern fenced= Pattern.compile("(?s)(?<!`)(`+)(?!`)(.*?)(?<!`)\\1(?!`)");
@@ -50,10 +50,10 @@ final class DocRefScanner{
   /// One reference, read left to right: an optional receiver, then an optional
   /// selector. Each name is handed to core to be judged.
   private static final class Parse{
-    Parse(String s){ this.s= s; }
     final String s;
     int i= 0;
     boolean ok= true;
+    Parse(String s){ this.s= s; }
 
     Optional<DocRef> ref(){
       var receiver= startsSelector() ? Optional.<DocRef.Receiver>empty() : receiver();

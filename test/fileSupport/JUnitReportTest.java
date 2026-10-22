@@ -3,7 +3,6 @@ package fileSupport;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.time.Instant;
@@ -60,14 +59,14 @@ Assertion failure.
   @Test void aRunThatLoggedNoUnitTestsReportsNothing(@TempDir Path project){
     assertEquals("", JUnitReport.suite("demo", project));
     JUnitReport.write(project, project, "demo", Instant.parse("2026-09-03T00:00:00Z"));
-    assertFalse(Files.exists(JUnitReport.file(project)));
+    assertFalse(Fs.exists(JUnitReport.file(project)));
   }
   @Test void aLogStillBeingWrittenIsReportedUpToItsLastCompleteRecord(@TempDir Path project){
     writeLog(project, "20260904_012117_731Z", log);
     var file= project.resolve(".out").resolve("logs").resolve("_base").resolve("unit_test_log$20260904_012117_731Z.log");
     var open= "<testcase classname=\"Last\" name=\"Last at line: 11\" file=\"_hello/_rank_app.fear\" line=\"11\">\n<failure>\nAssertion ";
-    Fs.ofV(() -> Files.writeString(file, open, StandardOpenOption.APPEND));
-    Fs.ofV(() -> Files.write(file, new byte[]{(byte)0xC3}, StandardOpenOption.APPEND));
+    Fs.ofV(() -> Fs.writeString(file, open, StandardOpenOption.APPEND));
+    Fs.ofV(() -> Fs.write(file, new byte[]{(byte)0xC3}, StandardOpenOption.APPEND));
     utils.Err.strCmp("""
 <testsuite name="demo" tests="3" failures="1" errors="0">
 <testcase classname="Later" name="Later at line: 9" file="_hello/_rank_app.fear" line="9"><skipped/></testcase>
@@ -86,6 +85,6 @@ Assertion failure.
   @Test void aLogOlderThanThisRunIsNotReported(@TempDir Path project){
     writeLog(project, "20260904_012117_731Z", log);
     JUnitReport.write(project, project, "demo", Instant.parse("2026-09-05T00:00:00Z"));
-    assertFalse(Files.exists(JUnitReport.file(project)));
+    assertFalse(Fs.exists(JUnitReport.file(project)));
   }
 }

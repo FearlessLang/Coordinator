@@ -2,7 +2,7 @@ package fileSupport;
 
 import static fileSupport.ByteFiles.Kind.*;
 
-import java.util.Arrays;
+import java.util.stream.Stream;
 
 import fileSupport.ByteFiles.Kind;
 
@@ -616,8 +616,8 @@ enum TextMatch{
   private final Kind kind;
   private final String[] needles;
   TextMatch(Kind kind, String... needles){ this.kind= kind; this.needles= needles; }
-  boolean has(String text){ return Arrays.stream(needles).anyMatch(text::contains); }
+  boolean has(String text){ return Stream.of(needles).anyMatch(text::contains); }
   static Kind match(String text){
-    return Arrays.stream(values()).filter(v -> v.has(text)).findFirst().map(v -> v.kind).orElse(UnknownFailureAfterSuccessfulOpen);
+    return Stream.of(values()).filter(v -> v.has(text)).findFirst().map(v -> v.kind).orElse(UnknownFailureAfterSuccessfulOpen);
   }
 }

@@ -94,7 +94,7 @@ public record MainsInfo(Map<String,Main> mains){
     return Stream.concat(core.stream(), nested).filter(MainsInfo::isMain).distinct()
       .collect(Collectors.toUnmodifiableMap(l -> l.name().s(), of::main));
   }
-  private static boolean isMain(Literal l){
+  public static boolean isMain(Literal l){
     return LiteralDeclarations.has(l.cs(), main)
       && l.ms().stream().noneMatch(m -> m.sig().abs());
   }
@@ -112,7 +112,7 @@ public record MainsInfo(Map<String,Main> mains){
         if (!lit.startsWith("\"") && !lit.startsWith("`")){ throw Report.claimExtNotStr(src, l, c); }
         var ext= lit.substring(1, lit.length()-1);
         if (!Fs.isExtSeg(ext) || ext.equals("fearless")){ throw Report.claimExtInvalid(src, l, c, ext); }
-        var shortcut= c.name().equals(claims.get(3));
+        var shortcut= c.name().simpleName().equals("Shortcut");
         if (shortcut != ext.matches("fapp[0-9]{3}")){ throw shortcut ? Report.claimShortcutNotFapp(src, l, c, ext) : Report.claimOpenWithFapp(src, l, c, ext); }
         var prev= exts.putIfAbsent(ext, c);
         if (prev != null){ throw Report.claimExtTwice(src, l, prev, c, ext); }

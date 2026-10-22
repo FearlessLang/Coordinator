@@ -6,27 +6,27 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.IdentityHashMap;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 
 import utils.Pos;
 
 final class SourceDocs{
+  final URI uri;
+  final List<String> lines;
+  final HashMap<Integer,List<DocOcc>> docsByLine= new HashMap<>();
+  final HashMap<Integer,int[]> depthByLine= new HashMap<>();
+  final HashSet<DocOcc> attached= new HashSet<>();
+  final HashMap<DocOcc,Integer> inlineClaimedFromColumn= new HashMap<>();
+  final LinkedHashSet<DocOcc> ambiguousInline= new LinkedHashSet<>();
+
   SourceDocs(URI uri, String text){
     this.uri= uri;
     lines= text.lines().toList();
     scan();
   }
-
-  final URI uri;
-  final List<String> lines;
-  final HashMap<Integer,List<DocOcc>> docsByLine= new HashMap<>();
-  final HashMap<Integer,int[]> depthByLine= new HashMap<>();
-  final Set<DocOcc> attached= Collections.newSetFromMap(new IdentityHashMap<>());
-  final IdentityHashMap<DocOcc,Integer> inlineClaimedFromColumn= new IdentityHashMap<>();
-  final Set<DocOcc> ambiguousInline= Collections.newSetFromMap(new IdentityHashMap<>());
 
   List<DocOcc> docsAt(Pos pos, boolean includeBefore){
     assert pos.line()>0 && pos.line()<=lines.size() : pos;

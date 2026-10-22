@@ -27,33 +27,33 @@ public record ZipEntry(Path root, Path local, List<String> segments, List<String
   private static final int maxZipNesting= 64;
   public static List<ZipEntry> allEntryPaths(Path root, Path local){
     assert root.isAbsolute() && !local.isAbsolute();
-    var out= new ArrayList<ZipEntry>();
-    reqCollect(root.resolve(local), root, local, List.of(), out);
-    reqNoFileUsedAsDirectory(out);
-    reqNoFolderForNestedZipName(out);
-    return List.copyOf(out);
+    var res= new ArrayList<ZipEntry>();
+    reqCollect(root.resolve(local), root, local, List.of(), res);
+    reqNoFileUsedAsDirectory(res);
+    reqNoFolderForNestedZipName(res);
+    return List.copyOf(res);
   }
-  private static void reqCollect(Path diskZip, Path root, Path local, List<String> steps, ArrayList<ZipEntry> out){
+  private static void reqCollect(Path diskZip, Path root, Path local, List<String> steps, ArrayList<ZipEntry> res){
     if (steps.size() > maxZipNesting){ throw Report.zipNestingTooDeep(diskZip, steps); }
     for (var name : ZipLocator.entryNames(diskZip, steps)){
-      out.add(new ZipEntry(root, local, zipsToSegments(steps, name), steps, name));
-      if (name.endsWith(".zip")){ reqCollect(diskZip, root, local, Push.of(steps, name), out); }
+      res.add(new ZipEntry(root, local, zipsToSegments(steps, name), steps, name));
+      if (name.endsWith(".zip")){ reqCollect(diskZip, root, local, Push.of(steps, name), res); }
     }
   }
-  private static void reqNoFileUsedAsDirectory(List<ZipEntry> out){
-    for (var e : out){
-      var nested= out.stream().filter(o -> isProperPrefix(e.segments(), o.segments())).findFirst();
+  private static void reqNoFileUsedAsDirectory(List<ZipEntry> es){
+    for (var e : es){
+      var nested= es.stream().filter(o -> isProperPrefix(e.segments(), o.segments())).findFirst();
       if (nested.isEmpty()){ continue; }
       var extra= nested.get().segments().subList(e.segments().size(), nested.get().segments().size());
       var nestedDisplay= Join.of(extra, e.lastZips()+"/", "/", "");
       throw Report.zipFileUsedAsDirectory(e.root().resolve(e.local()), e.zips(), e.lastZips(), nestedDisplay);
     }
   }
-  private static void reqNoFolderForNestedZipName(List<ZipEntry> out){
-    for (var e : out){
+  private static void reqNoFolderForNestedZipName(List<ZipEntry> es){
+    for (var e : es){
       if (!e.lastZips().endsWith(".zip")){ continue; }
       var folder= dropZipExt(e.segments());
-      out.stream()
+      es.stream()
         .filter(o -> o.zips().equals(e.zips()))
         .filter(o -> isProperPrefix(folder, o.segments()))
         .findFirst().ifPresent(o -> { throw Report.zipNameClashesWithFolder(e.root().resolve(e.local()), e.zips(), e.lastZips(), o.lastZips()); });

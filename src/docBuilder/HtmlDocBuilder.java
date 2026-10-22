@@ -5,6 +5,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -31,13 +32,6 @@ import userMessages.Report;
 import utils.Pos;
 
 public final class HtmlDocBuilder{
-  public HtmlDocBuilder(SourceOracle oracle, OtherPackages other, List<Literal> core, Optional<Path> baseDocLocation){
-    assert Require.nonNull(oracle, other, core, baseDocLocation);
-    this.oracle= oracle;
-    this.other= other;
-    this.baseDocLocation= baseDocLocation;
-    currentByName= core.stream().collect(Collectors.toUnmodifiableMap(Literal::name, l -> l));
-  }
   final Optional<Path> baseDocLocation;
 
   final SourceOracle oracle;
@@ -50,7 +44,15 @@ public final class HtmlDocBuilder{
 
   final ArrayList<TypeDoc> types= new ArrayList<>();
   final IdentityHashMap<Src,TypeDoc> typeBySrc= new IdentityHashMap<>();
-  final HashMap<URI,SourceDocs> sources= new HashMap<>();
+  final LinkedHashMap<URI,SourceDocs> sources= new LinkedHashMap<>();
+
+  public HtmlDocBuilder(SourceOracle oracle, OtherPackages other, List<Literal> core, Optional<Path> baseDocLocation){
+    assert Require.nonNull(oracle, other, core, baseDocLocation);
+    this.oracle= oracle;
+    this.other= other;
+    this.baseDocLocation= baseDocLocation;
+    currentByName= core.stream().collect(Collectors.toUnmodifiableMap(Literal::name, l -> l));
+  }
 
   public void packageLocation(String pkgName, Path htmlPath, Optional<Path> testsRoot){
     assert Require.nonNull(pkgName, htmlPath, testsRoot);
@@ -85,7 +87,7 @@ public final class HtmlDocBuilder{
   public Optional<Ref> complete(URI testsUri){
     assert Require.nonNull(pkgName, htmlPath);
     var resolver= new DocResolver(pkgName, types, other);
-    var spans= new IdentityHashMap<DocOcc,Map<Integer,DocLink>>();
+    var spans= new HashMap<DocOcc,Map<Integer,DocLink>>();
     var problems= new ArrayList<String>();
     sources.values().stream().flatMap(s -> s.orphanRuns().stream()).map(this::orphan).forEach(problems::add);
     sources.values().stream().flatMap(s -> s.ambiguousInline.stream()).map(this::ambiguousInline).forEach(problems::add);
@@ -104,8 +106,8 @@ public final class HtmlDocBuilder{
     var names= renderer.testNames();
     var declared= types.stream().map(TypeDoc::main).collect(Collectors.toMap(l -> l.name().simpleName(), l -> l, (a,_) -> a));
     if (names.perType().isEmpty() || declared.containsKey(names.top())){ remove(path); return Optional.empty(); }
-    var collided= names.perType().stream().filter(declared::containsKey).findFirst();
-    if (collided.isPresent()){ throw Report.generatedTestNameReserved(reservedNameProblem(declared.get(collided.get())), names.top()); }
+    names.perType().stream().filter(declared::containsKey).findFirst()
+      .ifPresent(n -> { throw Report.generatedTestNameReserved(reservedNameProblem(declared.get(n)), names.top()); });
     var test= renderer.renderTest();
     if (!old.equals(test)){ Fs.writeUtf8(path, test); }
     return Optional.of(tests);
@@ -125,14 +127,14 @@ public final class HtmlDocBuilder{
     return Message.of(oracle::loadString, List.of(new Frame("the documentation of package "+pkgName, span)), msg);
   }
 
-  void linkType(DocResolver resolver, TypeDoc t, IdentityHashMap<DocOcc,Map<Integer,DocLink>> spans, ArrayList<String> problems){
+  void linkType(DocResolver resolver, TypeDoc t, HashMap<DocOcc,Map<Integer,DocLink>> spans, ArrayList<String> problems){
     linkGroup(resolver, Scope.of(t.main()), t.docs, spans, problems);
     t.methods.forEach(m -> linkGroup(resolver, Scope.of(t.main(), m.main()), m.docs, spans, problems));
   }
 
   //one group per declaration, carrying the scope its comment is written in: a fenced
   //``` ... ``` block never spans declarations, so "inside a fence" resets per group.
-  void linkGroup(DocResolver resolver, Scope scope, List<DocOcc> docs, IdentityHashMap<DocOcc,Map<Integer,DocLink>> spans,
+  void linkGroup(DocResolver resolver, Scope scope, List<DocOcc> docs, HashMap<DocOcc,Map<Integer,DocLink>> spans,
       ArrayList<String> problems){
     var inFence= false;
     for (var occ : docs){
@@ -145,7 +147,7 @@ public final class HtmlDocBuilder{
   }
 
   void link(DocResolver resolver, DocOcc occ, Scope scope,
-      IdentityHashMap<DocOcc,Map<Integer,DocLink>> spans, ArrayList<String> problems){
+      HashMap<DocOcc,Map<Integer,DocLink>> spans, ArrayList<String> problems){
     var res= new HashMap<Integer,DocLink>();
     for (var sp : DocRefScanner.refSpans(occ.text())){
       var ref= DocRefScanner.wholeRef(occ.text(), sp);

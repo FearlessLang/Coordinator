@@ -17,11 +17,11 @@ import java.nio.file.NoSuchFileException;
 import java.nio.file.NotDirectoryException;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
-import java.util.Arrays;
 import java.util.Locale;
+import java.util.stream.Stream;
 
-import utils.Join;
 import tools.Fs;
+import utils.Join;
 
 public final class ByteFiles{
   public enum Op{
@@ -166,6 +166,6 @@ public final class ByteFiles{
   public static String text(Throwable e){
     if (e == null){ return ""; }
     var text= (e instanceof FileSystemException fs && fs.getReason()!=null) ? fs.getReason() : e.getMessage();
-    return (text==null ? "" : " "+text.toLowerCase(Locale.ROOT))+text(e.getCause())+Join.of(Arrays.stream(e.getSuppressed()).map(ByteFiles::text), "", "", "", "");
+    return (text==null ? "" : " "+text.toLowerCase(Locale.ROOT))+text(e.getCause())+Join.of(Stream.of(e.getSuppressed()).map(ByteFiles::text), "", "", "", "");
   }
 }

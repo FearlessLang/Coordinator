@@ -3,7 +3,6 @@ package coordinator;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
 import java.util.LinkedHashMap;
@@ -482,7 +481,7 @@ final class RecompilationCacheTest{
     @Override public void backend(String pkgName, List<Literal> core, SourceOracle oracle, OtherPackages other, CapabilityEnvironment capabilities){}
     int calls(String pkg){ return frontendCalls.getOrDefault(pkg, 0); }
   }
-  private static void touch(Path p, long millis){ Fs.ofV(() -> Files.setLastModifiedTime(p, FileTime.fromMillis(millis))); }
+  private static void touch(Path p, long millis){ Fs.ofV(() -> Fs.setLastModifiedTime(p, FileTime.fromMillis(millis))); }
 
   @Test void touchingOnePackageMustNotRecompileAnIndependentPackage(@TempDir Path tmp) throws InterruptedException{
     var project= tmp.resolve("project");
@@ -525,7 +524,7 @@ final class RecompilationCacheTest{
     assertEquals(1, c.calls("a"));
     assertEquals(1, c.calls("b"));
 
-    Fs.ofV(() -> Files.delete(extra));
+    Fs.ofV(() -> Fs.delete(extra));
     c.main(project, c.sourceOracle(stdLib));
     assertEquals(2, c.calls("a"));
     assertEquals(1, c.calls("b"));

@@ -1,6 +1,5 @@
 package testBuildBase;
 
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
@@ -27,7 +26,7 @@ public final class BaseCacheBuilder{
     buildInto(modsDir, stdLib, Optional.empty());
   }
   private static Path singleDirNamed(Path root, String name){
-    var found= Fs.walk(root, s -> s.filter(Files::isDirectory).filter(p -> p.getFileName().toString().equals(name)).toList());
+    var found= Fs.walk(root, s -> s.filter(Fs::isDirectory).filter(p -> p.getFileName().toString().equals(name)).toList());
     return OneOr.of("Expected exactly one '"+name+"' dir under "+root, found.stream());
   }
   public static void buildInto(Path modsDir, Path stdLibDir, Optional<Path> testsRoot){
