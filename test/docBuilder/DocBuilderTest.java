@@ -41,7 +41,6 @@ final class DocBuilderTest{
   static{ utils.Err.setUp(AssertionFailedError.class, Assertions::assertEquals, Assertions::assertTrue); }
   private static final URI file= URI.create("fear:/_pkg/a.fear");
   private static final URI tests= URI.create("fear:/auto_tests/pkg_test.fear");
-
   @Test void plainLineCommentWithAStrayQuoteDoesNotSwallowALaterDocComment(){
     var text= ""
       + "// a comment mentioning a quote: \"\n"
@@ -53,7 +52,6 @@ final class DocBuilderTest{
     assertEquals(1, atLine2.size(), "the /// doc comment on line 2 must be recognized as a doc comment");
     assertEquals("this is meant to be a doc comment", atLine2.getFirst().text());
   }
-
   @Test void plainLineCommentWithAStrayBacktickDoesNotSwallowALaterDocComment(){
     var text= ""
       + "// a comment mentioning a backtick: `\n"
@@ -65,7 +63,6 @@ final class DocBuilderTest{
     assertEquals(1, atLine2.size(), "the /// doc comment on line 2 must be recognized as a doc comment");
     assertEquals("this doc should still be found", atLine2.getFirst().text());
   }
-
   @Test void aBlockCommentIsNeverTreatedAsADocCommentEvenIfItContainsTripleSlashLookingText(){
     var text= ""
       + "/* /// not a doc, just text inside a block comment */\n"
@@ -74,7 +71,6 @@ final class DocBuilderTest{
     var docs= new SourceDocs(file, text);
     assertTrue(docs.docsByLine.isEmpty(), "a block comment must never register a doc occurrence: "+docs.docsByLine);
   }
-
   @Test void consecutivePureDocLinesAboveADeclarationAreCollectedInSourceOrder(){
     var text= ""
       + "/// first line of doc\n"
@@ -85,7 +81,6 @@ final class DocBuilderTest{
     var before= docs.docsAt(Pos.of(file, 3, 1), true);
     assertEquals(List.of("first line of doc", "second line of doc"), before.stream().map(DocOcc::text).toList());
   }
-
   @Test void aRunnableExampleLineBetweenAProseDocAndItsDeclarationIsStillReachedAsAPureDoc(){
     var text= ""
       + "/// description of foo\n"
@@ -98,7 +93,6 @@ final class DocBuilderTest{
     assertFalse(before.getFirst().example(), "the /// line is prose, not an example");
     assertTrue(before.get(1).example(), "the //> line is a runnable example");
   }
-
   @Test void severalRunnableExampleLinesAllReachTheDeclarationInSourceOrder(){
     var text= ""
       + "/// description of foo\n"
@@ -112,7 +106,6 @@ final class DocBuilderTest{
       List.of("description of foo", "  .check{foo.assertEq(1)}", "  .checkDetErr({_ -> True}, {bar})"),
       before.stream().map(DocOcc::text).toList());
   }
-
   @Test void aTrailingInlineDocCommentOnTheDeclarationLineIsFound(){
     var text= "Foo: Bar { /// trailing doc\n";
     var docs= new SourceDocs(file, text);
@@ -121,14 +114,12 @@ final class DocBuilderTest{
     assertEquals("trailing doc", found.getFirst().text());
     assertTrue(found.getFirst().inline(), "a doc comment following code on the same line must be inline, not pure");
   }
-
   @Test void trailingDocsSharedByTwoDeclarationsAreAmbiguousInSourceOrder(){
     var text= ".aaa->1;  .bbb->2 /// first note\n.ccc->3;  .ddd->4 /// second note\n";
     var docs= new SourceDocs(file, text);
     List.of(Pos.of(file, 1, 1), Pos.of(file, 1, 11), Pos.of(file, 2, 1), Pos.of(file, 2, 11)).forEach(p -> docs.docsAt(p, false));
     assertEquals(List.of("first note", "second note"), docs.ambiguousInline.stream().map(DocOcc::text).toList());
   }
-
   //documentation that reaches no declaration is documentation nobody reads: the usual
   //cause is a /// or //> written with one mark too few, which ends the block silently.
   @Test void aDocCommentThatReachesNoDeclarationIsReported(){
@@ -144,14 +135,12 @@ final class DocBuilderTest{
     assertEquals(1, runs.size(), "the run above the // line is attached to nothing");
     assertEquals(List.of("orphaned by the line below"), runs.getFirst().stream().map(DocOcc::text).toList());
   }
-
   @Test void aDocBlockThatReachesItsDeclarationLeavesNoOrphan(){
     var text= "/// attached\nFoo: Bar {\n}\n";
     var docs= new SourceDocs(file, text);
     docs.docsAt(Pos.of(file, 2, 1), true);
     assertTrue(docs.orphanRuns().isEmpty());
   }
-
   @Test void anEmptyLineInsideADocBlockEndsTheParagraphNotTheBlock(){
     var text= "/// first\n\n/// second\nFoo: Bar {\n}\n";
     var docs= new SourceDocs(file, text);
@@ -159,7 +148,6 @@ final class DocBuilderTest{
     assertEquals(List.of("first", "", "second"), res.stream().map(DocOcc::text).toList());
     assertTrue(docs.orphanRuns().isEmpty(), "an empty line must not detach what is above it");
   }
-
   @Test void anEmptyLineBetweenRunnableExamplesReadsAsAnEmptyExample(){
     var text= "//> one\n\n//> two\nFoo: Bar {\n}\n";
     var docs= new SourceDocs(file, text);
@@ -168,7 +156,6 @@ final class DocBuilderTest{
     assertTrue(res.get(1).text().isBlank() && res.get(1).example(),
       "between two //> lines the empty line is an example line, not prose");
   }
-
   //trimming an empty line off the end of a block is about what to show; the line was
   //still reached by the declaration and must not be reported as attached to nothing.
   @Test void anEmptyDocLineAtTheEndOfABlockIsTrimmedButStillAttached(){
@@ -178,40 +165,33 @@ final class DocBuilderTest{
     assertEquals(List.of("doc"), res.stream().map(DocOcc::text).toList());
     assertTrue(docs.orphanRuns().isEmpty());
   }
-
   private static Literal literal(String name, RC rc){
     return new Literal(rc, new TName(name, 0, Pos.unknown), List.of(), List.of(), "this", List.of(), Src.synthetic, false);
   }
-
   @Test void aLocalTypeThatSharesABaseNameShadowsIt(){
     var core= List.of(literal("mypkg.List", RC.imm));
     var uses= DocNames.uses("mypkg", core);
     assertFalse(uses.containsKey("base.List"), "a package-local List must shadow base.List, not alias it");
     assertTrue(uses.containsKey("base.Str"), "unshadowed base names must still be offered for shortening");
   }
-
   @Test void aSameNamedTypeInADifferentPackageDoesNotShadowABaseName(){
     var core= List.of(literal("otherpkg.List", RC.imm));
     var uses= DocNames.uses("mypkg", core);
     assertTrue(uses.containsKey("base.List"), "a same-named type declared in a DIFFERENT package must not shadow base.List");
   }
-
   @Test void hEscapesEveryHtmlSpecialCharacterUsedInThisRenderer(){
     assertEquals("&amp;", HtmlDocRenderer.h("&"));
     assertEquals("&lt;", HtmlDocRenderer.h("<"));
     assertEquals("&gt;", HtmlDocRenderer.h(">"));
     assertEquals("&quot;", HtmlDocRenderer.h("\""));
   }
-
   @Test void hDoesNotDoubleEscapeAnAmpersandIntroducedByEscapingAnotherCharacter(){
     assertEquals("&lt;", HtmlDocRenderer.h("<"));
   }
-
   @Test void aDocCommentThatLooksLikeAScriptTagIsFullyNeutralized(){
     var rendered= HtmlDocRenderer.h("<script>alert(1)</script>");
     assertEquals("&lt;script&gt;alert(1)&lt;/script&gt;", rendered);
   }
-
   @Test void renderExamplesWrapsRunnableExampleLinesInAnExpandableDetailsBlock(){
     var sb= new StringBuilder();
     var renderer= new HtmlDocRenderer("pkg", Map.of(), List.of(), OtherPackages.empty(), Map.of(), Optional.empty());
@@ -219,27 +199,22 @@ final class DocBuilderTest{
     var rendered= sb.toString();
     utils.Err.strCmp("<details class=\"examples\">[###]<pre class=\"example\">.check{1.assertEq(1)}</pre>[###]", rendered);
   }
-
   @Test void renderExamplesRendersNothingWhenThereAreNoExamples(){
     var sb= new StringBuilder();
     var renderer= new HtmlDocRenderer("pkg", Map.of(), List.of(), OtherPackages.empty(), Map.of(), Optional.empty());
     renderer.renderExamples(sb, List.of());
     assertEquals("", sb.toString());
   }
-
   @Test void idPassesThroughPlainAsciiIdentifiersUnchanged(){
     assertEquals("fooBar123", HtmlDocRenderer.id("fooBar123"));
   }
-
   @Test void idEscapesEveryNonAlphanumericCharacterIncludingUnderscoreItself(){
     assertEquals("_5f_", HtmlDocRenderer.id("_"));
   }
-
   @Test void idProducesDistinctIdsForDistinctOperatorSelectors(){
     assertNotEquals(HtmlDocRenderer.id("+"), HtmlDocRenderer.id("-"));
     assertNotEquals(HtmlDocRenderer.id("=="), HtmlDocRenderer.id("!="));
   }
-
   private static Src freshSrc(){
     return new Src(new Src.SrcObj(){
       @Override public Pos pos(){ return Pos.unknown; }
@@ -275,7 +250,6 @@ final class DocBuilderTest{
   private static Literal namedType(String name, List<T.C> cs, List<M> ms){
     return new Literal(RC.imm, new TName(name, 0, Pos.unknown), List.of(), cs, "this", ms, freshSrc(), false);
   }
-
   @Test void inheritedMethodsOnlyMatchesTheSupertypeMethodWithTheSameReceiverCapability(){
     var supName= new TName("pkg.Sup", 0, Pos.unknown);
     var subName= new TName("pkg.Sub", 0, Pos.unknown);
@@ -284,15 +258,12 @@ final class DocBuilderTest{
     var sup= namedType("pkg.Sup", List.of(), List.of(supMut, supImm));
     var subMut= fooMethod(RC.mut, subName);
     var sub= namedType("pkg.Sub", List.of(new T.C(supName, List.of())), List.of(subMut));
-
     SourceOracle oracle= List::of;
     var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(sup, sub), Optional.empty());
     var refs= builder.inheritedMethods(sub, subMut);
-
     assertEquals(1, refs.size());
     assertTrue(refs.getFirst().method() == supMut);
   }
-
   @Test void inheritedMethodsListsEveryProviderAlongAnOverrideChainEvenTheShadowedOne(){
     var baseName= new TName("pkg.Base", 0, Pos.unknown);
     var midName= new TName("pkg.Mid", 0, Pos.unknown);
@@ -302,32 +273,26 @@ final class DocBuilderTest{
     var mid= namedType("pkg.Mid", List.of(new T.C(baseName, List.of())), List.of(midSame));
     var top= namedType("pkg.Top",
       List.of(new T.C(midName, List.of()), new T.C(baseName, List.of())), List.of());
-
     SourceOracle oracle= List::of;
     var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(base, mid, top), Optional.empty());
     var refs= builder.inheritedMethods(top, midSame);
-
     assertEquals(2, refs.size());
     assertTrue(refs.stream().anyMatch(r -> r.method() == midSame));
     assertTrue(refs.stream().anyMatch(r -> r.method() == baseSame));
   }
-
   @Test void aSingleDeclarationWithNoExplicitRcIsDuplicatedPerRequiredRcAndEachVariantMatchesItsOwnSupertypeCounterpart(){
     var supName= new TName("pkg.Sup", 0, Pos.unknown);
     var subName= new TName("pkg.Sub", 0, Pos.unknown);
     var supMut= fooMethod(RC.mut, supName);
     var supImm= fooMethod(RC.imm, supName);
     var sup= namedType("pkg.Sup", List.of(), List.of(supMut, supImm));
-
     var subMut= fooMethod(RC.mut, subName);
     var subImm= fooMethod(RC.imm, subName);
     var sub= namedType("pkg.Sub", List.of(new T.C(supName, List.of())), List.of(subMut, subImm));
-
     SourceOracle oracle= List::of;
     var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(sup, sub), Optional.empty());
     builder.visitLiteral(sup);
     builder.visitLiteral(sub);
-
     var doc= builder.type(sub).methods.getFirst();
     assertEquals(1, builder.type(sub).methods.size());
     assertEquals(2, doc.variants.size());
@@ -335,7 +300,6 @@ final class DocBuilderTest{
     assertTrue(doc.inheritedFrom.stream().anyMatch(r -> r.method() == supMut));
     assertTrue(doc.inheritedFrom.stream().anyMatch(r -> r.method() == supImm));
   }
-
   @Test void aBareTypeNameThatMatchesTwoLocalArityVariantsIsAmbiguous(){
     var one= namedType("pkg.Pair", List.of(), List.of());
     var two= new Literal(RC.imm, new TName("pkg.Pair", 2, Pos.unknown), twoBounds(), List.of(), "this", List.of(), freshSrc(), false);
@@ -344,14 +308,11 @@ final class DocBuilderTest{
     builder.visitLiteral(one);
     builder.visitLiteral(two);
     var resolver= new DocResolver("pkg", builder.types, OtherPackages.empty());
-
     var link= resolver.resolveType(new DocRef.TypeName(Optional.empty(), "Pair", OptionalInt.empty()));
-
     assertTrue(link.isPresent());
     assertTrue(link.get() instanceof DocLink.Ambiguous);
     assertEquals(2, ((DocLink.Ambiguous)link.get()).options().size());
   }
-
   @Test void anExplicitArityResolvesAWouldBeAmbiguousTypeNamePrecisely(){
     var one= namedType("pkg.Pair", List.of(), List.of());
     var two= new Literal(RC.imm, new TName("pkg.Pair", 2, Pos.unknown), twoBounds(), List.of(), "this", List.of(), freshSrc(), false);
@@ -360,13 +321,10 @@ final class DocBuilderTest{
     builder.visitLiteral(one);
     builder.visitLiteral(two);
     var resolver= new DocResolver("pkg", builder.types, OtherPackages.empty());
-
     var link= resolver.resolveType(new DocRef.TypeName(Optional.empty(), "Pair", OptionalInt.of(2)));
-
     assertTrue(link.get() instanceof DocLink.Resolved);
     assertEquals(two.name(), ((DocLink.Resolved)link.get()).hit().owner());
   }
-
   @Test void aBareSelectorDeclaredByTwoDifferentLocalTypesIsAmbiguous(){
     var aName= new TName("pkg.A", 0, Pos.unknown);
     var bName= new TName("pkg.B", 0, Pos.unknown);
@@ -377,13 +335,10 @@ final class DocBuilderTest{
     builder.visitLiteral(a);
     builder.visitLiteral(b);
     var resolver= new DocResolver("pkg", builder.types, OtherPackages.empty());
-
     var link= resolver.resolve(new DocRef.MethodName(Optional.empty(), ".bar", OptionalInt.empty()), Scope.of(a));
-
     assertTrue(link.get() instanceof DocLink.Ambiguous);
     assertEquals(2, ((DocLink.Ambiguous)link.get()).options().size());
   }
-
   @Test void aQualifiedSelectorMatchingTwoRcOverloadsOnTheSameLocalTypeIsAmbiguous(){
     var name= new TName("pkg.Foo", 0, Pos.unknown);
     var imm= fooMethodAt(RC.imm, name, TSpan.fromPos(Pos.of(file, 0, 1), 1));
@@ -393,14 +348,11 @@ final class DocBuilderTest{
     var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(foo), Optional.empty());
     builder.visitLiteral(foo);
     var resolver= new DocResolver("pkg", builder.types, OtherPackages.empty());
-
     var ref= new DocRef.MethodName(Optional.of(new DocRef.TypeName(Optional.empty(), "Foo", OptionalInt.empty())), ".foo", OptionalInt.empty());
     var link= resolver.resolve(ref, Scope.of(foo));
-
     assertTrue(link.get() instanceof DocLink.Ambiguous, link.get().toString());
     assertEquals(2, ((DocLink.Ambiguous)link.get()).options().size());
   }
-
   @Test void twoDifferentAmbiguousReferencesToOneSelectorLandOnTwoDifferentPages(){
     var aName= new TName("pkg.A", 0, Pos.unknown);
     var bName= new TName("pkg.B", 0, Pos.unknown);
@@ -417,7 +369,6 @@ final class DocBuilderTest{
     assertEquals(3, anyArity.options().size());
     assertNotEquals(renderer.href(oneArg), renderer.href(anyArity));
   }
-
   @Test void aQualifiedMethodOnAForeignTypeResolvesThroughAnInheritedSupertypeMethod(){
     var supName= new TName("other.Sup", 0, Pos.unknown);
     var subName= new TName("other.Sub", 0, Pos.unknown);
@@ -425,14 +376,11 @@ final class DocBuilderTest{
     var sub= namedType("other.Sub", List.of(new T.C(supName, List.of())), List.of());
     var other= OtherPackages.start(Map.of(), List.of(sup, sub), 0L);
     var resolver= new DocResolver("pkg", List.of(), other);
-
     var link= resolver.resolve(new DocRef.MethodName(Optional.of(new DocRef.TypeName(Optional.of("other"), "Sub", OptionalInt.empty())), ".bar", OptionalInt.empty()), Scope.of(sub));
-
     assertTrue(link.isPresent());
     assertTrue(link.get() instanceof DocLink.Resolved);
     assertEquals(subName, ((DocLink.Resolved)link.get()).hit().owner());
   }
-
   //"this" and the parameter names are what the doc author actually writes; they mean
   //the type being documented and the type of that parameter.
   @Test void thisNamesTheTypeBeingDocumented(){
@@ -441,19 +389,15 @@ final class DocBuilderTest{
     var link= resolver.resolve(new DocRef.LocalName("this"), Scope.of(owner));
     assertEquals(owner.name(), ((DocLink.Resolved)link.get()).hit().owner());
   }
-
   @Test void aParameterNameLinksToItsOwnType(){
     var ownerName= new TName("pkg.Holder", 0, Pos.unknown);
     var paramType= new TName("pkg.Thing", 0, Pos.unknown);
     var m= methodTaking(".take", ownerName, "elem", paramType);
     var owner= namedType("pkg.Holder", List.of(), List.of(m));
     var resolver= new DocResolver("pkg", List.of(), OtherPackages.empty());
-
     var link= resolver.resolve(new DocRef.LocalName("elem"), Scope.of(owner, m));
-
     assertEquals(paramType, ((DocLink.Resolved)link.get()).hit().owner());
   }
-
   @Test void aNameThatIsNotAParameterOfThisMethodIsUnresolved(){
     var ownerName= new TName("pkg.Holder", 0, Pos.unknown);
     var m= methodTaking(".take", ownerName, "elem", new TName("pkg.Thing", 0, Pos.unknown));
@@ -462,7 +406,6 @@ final class DocBuilderTest{
     assertTrue(resolver.resolve(new DocRef.LocalName("e"), Scope.of(owner, m)).isEmpty(),
       "a doc naming a parameter the signature does not declare must be reported");
   }
-
   @Test void aParameterIsOnlyInScopeForItsOwnMethod(){
     var ownerName= new TName("pkg.Holder", 0, Pos.unknown);
     var m= methodTaking(".take", ownerName, "elem", new TName("pkg.Thing", 0, Pos.unknown));
@@ -471,7 +414,6 @@ final class DocBuilderTest{
     assertTrue(resolver.resolve(new DocRef.LocalName("elem"), Scope.of(owner)).isEmpty(),
       "a parameter must not be in scope in the type level documentation");
   }
-
   @Test void aMethodOnThisResolvesAgainstTheTypeBeingDocumented(){
     var ownerName= new TName("pkg.Holder", 0, Pos.unknown);
     var bar= namedMethod(".bar", ownerName);
@@ -480,13 +422,10 @@ final class DocBuilderTest{
     var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(owner), Optional.empty());
     builder.visitLiteral(owner);
     var resolver= new DocResolver("pkg", builder.types, OtherPackages.empty());
-
     var ref= new DocRef.MethodName(Optional.of(new DocRef.LocalName("this")), ".bar", OptionalInt.empty());
     var link= resolver.resolve(ref, Scope.of(owner));
-
     assertEquals(ownerName, ((DocLink.Resolved)link.get()).hit().owner());
   }
-
   @Test void aMethodThatTheDocumentedTypeDoesNotHaveIsUnresolved(){
     var owner= namedType("pkg.Holder", List.of(), List.of());
     SourceOracle oracle= List::of;
@@ -496,19 +435,16 @@ final class DocBuilderTest{
     var ref= new DocRef.MethodName(Optional.of(new DocRef.LocalName("this")), ".nope", OptionalInt.empty());
     assertTrue(resolver.resolve(ref, Scope.of(owner)).isEmpty());
   }
-
   @Test void aReferenceThatMatchesNothingAnywhereIsUnresolved(){
     var resolver= new DocResolver("pkg", List.of(), OtherPackages.empty());
     assertTrue(resolver.resolveType(new DocRef.TypeName(Optional.empty(), "NowhereToBeFound", OptionalInt.empty())).isEmpty());
   }
-
   @Test void anUnqualifiedNameFoundOnlyInAThirdPackageStillResolves(){
     var other= OtherPackages.start(Map.of(), List.of(namedType("third.Widget", List.of(), List.of())), 0L);
     var resolver= new DocResolver("pkg", List.of(), other);
     var link= resolver.resolveType(new DocRef.TypeName(Optional.empty(), "Widget", OptionalInt.empty()));
     assertTrue(link.get() instanceof DocLink.Resolved);
   }
-
   @Test void aLocalTypeWinsOverASameNamedTypeInAnotherPackage(){
     var local= namedType("pkg.Widget", List.of(), List.of());
     var other= OtherPackages.start(Map.of(), List.of(namedType("third.Widget", List.of(), List.of())), 0L);
@@ -516,9 +452,7 @@ final class DocBuilderTest{
     var builder= new HtmlDocBuilder(oracle, other, List.of(local), Optional.empty());
     builder.visitLiteral(local);
     var resolver= new DocResolver("pkg", builder.types, other);
-
     var link= resolver.resolveType(new DocRef.TypeName(Optional.empty(), "Widget", OptionalInt.empty()));
-
     assertTrue(link.get() instanceof DocLink.Resolved);
     assertEquals(local.name(), ((DocLink.Resolved)link.get()).hit().owner());
   }
@@ -534,22 +468,18 @@ final class DocBuilderTest{
     assertEquals(List.of(), linked.stream().distinct().filter(l -> !ids.contains(l)).toList(),
       "every in-page link must have a matching id");
   }
-
   @Test void aDisambiguationPageNeverOffersAMethodOfATypeThatIsNotRendered(){
     var html= renderedFixture();
     assertFalse(html.contains("Hidden"), "an undocumented anonymous literal must not reach the page: "+html);
   }
-
   @Test void renderTextNeverContainsHtmlMarkup(){
     var text= renderedTextFixture();
     assertFalse(text.contains("<"), "the plain text doc must contain no markup at all: "+text);
   }
-
   @Test void renderTextNeverLeaksAHiddenAnonymousLiteral(){
     var text= renderedTextFixture();
     assertFalse(text.contains("Hidden"), "an undocumented anonymous literal must not reach the text doc either: "+text);
   }
-
   @Test void aDocumentedAnonymousLiteralIsListedByItsFileAndLineAndTitledByItsPosition(){
     var at= Pos.of(file, 2, 1);
     var src= new Src(new Src.SrcObj(){
@@ -564,7 +494,6 @@ final class DocBuilderTest{
     utils.Err.strCmp("[###]>Anon@a:2<[###]", html);
     utils.Err.strCmp("[###]anonymous literal at [###]", html);
   }
-
   @Test void renderTextProducesAPlainSignatureLineWithNoPlaceholderForMissingDocs(){
     var ownerName= new TName("pkg.Holder", 0, Pos.unknown);
     var bar= namedMethod(".bar", ownerName);
@@ -572,9 +501,7 @@ final class DocBuilderTest{
     SourceOracle oracle= List::of;
     var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(owner), Optional.empty());
     builder.visitLiteral(owner);
-
     var text= new HtmlDocRenderer("pkg", Map.of(), builder.types, OtherPackages.empty(), Map.of(), Optional.empty()).renderText();
-
     assertEquals("""
 package pkg
 
@@ -583,7 +510,6 @@ Holder
 
 """, text);
   }
-
   @Test void renderTextIndentsDocProseAndExamplesUnderTheirDeclaredMethod(){
     var ownerName= new TName("pkg.Holder", 0, Pos.unknown);
     var bar= namedMethod(".bar", ownerName);
@@ -593,9 +519,7 @@ Holder
       new DocOcc(file, 9, 1, 4, "does the bar thing", true, false, false),
       new DocOcc(file, 9, 1, 4, ".check{bar.assertOk}", true, true, false)
     ), List.of());
-
     var text= new HtmlDocRenderer("pkg", Map.of(), List.of(typeDoc), OtherPackages.empty(), Map.of(), Optional.empty()).renderText();
-
     assertEquals("""
 package pkg
 
@@ -607,7 +531,6 @@ Holder
 
 """, text);
   }
-
   @Test void renderTextOpensEveryMethodLineWithATabAndNoDocumentationLineWithOne(){
     var ownerName= new TName("pkg.Holder", 0, Pos.unknown);
     var bar= namedMethod(".bar", ownerName);
@@ -616,9 +539,7 @@ Holder
       new DocOcc(file, 8, 1, 2, ".bar is drawn at this very indent", true, false, false)
     ));
     typeDoc.declared(Pos.of(file, 9, 1), bar, List.of(), List.of());
-
     var text= new HtmlDocRenderer("pkg", Map.of(), List.of(typeDoc), OtherPackages.empty(), Map.of(), Optional.empty()).renderText();
-
     assertEquals("""
 package pkg
 
@@ -628,7 +549,6 @@ Holder
 
 """, text);
   }
-
   @Test void renderTestNestsEachMethodsExamplesAsAnAnonymousTestInsideOneSuitePerTypeThenIntoOnePackageMain(){
     var ownerName= new TName("pkg.Holder", 0, Pos.unknown);
     var bar= namedMethod(".bar", ownerName);
@@ -637,9 +557,7 @@ Holder
     typeDoc.declared(Pos.of(file, 9, 1), bar, List.of(
       new DocOcc(file, 9, 1, 4, ".check{bar.assertOk}", true, true, false)
     ), List.of());
-
     var test= new HtmlDocRenderer("pkg", Map.of(), List.of(typeDoc), OtherPackages.empty(), Map.of(), Optional.empty()).renderTest();
-
     assertEquals("""
 //Autogenerated from the doc examples of package pkg; any edit is overwritten
 
@@ -654,7 +572,6 @@ AllAutoTests_pkg: base.UnitTests {::
   }
 """, test);
   }
-
   @Test void renderTestIncludesPrivateTypesAndSkipsMethodsWithoutExamples(){
     var visibleName= new TName("pkg.Visible", 0, Pos.unknown);
     var bar= namedMethod(".bar", visibleName);
@@ -667,7 +584,6 @@ AllAutoTests_pkg: base.UnitTests {::
     visibleDoc.declared(Pos.of(file, 12, 1), baz, List.of(
       new DocOcc(file, 12, 1, 4, "does the baz thing", true, false, false)
     ), List.of());
-
     var hiddenName= new TName("pkg._Hidden", 0, Pos.unknown);
     var qux= namedMethod(".qux", hiddenName);
     var hidden= namedType("pkg._Hidden", List.of(), List.of());
@@ -675,9 +591,7 @@ AllAutoTests_pkg: base.UnitTests {::
     hiddenDoc.declared(Pos.of(file, 20, 1), qux, List.of(
       new DocOcc(file, 20, 1, 4, ".check{qux.assertOk}", true, true, false)
     ), List.of());
-
     var test= new HtmlDocRenderer("pkg", Map.of(), List.of(visibleDoc, hiddenDoc), OtherPackages.empty(), Map.of(), Optional.empty()).renderTest();
-
     assertEquals("""
 //Autogenerated from the doc examples of package pkg; any edit is overwritten
 
@@ -699,7 +613,6 @@ AllAutoTests_pkg: base.UnitTests {::
   }
 """, test);
   }
-
   @Test void renderTestIncludesTestOnlyLinesButRenderTextHidesThem(){
     var ownerName= new TName("pkg.Holder", 0, Pos.unknown);
     var bar= namedMethod(".bar", ownerName);
@@ -709,9 +622,7 @@ AllAutoTests_pkg: base.UnitTests {::
       new DocOcc(file, 9, 1, 4, ".let x={1}", true, false, true),
       new DocOcc(file, 9, 1, 4, ".check{x.assertEq 1}", true, true, false)
     ), List.of());
-
     var test= new HtmlDocRenderer("pkg", Map.of(), List.of(typeDoc), OtherPackages.empty(), Map.of(), Optional.empty()).renderTest();
-
     assertEquals("""
 //Autogenerated from the doc examples of package pkg; any edit is overwritten
 
@@ -726,9 +637,7 @@ AllAutoTests_pkg: base.UnitTests {::
   .test _Holder_Examples
   }
 """, test);
-
     var text= new HtmlDocRenderer("pkg", Map.of(), List.of(typeDoc), OtherPackages.empty(), Map.of(), Optional.empty()).renderText();
-
     assertEquals("""
 package pkg
 
@@ -739,7 +648,6 @@ Holder
 
 """, text);
   }
-
   private static TypeDoc exampleOf(TName name, List<B> bs){
     var bar= namedMethod(".bar", name);
     var typeDoc= new TypeDoc(new Literal(RC.imm, name, bs, List.of(), "this", List.of(), freshSrc(), false), List.of());
@@ -759,7 +667,6 @@ Holder
     var names= new HtmlDocRenderer("pkg", Map.of(), List.of(prime), OtherPackages.empty(), Map.of(), Optional.empty()).testNames().perType();
     assertEquals(List.of(true), names.stream().map(TName::isTypeName).toList(), names.toString());
   }
-
   @Test void aTypeNamedLikeTheTopLevelSuiteSuppressesGenerationForTheWholePackage(@TempDir Path tmp){
     var holderName= new TName("pkg.Holder", 0, Pos.unknown);
     var bar= namedMethod(".bar", holderName);
@@ -774,13 +681,10 @@ Holder
     ), List.of());
     var testPath= tmp.resolve("auto_tests", "pkg_test.fear");
     builder.packageLocation("pkg", tmp.resolve("pkg.html"), Optional.of(tmp));
-
     var renderer= new HtmlDocRenderer("pkg", Map.of(), builder.types, OtherPackages.empty(), Map.of(), Optional.empty());
     builder.writeTest(renderer, new PathEntry(tmp, Path.of("auto_tests", "pkg_test.fear")));
-
     assertFalse(Fs.exists(testPath), "a type matching the top-level generated name must suppress generation entirely");
   }
-
   private void writeSuppressed(Path tmp){
     var holderName= new TName("pkg.Holder", 0, Pos.unknown);
     var bar= namedMethod(".bar", holderName);
@@ -837,14 +741,11 @@ Holder
       new DocOcc(file, 9, 1, 4, ".check{bar.assertOk}", true, true, false)
     ), List.of());
     builder.packageLocation("pkg", tmp.resolve("pkg.html"), Optional.of(tmp));
-
     var renderer= new HtmlDocRenderer("pkg", Map.of(), builder.types, OtherPackages.empty(), Map.of(), Optional.empty());
     var ex= assertThrows(UserError.class, () -> builder.writeTest(renderer, new PathEntry(tmp, Path.of("auto_tests", "pkg_test.fear"))));
-
     utils.Err.strCmp("[###]_Holder_Examples[###]", ex.getMessage());
     utils.Err.strCmp("[###]AllAutoTests_pkg[###]", ex.getMessage());
   }
-
   @Test void renderTextShowsPlainFromProvenanceForAnInheritedMethod(){
     var supName= new TName("pkg.Sup", 0, Pos.unknown);
     var subName= new TName("pkg.Sub", 0, Pos.unknown);
@@ -856,13 +757,10 @@ Holder
     var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(sup, sub), Optional.empty());
     builder.visitLiteral(sup);
     builder.visitLiteral(sub);
-
     var text= new HtmlDocRenderer("pkg", Map.of(), builder.types, OtherPackages.empty(), Map.of(), Optional.empty()).renderText();
-
     utils.Err.strCmp("[###]from: Sup.foo[###]", text);
     assertFalse(text.contains("<a "), text);
   }
-
   @Test void aTrailingDocSharedByTwoDeclarationsOnOneLineIsAnAmbiguousReferenceError(@TempDir Path tmp){
     var ownerName= new TName("pkg.Holder", 0, Pos.unknown);
     var zzz= namedMethodAt(".zzz", ownerName, Pos.of(file, 1, 1));
@@ -872,12 +770,9 @@ Holder
     var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(owner), Optional.empty());
     builder.visitLiteral(owner);
     builder.packageLocation("pkg", tmp.resolve("pkg.html"), Optional.of(tmp));
-
     var ex= assertThrows(UserError.class, () -> builder.complete(Optional.of(tests)));
-
     utils.Err.strCmp("[###]more than one declaration on the same line[###]", ex.getMessage());
   }
-
   @Test void aTrailingDocSharedByThreeDeclarationsOnOneLineIsStillAnAmbiguousReferenceError(@TempDir Path tmp){
     var ownerName= new TName("pkg.Holder", 0, Pos.unknown);
     var aaa= namedMethodAt(".aaa", ownerName, Pos.of(file, 1, 1));
@@ -888,10 +783,8 @@ Holder
     var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(owner), Optional.empty());
     builder.visitLiteral(owner);
     builder.packageLocation("pkg", tmp.resolve("pkg.html"), Optional.of(tmp));
-
     assertThrows(UserError.class, () -> builder.complete(Optional.of(tests)));
   }
-
   @Test void aTrailingTestOnlyLineSharedByTwoDeclarationsOnOneLineIsAnAmbiguousReferenceError(@TempDir Path tmp){
     var ownerName= new TName("pkg.Holder", 0, Pos.unknown);
     var zzz= namedMethodAt(".zzz", ownerName, Pos.of(file, 1, 1));
@@ -901,12 +794,9 @@ Holder
     var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(owner), Optional.empty());
     builder.visitLiteral(owner);
     builder.packageLocation("pkg", tmp.resolve("pkg.html"), Optional.of(tmp));
-
     var ex= assertThrows(UserError.class, () -> builder.complete(Optional.of(tests)));
-
     utils.Err.strCmp("[###]more than one declaration on the same line[###]", ex.getMessage());
   }
-
   @Test void aTrailingDocAfterAClosedNestedBraceOnTheSameLineIsNotAmbiguous(@TempDir Path tmp){
     var ownerName= new TName("pkg.Holder", 0, Pos.unknown);
     var outer= namedMethodAt(".hash", ownerName, Pos.of(file, 1, 1));
@@ -916,10 +806,8 @@ Holder
     var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(owner), Optional.empty());
     builder.visitLiteral(owner);
     builder.packageLocation("pkg", tmp.resolve("pkg.html"), Optional.of(tmp));
-
     builder.complete(Optional.of(tests));
   }
-
   @Test void aTrailingDocRightAfterAnOpeningBraceIsAmbiguousBetweenTheOuterDeclarationAndTheNestedOne(@TempDir Path tmp){
     var ownerName= new TName("pkg.Holder", 0, Pos.unknown);
     var outer= namedMethodAt(".outer", ownerName, Pos.of(file, 1, 1));
@@ -929,10 +817,8 @@ Holder
     var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(owner), Optional.empty());
     builder.visitLiteral(owner);
     builder.packageLocation("pkg", tmp.resolve("pkg.html"), Optional.of(tmp));
-
     assertThrows(UserError.class, () -> builder.complete(Optional.of(tests)));
   }
-
   @Test void aTrailingDocAfterTheLastOfTwoDeclarationsOnSeparateLinesIsNotAmbiguous(@TempDir Path tmp){
     var ownerName= new TName("pkg.Holder", 0, Pos.unknown);
     var zzz= namedMethodAt(".zzz", ownerName, Pos.of(file, 1, 1));
@@ -942,10 +828,8 @@ Holder
     var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(owner), Optional.empty());
     builder.visitLiteral(owner);
     builder.packageLocation("pkg", tmp.resolve("pkg.html"), Optional.of(tmp));
-
     builder.complete(Optional.of(tests));
   }
-
   @Test void twoDeclarationsSharingALineWithNoTrailingDocAtAllIsNotAmbiguous(@TempDir Path tmp){
     var ownerName= new TName("pkg.Holder", 0, Pos.unknown);
     var zzz= namedMethodAt(".zzz", ownerName, Pos.of(file, 1, 1));
@@ -955,10 +839,8 @@ Holder
     var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(owner), Optional.empty());
     builder.visitLiteral(owner);
     builder.packageLocation("pkg", tmp.resolve("pkg.html"), Optional.of(tmp));
-
     builder.complete(Optional.of(tests));
   }
-
   private static HtmlDocBuilder fixtureBuilder(){
     var aName= new TName("pkg.A", 0, Pos.unknown);
     var bName= new TName("pkg.B", 0, Pos.unknown);
@@ -975,17 +857,14 @@ Holder
     builder.visitLiteral(hidden);
     return builder;
   }
-
   private static String renderedFixture(){
     var builder= fixtureBuilder();
     return new HtmlDocRenderer("pkg", Map.of(), builder.types, OtherPackages.empty(), Map.of(), Optional.empty()).render();
   }
-
   private static String renderedTextFixture(){
     var builder= fixtureBuilder();
     return new HtmlDocRenderer("pkg", Map.of(), builder.types, OtherPackages.empty(), Map.of(), Optional.empty()).renderText();
   }
-
   private static List<String> idsIn(String html, String prefix){
     var res= new ArrayList<String>();
     for (int i= html.indexOf(prefix); i >= 0; i = html.indexOf(prefix, i+1)){

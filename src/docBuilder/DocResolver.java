@@ -22,10 +22,8 @@ record Scope(Literal owner, Optional<M> method){
   static Scope of(Literal owner){ return new Scope(owner, Optional.empty()); }
   static Scope of(Literal owner, M method){ return new Scope(owner, Optional.of(method)); }
 }
-
 /// Resolves a scanned DocRef to the declarations it could name.
 record DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other){
-
   Optional<DocLink> resolve(DocRef ref, Scope scope){
     return switch (ref){
       case DocRef.TypeName t -> resolveType(t);
@@ -33,7 +31,6 @@ record DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other){
       case DocRef.MethodName m -> resolveMethod(m, scope);
     };
   }
-
   //"this" and the method's parameters. A parameter typed by a type variable is in
   //scope but has no page to point at, so it is a reference with no link.
   private Optional<DocLink> resolveLocal(DocRef.LocalName ref, Scope scope){
@@ -42,23 +39,19 @@ record DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other){
       .<DocLink>map(n -> new DocLink.Resolved(Candidate.ofType(n)))
       .orElseGet(DocLink.NoLink::new));
   }
-
   private boolean inScope(String name, Scope scope){
     if (name.equals(scope.owner().thisName())){ return true; }
     return scope.method().map(m -> m.xs().contains(name)).orElse(false);
   }
-
   private Optional<TName> localType(String name, Scope scope){
     if (name.equals(scope.owner().thisName())){ return Optional.of(scope.owner().name()); }
     var m= scope.method().get();
     return m.sig().ts().get(m.xs().indexOf(name)) instanceof T.RCC rcc ? Optional.of(rcc.c().name()) : Optional.empty();
   }
-
   Optional<DocLink> resolveType(DocRef.TypeName ref){
     var cands= typeCandidates(ref).stream().map(Candidate::ofType).toList();
     return pack("Type "+ref.pkg().map(p -> p+".").orElse("")+ref.simpleName()+shape(ref.arity(), "[", "]"), cands);
   }
-
   //a name declared here always wins over a same-named one elsewhere; only when nothing
   //local matches do the other packages get a say, and then all of them do, so a valid
   //cross-package reference is a link (or a disambiguation) rather than an error.
@@ -70,14 +63,12 @@ record DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other){
     }
     return matching(other.dom().stream().filter(n -> pkg.isEmpty() || n.pkgName().equals(pkg.get())), ref);
   }
-
   private List<TName> matching(Stream<TName> names, DocRef.TypeName ref){
     return names
       .filter(n -> n.simpleName().equals(ref.simpleName()))
       .filter(n -> ref.arity().isEmpty() || n.arity()==ref.arity().getAsInt())
       .toList();
   }
-
   private Optional<DocLink> resolveMethod(DocRef.MethodName ref, Scope scope){
     if (ref.owner().isEmpty()){ return resolveBareSelector(ref.selector(), ref.arity()); }
     return switch (ref.owner().get()){
@@ -85,19 +76,16 @@ record DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other){
       case DocRef.TypeName t -> onOwners(t.simpleName(), typeCandidates(t), ref.selector(), ref.arity());
     };
   }
-
   private Optional<DocLink> onLocal(DocRef.LocalName l, DocRef.MethodName ref, Scope scope){
     if (!inScope(l.name(), scope)){ return Optional.empty(); }
     var owner= localType(l.name(), scope);
     if (owner.isEmpty()){ return Optional.of(new DocLink.NoLink()); }
     return onOwners(owner.get().simpleName(), List.of(owner.get()), ref.selector(), ref.arity());
   }
-
   private Optional<DocLink> onOwners(String shown, List<TName> owners, String selector, OptionalInt arity){
     var cands= owners.stream().flatMap(o -> methodCandidatesOn(o, selector, arity).stream()).toList();
     return pack(shown+selector+shape(arity, "(", ")"), cands);
   }
-
   private List<Candidate> methodCandidatesOn(TName owner, String selector, OptionalInt arity){
     var local= localTypeDoc(owner);
     if (local.isPresent()){
@@ -110,21 +98,17 @@ record DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other){
     }
     return literalOf(owner).stream().flatMap(lit -> foreignCandidates(owner, declaredAndInherited(lit), selector, arity)).toList();
   }
-
   private Optional<TypeDoc> localTypeDoc(TName n){
     return OneOr.opt("type "+n, types.stream().filter(t -> !t.main().infName() && t.main().name().equals(n)));
   }
-
   private List<M> declaredAndInherited(Literal owner){
     var res= new ArrayList<>(owner.ms());
     owner.cs().forEach(c -> literalOf(c.name()).ifPresent(sup -> res.addAll(declaredAndInherited(sup))));
     return res;
   }
-
   private Optional<Literal> literalOf(TName n){
     return localTypeDoc(n).map(TypeDoc::main).or(() -> Optional.ofNullable(other.__of(n)));
   }
-
   //every type that has the method, not only the one declaring it: this page answers
   //"who has a .foo?". Only what the renderer emits an anchor for can be a candidate,
   //since an invisible type or method has no id on the page to land on.
@@ -139,22 +123,18 @@ record DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other){
       .flatMap(n -> foreignCandidates(n, other.__of(n).ms(), selector, arity));
     return pack(selector+shape(arity, "(", ")"), Stream.concat(localCands, foreignCands).toList());
   }
-
   private Stream<Candidate> foreignCandidates(TName owner, List<M> ms, String selector, OptionalInt arity){
     return ms.stream()
       .filter(m -> named(m, selector, arity))
       .gather(DistinctBy.<M,Integer>of(m -> m.sig().m().arity()))
       .map(m -> new Candidate(owner, Optional.of(selector), OptionalInt.of(m.sig().m().arity()), Optional.empty()));
   }
-
   private static boolean named(M m, String selector, OptionalInt arity){
     return m.sig().m().s().equals(selector) && (arity.isEmpty() || m.sig().m().arity()==arity.getAsInt());
   }
-
   static String shape(OptionalInt arity, String open, String close){
     return arity.isEmpty() ? "" : Join.of(Collections.nCopies(arity.getAsInt(), "_"), open, ",", close, open+close);
   }
-
   private Optional<DocLink> pack(String title, List<Candidate> cands){
     if (cands.isEmpty()){ return Optional.empty(); }
     if (cands.size() == 1){ return Optional.of(new DocLink.Resolved(cands.getFirst())); }

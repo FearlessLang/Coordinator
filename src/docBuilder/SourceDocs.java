@@ -21,13 +21,11 @@ final class SourceDocs{
   final HashSet<DocOcc> attached= new HashSet<>();
   final HashMap<DocOcc,Integer> inlineClaimedFromColumn= new HashMap<>();
   final LinkedHashSet<DocOcc> ambiguousInline= new LinkedHashSet<>();
-
   SourceDocs(URI uri, String text){
     this.uri= uri;
     lines= text.lines().toList();
     scan();
   }
-
   List<DocOcc> docsAt(Pos pos, boolean includeBefore){
     assert pos.line()>0 && pos.line()<=lines.size() : pos;
     var res= new ArrayList<DocOcc>();
@@ -42,12 +40,10 @@ final class SourceDocs{
     attached.addAll(res);
     return res;
   }
-
   int depthAt(int line, int column){
     var arr= depthByLine.get(line);
     return (arr==null || column>arr.length) ? 0 : arr[column-1];
   }
-
   //every /// and //> that no declaration took, as runs of consecutive lines
   List<List<DocOcc>> orphanRuns(){
     var lost= docsByLine.values().stream()
@@ -63,7 +59,6 @@ final class SourceDocs{
     }
     return List.copyOf(res);
   }
-
   //An empty line inside a block reads as an empty doc line of whatever kind surrounds
   //it, so it ends a paragraph without ending the block. The ones at either end of the
   //block separate nothing and are dropped. Anything else ends the block, and whatever
@@ -84,7 +79,6 @@ final class SourceDocs{
     attached.addAll(before);
     res.addAll(trimBlanks(before));
   }
-
   static List<DocOcc> trimBlanks(List<DocOcc> ds){
     var from= 0;
     var to= ds.size();
@@ -92,19 +86,16 @@ final class SourceDocs{
     while (to>from && ds.get(to-1).text().isBlank()){ to -= 1; }
     return ds.subList(from, to);
   }
-
   List<DocOcc> pureDocs(int line){
     return docsByLine.getOrDefault(line, List.of()).stream()
       .filter(DocOcc::pureLine)
       .toList();
   }
-
   Optional<DocOcc> inlineAfter(int line, int column){
     return docsByLine.getOrDefault(line, List.of()).stream()
       .filter(c -> !c.pureLine() && c.column()>=column)
       .findFirst();
   }
-
   void scan(){
     var closer= "";
     var depth= 0;
@@ -130,7 +121,6 @@ final class SourceDocs{
       depthByLine.put(l, arr);
     }
   }
-
   //textColumn is where the stored text really starts in the line, so an error can put
   //its carets under the offending characters: past the "///" and the space clean drops.
   void add(int line, int column, String text, boolean pureLine, boolean example, boolean testOnly){

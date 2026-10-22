@@ -22,9 +22,7 @@ import userMessages.Report;
 /// files carry real "map .. as .. in ..;" directives.
 final class ProjectTreeErrorTest{
   static{ utils.Err.setUp(AssertionFailedError.class, Assertions::assertEquals, Assertions::assertTrue); }
-
   static final Path fakeRoot= Path.of("unused", "project", "root");
-
   /// Runs the coordinator over an in memory project made of the given
   /// path/content pairs, and returns the message of the error it fails with.
   static String errMsg(String... pathThenContent){
@@ -45,14 +43,12 @@ final class ProjectTreeErrorTest{
   static void runErr(String expected, String... pathThenContent){
     utils.Err.strCmp(expected, errMsg(pathThenContent));
   }
-
   @Test void emptyProject(){ runErr("""
 This project folder contains no ".fear" files.
 Folder:
   %s
 """.formatted(fakeRoot),
     "readme.txt", "hi"); }
-
   @Test void noPackageSegment(){ runErr("""
 This file must be placed inside a package.
 File:
@@ -63,7 +59,6 @@ That folder name, without the leading "_", defines the package name.
 [###]
 """,
     "src/foo.fear", ""); }
-
   @Test void ambiguousPackageSegment(){ runErr("""
 This path contains more than one folder whose name starts with "_":
   "fear:/src/_bla/_beer/bar.fear"
@@ -76,7 +71,6 @@ Is "bar.fear" in package "bla" or in package "beer"?
 [###]
 """,
     "src/_bla/_beer/bar.fear", ""); }
-
   //The folder name after the "_" is the package name, and it also becomes a folder and a
   //file name in the generated code. "con" passes every rule of the project scanner, which
   //only rejects a folder literally called "con".
@@ -95,7 +89,6 @@ Windows reserved device name: "con", "prn", "aux", "nul", "com1".."com9",
 [###]
 """,
     "src/_con/foo.fear", ""); }
-
   @Test void emptyPackageName(){ runErr("""
 This folder does not name a valid package.
 Folder:
@@ -105,7 +98,6 @@ Package name: ""
 [###]
 """,
     "src/_/foo.fear", ""); }
-
   @Test void packageNameStartingWithADigit(){ runErr("""
 This folder does not name a valid package.
 Folder:
@@ -115,7 +107,6 @@ Package name: "1abc"
 [###]
 """,
     "src/_1abc/foo.fear", ""); }
-
   @Test void missingRankFile(){ runErr("""
 Missing rank file for a package.
 
@@ -127,7 +118,6 @@ Each package folder must contain exactly one file whose name follows this patter
 [###]
 """,
     "src/_bla/foo.fear", ""); }
-
   @Test void multipleRankFiles(){ runErr("""
 Multiple rank files for the same package.
 Package:
@@ -140,7 +130,6 @@ Each package must contain exactly one rank file.
 """,
     "src/_bla/_rank_app.fear", "",
     "src/_bla/_rank_core.fear", ""); }
-
   @Test void malformedRankFileName(){ runErr("""
 Malformed rank file name.
 File:
@@ -151,7 +140,6 @@ Each package folder must contain exactly one file whose name follows this patter
 [###]
 """,
     "src/_bla/_rank_bogus.fear", ""); }
-
   @Test void aMalformedRankFileNameTakesPriorityOverMultipleRankFiles(){ runErr("""
 Malformed rank file name.
 File:
@@ -163,7 +151,6 @@ Each package folder must contain exactly one file whose name follows this patter
 """,
     "src/_bla/_rank_app.fear", "",
     "src/_bla/_rank_bogus.fear", ""); }
-
   //Two rank files of the SAME rank map the same virtual name to different real
   //packages, so neither can override the other. Reported as a well formedness error.
   @Test void mapConflict(){ runErr("""
@@ -182,7 +169,6 @@ How to fix it:
 """,
     "_pka/_rank_app999.fear", "map a as pkc in pkb;",
     "_pkd/_rank_app999.fear", "map a as pkb in pkb;"); }
-
   @Test void mapToMissingPackage(){ runErr("""
 For package "pkb", the virtual package name "a" is mapped to "bas",
 but package "bas" does not exist:
@@ -194,7 +180,6 @@ Error 7 WellFormedness
 """,
     "_pka/_rank_app999.fear", "map a as bas in pkb;",
     "_pkb/_rank_app200.fear", ""); }
-
   @Test void aPlainResourceFileNamedLikeARankFileIsAlsoAMalformedRankFileName(){
     runErr("""
 Malformed rank file name.
@@ -207,7 +192,6 @@ Each package folder must contain exactly one file whose name follows this patter
 """,
       "src/_bla/_rank_app.fear", "",
       "src/_bla/_rank_notes.txt", "hello"); }
-
   @Test void basePackageNameIsReserved(){ runErr("""
 This folder names a reserved package.
 Folder:
@@ -221,7 +205,6 @@ for a package of a project.
 Rename the folder so that the name after the "_" is a different package name.
 """,
     "src/_base/foo.fear", ""); }
-
   @Test void rankPackageNameIsReserved(){ runErr("""
 This folder names a reserved package.
 Folder:
@@ -231,7 +214,6 @@ Package name: "rank"
 [###]
 """,
     "src/_rank/foo.fear", ""); }
-
   @Test void ambiguousPackageSegmentMessageMustNameTheActualCandidates(){
     record FakeRef(String fearPath) implements SourceOracle.Ref{
       @Override public byte[] loadBytes(){ return new byte[0]; }

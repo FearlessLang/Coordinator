@@ -47,18 +47,13 @@ public final class ByteFiles{
     FileBusy_WindowsFileRegionLocked,
     FileBusy_PosixTextFileBusy,
     FileBusy_WindowsFileCheckedOut,
-
     StorageBusy_DeviceOrResourceBusy,
     StorageBusy_DriveLocked,
-
     StorageFull_NoSpaceOnVolume,
     StorageFull_QuotaExceeded,
-
     StorageReadOnly_VolumeMountedReadOnly,
     StorageReadOnly_MediaWriteProtected,
-
     FileLock_WindowsFileRegionLockFailed,
-
     StorageUnavailable_StaleNetworkFile,
     StorageUnavailable_DeviceNotReady,
     StorageUnavailable_DeviceDisconnected,
@@ -67,27 +62,21 @@ public final class ByteFiles{
     StorageUnavailable_NetworkPathUnavailable,
     StorageUnavailable_NetworkResourceGone,
     StorageUnavailable_NetworkBusy,
-
     NetworkFailure_BadResponse,
     NetworkFailure_Unexpected,
-
     ResourceExhausted_TooManyOpenFiles,
     ResourceExhausted_Memory,
     ResourceExhausted_SystemResources,
-
     FileTooLargeForByteArray,
-
     PathResolutionFailure_FileNotFound,
     PathResolutionFailure_ParentIsNotAFolder,
     PathResolutionFailure_InvalidName,
     PathResolutionFailure_PathTooLong,
     PathResolutionFailure_SymlinkLoop,
     FileAlreadyExists,
-
     AccessDenied,
     AccessDenied_Network,
     PathIsFolder,
-
     MediaIoFailure_Generic,
     MediaIoFailure_CyclicRedundancyCheck,
     MediaIoFailure_SeekFailure,
@@ -95,20 +84,15 @@ public final class ByteFiles{
     MediaIoFailure_WriteFault,
     MediaIoFailure_ReadFault,
     MediaIoFailure_DeviceNotFunctioning,
-
     InvalidHandleOrDescriptor,
-
     InvalidOperationOrParameter_InvalidArgument,
     InvalidOperationOrParameter_IncorrectFunction,
     InvalidOperationOrParameter_InvalidParameter,
-
     UnsupportedFileSystem,
     UnsupportedFileSystem_DeviceDoesNotRecognizeCommand,
-
     ChannelClosedByInterrupt,
     IoInterrupted,
     ChannelClosedExternally,
-
     UnknownOpenFailure,
     UnknownFailureAfterSuccessfulOpen
   }
@@ -117,7 +101,6 @@ public final class ByteFiles{
   // handler typecheck against each entry point.
   public interface Handler<T,X extends Throwable>{ T failure(Kind kind, Throwable cause) throws X; }
   private interface IoOperation<T>{ T run() throws IOException; }
-
   public static <X extends Throwable> byte[] read(Path path, Handler<byte[],X> handler) throws X{
     return attempt(Op.Read, path, () -> Fs.readAllBytes(path), handler);
   }

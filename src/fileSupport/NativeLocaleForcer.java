@@ -42,7 +42,6 @@ public final class NativeLocaleForcer{
   private static final int maxProcessUiLanguageChars= 1_000;
   private static final String enUs= "en-US";
   private static final Linker linker= Linker.nativeLinker();
-
   public static void forceEnglish(){
     Locale.setDefault(Locale.US);
     try{

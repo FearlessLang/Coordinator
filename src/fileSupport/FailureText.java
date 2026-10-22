@@ -73,23 +73,17 @@ final class FailureText{
     var suppressed= new Suppressed();
     var text= CommonInfo.of(op, path, suppressed)+switch (kind){
       case UnknownFailureAfterSuccessfulOpen -> UnknownFailureAfterSuccessfulOpen.of(path, suppressed);
-
       case FileBusy_WindowsSharingViolation -> FileBusyWindowsSharingViolation.of(path, suppressed);
       case FileBusy_WindowsFileRegionLocked -> FileBusyWindowsFileRegionLocked.of(path, suppressed);
       case FileBusy_PosixTextFileBusy -> FileBusyText.posixTextFileBusy;
       case FileBusy_WindowsFileCheckedOut -> FileBusyText.windowsFileCheckedOut;
-
       case StorageBusy_DeviceOrResourceBusy -> StorageBusyText.deviceOrResourceBusy;
       case StorageBusy_DriveLocked -> StorageBusyText.driveLocked;
-
       case StorageFull_NoSpaceOnVolume -> StorageFullText.noSpaceOnVolume;
       case StorageFull_QuotaExceeded -> StorageFullText.quotaExceeded;
-
       case StorageReadOnly_VolumeMountedReadOnly -> StorageReadOnlyText.volumeMountedReadOnly;
       case StorageReadOnly_MediaWriteProtected -> StorageReadOnlyText.mediaWriteProtected;
-
       case FileLock_WindowsFileRegionLockFailed -> FileLockWindowsFileRegionLockFailed.of(path, suppressed);
-
       case StorageUnavailable_StaleNetworkFile -> StorageUnavailableText.staleNetworkFile;
       case StorageUnavailable_DeviceNotReady -> StorageUnavailableText.deviceNotReady;
       case StorageUnavailable_DeviceDisconnected -> StorageUnavailableText.deviceDisconnected;
@@ -98,27 +92,21 @@ final class FailureText{
       case StorageUnavailable_NetworkPathUnavailable -> NetworkPathUnavailable.of(path, suppressed);
       case StorageUnavailable_NetworkResourceGone -> StorageUnavailableText.networkResourceGone;
       case StorageUnavailable_NetworkBusy -> StorageUnavailableText.networkBusy;
-
       case NetworkFailure_BadResponse -> NetworkFailureText.badResponse;
       case NetworkFailure_Unexpected -> NetworkFailureText.unexpected;
-
       case ResourceExhausted_TooManyOpenFiles -> TooManyOpenFiles.of(path, suppressed);
       case ResourceExhausted_Memory -> ResourceExhaustedText.memory;
       case ResourceExhausted_SystemResources -> ResourceExhaustedText.systemResources;
-
       case FileTooLargeForByteArray -> FileTooLargeForByteArray.of(path, suppressed);
-
       case PathResolutionFailure_FileNotFound -> PathResolutionFileNotFound.of(op, path, suppressed);
       case PathResolutionFailure_ParentIsNotAFolder -> PathResolutionParentIsNotAFolder.msg;
       case PathResolutionFailure_InvalidName -> PathResolutionInvalidName.msg+PathResolutionInvalidName.example;
       case PathResolutionFailure_PathTooLong -> PathResolutionPathTooLong.of(path, suppressed);
       case PathResolutionFailure_SymlinkLoop -> PathResolutionText.symlinkLoop;
       case FileAlreadyExists -> FileAlreadyExists.msg;
-
       case AccessDenied -> AccessDenied.of(op, path, suppressed);
       case AccessDenied_Network -> AccessText.accessDeniedNetwork;
       case PathIsFolder -> PathIsFolder.of(path, suppressed);
-
       case MediaIoFailure_Generic -> MediaIoText.generic;
       case MediaIoFailure_CyclicRedundancyCheck -> MediaIoText.cyclicRedundancyCheck;
       case MediaIoFailure_SeekFailure -> MediaIoText.seekFailure;
@@ -126,20 +114,15 @@ final class FailureText{
       case MediaIoFailure_WriteFault -> MediaIoText.writeFault(op);
       case MediaIoFailure_ReadFault -> MediaIoText.readFault;
       case MediaIoFailure_DeviceNotFunctioning -> MediaIoText.deviceNotFunctioning;
-
       case InvalidHandleOrDescriptor -> InvalidHandleOrDescriptor.of(path, suppressed);
-
       case InvalidOperationOrParameter_InvalidArgument -> InvalidOperationText.invalidArgument;
       case InvalidOperationOrParameter_IncorrectFunction -> InvalidOperationText.incorrectFunction;
       case InvalidOperationOrParameter_InvalidParameter -> InvalidOperationText.invalidParameter;
-
       case UnsupportedFileSystem -> UnsupportedText.unsupportedFileSystem;
       case UnsupportedFileSystem_DeviceDoesNotRecognizeCommand -> UnsupportedText.deviceDoesNotRecognizeCommand;
-
       case ChannelClosedByInterrupt -> InterruptionText.channelClosedByInterrupt;
       case IoInterrupted -> InterruptionText.ioInterrupted;
       case ChannelClosedExternally -> InterruptionText.channelClosedExternally;
-
       case UnknownOpenFailure -> UnknownText.unknownOpenFailure;
     };
     return new Explanation(op.fill(text), suppressed.toList());
@@ -161,7 +144,6 @@ final class Suppressed{
   List<Throwable> toList(){ return List.copyOf(errors); }
 }
 final class CommonInfo{
-
   static String of(Op op, Path path, Suppressed suppressed){
     return "Fearless could not "+op.verb+" this file:\n\n  "+located(path, suppressed);
   }
@@ -187,12 +169,10 @@ final class CommonInfo{
     catch (IOException e){ return "<reading volume failed>"+suppressed.mark(e); }//documented: getFileStore throws when the file/volume cannot be read
   }
 }
-
 // A given holder is the same program whether it triggered a sharing violation (32) or a lock violation (33)
 final class Holders{
   // Holder enumeration is per-OS. Windows: Restart Manager / NtQuerySystemInformation.
   // Linux: walk /proc/*/fd (or lsof/fuser). macOS: lsof / proc_pidfdinfo.
-
   // Contract: an EMPTY list means "confirmed: no program currently holds this file open".
   // A failure of the enumeration itself must be reported by throwing IOException.
   // Per-field failures inside one entry adds to suppressed.
@@ -226,12 +206,10 @@ Antimalware Service Executable
        Kind:           Windows service   (service name: WinDefend)
 """;
 }
-
 // ---- Shared text pieces and example-data helpers -----------------------------------
 // Same pattern as Holders: real implementations query the OS / walk the disk; for now
 // they return EXAMPLE data so the final message shape can be reviewed, and the calling
 // texts are already wired for the (path, suppressed) discovery style.
-
 final class Terms{
   // User-facing glossary (review round 2): the fixed meanings of the storage words,
   // written for the AUDIENCE described at the top - no OS, shell, or file lore assumed.
@@ -259,7 +237,6 @@ Terms used above:
                    kinds of volumes follow different rules.
 """;
 }
-
 final class ReportText{
   static final String please= """
 
@@ -270,7 +247,6 @@ The details gathered above were collected at the moment of failure and are
 what allows the fault to be routed to Fearless, to the JVM, or to the operating system.
 """;
 }
-
 final class NetInfo{
   static final String serverLine=
     "This path is hosted on the server: [[fileserver01]](read from the path itself, or from the mount table for a mounted network volume).\n\n";
@@ -305,7 +281,6 @@ The folder holds 3 entries:
   drafts    (a folder)
 """;
 }
-
 final class PermissionsInfo{
   // Real implementation. POSIX: Files.getPosixFilePermissions plus owner/group,
   // compared with the current user. Windows: read the ACL (AclFileAttributeView) and
@@ -327,7 +302,6 @@ File permissions: [[Read/Write/Execute]](easy on linux, how to do on win?, use f
 
 """;
 }
-
 final class NetworkProbe{
   // Real implementation: take the server from the path or the mount table, then check
   // in order: does the name resolve (DNS/NetBIOS)? does the machine answer
@@ -345,7 +319,6 @@ Fearless checked the server just now:
 Explanation of what 'name lookup' is.
 """;
 }
-
 final class OpenFilesInfo{
   // Real implementation. POSIX: getrlimit(RLIMIT_NOFILE) for the limit, /proc/self/fd
   // for the list (readable by the process itself). Windows: GetProcessHandleCount plus
@@ -363,7 +336,6 @@ The open files, grouped by folder:
 //From the user perspective standard input/output are not files, need to be subtracted from total allowed etc etc.
 """;
 }
-
 final class InterferenceInfo{
   //Apparently, on most OS/FS naming WHICH software interfered on THIS operation is not possible.
   //So we fall back to name WHO WAS IN A POSITION to interfere (readable right now, while the context is alive).
@@ -382,7 +354,6 @@ Software in a position to interfere on this program's open files:
 """;
 }
 // ---- end of shared pieces and example-data helpers ----------------------------------
-
 //[any OS]
 final class UnknownFailureAfterSuccessfulOpen{
   static String of(Path path, Suppressed suppressed){
@@ -398,7 +369,6 @@ Fearless cannot tell whether the problem is with the file or with the device or 
   //Trying reading a sibling file on the same volume to distinguish "this file" from "this volume"
   //chosen not to do: a successful probe proves little (different sectors/regions)
 }
-
 // Error 32, ERROR_SHARING_VIOLATION: an open-stage failure. Some existing handle was opened with a share mode that omits read-sharing (or write-sharing, for a write).
 //[Windows-only]
 final class FileBusyWindowsSharingViolation{
@@ -412,7 +382,6 @@ one of the programs below has chosen not to. Windows reported a sharing violatio
 
 """;//Above, is it correct always program or should be always process or a mix? and why?
 //should the difference program/process be added to the terminology message?
-
   private static final String whenNone= """
 The open failed because some program had this file open in a non-sharing mode,
 yet this check (some moments after), found no program holding the file open at all.
@@ -421,7 +390,6 @@ yet this check (some moments after), found no program holding the file open at a
 //Was: The file can be read again once the program(s) reserving it release it.
 //but this is against the design, it reads like a help to solve not a description of the current problem.
 }
-
 // Error 33, ERROR_LOCK_VIOLATION: a failure at the read/write stage. The open succeeded (share modes were compatible), then the operation overlapped a byte-range lock.
 // Deliberately does NOT probe for the locked range.
 //[Windows-only]
@@ -436,14 +404,12 @@ Another program has locked a portion of this file, and the range Fearless tried 
 """;
 //should the terminology section discuss those two kinds of locks? (file and range)
 //also, program or process?
-
   private static final String whenNone= """
 The `read` failed because it overlapped a lock,
 yet this check (some moments after), found no program holding the file open at all.
 """;
 //Removed since verbose and pointless:
 //"Each observation is true only at its own moment; Fearless cannot see what happened in between."
-
   private static final String outro= """
 One of the programs above placed the lock; Windows does not report which, so every
 program holding the file open is listed.
@@ -451,7 +417,6 @@ program holding the file open is listed.
 //again, removed since verbose and adds nothing
 //"This list is a snapshot: it describes only the moment the check was made."
 }
-
 // Error 167, ERROR_LOCK_FAILED: Fearless (or the layer below it) tried to place a lock and Windows could not.
 //Likely DEAD CODE. Those errors comes from Files.readAllBytes(path)/Files.write(path,..) and it seems windows will never trigger this from either.
 //Needs more checking, and could come back for other IO reporting.
@@ -471,7 +436,6 @@ The lock failed because of a conflicting lock,
 yet this check (some moments after), found no program holding the file open at all.
 """;
 }//should the terminology explain what conflicting locks really means on the various OS+Fs?
-
 final class FileBusyText{
   //[POSIX-only]
   //ETXTBSY is raised for a WRITE-open of a running program; a plain read does not
@@ -502,7 +466,6 @@ The other operation is run by [[the program "backup-daemon", process 2214]](foun
 listing who is using the device or volume - the same walk Holders does, pointed at
 the mount point instead of the file).
 """+Terms.glossary;
-
   //[Windows-only]
   static final String driveLocked= """
 The volume named above is locked by a program that needs exclusive access to the
@@ -527,7 +490,6 @@ system: FileStore.getUsableSpace and getTotalSpace on the volume named above).
 //Also: a "full" volume can still hold a SMALLER write; stating the size of the failed
 //write next to the free space would make the refusal checkable. Discoverable? The
 //byte count is known to ByteFiles; would need to flow into the explain call.
-
   //[any OS]
   static final String quotaExceeded= """
 This write was refused because this user's allowance of storage on this volume is
@@ -550,7 +512,6 @@ It is mounted read-only because [[that was requested when it was mounted/the
 operating system switched it to read-only after finding damage on it]](asked to the
 system: the mount options recorded for this volume, and the system log).
 """+Terms.glossary;
-
   //[Windows-only]
   static final String mediaWriteProtected= """
 The device named above refuses all writes: its storage medium is write protected (error 19, ERROR_WRITE_PROTECT).
@@ -567,7 +528,6 @@ for the actual `reading`.
 The server has stopped honoring the reference this computer holds for this file ("stale file handle").
 Servers do that when the file behind a reference was deleted, moved, or replaced.
 """+Terms.glossary;
-
   //[Windows-only]
   static final String deviceNotReady= """
 The device behind the volume named above is not ready (error 21, ERROR_NOT_READY).
@@ -575,7 +535,6 @@ The device is [[a memory-card reader, and no card is inserted/a disc drive, and 
 disc is inserted/a disk that is still powering up]](asked to Windows through the
 device-kind queries: GetDriveType, the IOCTL_STORAGE family).
 """+Terms.glossary;
-
   //[Windows-only]
   static final String deviceDisconnected= """
 The device behind the volume named above is no longer connected to this computer
@@ -584,7 +543,6 @@ in a dock that lost power]](asked to Windows: device kind, plus the disconnectio
 event in the system log). The volume it carried is unreachable until the device is
 connected again.
 """+Terms.glossary;
-
   //[POSIX-only]
   static final String transportEndpointDisconnected= NetInfo.serverLine+"""
 This file is on a mounted network volume, and the connection between this computer
@@ -596,7 +554,6 @@ The network folder still appears on this computer, but nothing is behind it any 
 """+Terms.glossary;
 //Removed since pointless and on the fixing mindset instead or error reporting:
 //"It leads somewhere again only once the connection to the server is re-established."
-
   //[Windows-only]
   static final String providerUnavailable= """
 No software component on this computer accepted this network path (error 1203, ERROR_NO_NET_OR_BAD_PATH).
@@ -606,7 +563,6 @@ This computer has providers for [[SMB, the ordinary Windows file sharing/WebDAV,
 offered by web servers]](discovered by listing the installed providers: the registry
 NetworkProvider order, or WNetOpenEnum), and none of them claimed this path.
 """+Terms.glossary;
-
   //[Windows-only]
   static final String networkResourceGone= NetInfo.serverLine+"""
 The shared folder holding this path is no longer offered by the server named above (error 55, ERROR_DEV_NOT_EXIST).
@@ -615,7 +571,6 @@ folder/the server no longer answers at all - it went offline]](checked by the sa
 probe as error 53: name lookup, reachability, share).
 """+Terms.glossary;
 //The server is now named above, but what about the 'shared folder', can we name it?
-
   //[Windows-only]
   static final String networkBusy= NetInfo.serverLine+"""
 The connection to the server named above is too busy to handle the request right now (error 54, ERROR_NETWORK_BUSY).
@@ -637,7 +592,6 @@ The computer or shared folder named in this path did not answer (error 53, ERROR
 //how is this different from the other "The connection to the server named above is..."
 //the change in terminology suggests this connection does not go/attempts to go via a 'server'.
 }
-
 final class NetworkFailureText{
   //[Windows-only]
   static final String badResponse= NetInfo.serverLine+"""
@@ -648,7 +602,6 @@ The two are separable up to a point:
 server/only this one answer was malformed, which can be either]](checked by retrying
 one cheap request once, reported as a hint, not a verdict).
 """+Terms.glossary;
-
   //[Windows-only]
   static final String unexpected= NetInfo.serverLine+"""
 Communication with this server failed in a way Windows did not classify (error 59, ERROR_UNEXP_NET_ERR).
@@ -665,7 +618,6 @@ may hold open at the same time ("too many open files"). This is a limit on the p
 Max files that can be open: [[34?]](POSIX: getrlimit(RLIMIT_NOFILE) and ///proc/self/fd, readable by the process itself; Windows: handle/stream counts)
 """;
 }
-
 final class ResourceExhaustedText{
   //[POSIX-only]
   //"Closing other programs frees memory" (advice) removed; the text now only says whose memory ran out.
@@ -678,7 +630,6 @@ Running out of the Fearless process memory while loading a large file surfaces a
 // not as an IOException, so it never reaches this table. ENOMEM can still arrive here as an
 //IOException when the KERNEL fails to allocate on behalf of the read: native/direct buffers, page tables, network-file-system structures.
 //Rare, but real. The same holds for a write, whose bytes already sit on the heap.
-
   //[Windows-only]
   //CHANGED(2): "closing other programs, or simply waiting, usually resolves it"
   //(advice+prediction) replaced by what the error asserts: a momentary whole-computer
@@ -690,7 +641,6 @@ This describes a momentary state of the whole computer, not a property of this f
 //Windows does not tell WHICH internal pool ran out (paged/non-paged kernel
 //memory, handles, ...) and Windows offers no per-error breakdown.
 }
-
 //[JVM]  Read-only kind: writes hand Fearless the bytes, they never build the array.
 final class FileTooLargeForByteArray{
   static String of(Path path, Suppressed suppressed){
@@ -701,7 +651,6 @@ final class FileTooLargeForByteArray{
       +"one block can hold at most 2,147,483,647 bytes (about 2 GB).\n";
   }
 }
-
 //[any OS]
 final class PathResolutionFileNotFound{
   static String of(Op op, Path path, Suppressed suppressed){
@@ -725,7 +674,6 @@ If a chain of links is shown above, the missing folder is on the final location 
 deepest EXISTING ancestor - the walk the FolderInfo comment already describes)
 """;
 }
-
 //[any OS]
 final class PathResolutionParentIsNotAFolder{
   static final String msg= """
@@ -743,7 +691,6 @@ files inside an archive cannot be reached by path; they are read through the arc
 [[The zip file backup.zip cointains/does not contan xxx inside/is not a valid zip]](using the zip api)
 """;
 }
-
 //[Windows-only]
 final class PathResolutionInvalidName{
   static final String msg= """
@@ -759,7 +706,6 @@ The first invalid character is marked below:
 '<' cannot appear in a file or folder name on Windows.
 """;
 }
-
 //[any OS]
 final class PathResolutionPathTooLong{
   // Typical limits, stated in the texts below; a real implementation should ask the
@@ -776,14 +722,12 @@ On Windows the limit is 259 characters, unless long-path support is enabled, in 
 System setting -> registry value LongPathsEnabled.
 On this computer the system setting is [[enabled/not enabled]](read from the registry value).
 """;
-
   private static final String posixLimits= """
 On this system, a whole path may be at most [[4096]](asked to the system: pathconf
 of this path, PATH_MAX) bytes, and a single file or folder name at most
 [[255]](asked the same way, NAME_MAX) bytes.
 """;
 }
-
 final class PathResolutionText{
   //[POSIX-only]
   static final String symlinkLoop= """
@@ -812,7 +756,6 @@ final class AccessDenied{
 The operating system did not allow Fearless to `read` this file (access denied).
 """;
 }
-
 final class AccessText{
   //[any OS]
   static final String accessDeniedNetwork= NetInfo.serverLine+"""
@@ -830,9 +773,7 @@ This path is a folder, not a file, so it cannot be `written` as a file.
 """;//CHANGED: was "so there are no file contents to read", which had no sensible
 //write twin; passive position, so it takes the participle token (see Op.fill).
 }//TODO: should look if there is a file with the same name and some extension.
-
 final class MediaIoText{
-
 //[any OS]
   static final String generic= """
 The device named above reported a failure while `reading` (I/O error).
@@ -843,7 +784,6 @@ This failure does not report whether this file's stored bytes are damaged or the
 //CHANGED: "the medium is unreadable at the spots" -> "damaged at the spots": for a
 //write the medium is failing to ACCEPT bytes, not to give them back; "damaged" holds
 //for both directions.
-
   //[Windows-only]
   static final String cyclicRedundancyCheck= """
 The device named above returned data for this file, but the data failed its integrity check
@@ -856,19 +796,16 @@ but the device's own reading machinery worked.
 //just above it (a CRC failure DOES localize the damage to the stored bytes).
 //Op.Write review question: a CRC during a write points at verify-after-write or at
 //an internal read the write needed; does the "returned data" sentence still hold?
-
   //[Windows-only]
   static final String seekFailure= """
 The device could not move to the position on its storage medium where this file's
 data is kept (error 25, ERROR_SEEK). This is a fault in the device, not in the file.
 """+Terms.glossary;
-
   //[Windows-only]
   static final String sectorNotFound= """
 The device could not find the place on its storage medium where this file's data
 should be (error 27, ERROR_SECTOR_NOT_FOUND). That part of the medium is unreadable.
 """+Terms.glossary;
-
   //[Windows-only]
   //The CONTENT forks on the operation - a write fault during a write is the plain
   //event; during a read it needs the "surprising but not impossible" paragraph - so
@@ -885,7 +822,6 @@ Either way it points to a problem with the device, not with the file.
 The device named above could not store this file's data (error 29, ERROR_WRITE_FAULT).
 This points to a problem with the device, not with the file.
 """+Terms.glossary;
-
 //[Windows-only]
   static final String readFault= """
 The device could not deliver this file's data (error 30, ERROR_READ_FAULT).
@@ -897,7 +833,6 @@ query, the same one that feeds the future "Device:" line).
 """+Terms.glossary;
 //The mirror of writeFault: a read fault during a WRITE means the operation needed an
 //internal read. Symmetric op-branching to consider once one is observed in practice.
-
   //[Windows-only]
   static final String deviceNotFunctioning= """
 The device named above is not working correctly (error 31, ERROR_GEN_FAILURE).
@@ -915,7 +850,6 @@ This should not happen in normal operation: it points to a bug in the JVM
 [[,or to another program interfering with this program's open files]](windows only).
 """;
 }
-
 final class InvalidOperationText{
 //[POSIX-only]
   static final String invalidArgument= """
@@ -925,7 +859,6 @@ This file is [[not an ordinary file: it is a device endpoint, which cannot be `w
 /an ordinary file on an ordinary volume, so the malformed request shows a JVM bug]]
 (checked by asking the file's kind and the volume's kind: one metadata query plus the Device-line queries).
 """+Terms.glossary+ReportText.please;
-
   //Same failure as "invalid argument" above, reported by Windows instead of POSIX:
   //the OS judged a value in the request nonsensical for the target. One kind per
   //error vocabulary, not two different events.
@@ -938,7 +871,6 @@ This file is [[not an ordinary file: it is a device endpoint, which cannot be `w
 /an ordinary file on an ordinary volume, so the malformed request shows a JVM bug]]
 (checked by asking the file's kind and the volume's kind: one metadata query plus the Device-line queries).
 """+Terms.glossary+ReportText.please;
-
   //[Windows-only]
   static final String incorrectFunction= """
 A component involved in `reading` this file refused an operation as one it does not
@@ -954,7 +886,6 @@ itself is the anomaly, and it points to a bug in the driver, in Windows, or in t
 JVM.]](checked by asking the device kind and volume type: the Device-line queries.)
 """+Terms.glossary;
 }
-
 final class UnsupportedText{
 //[any OS]
   static final String unsupportedFileSystem= """
@@ -966,7 +897,6 @@ by the Fearless API
 /an ordinary file on an ordinary volume; thus the refusal itself is the anomaly: a bug in the driver, in the operating system, or in the JVM]]
 (checked by asking the file's kind and the volume's kind: one metadata query plus the Device-line queries).
 """+Terms.glossary+ReportText.please;
-
   //[Windows-only]
   //Not a fifth sibling of the error-1/EINVAL/87/ENOTSUP family: unlike those, this
   //error DOES name the level - the boundary between device and driver - so no branch
@@ -982,7 +912,6 @@ The device is [[the USB storage device "SanDisk Ultra"]] and its driver is
  [[disk.sys, version 10.0.26100]](both identities from the Device-line queries).
 """+Terms.glossary;
 }
-
 final class InterruptionText{
   //[JVM]
   //CHANGED(2): "the file must be reopened before trying again" was instruction;
@@ -995,7 +924,6 @@ Stopping a `read` this way also closes the file.
 //Op.Write review question: a write stopped mid way may leave the file with only part
 //of the new content on disk. True and important; is stating it "information" (yes)
 //and can we DISCOVER whether bytes had already been written when the stop landed?
-
 //[JVM]
   //Sibling of channelClosedByInterrupt: both are the JVM's own bookkeeping ("the file was closed under an operation in progress"), arriving by different doors - that one via
   //the cancellation mechanism, this one via a direct close.
@@ -1004,7 +932,6 @@ While this `read` was in progress, the file was closed from inside this program,
 not by the operating system and not through a cancellation.
 This must be a JVM bug, or a bug in some native code loaded by Fearless.
 """+ReportText.please;
-
 //[JVM]
   //Not a sibling of the text above, despite the similar name. That one is the JVM's
   //own cancellation (deliberate, closes the file). This one is the OS pausing the

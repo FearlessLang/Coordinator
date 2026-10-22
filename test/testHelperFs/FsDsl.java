@@ -28,7 +28,6 @@ public final class FsDsl{
     final LinkedHashMap<String,ZipNode> nested= new LinkedHashMap<>();
     final ArrayList<Leaf> leafs= new ArrayList<>();
   }
-
   static List<Item> parse(String spec){
     var items= new ArrayList<Item>();
     var cur= new ArrayList<String>();
@@ -39,7 +38,6 @@ public final class FsDsl{
     addItem(items, cur);
     return items;
   }
-
   private static void addItem(ArrayList<Item> out, ArrayList<String> lines){
     if (lines.isEmpty()){ return; }
     var i= 0;
@@ -49,7 +47,6 @@ public final class FsDsl{
     var content= Join.of(lines.subList(i+1, lines.size()), "", "\n", "", "");
     out.add(new Item(name, content));
   }
-
   public static void materialize(Path root, String spec){
     try{
       var zips= new LinkedHashMap<Path,ZipNode>();
@@ -60,31 +57,25 @@ public final class FsDsl{
       Assumptions.abort("OS forbids creating this path on disk: "+e.getMessage());
     }
   }
-
   private static void emit(Path root, LinkedHashMap<Path,ZipNode> zips, Item it){
     var name= it.name();
     var isDir= name.endsWith("/");
     if (isDir){ name = name.substring(0, name.length()-1); }
     var segs= name.split("/", -1);
-
     var zi= firstZipSeg(segs);
     if (zi < 0){ emitDisk(root, segs, isDir, it.content()); return; }
-
     var diskZip= root;
     for (int i= 0; i <= zi; i += 1){ diskZip = diskZip.resolve(segs[i]); }
-
     var node= zips.computeIfAbsent(diskZip, _ -> new ZipNode());
     var after= List.of(segs).subList(zi+1, segs.length);
     emitZip(node, after, isDir, it.content());
   }
-
   private static int firstZipSeg(String[] segs){
     for (int i= 0; i < segs.length; i += 1){
       if (segs[i].endsWith(".zip")){ return i; }
     }
     return -1;
   }
-
   private static void emitDisk(Path root, String[] segs, boolean isDir, String content){
     var p= root;
     for (var s : segs){ p = p.resolve(s); }
@@ -92,7 +83,6 @@ public final class FsDsl{
     mkdirs(p.getParent());
     writeString(p, content);
   }
-
   private static void emitZip(ZipNode root, List<String> after, boolean isDir, String content){
     if (after.isEmpty()){
       assert !isDir : "Use path ending with .zip (no trailing /) to declare empty zip";
@@ -110,19 +100,16 @@ public final class FsDsl{
     if (entry.isEmpty()){ return; } // declaration only at this zip level
     root.leafs.add(new Leaf(entry, content, isDir));
   }
-
   private static int nextZipIndex(List<String> segs, int from){
     for (int i= from; i < segs.size(); i += 1){
       if (segs.get(i).endsWith(".zip")){ return i; }
     }
     return -1;
   }
-
   private static void writeDiskZip(Path diskZip, ZipNode node){
     mkdirs(diskZip.getParent());
     writeBytes(diskZip, buildZip(node));
   }
-
   private static byte[] buildZip(ZipNode node){
     var bout= new ByteArrayOutputStream();
     try (var zos= new ZipOutputStream(bout, UTF_8)){
@@ -138,7 +125,6 @@ public final class FsDsl{
     catch (Exception e){ throw new AssertionError(e); }
     return bout.toByteArray();
   }
-
   private static void putDir(ZipOutputStream zos, String name){
     try{
       zos.putNextEntry(new ZipEntry(name.endsWith("/") ? name : name+"/"));
@@ -146,7 +132,6 @@ public final class FsDsl{
     }
     catch (Exception e){ throw new AssertionError(e); }
   }
-
   private static void putFile(ZipOutputStream zos, String name, byte[] bytes){
     try{
       zos.putNextEntry(new ZipEntry(name));
@@ -155,7 +140,6 @@ public final class FsDsl{
     }
     catch (Exception e){ throw new AssertionError(e); }
   }
-
   public static String dump(SourceOracle so){
     var rs= new ArrayList<SourceOracle.Ref>(so.allFiles());
     rs.sort(Comparator.comparing(SourceOracle.Ref::fearPath));
@@ -166,7 +150,6 @@ public final class FsDsl{
     }
     return sb.toString();
   }
-
   public static String dumpErr(Path root, RuntimeException ex){
     var msg= String.valueOf(ex.getMessage());
     var abs= root.toAbsolutePath().normalize().toString();
@@ -174,18 +157,15 @@ public final class FsDsl{
     var uri= root.toUri().normalize().toString();
     return msg.replace(abs, "<root>").replace(absSl, "<root>").replace(uri, "<root-uri>");
   }
-
   private static void mkdirs(Path p){
     if (p == null){ return; }
     try{ Fs.createDirectories(p); }
     catch (Exception e){ throw new AssertionError(e); }
   }
-
   private static void writeString(Path p, String s){
     try{ Fs.writeString(p, s); }
     catch (Exception e){ throw new AssertionError(e); }
   }
-
   private static void writeBytes(Path p, byte[] bs){
     try{ Fs.write(p, bs); }
     catch (Exception e){ throw new AssertionError(e); }
@@ -206,5 +186,4 @@ public final class FsDsl{
     var res= dumpErr(root, ex);
     utils.Err.strCmp(expected, res);
   }
-
 }

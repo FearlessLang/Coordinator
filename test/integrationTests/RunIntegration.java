@@ -63,7 +63,6 @@ import utils.Push;
 
 final class RunIntegration{
   static{ utils.Err.setUp(AssertionFailedError.class, Assertions::assertEquals, Assertions::assertTrue); }
-
   static final Path baseCache= ResolveResource.stLibDebugOut.resolve("baseCache");
   static final Path reportsDir= ResolveResource.coordinatorSrc.getParent().resolve(".out", "junit_xml");
   static final Path reportsFile= reportsDir.resolve("all_auto_tests.xml");
@@ -565,7 +564,6 @@ zeroMemo
   @Test void theInteractiveProjectsStillCompile(){
     for (var name : List.of("testGui1", "testGui2", "testGuiImg", "testGuiLive", "testGuiInput", "testGuiText", "testGuiTiles", "testBasketball", "testTicTacToe")){ compileOk(name); }
   }
-
   // Two assets that generate the same auto-loaded type name (here "foo.txt" and "foo.png",
   // both auto-loading as "Foo") must be rejected end-to-end, before the frontend ever sees
   // the synthetic autoloaded_assets.fear file, with a message naming the two real files
@@ -606,7 +604,6 @@ How to fix
 We check this so that you[###]
 """, ex.getMessage());
   }
-
   @Test void mainsAreListedWithTheFileDeclaringThem(@TempDir Path tmp){
     var root= tmp.resolve("root");
     UserError.root = root;
@@ -669,7 +666,6 @@ hello
 """);
     coordinator(root).main(root, stLib);
   }
-
   // TxtFile/ImageFile are ordinary public types: any Fearless type can implement one and
   // override .path/.diskPath/.zipSteps/.zipEntry/.originalFileName with whatever literal it
   // likes. A forged implementer that copies a real asset's .path but points .diskPath at a file
@@ -710,7 +706,6 @@ REAL ASSET CONTENT
     utils.Err.strCmp("[###]was not recognized by the compiler as auto-imported[###]", out);
     utils.Err.strCmp("[###]REAL ASSET CONTENT[###]", out);
   }
-
   static Path inputProject(Path tmp){
     var root= tmp.resolve("root");
     UserError.root = root;
@@ -1767,7 +1762,6 @@ Hello:base.Main{s->base.Debug#((lib.Lit.m("a\\"))+(lib.Lit.n(`b"c`))+(lib.Lit.k.
     editAndTouch(root.resolve("_col", "_rank_app.fear"), "(lib.Lit.k.str)", "(lib.Lit.k.str)+`!`");
     utils.Err.strCmp("a\\b\"c5!\n", coordinator(root).main(root, stLib));
   }
-
   @Test void anAssetWhoseNameForgesNoValidTypeIsReportedAgainstTheRealFile(@TempDir Path tmp){
     var root= tmp.resolve("root");
     UserError.root = root;
@@ -1801,7 +1795,6 @@ How to fix
 We check this so that you[###]
 """, ex.getMessage());
   }
-
   @Test void aRealApiPreservingEditMustNotRebuildTheDependentPackage(@TempDir Path tmp) throws Exception{
     var root= tmp.resolve("root");
     UserError.root = root;
@@ -1825,12 +1818,10 @@ Hello:Main{s->base.Debug#(Greeting.hi)}
     var bBuilt= Fs.lastModified(out.resolve("b.built"));
     editAndTouch(root.resolve("_a/_rank_core.fear"), "\"hi\"", "\"ho\"");
     c.main(root, stLib);
-
     assertNotEquals(aBuilt, Fs.lastModified(out.resolve("a.built")));
     assertEquals(aJson, Fs.lastModified(out.resolve("a.json")));
     assertEquals(bBuilt, Fs.lastModified(out.resolve("b.built")));
   }
-
   // Confirms expected behaviour: only the packages at the highest rank number get their Main run.
   @Test void onlyTheHighestRankPackageMainRuns(@TempDir Path tmp) throws InterruptedException{
     var root= tmp.resolve("root");
@@ -1850,7 +1841,6 @@ Hello:Main{s->base.Debug#("from app")}
     utils.Err.strCmp("[###]from app[###]", out);
     assertFalse(out.contains("from core"), out);
   }
-
   // Confirms expected behaviour: packages tied for that highest rank number all run.
   @Test void allPackagesAtTheHighestRankRun(@TempDir Path tmp) throws InterruptedException{
     var root= tmp.resolve("root");
@@ -1870,7 +1860,6 @@ Hello:Main{s->base.Debug#("from z")}
     utils.Err.strCmp("[###]from a[###]", out);
     utils.Err.strCmp("[###]from z[###]", out);
   }
-
   @Test void flowsAreDeterministic(){ testOk("testFlowDeterminism"); }
   // The sequential flow returns 0 without evaluating any other element, so the parallel one must
   // return as well, whatever the elements past the decision do: here they never return.
@@ -2011,7 +2000,6 @@ b
     assertEquals(1, Coordinator.startMain(root, ResolveResource.stLibPath, "rec.NaiveSum", Optional.empty(), Map.of(), Map.of(), List.of(), coordinator(root).sharedClasspath(), out::append).await(), out::toString);
     utils.Err.strCmp("[###]java.lang.StackOverflowError[###]", out.toString());
   }
-
   @Test void virtualizationMapMentionsAPackageThatDoesNotExist(@TempDir Path tmp) throws InterruptedException{
     var root= tmp.resolve("root");
     UserError.root = root;
@@ -2037,7 +2025,6 @@ Existing packages: "base", "pka", "pkb".
 Error 7 WellFormedness
 """, ex.getMessage());
   }
-
   @Test void useOfAHigherRankPackageIsReportedAsARankProblem(@TempDir Path tmp) throws InterruptedException{
     var root= tmp.resolve("root");
     UserError.root = root;
@@ -2067,7 +2054,6 @@ A package can only use packages of a lower rank.
 Error 7 WellFormedness
 """, ex.getMessage());
   }
-
   @Test void useOfASameRankPackageIsReportedAsARankProblem(@TempDir Path tmp) throws InterruptedException{
     var root= tmp.resolve("root");
     UserError.root = root;
@@ -2097,7 +2083,6 @@ A package can only use packages of a lower rank.
 Error 7 WellFormedness
 """, ex.getMessage());
   }
-
   @Test void twoTypeNamesDifferingOnlyByCaseMustStillBuildOnASecondRun(@TempDir Path tmp) throws InterruptedException{
     var root= tmp.resolve("root");
     UserError.root = root;
@@ -2114,11 +2099,9 @@ Hello:Main{s->base.Debug#("hi")}
     c.main(root, stLib);
     c.main(root, stLib);
   }
-
   // --- DownloadCapability -------------------------------------------------
   // Each test starts a local HttpServer (no external network needed) and
   // materializes a fresh Fearless project whose source references its port.
-
   static HttpServer startServer(HttpHandler handler) throws IOException{
     var server= HttpServer.create(new InetSocketAddress(InetAddress.getLoopbackAddress(), 0), 0);
     server.createContext("/", handler);
@@ -2156,7 +2139,6 @@ NeverRecovers: base.BadStrUnitRecover { reason, byteOffset, byteLength, rejected
 NeverRecoversU: base.BadUStrUnitRecover { reason, byteOffset, byteLength, rejectedValue -> "should not happen".u }
 Hello:Main{s->base.Debug#("""+call.replace("$URL", url)+")}\n";
   }
-
   @Test void downloadStrUtf8Succeeds(@TempDir Path tmp) throws Exception{
     var server= startServer(ex -> reply(ex, 200, "hello download".getBytes(UTF_8)));
     try{
@@ -2169,7 +2151,6 @@ Hello:Main{s->base.Debug#("""+call.replace("$URL", url)+")}\n";
     }
     finally{ server.stop(0); }
   }
-
   @Test void downloadBytesReturnsExactContent(@TempDir Path tmp) throws Exception{
     var server= startServer(ex -> reply(ex, 200, new byte[]{65, 66, 67}));
     try{
@@ -2182,7 +2163,6 @@ Hello:Main{s->base.Debug#("""+call.replace("$URL", url)+")}\n";
     }
     finally{ server.stop(0); }
   }
-
   @Test void downloadRejectsNonHttpScheme(@TempDir Path tmp) throws Exception{
     var root= tmp.resolve("root");
     UserError.root = root;
@@ -2192,7 +2172,6 @@ Hello:Main{s->base.Debug#("""+call.replace("$URL", url)+")}\n";
     utils.Err.strCmp("[###]Invalid URL descriptor[###]", out);
     utils.Err.strCmp("[###]unsupported scheme[###]", out);
   }
-
   @Test void downloadRejectsMalformedUrl(@TempDir Path tmp) throws Exception{
     var root= tmp.resolve("root");
     UserError.root = root;
@@ -2201,7 +2180,6 @@ Hello:Main{s->base.Debug#("""+call.replace("$URL", url)+")}\n";
     var out= coordinator(root).main(root, stLib);
     utils.Err.strCmp("[###]Invalid URL descriptor[###]", out);
   }
-
   @Test void downloadFailsWhenContentLengthExceedsMaxBytes(@TempDir Path tmp) throws Exception{
     var server= startServer(ex -> reply(ex, 200, "0123456789".getBytes(UTF_8)));
     try{
@@ -2215,7 +2193,6 @@ Hello:Main{s->base.Debug#("""+call.replace("$URL", url)+")}\n";
     }
     finally{ server.stop(0); }
   }
-
   @Test void downloadFailsWhenStreamedBytesExceedMaxBytesWithoutContentLength(@TempDir Path tmp) throws Exception{
     var server= startServer(ex -> replyChunked(ex, "0123456789".getBytes(UTF_8)));
     try{
@@ -2229,7 +2206,6 @@ Hello:Main{s->base.Debug#("""+call.replace("$URL", url)+")}\n";
     }
     finally{ server.stop(0); }
   }
-
   @Test void downloadFollowsRedirectsThenSucceeds(@TempDir Path tmp) throws Exception{
     var server= startServer(ex -> {
       switch (ex.getRequestURI().getPath()){
@@ -2249,7 +2225,6 @@ Hello:Main{s->base.Debug#("""+call.replace("$URL", url)+")}\n";
     }
     finally{ server.stop(0); }
   }
-
   @Test void downloadFailsAfterTooManyRedirects(@TempDir Path tmp) throws Exception{
     var server= startServer(ex -> redirect(ex, "/loop"));
     try{
@@ -2262,7 +2237,6 @@ Hello:Main{s->base.Debug#("""+call.replace("$URL", url)+")}\n";
     }
     finally{ server.stop(0); }
   }
-
   @Test void downloadRedirectRevalidatesScheme(@TempDir Path tmp) throws Exception{
     var server= startServer(ex -> redirect(ex, "file:///etc/passwd"));
     try{
@@ -2277,7 +2251,6 @@ Hello:Main{s->base.Debug#("""+call.replace("$URL", url)+")}\n";
     }
     finally{ server.stop(0); }
   }
-
   @Test void downloadFailsOnNon2xxStatus(@TempDir Path tmp) throws Exception{
     var server= startServer(ex -> reply(ex, 404, "nope".getBytes(UTF_8)));
     try{
@@ -2290,7 +2263,6 @@ Hello:Main{s->base.Debug#("""+call.replace("$URL", url)+")}\n";
     }
     finally{ server.stop(0); }
   }
-
   // A precomposed e-acute (U+00E9, via Character.toChars so the source file's
   // own encoding never matters) is valid UTF-8 and a valid Unicode scalar
   // value, but it is outside Str's ASCII-only whitelist: UStr decodes it
@@ -2320,7 +2292,6 @@ Hello:Main{s->base.Debug#(
     }
     finally{ server.stop(0); }
   }
-
   @Test void downloadImageSucceeds(@TempDir Path tmp) throws Exception{
     var png= onePixelPng();
     var server= startServer(ex -> reply(ex, 200, png));

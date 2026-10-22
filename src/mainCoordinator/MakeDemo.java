@@ -17,7 +17,6 @@ public final class MakeDemo{
     Fs.ensureDir(pkgDir);
     if (!Fs.exists(pkgDir.resolve("_rank_app.fear"))){ Fs.writeUtf8(pkgDir.resolve("_rank_app.fear"), rankAppFear.formatted(type)); }
   }
-
   private static final String rankAppFear= """
 use base.Main as Main;
 use base.Lists as List;

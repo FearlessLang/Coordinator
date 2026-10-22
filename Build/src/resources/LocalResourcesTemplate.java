@@ -9,7 +9,6 @@ public class LocalResourcesTemplate{ //public class LocalResources {
   //private static Path prefix= Path.of("/").resolve("home","...","Desktop","Java25");
   //example for mac
   //private static Path prefix= ...
-
   public static final Path stLibPath= prefix.resolve("StandardLibrary", "base");
   public static final Path stLibRTPath= prefix.resolve("StandardLibrary", "rt");
   public static final Path stLibDebugOut= prefix.resolve("StandardLibrary", "dbgOut");

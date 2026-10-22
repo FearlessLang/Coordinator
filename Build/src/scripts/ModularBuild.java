@@ -19,7 +19,6 @@ public final class ModularBuild{
   static final Path out= root.resolve("out").resolve("modular");
   static final Path mods= out.resolve("mods");
   static final Path resources= ResolveResource.coordinatorSrc.getParent().resolve("Build", "src", "resources");
-
   static void mainJars(){ commons(); frontendMain(); coordinatorMain(); }
   static void commons(){
     Fs.cleanDir(mods);
@@ -55,7 +54,6 @@ public final class ModularBuild{
     JavacTool.javac(srcs, classes, mods, extraLintDisables);
     JavacTool.jar(classes, mods.resolve(name+".jar"));
   }
-
   static void fearlessTour(){
     var tour= root.resolve("FearlessTour");
     Fs.copyTreeFlat(tour.resolve("externalJars"), mods);
@@ -66,7 +64,6 @@ public final class ModularBuild{
     Fs.ofV(() -> Fs.delete(OneOr.of("Expected exactly one junit console jar in "+mods, jars.stream())));
     buildJar("FearlessTour", List.of(tour.resolve("src"), resources), List.of("-requires-automatic"));
   }
-
   static void runJUnit(String[] scriptArgs, Path testClasses, String... extraArgs) throws InterruptedException{
     var compact= List.of(scriptArgs).equals(List.of("compact"));
     if (!compact && scriptArgs.length != 0){ throw new IllegalArgumentException("Expected no arguments or the single argument compact, got "+List.of(scriptArgs)); }
@@ -76,7 +73,6 @@ public final class ModularBuild{
       "--include-classname=.*", "--details=summary", "--disable-ansi-colors"), List.of(extraArgs));
     JavaTool.runMain(jvmArgs, testClasses, mods, "org.junit.platform.console.ConsoleLauncher", args.toArray(String[]::new));
   }
-
   static void deploy(Path folderOut, List<List<Path>> srcs, String binName, String mainClass, boolean eclipsePlugin) throws InterruptedException{
     var appRoot= folderOut.resolve(binName);
     new PortableApp(ResolveResource.packaging, folderOut, srcs, ResolveResource.stLibPath, ResolveResource.stLibRTPath,
@@ -87,7 +83,6 @@ public final class ModularBuild{
     if (eclipsePlugin){ deployEclipsePlugin(appRoot); }
     System.out.println("Deployed to "+appRoot);
   }
-
   static void deployEclipsePlugin(Path appRoot){
     var found= Fs.walk(appRoot, s -> s.filter(Fs::isDirectory).filter(p -> p.getFileName().toString().equals("mods")).toList());
     var appDir= OneOr.of("Expected exactly one 'mods' dir under "+appRoot, found.stream()).getParent();

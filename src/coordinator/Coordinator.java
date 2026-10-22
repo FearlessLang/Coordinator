@@ -119,7 +119,6 @@ public interface Coordinator{
   }
   static Path genJava(Path outRoot){ return outRoot.resolve("gen_java"); }
   String outDir= ".fearless_out";
-
   default List<Literal> frontend(String pkgName, List<Ref> files, SourceOracle oracle, OtherPackages other, Map<String,String> vres, CapabilityEnvironment capabilities){
     var tests= new ArrayList<Ref>();
     try{ return new FrontendLogicMain().of(pkgName, vres, files, other, core -> docs(pkgName, testsUri(pkgName, files), oracle, other, core, capabilities, tests)); }
@@ -186,7 +185,6 @@ final class Helper{
   private static final List<String> ranks= List.of(
     "_rank_base", "_rank_core", "_rank_driver", "_rank_worker", "_rank_framework", "_rank_accumulator", "_rank_tool", "_rank_app");
   private static final Pattern rankName= Pattern.compile(Join.of(ranks, "(", "|", ")")+"(\\d{3})?");
-
   static boolean hasReservedRankPrefix(Ref u){ return Fs.fileNameWithExtension(u.fearPath()).startsWith("_rank_"); }
   static Ref okPkgContent(List<Ref> u){
     var pkg= pkgName(u.getFirst());
@@ -197,7 +195,6 @@ final class Helper{
     return reserved.getFirst();
   }
   static String pkgName(Ref u){ return pkgNameOpt(u).orElseThrow(() -> Report.projectNoPackageSegment(u)); }
-
   static Optional<String> pkgNameOpt(Ref u){
     var candidates= Stream.of(u.fearPath().split("/"))
       .filter(s -> s.startsWith("_") && !s.contains("."))

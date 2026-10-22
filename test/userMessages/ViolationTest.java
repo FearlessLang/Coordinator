@@ -13,7 +13,6 @@ import org.opentest4j.AssertionFailedError;
 
 final class ViolationTest{
   static{ utils.Err.setUp(AssertionFailedError.class, Assertions::assertEquals, Assertions::assertTrue); }
-
   @Test void mustUseLauncher(){
     utils.Err.strCmp("""
 Error: Fearless has been started without using its launcher.
@@ -67,7 +66,6 @@ If this keeps happening, report the problem.
       Violation.couldNotForceEnglish("mock locale failure", null).getMessage(),
       Violation.couldNotForceEnglish("mock locale failure").getMessage());
   }
-
   @Test void cacheMissingBaseApiFile(){
     var apiJson= Path.of("C:\\Users\\ada\\Downloads\\fearlessManaged0_007\\app\\stdLib\\baseCache\\base.json");
     utils.Err.strCmp("""
@@ -80,7 +78,6 @@ Replace this Fearless folder with a fresh copy.
 If this keeps happening, report the problem.
 """, Violation.cacheMissingBaseApiFile(apiJson).getMessage());
   }
-
   @Test void associationsAmbiguous(){
     var registered= "C:\\Program Files\\FearlessManaged0_006\\fearlessManaged0_006w.exe\nC:\\Users\\ada\\Downloads\\fearlessManaged0_007\\fearlessManaged0_007w.exe";
     utils.Err.strCmp("""

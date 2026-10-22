@@ -57,7 +57,6 @@ security
 contributing
 code_of_conduct
 """.lines().collect(Collectors.toCollection(LinkedHashSet::new));
-
   public static final Set<String> allowedMultiDotExts= """
 tar.gz
 tar.bz2
@@ -72,9 +71,7 @@ css.map
 min.js
 min.css
 """.lines().collect(Collectors.toCollection(LinkedHashSet::new));
-
   private static String tickList(Set<String> xs){ return Join.of(xs.stream().map(x -> "`"+x+"`"), "", ", ", ""); }
-
   private static final String rulesWall= """
 We check this so that you do not get surprises later.
 Fearless enforces simple, portable names so the same data/repository works on Windows, Linux, and Mac,
@@ -119,7 +116,6 @@ Other rules (everywhere)
 - Symbolic links are not allowed.
 - Only normal files and folders are allowed.
 """.formatted(tickList(allowedNoExtFiles), tickList(allowedMultiDotExts));
-
   //-- the project folder itself
   public static UserError launchPathNotFound(Path given){ return new UserError("""
 Nothing exists at the given path.
@@ -142,7 +138,6 @@ Different systems handle empty folders differently,
 and they may not be supported by compression tools (zip)
 or version control systems (git).
 """);}
-
   public static UserError dateInTheFuture(Path kid, long t, long now){
     return new UserError(showRel(kid)+"\nThis file is dated "+future(t, now)+"""
 Fearless decides what needs compiling by comparing the modification dates of the files,
@@ -174,7 +169,6 @@ when deciding what needs compiling, so such a date can not be trusted.
     return dateOf(t)+",\n"+ahead.toHours()+"h "+ahead.toMinutesPart()+"m "+ahead.toSecondsPart()+"s after the current time of this computer, "+dateOf(now)+".\n";
   }
   private static String dateOf(long t){ return DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").format(Instant.ofEpochMilli(t).atZone(ZoneId.systemDefault())); }
-
   //-- visible names
   public static UserError pathTooLong(RefParent kid){
     return fail(showRel(kid),
@@ -282,7 +276,6 @@ when deciding what needs compiling, so such a date can not be trusted.
     + "  produced twice."
     );
   }
-
   //-- protected ("dot") names: ignored by Fearless, but still checked out by other tools
   public static UserError invisibleOnlyRegularFilesAndDirs(Path kid){
     return fail(showRel(kid),
@@ -343,7 +336,6 @@ when deciding what needs compiling, so such a date can not be trusted.
     + "- Avoid differences that are only case changes or Unicode-equivalent spellings."
     );
   }
-
   //-- auto-loaded assets
   public static UserError autoloadedNamesCollide(RefParent kid, String prev, String name, String typeName){
     return fail(showRel(kid),
@@ -355,7 +347,6 @@ when deciding what needs compiling, so such a date can not be trusted.
     + "- Avoid two assets whose folder and file name produce the same auto-loaded type name."
     );
   }
-
   public static UserError autoloadedNameNotAType(RefParent kid, String typeName){
     return fail(showRel(kid),
       "- Auto-loading this file would declare a type called "+disp(typeName)+".\n"
@@ -365,7 +356,6 @@ when deciding what needs compiling, so such a date can not be trusted.
     + "  Examples: \"my_notes.txt\" auto-loads as \"MyNotes\", \"_notes.txt\" as \"_Notes\"."
     );
   }
-
   //-- zips, which we read as if they were folders
   public static UserError zipBadEntryName(Path diskZip, List<String> steps, String entryName){
     return directFail(showZipRel(diskZip, steps, entryName),
@@ -448,7 +438,6 @@ Fearless expands each zip file into a folder: rename this file if it is not mean
      +"Different systems handle empty folders differently, and they may not be\n"
      +"supported by compression tools (zip) or version control systems (git).");
   }
-
   //-- project layout: which folder defines a package, and the rank file of each package
   public static UserError projectEmpty(Path root){ return new UserError("""
 This project folder contains no ".fear" files.
@@ -456,7 +445,6 @@ Folder:
 %s
 """.formatted(path(root.toString())));
   }
-
   public static UserError projectNoPackageSegment(Ref file){ return new UserError("""
 This file must be placed inside a package.
 File:
@@ -600,7 +588,6 @@ File:
 
 """.formatted(disp(rankFile.fearPath()))+rankFilePattern);
   }
-
   //-- the user's Fearless source. The frontend explains these itself, in the language of
   //the language: parse errors, well formedness, types. Here they only become terminal.
   public static UserError sourceError(String rendered){ return new UserError(rendered); }
@@ -654,7 +641,6 @@ File:
     + "both "+disp(repr(first))+" and "+disp(repr(second))+" claim it.\n"
     + "A main can claim each extension at most once, across all its \"base.OpenWith[_,_]\" and \"base.Shortcut[_,_]\", since one extension has one icon.");
   }
-
   public static UserError docReferences(List<String> problems){ return new UserError("""
 Broken reference in a doc comment.
 
@@ -683,7 +669,6 @@ To show code that is not a name, use two backticks or more:
   ``this.foo(x)``   shown as code, never checked, never a link
 """.formatted(Join.of(problems, "", "\n\n", "")));
   }
-
   public static UserError generatedTestNameReserved(String problem, String topName){ return new UserError("""
 A type collides with an auto-generated test suite.
 

@@ -13,7 +13,6 @@ public final class ResolveResource extends LocalResources{
   public static final Path coordinatorTestJars= coordinatorSrc.getParent().resolve("testJars");
   public static final Path controllerPluginSrc= controllerSrc.getParent().resolve("fearlessPluginProject");
   public static final Path eclipsePlugins= portableEclipse.resolve("plugins");
-
   public static final String eclipseJavaVersion= "21";
   public static final String versionId= "0_001";
 }

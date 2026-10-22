@@ -19,7 +19,6 @@ final class StringFilesTest{
   static{ utils.Err.setUp(AssertionFailedError.class, Assertions::assertEquals, Assertions::assertTrue); }
   @SuppressWarnings("serial")
   private static final class Marker extends RuntimeException{}
-
   @Test void invalidUtf8MessageStaysWithinWhitelistAndUsesPlainDots(@TempDir Path tmp) throws Exception{
     var prefix= "x".repeat(120).getBytes(UTF_8);
     var bytes= Arrays.copyOf(prefix, prefix.length+1);

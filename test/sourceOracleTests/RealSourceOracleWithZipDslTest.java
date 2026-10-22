@@ -37,9 +37,7 @@ import utils.OneOr;
 import utils.Pos;
 
 final class RealSourceOracleWithZipDslTest{
-
   static{ utils.Err.setUp(AssertionFailedError.class, Assertions::assertEquals, Assertions::assertTrue); }
-
   private void testOk(Path tmp, String in, String out){
     assertEquals(out, FsDsl.runOk(tmp, in));
   }
@@ -92,7 +90,6 @@ We check this so that you[###]
   }
   private static void writeShort(ByteArrayOutputStream out, int v){ out.write(v & 0xff); out.write((v>>8) & 0xff); }
   private static void writeInt(ByteArrayOutputStream out, long v){ for (int i= 0; i < 4; i += 1){ out.write((int)((v>>(8*i)) & 0xff)); } }
-
 @Test void errZipDuplicateEntryName2(@TempDir Path tmp){ runErrIOE(tmp, """
 _pkg/z.zip/a.fear
 iii
@@ -112,7 +109,6 @@ Using it may even mean that different content is seen in different moments.
 
 We check this so that you[###]
 """);}
-
   @Test void okGeneratedTestsAreNotScanned(@TempDir Path tmp){ testOk(tmp, """
 _pkg/a.fear
 iii
@@ -254,7 +250,6 @@ A
 B
 
 """);}
-
   @Test void okDiskAndZipMix(@TempDir Path tmp){ testOk(tmp, """
 _pkg/a.fear
 iii
@@ -276,7 +271,6 @@ AB
 --- fear:/_pkg/b/c.fear
 C
 """);}
-
   @Test void okNestedZip(@TempDir Path tmp){ testOk(tmp, """
 _pkg/o.zip/p.zip/q.fear
 iii
@@ -286,7 +280,6 @@ Q
 Q
 
 """);}
-
   @Test void okZipEntryWithSlashes(@TempDir Path tmp){ testOk(tmp, """
 _pkg/z.zip/a/b/c.fear
 iii
@@ -296,7 +289,6 @@ C
 C
 
 """);}
-
   @Test void okTwoSeparateZips(@TempDir Path tmp){ testOk(tmp, """
 _pkg/z1.zip/a.fear
 iii
@@ -312,7 +304,6 @@ iii
 2
 
 """);}
-
   @Test void okMultilineContent(@TempDir Path tmp){ testOk(tmp, """
 _pkg/a.fear
 iii
@@ -324,7 +315,6 @@ line1
 line2
 
 """);}
-
   @Test void okInvisibleExcluded(@TempDir Path tmp){ testOk(tmp, """
 _pkg/.d/a.txt
 iii
@@ -338,7 +328,6 @@ V
 V
 
 """);}
-
   @Test void okProtectedFolderOfAGitRepositoryMayHoldEmptyDirectories(@TempDir Path tmp){ testOk(tmp, """
 .git/refs/tags/
 iii
@@ -358,7 +347,6 @@ A
 A
 
 """);}
-
   @Test void okProtectedFolderMayHoldAnEmptyZip(@TempDir Path tmp){ testOk(tmp, """
 .tool_cache/e.zip
 iii
@@ -371,7 +359,6 @@ A
 A
 
 """);}
-
   @Test void errEmptyDirectory(@TempDir Path tmp){ runErrIOE(tmp, """
 _pkg/
 iii
@@ -387,7 +374,6 @@ or version control systems (git).
 
 We check this so that you[###]
 """);}
-
   @Test void errEmptyExpandedZipEmptyZip(@TempDir Path tmp){ runErrIOE(tmp, """
 _pkg/e.zip
 iii
@@ -401,7 +387,6 @@ This is most likely a mistake.
 
 We check this so that you[###]
 """);}
-
   @Test void errEmptyExpandedZipDirEntriesOnly(@TempDir Path tmp){ runErrIOE(tmp, """
 _pkg/e.zip/d/
 iii
@@ -416,7 +401,6 @@ supported by compression tools (zip) or version control systems (git).
 
 We check this so that you[###]
 """);}
-
   @Test void errEmptyDirectoryInsideANonEmptyZip(@TempDir Path tmp){ runErrIOE(tmp, """
 _pkg/e.zip/a.fear
 iii
@@ -435,7 +419,6 @@ supported by compression tools (zip) or version control systems (git).
 
 We check this so that you[###]
 """);}
-
   @Test void errEmptyNestedZip(@TempDir Path tmp){ runErrIOE(tmp, """
 _pkg/a.fear
 iii
@@ -458,7 +441,6 @@ This is most likely a mistake.
 
 We check this so that you[###]
 """);}
-
   @Test void errNestedZipThatIsNotAZip(@TempDir Path tmp) throws Exception{
     var root= tmp.resolve("root").toAbsolutePath().normalize();
     UserError.root = root;
@@ -490,7 +472,6 @@ Fearless expands each zip file into a folder: rename this file if it is not mean
 We check this so that you[###]
 """, FsDsl.dumpErr(root, ex));
   }
-
   @Test void errNeedsExtension(@TempDir Path tmp){ runErrIOE(tmp, """
 _pkg/a
 iii
@@ -511,7 +492,6 @@ How to fix
 
 We check this so that[###]
 """);}
-
   @Test void errExtensionlessFileStartingWithAnUppercaseLetter(@TempDir Path tmp){ runErrIOE(tmp, """
 _pkg/README
 iii
@@ -532,7 +512,6 @@ How to fix
 
 We check this so that you[###]
 """);}
-
   @Test void errVisibleMustStartWithLetterOrUnderscore(@TempDir Path tmp){ runErrIOE(tmp, """
 _pkg/1a.fear
 iii
@@ -553,7 +532,6 @@ How to fix
 
 We check this so that you[###]
 """);}
-
   @Test void errVisibleInvalidCharUppercase(@TempDir Path tmp){ runErrIOE(tmp, """
 _pkg/A.fear
 iii
@@ -574,7 +552,6 @@ How to fix
 
 We check this so that you[###]
 """);}
-
   @Test void errVisibleInvalidChar(@TempDir Path tmp){ runErrIOE(tmp, """
 _pkg/fo-o.fear
 iii
@@ -595,7 +572,6 @@ How to fix
 
 We check this so that you[###]
 """);}
-
   @Test void errVisibleFolderNameWithADot(@TempDir Path tmp){ runErrIOE(tmp, """
 _pkg/my.dir/a.fear
 iii
@@ -616,7 +592,6 @@ How to fix
 
 We check this so that you[###]
 """);}
-
   @Test void errVisibleFolderNameWithADotInZip(@TempDir Path tmp){ runErrIOE(tmp, """
 _pkg/z.zip/my.dir/a.fear
 iii
@@ -637,7 +612,6 @@ How to fix
 
 We check this so that you[###]
 """);}
-
   @Test void errVisibleFolderNameEndingWithADotInZip(@TempDir Path tmp){ runErrIOE(tmp, """
 _pkg/z.zip/my./a.fear
 iii
@@ -658,7 +632,6 @@ How to fix
 
 We check this so that you[###]
 """);}
-
   @Test void errMissingExtensionAfterDotInZip(@TempDir Path tmp){ runErrIOE(tmp, """
 _pkg/z.zip/a.
 iii
@@ -679,7 +652,6 @@ How to fix
 
 We check this so that you[###]
 """);}
-
   @Test void errExtSegmentTooLongInZip(@TempDir Path tmp){ runErrIOE(tmp, """
 _pkg/z.zip/a.abcdefghijklmnopq
 iii
@@ -699,7 +671,6 @@ How to fix
 
 We check this so that[###]
 """);}
-
   @Test void errExtInvalidCharInZip(@TempDir Path tmp){ runErrIOE(tmp, """
 _pkg/z.zip/a.txT
 iii
@@ -720,7 +691,6 @@ How to fix
 
 We check this so that you[###]
 """);}
-
   @Test void errMultiDotExtNotAllowedInZip(@TempDir Path tmp){ runErrIOE(tmp, """
 _pkg/z.zip/a.aa.bb.cc
 iii
@@ -741,7 +711,6 @@ How to fix
 
 We check this so that you[###]
 """);}
-
   @Test void errWindowsReservedVisibleNameInZip(@TempDir Path tmp){ runErrIOE(tmp, """
 _pkg/z.zip/con.fear
 iii
@@ -762,7 +731,6 @@ How to fix
 
 We check this so that you[###]
 """);}
-
   @Test void errInvisibleTrailingDotInZip(@TempDir Path tmp){ runErrIOE(tmp, """
 _pkg/z.zip/.d/a.
 iii
@@ -783,7 +751,6 @@ How to fix
 
 We check this so that you[###]
 """);}
-
   @Test void errInvisibleWindowsBadCharColonInZip(@TempDir Path tmp){ runErrIOE(tmp, """
 _pkg/z.zip/.d/a:b.txt
 iii
@@ -805,7 +772,6 @@ How to fix
 
 We check this so that you[###]
 """);}
-
   //Same name, same rule, but the protected path is a zip sitting on disk: BuildWithZip.collectFile
   //makes a protected zip a kid of its folder like any other protected file, so the
   //protected-name checks (characters, reserved device names, case/NFC sibling collisions,
@@ -831,7 +797,6 @@ How to fix
 
 We check this so that you[###]
 """);}
-
   @Test void errInvisibleControlCharInZip(@TempDir Path tmp){ runErrIOE(tmp, """
 _pkg/z.zip/.d/a\u0001b.txt
 iii
@@ -852,7 +817,6 @@ How to fix
 
 We check this so that you[###]
 """);}
-
   @Test void errInvisibleWindowsReservedDeviceNameInZip(@TempDir Path tmp){ runErrIOE(tmp, """
 _pkg/z.zip/.d/con.txt
 iii
@@ -873,7 +837,6 @@ How to fix
 
 We check this so that you[###]
 """);}
-
   @Test void errHiddenSiblingCaseCollisionInZip(@TempDir Path tmp){ runErrIOE(tmp, """
 _pkg/z.zip/.d/a.txt
 iii
@@ -900,7 +863,6 @@ How to fix
 
 We check this so that you[###]
 """);}
-
   @Test void errHiddenSiblingNfcCollisionInZip(@TempDir Path tmp){ runErrIOE(tmp, """
 _pkg/z.zip/.d/\u00e9.txt
 iii
@@ -927,7 +889,6 @@ How to fix
 
 We check this so that you[###]
 """);}
-
   @Test void errZipBadEntryAbsolute(@TempDir Path tmp){ runErrIOE(tmp, """
 _pkg/z.zip//a.fear
 iii
@@ -942,7 +903,6 @@ This entry name cannot be handled safely and consistently across systems and too
 
 Invalid entry names[###]
 """);}
-
   @Test void errZipBadEntryDotSegment(@TempDir Path tmp){ runErrIOE(tmp, """
 _pkg/z.zip/./a.fear
 iii
@@ -957,7 +917,6 @@ This entry name cannot be handled safely and consistently across systems and too
 
 Invalid entry names (based on the exact text of the entry name):[###]
 """);}
-
 @Test void errZipBadEntryDotdotSegment(@TempDir Path tmp){ runErrIOE(tmp, """
 _pkg/z.zip/../a.fear
 iii
@@ -972,7 +931,6 @@ This entry name cannot be handled safely and consistently across systems and too
 
 Invalid entry names[###]
 """);}
-
 @Test void errZipBadEntryEndsWithSlashDot(@TempDir Path tmp){ runErrIOE(tmp, """
 _pkg/z.zip/a/.
 iii
@@ -987,7 +945,6 @@ This entry name cannot be handled safely and consistently across systems and too
 
 Invalid entry[###]
 """);}
-
 @Test void errZipBadEntryEndsWithSlashDotdot(@TempDir Path tmp){ runErrIOE(tmp, """
 _pkg/z.zip/a/..
 iii
@@ -1002,7 +959,6 @@ This entry name cannot be handled safely and consistently across systems and too
 
 Invalid entry names[###]
 """);}
-
   @Test void errZipBadEntryNul(@TempDir Path tmp){ runErrIOE(tmp, """
 _pkg/z.zip/a\u0000b.fear
 iii
@@ -1028,7 +984,6 @@ Invalid entry names (based on the exact text of the entry name):
 
 We check this so that you[###]
 """);}
-
   @Test void errZipFileDirPrefixConflict(@TempDir Path tmp){ runErrIOE(tmp, """
 _pkg/z.zip/a
 iii
@@ -1052,7 +1007,6 @@ hide what is nested under it, others expand it as a folder and hide the file.
 
 We check this so that you[###]
 """);}
-
   @Test void errZipFileUsedAsDirectoryWithAllowedNoExtName(@TempDir Path tmp){ runErrIOE(tmp, """
 _pkg/z.zip/readme
 iii
@@ -1076,7 +1030,6 @@ hide what is nested under it, others expand it as a folder and hide the file.
 
 We check this so that you[###]
 """);}
-
   @Test void errRealFolderCollidesWithZipExpandedFolder(@TempDir Path tmp){ runErrIOE(tmp, """
 _pkg/z/foo.fear
 iii
@@ -1110,7 +1063,6 @@ How to fix
 
 We check this so that you[###]
 """);}
-
   @Test void errRealFileClashesWithZipFileSameBaseName(@TempDir Path tmp){ runErrIOE(tmp, """
 _pkg/readme
 iii
@@ -1144,7 +1096,6 @@ How to fix
 
 We check this so that you[###]
 """);}
-
   @Test void errRealFolderClashesWithZipFileSameBaseName(@TempDir Path tmp){ runErrIOE(tmp, """
 _pkg/z/foo.fear
 iii
@@ -1178,7 +1129,6 @@ How to fix
 
 We check this so that you[###]
 """);}
-
   @Test void errNestedZipClashesWithFolderSameContent(@TempDir Path tmp){ runErrIOE(tmp, """
 _pkg/o.zip/z/foo.fear
 iii
@@ -1202,7 +1152,6 @@ that folder.
 
 We check this so that you[###]
 """);}
-
   @Test void errNestedZipClashesWithFolderDisjointContent(@TempDir Path tmp){ runErrIOE(tmp, """
 _pkg/o.zip/z/foo.fear
 iii
@@ -1226,7 +1175,6 @@ that folder.
 
 We check this so that you[###]
 """);}
-
   @Test void errNestedZipClashesWithFolderInASubFolder(@TempDir Path tmp){ runErrIOE(tmp, """
 _pkg/o.zip/sub/z.zip/bar.fear
 iii
@@ -1250,7 +1198,6 @@ that folder.
 
 We check this so that you[###]
 """);}
-
   @Test void errNestedZipClashesWithFolderTwoZipsDeep(@TempDir Path tmp){ runErrIOE(tmp, """
 _pkg/o.zip/p.zip/z/foo.fear
 iii
@@ -1274,7 +1221,6 @@ that folder.
 
 We check this so that you[###]
 """);}
-
   @Test void errZipFileUsedAsDirectoryViaNestedZip(@TempDir Path tmp){ runErrIOE(tmp, """
 _pkg/z.zip/readme
 iii
@@ -1298,12 +1244,10 @@ hide what is nested under it, others expand it as a folder and hide the file.
 
 We check this so that you[###]
 """);}
-
   private static void createSymbolicLinkOrSkip(Path link, Path target) throws Exception{
     try{ Files.createSymbolicLink(link, target); }
     catch (AccessDeniedException _){ Assumptions.abort("OS denies creating symbolic links here"); }
   }
-
   @Test void errVisibleSymlinkForbidden(@TempDir Path tmp) throws Exception{
     var root= tmp.resolve("root").toAbsolutePath().normalize();
     UserError.root = root;
@@ -1328,7 +1272,6 @@ How to fix
 We check this so that you[###]
 """, FsDsl.dumpErr(root, ex));
   }
-
   @Test void errInvisibleSymlinkForbidden(@TempDir Path tmp) throws Exception{
     var root= tmp.resolve("root").toAbsolutePath().normalize();
     UserError.root = root;
@@ -1354,7 +1297,6 @@ How to fix
 We check this so that you[###]
 """, FsDsl.dumpErr(root, ex));
   }
-
   @Test void errExtensionlessMasksExtension(@TempDir Path tmp){ runErrIOE(tmp, """
 _pkg/readme
 iii
@@ -1386,7 +1328,6 @@ How to fix
 
 We check this so that you[###]
 """);}
-
   @Test void errPathTooLong(@TempDir Path tmp){
     var longName= "a".repeat(200);
     runErrIOE(tmp, ("""
@@ -1409,7 +1350,6 @@ How to fix
 We check this so that you[###]
 """).formatted(longName));
   }
-
   // Real filesystem paths can't carry a raw UTF-16 surrogate through UTF-8 encoding,
   // so this exercises the message factory directly rather than through a real scan.
   @Test void errInvisibleInvalidSurrogateMessage(@TempDir Path tmp) throws Exception{
@@ -1436,7 +1376,6 @@ How to fix
 We check this so that you[###]
 """, ex.getMessage());
   }
-
   // Two assets that generate the same auto-loaded type name must be rejected, naming both
   // real files, instead of silently declaring that type twice in the synthetic
   // autoloaded_assets.fear file (see realSourceOracle.SourceOracleWithAutoload.generate).
@@ -1466,7 +1405,6 @@ How to fix
 
 We check this so that you[###]
 """); }
-
   @Test void errAssetAutoloadNameCollisionSameHandler(@TempDir Path tmp){ autoloadErr(tmp, "_assets", """
 _assets/foo.png
 iii
@@ -1493,7 +1431,6 @@ How to fix
 
 We check this so that you[###]
 """); }
-
   @Test void okAssetAutoloadNoCollisionForDistinctNames(@TempDir Path tmp){
     var root= tmp.resolve("root");
     UserError.root = root;
@@ -1512,7 +1449,6 @@ world
     utils.Err.strCmp("[###]Foo: base.TxtFile{[###]", generated);
     utils.Err.strCmp("[###]Bar: base.TxtFile{[###]", generated);
   }
-
   @Test void okAssetAutoloadOriginalFileNameIsTheBareFileName(@TempDir Path tmp){
     var root= tmp.resolve("root");
     UserError.root = root;
@@ -1531,7 +1467,6 @@ world
     utils.Err.strCmp("[###].originalFileName: base.Str -> \"foo.txt\";[###]", generated);
     utils.Err.strCmp("[###].originalFileName: base.Str -> \"bar.txt\";[###]", generated);
   }
-
   @Test void okBaseAssetAutoload(@TempDir Path tmp){
     var root= tmp.resolve("root");
     UserError.root = root;
@@ -1561,7 +1496,6 @@ IconsConflict: base.ImageFile{
 """, res.newRefs().getFirst().loadString());
     assertEquals(List.of("fear:/_rank_base000.fear", "fear:/_base/autoloaded_assets.fear"), res.sources(base.allFiles()).stream().map(Ref::fearPath).toList());
   }
-
   @Test void okAllFilesSortedByFearPath(@TempDir Path tmp){
     var root= tmp.resolve("root");
     UserError.root = root;
@@ -1650,7 +1584,6 @@ Optional.empty
 Optional.empty
 """, Join.of(Stream.of("a.IconsFoo", "b.XYBar", "base.IconsConflict", "a.Foo", "a.A", "base.Str", "b.IconsNotes").map(asset), "", "\n", "\n", ""));
   }
-
   // A .fear file with invalid UTF-8 bytes fails loudly (Files.readString is strict) when
   // read directly off disk. The same bytes, read through a zip entry, must fail the same
   // way: FrontendLogicMain.of calls Ref.loadString() on every source file regardless of
@@ -1658,7 +1591,6 @@ Optional.empty
   // bytes into U+FFFD instead of failing would feed corrupted source text to the parser.
   @Test void errZipEntryInvalidUtf8MatchesDiskEntry(@TempDir Path tmp) throws Exception{
     byte[] bad= {(byte)0xFF, (byte)0xFE, 'X'};
-
     var diskRoot= tmp.resolve("disk").toAbsolutePath().normalize();
     UserError.root = diskRoot;
     Fs.createDirectories(diskRoot.resolve("_pkg"));
@@ -1666,7 +1598,6 @@ Optional.empty
     var diskRef= OneOr.of("one fear:/_pkg/a.fear", new RealSourceOracleWithZip(diskRoot).allFiles().stream()
       .filter(r -> r.fearPath().equals("fear:/_pkg/a.fear")));
     assertThrows(UncheckedIOException.class, diskRef::loadString);
-
     var zipRoot= tmp.resolve("zip").toAbsolutePath().normalize();
     UserError.root = zipRoot;
     Fs.createDirectories(zipRoot.resolve("_pkg"));

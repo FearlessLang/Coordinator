@@ -140,7 +140,6 @@ final class LimitedJsonParser{
     throw err("Expected array");
   }
   private TSpan dummySpan(){ return TSpan.fromPos(Pos.unknown, 1); }
-
   void ws(){ for (; i<s.length() && (s.charAt(i)==' ' || s.charAt(i)=='\n'); i += 1){} }
   private void req(char c){ if (!eat(c)){ throw err("Expected '"+c+"'"); } }
   private boolean eat(char c){
