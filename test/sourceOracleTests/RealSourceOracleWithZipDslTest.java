@@ -512,7 +512,7 @@ How to fix
 We check this so that[###]
 """);}
 
-  @Test void errBadCharExtensionlessFileIsMisreportedAsNeedingAnExtension(@TempDir Path tmp){ runErrIOE(tmp, """
+  @Test void errExtensionlessFileStartingWithAnUppercaseLetter(@TempDir Path tmp){ runErrIOE(tmp, """
 _pkg/README
 iii
 X
