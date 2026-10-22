@@ -873,7 +873,7 @@ Holder
     builder.visitLiteral(owner);
     builder.packageLocation("pkg", tmp.resolve("pkg.html"), Optional.of(tmp));
 
-    var ex= assertThrows(UserError.class, () -> builder.complete(tests));
+    var ex= assertThrows(UserError.class, () -> builder.complete(Optional.of(tests)));
 
     utils.Err.strCmp("[###]more than one declaration on the same line[###]", ex.getMessage());
   }
@@ -889,7 +889,7 @@ Holder
     builder.visitLiteral(owner);
     builder.packageLocation("pkg", tmp.resolve("pkg.html"), Optional.of(tmp));
 
-    assertThrows(UserError.class, () -> builder.complete(tests));
+    assertThrows(UserError.class, () -> builder.complete(Optional.of(tests)));
   }
 
   @Test void aTrailingTestOnlyLineSharedByTwoDeclarationsOnOneLineIsAnAmbiguousReferenceError(@TempDir Path tmp){
@@ -902,7 +902,7 @@ Holder
     builder.visitLiteral(owner);
     builder.packageLocation("pkg", tmp.resolve("pkg.html"), Optional.of(tmp));
 
-    var ex= assertThrows(UserError.class, () -> builder.complete(tests));
+    var ex= assertThrows(UserError.class, () -> builder.complete(Optional.of(tests)));
 
     utils.Err.strCmp("[###]more than one declaration on the same line[###]", ex.getMessage());
   }
@@ -917,7 +917,7 @@ Holder
     builder.visitLiteral(owner);
     builder.packageLocation("pkg", tmp.resolve("pkg.html"), Optional.of(tmp));
 
-    builder.complete(tests);
+    builder.complete(Optional.of(tests));
   }
 
   @Test void aTrailingDocRightAfterAnOpeningBraceIsAmbiguousBetweenTheOuterDeclarationAndTheNestedOne(@TempDir Path tmp){
@@ -930,7 +930,7 @@ Holder
     builder.visitLiteral(owner);
     builder.packageLocation("pkg", tmp.resolve("pkg.html"), Optional.of(tmp));
 
-    assertThrows(UserError.class, () -> builder.complete(tests));
+    assertThrows(UserError.class, () -> builder.complete(Optional.of(tests)));
   }
 
   @Test void aTrailingDocAfterTheLastOfTwoDeclarationsOnSeparateLinesIsNotAmbiguous(@TempDir Path tmp){
@@ -943,7 +943,7 @@ Holder
     builder.visitLiteral(owner);
     builder.packageLocation("pkg", tmp.resolve("pkg.html"), Optional.of(tmp));
 
-    builder.complete(tests);
+    builder.complete(Optional.of(tests));
   }
 
   @Test void twoDeclarationsSharingALineWithNoTrailingDocAtAllIsNotAmbiguous(@TempDir Path tmp){
@@ -956,7 +956,7 @@ Holder
     builder.visitLiteral(owner);
     builder.packageLocation("pkg", tmp.resolve("pkg.html"), Optional.of(tmp));
 
-    builder.complete(tests);
+    builder.complete(Optional.of(tests));
   }
 
   private static HtmlDocBuilder fixtureBuilder(){

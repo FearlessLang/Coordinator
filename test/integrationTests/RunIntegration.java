@@ -276,6 +276,47 @@ In file: fear:/_p/auto_tests/p_test.fear
     utils.Err.strCmp("hi\n", main(root, List.of()));
     assertFalse(Fs.exists(generatedTests(root)));
   }
+  @Test void aZippedPackageGetsNoGeneratedTests(@TempDir Path tmp){
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_p.zip/_rank_app.fear
+iii
+use base.Main as Main;
+use base.Nat as Nat;
+use base.Debug as Debug;
+Calc:{
+  //> .check{Calc.inc(1) .assertEq 5}
+  .inc(n: Nat): Nat -> n + 1;
+  }
+App:Main{s->Debug#("hi")}
+""");
+    utils.Err.strCmp("hi\n", main(root, List.of()));
+    utils.Err.strCmp("hi\n", main(root, List.of()));
+    assertFalse(Fs.exists(root.resolve("_p")));
+  }
+  @Test void aDocExampleOfATypeRuns(@TempDir Path tmp){
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_p/_rank_app.fear
+iii
+use base.Main as Main;
+use base.Nat as Nat;
+use base.Debug as Debug;
+///Counts.
+//> .check{Calc.inc(1) .assertEq 5}
+Calc:{
+  .inc(n: Nat): Nat -> n + 1;
+  }
+App:Main{s->Debug#("hi")}
+""");
+    utils.Err.strCmp("""
+Test failure _Calc_Examples at line: [###] in file: _p/auto_tests/p_test.fear
+[###]
+hi
+""", main(root, List.of()));
+  }
   @Test void docExamplesOfTwoTypesSharingASimpleNameWithDifferentAritiesRun(@TempDir Path tmp){
     var root= tmp.resolve("root");
     UserError.root = root;
@@ -397,6 +438,36 @@ App:Main, lib.Lib{s->base.Debug#(`app`)}
       _GCase$1k$0.java only imm
       """, Join.of(got, "", "\n", "\n"));
   }
+  @Test void twoFileLogsWhoseNamesDifferOnlyByCaseWriteToFilesThatDifferNotOnlyByCase(@TempDir Path tmp){
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_p/_rank_app.fear
+iii
+use base.FileLog as FileLog;
+AppLog: FileLog{"a"}
+Applog: FileLog{"b"}
+""");
+    var genJava= tmp.resolve("genJava");
+    var base= coordinator(root);
+    new Coordinator(){
+      @Override public Path modsPath(){ return base.modsPath(); }
+      @Override public Optional<Path> baseCachePath(){ return base.baseCachePath(); }
+      @Override public Path stdLibBase(){ return base.stdLibBase(); }
+      @Override public BackendTools backendTools(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, CapabilityEnvironment capabilities){
+        return base.backendTools(pkgName, oracle, other, core, capabilities);
+      }
+      @Override public void backend(String pkgName, List<Literal> core, SourceOracle oracle, OtherPackages other, CapabilityEnvironment capabilities){
+        new Backend(genJava, base.backendTools(pkgName, oracle, other, core, capabilities)).produceJavaCode();
+      }
+    }.compile(root, stLib);
+    var logFiles= Fs.walk(genJava, s -> s.filter(Fs::isRegularFile).sorted()
+      .flatMap(p -> Fs.readUtf8(p).lines().filter(l -> l.contains("_base.AppLog.open("))).toList());
+    utils.Err.strCmp("""
+[###]_base.AppLog.open(java.nio.file.Path.of(".out","logs","_p","app_log.log"), false);
+[###]_base.AppLog.open(java.nio.file.Path.of(".out","logs","_p","applog.log"), false);
+""", Join.of(logFiles, "", "\n", "\n"));
+  }
   @Test void testAssets(){ testOk("testAssets");}
   private Path theOneLogFile(Path dir, String prefix) throws IOException{
     try (var files= Fs.list(dir)){
@@ -418,7 +489,7 @@ App:Main, lib.Lib{s->base.Debug#(`app`)}
 [###] processed item 3
 [###] finished
 """, content);
-    var pkgContent= Fs.readUtf8(theOneLogFile(logDir.resolve("logging"), "PkgLog$"));
+    var pkgContent= Fs.readUtf8(theOneLogFile(logDir.resolve("_logging"), "pkg_log$"));
     utils.Err.strCmp("[###] package-specific log entry\n", pkgContent);
   }
   // testingNorms holds no fearless unit tests: a cache hit and a recomputation return

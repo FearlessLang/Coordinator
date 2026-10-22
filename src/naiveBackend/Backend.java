@@ -54,7 +54,7 @@ public final class Backend{
     }
     if (hasInstance && implementsType(l, "base.FileLog", 0)){
       sb.a(l.name().arity()==0
-        ? "  _base.AppLog _appLog= _base.AppLog.open(java.nio.file.Path.of(\".out\",\"logs\",\""+tools.pkgName()+"\",\""+l.name().simpleName()+".log\"), false);\n  default _base.AppLog _log(){ return _appLog; }\n"
+        ? "  _base.AppLog _appLog= _base.AppLog.open(java.nio.file.Path.of(\".out\",\"logs\",\"_"+tools.pkgName()+"\",\""+Fs.fileNameOfType(l.name().simpleName()).orElseThrow()+".log\"), false);\n  default _base.AppLog _log(){ return _appLog; }\n"
         : "  default _base.AppLog _log(){ return null; }\n");
     }
     if (isRepr(l)){

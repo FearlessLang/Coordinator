@@ -123,7 +123,7 @@ public final class BuildWithZip{
     var c0= atom.charAt(0);
     if (c0!='_' && !('a'<=c0 && c0<='z')){ throw Report.visibleMustStartWithLetterOrUnderscore(kid); }
     atom.chars().skip(1).filter(c -> c!='_' && !Fs.isExtSegChar((char)c)).findFirst().ifPresent(c -> { throw Report.visibleInvalidChar(kid, (char)c); });
-    if (winReserved.contains(atom)){ throw Report.windowsReservedName(kid); }
+    if (Fs.winReserved.contains(atom)){ throw Report.windowsReservedName(kid); }
   }
   private static void checkExt(RefParent kid, String tail){
     if (tail.isEmpty()){ throw Report.missingExtension(kid); }
@@ -132,11 +132,6 @@ public final class BuildWithZip{
     if (tail.length() > Fs.maxExtSeg){ throw Report.extLenMustBe1To16(kid); }
     tail.chars().filter(c -> !Fs.isExtSegChar((char)c)).findFirst().ifPresent(c -> { throw Report.extInvalidChar(kid, (char)c); });
   }
-  private static final Set<String> winReserved= Set.of(
-    "con", "prn", "aux", "nul",
-    "com1", "com2", "com3", "com4", "com5", "com6", "com7", "com8", "com9",
-    "lpt1", "lpt2", "lpt3", "lpt4", "lpt5", "lpt6", "lpt7", "lpt8", "lpt9"
-  );
   private static final String winBadChars= "<>:\"/\\|?*";
 
   private static void checkIndividualInvisibleSegment(RefParent kid){
@@ -151,7 +146,7 @@ public final class BuildWithZip{
     }
     var d= name.indexOf('.');
     var base= (d<0 ? name : name.substring(0, d)).toLowerCase(Locale.ROOT);
-    if (winReserved.contains(base)){ throw Report.invisibleWindowsReservedDeviceName(kid, base, name); }
+    if (Fs.winReserved.contains(base)){ throw Report.invisibleWindowsReservedDeviceName(kid, base, name); }
   }
   private static void checkCollectiveInvisible(Collection<RefParent> kids){
     var seenKeyToName= new HashMap<String,String>();
