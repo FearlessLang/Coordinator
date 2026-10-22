@@ -459,7 +459,7 @@ Applog: FileLog{"b"}
         new Backend(genJava, base.backendTools(pkgName, oracle, other, core, capabilities)).produceJavaCode();
       }
     }.compile(root, stLib);
-    var logFiles= Fs.walk(genJava, s -> s.filter(Files::isRegularFile).sorted()
+    var logFiles= Fs.walk(genJava, s -> s.filter(Fs::isRegularFile).sorted()
       .flatMap(p -> Fs.readUtf8(p).lines().filter(l -> l.contains("_base.AppLog.open("))).toList());
     assertEquals(2, logFiles.size(), logFiles.toString());
     assertNotEquals(logFiles.get(0).toLowerCase(Locale.ROOT), logFiles.get(1).toLowerCase(Locale.ROOT),
