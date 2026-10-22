@@ -54,7 +54,7 @@ final class DocBuilderTest{
     assertEquals("this is meant to be a doc comment", atLine2.getFirst().text());
   }
 
-  @Test void plainLineCommentWithAStrayBacktickAlsoSwallowsALaterDocComment(){
+  @Test void plainLineCommentWithAStrayBacktickDoesNotSwallowALaterDocComment(){
     var text= ""
       + "// a comment mentioning a backtick: `\n"
       + "/// this doc should still be found\n"
