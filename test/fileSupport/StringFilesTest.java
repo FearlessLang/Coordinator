@@ -13,6 +13,7 @@ import org.junit.jupiter.api.io.TempDir;
 import org.opentest4j.AssertionFailedError;
 
 import tools.Fs;
+import userMessages.UserError;
 import utils.Box;
 
 final class StringFilesTest{
@@ -31,5 +32,13 @@ final class StringFilesTest{
     var msg= captured.get();
     utils.Err.strCmp("[###]...[###]", msg);
     assertTrue(msg.codePoints().allMatch(cp -> cp < 128 && Fs.allowed.indexOf((char)cp) >= 0), msg);
+  }
+  @Test void aMissingFileIsAFullyExplainedFailure(@TempDir Path tmp){
+    var e= assertThrows(UserError.class, () -> StringFiles.read(tmp.resolve("missing.txt"), UserError.onFileError()));
+    utils.Err.strCmp("Fearless could not read this file:[###]", e.getMessage());
+  }
+  @Test void aNewFileInAMissingFolderIsAFullyExplainedFailure(@TempDir Path tmp){
+    var e= assertThrows(UserError.class, () -> StringFiles.writeNew(tmp.resolve("missing", "new.txt"), "text", UserError.onFileError()));
+    utils.Err.strCmp("Fearless could not write this file:[###]", e.getMessage());
   }
 }

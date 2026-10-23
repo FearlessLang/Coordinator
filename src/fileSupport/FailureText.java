@@ -2,6 +2,7 @@ package fileSupport;
 
 import java.io.IOException;
 import java.nio.file.FileSystems;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -162,8 +163,13 @@ final class CommonInfo{
   // macOS: DiskArbitration. Same suppressed-on-failure pattern as volumeOf below.
   }
   private static String volumeOf(Path path, Suppressed suppressed){
+    var existing= path.toAbsolutePath();
+    while (!Files.exists(existing)){
+      existing = existing.getParent();
+      if (existing == null){ return "<no part of the path exists>"; }
+    }
     try{
-      var store= Fs.getFileStore(path);
+      var store= Files.getFileStore(existing);
       return Message.displayString(store.name())+"  "+Message.displayString(store.type());
     }
     catch (IOException e){ return "<reading volume failed>"+suppressed.mark(e); }//documented: getFileStore throws when the file/volume cannot be read
