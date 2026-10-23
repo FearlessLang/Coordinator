@@ -690,6 +690,19 @@ Type declaration "Hello[_]" implements "base.Main" and has generic parameters.
 A main can not have generic parameters: running a main gives no generic arguments to it.
 Error 7 WellFormedness""", ex.getMessage());
   }
+  @Test void aSourceFileThatIsNotUtf8IsAUserError(@TempDir Path tmp) throws IOException{
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_col/_rank_app.fear
+iii
+use base.Main as Main;
+Hello:Main{s->base.Debug#(`hi`)}
+""");
+    Fs.write(root.resolve("_col", "notes.fear"), new byte[]{'/', '/', 'c', 'a', 'f', (byte)0xE9, '\n'});
+    var ex= assertThrows(UserError.class, () -> coordinator(root).compile(root, stLib));
+    utils.Err.strCmp("[###]notes.fear[###]", ex.getMessage());
+  }
   @Test void aPackageNamedAfterAJavaKeywordRuns(@TempDir Path tmp) throws InterruptedException{
     var root= tmp.resolve("root");
     UserError.root = root;
