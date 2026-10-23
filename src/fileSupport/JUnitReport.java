@@ -34,8 +34,9 @@ public final class JUnitReport{
 """.formatted(suites);
   }
   private static Optional<LogFiles.Entry> newest(Path folder){
+    var base= folder.resolve(LogFiles.runDir).resolve("logs").resolve("_base");
     return LogFiles.list(folder).stream()
-      .filter(e -> e.path().getFileName().toString().startsWith("unit_test_log"))
+      .filter(e -> e.path().getParent().equals(base) && e.path().getFileName().toString().matches("unit_test_log(\\$.*)?\\.log"))
       .findFirst();
   }
   private static String suiteOf(String name, Path log){

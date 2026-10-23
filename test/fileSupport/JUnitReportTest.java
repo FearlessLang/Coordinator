@@ -81,6 +81,12 @@ Assertion failure.
 </testsuite>
 """, JUnitReport.suite("demo", project));
   }
+  @Test void theFileLogsOfUserTypesNamedLikeTheUnitTestLogAreNotTheUnitTestLog(@TempDir Path project){
+    writeLog(project, "20260904_012117_731Z", log);
+    Fs.writeUtf8(project.resolve(".out").resolve("logs").resolve("_foo").resolve("unit_test_logger.log"), "user text\n");
+    Fs.writeUtf8(project.resolve(".out").resolve("logs").resolve("_foo").resolve("unit_test_log.log"), "user text\n");
+    utils.Err.strCmp("<testsuite name=\"demo\" tests=\"3\" failures=\"1\" errors=\"0\">[###]", JUnitReport.suite("demo", project));
+  }
   //A main that runs no unit tests must not republish the log some earlier run left behind
   @Test void aLogOlderThanThisRunIsNotReported(@TempDir Path project){
     writeLog(project, "20260904_012117_731Z", log);
