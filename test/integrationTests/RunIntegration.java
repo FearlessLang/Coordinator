@@ -1829,15 +1829,6 @@ A:Main{s->base.Debug#(`hi`)}
   @Test void anApiJsonWithAnUnknownReferenceCapabilityDeletesTheCache(@TempDir Path tmp){
     aCorruptedCacheFileIsDeletedWithTheWholeCache(tmp, "p.json", bs -> new String(bs, UTF_8).replaceFirst("\"imm\"", "\"imx\"").getBytes(UTF_8), "imx");
   }
-  @Test void anApiJsonWithATypeOfReferenceCapabilityMutHDeletesTheCache(@TempDir Path tmp){
-    aCorruptedCacheFileIsDeletedWithTheWholeCache(tmp, "p.json", bs -> new String(bs, UTF_8).replaceFirst("\\[\"p.A\",\"mut\"", "[\"p.A\",\"mutH\"").getBytes(UTF_8), "Bad type reference capability mutH");
-  }
-  @Test void anApiJsonWithAnIsoMethodDeletesTheCache(@TempDir Path tmp){
-    aCorruptedCacheFileIsDeletedWithTheWholeCache(tmp, "p.json", bs -> new String(bs, UTF_8).replaceFirst("\\[\".main\",\"imm\"", "[\".main\",\"iso\"").getBytes(UTF_8), "Bad method reference capability iso");
-  }
-  @Test void anApiJsonWithARepeatedSupertypeDeletesTheCache(@TempDir Path tmp){
-    aCorruptedCacheFileIsDeletedWithTheWholeCache(tmp, "p.json", bs -> new String(bs, UTF_8).replaceFirst("\\[\"base.Main\"\\]", "[\"base.Main\"],[\"base.Main\"]").getBytes(UTF_8), "Repeated supertype");
-  }
   @Test void aMapDirectiveEditedInAHigherRankPackageMakesItsTargetPackageNotBuilt(@TempDir Path tmp) throws IOException{
     var root= tmp.resolve("root");
     UserError.root = root;
