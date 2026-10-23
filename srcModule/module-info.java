@@ -2,6 +2,7 @@ module Coordinator{
   requires transitive Commons;
   requires transitive FearlessFrontend;
   requires transitive java.desktop;
+  requires java.management;
   exports mainCoordinator;
   exports coordinator;
   exports docBuilder;

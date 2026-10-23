@@ -108,7 +108,6 @@ public record MainsInfo(Map<String,Main> mains, List<String> attenuators){
     }
     UserError err(Info i, String what){ return Info.err(text, i.span(), "Expected "+what+" here."); }
   }
-  static final TName attenuator= new TName("base.SystemAttenuator", 0, Pos.unknown);
   public static List<TName> icons(List<T.C> cs){
     var shortcuts= icons(cs, "Shortcut");
     return Stream.of(shortcuts, Stream.of(new TName("base.IconsFearless", 0, Pos.unknown)), icons(cs, "PreLoadIcon"), icons(cs, "OpenWith"))
@@ -119,10 +118,8 @@ public record MainsInfo(Map<String,Main> mains, List<String> attenuators){
     var all= AllLs.of(core).values();
     var of= new Of(src, stLib);
     all.stream().sorted(Comparator.comparingInt((Literal l) -> l.cs().size()).thenComparing(l -> l.name().s())).forEach(of::check);
-    var nested= all.stream().filter(l -> LiteralDeclarations.has(l.cs(), LiteralDeclarations.captureFree));
-    var named= Stream.concat(core.stream(), nested).distinct().toList();
     var mains= all.stream().filter(MainsInfo::isMain).collect(Collectors.toUnmodifiableMap(l -> l.name().s(), of::main));
-    return new MainsInfo(mains, named.stream().filter(l -> concrete(l, attenuator)).map(l -> l.name().s()).sorted().toList());
+    return new MainsInfo(mains, all.stream().filter(l -> concrete(l, LiteralDeclarations.attenuator)).map(l -> l.name().s()).sorted().toList());
   }
   public static boolean isMain(Literal l){ return concrete(l, LiteralDeclarations.main); }
   private static boolean concrete(Literal l, TName t){ return LiteralDeclarations.has(l.cs(), t) && l.ms().stream().noneMatch(m -> m.sig().abs()); }

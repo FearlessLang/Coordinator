@@ -144,7 +144,7 @@ public final class Backend{
       .append("  static boolean run(String n){\n");
     mains.forEach((n,iface) -> sb
       .append("    if (n.equals(\"").append(n).append("\")){ _base._FluentGUI.preload(").append(preloaded.get(n)).append("); return _base.Util.topLevel(()->")
-      .append(iface).append(".instance.imm$main$1(new ").append(typeName(new TName("base._System", 0, Pos.unknown))).append("())); }\n"));
+      .append(iface).append(".instance.imm$main$1(").append(typeName(new TName("base._CapProcess", 0, Pos.unknown))).append(".system())); }\n"));
     sb.append("    throw new AssertionError(\"No main called \"+n+\" in package ").append(tools.pkgName()).append("\");\n  }\n}\n");
     Fs.writeUtf8(out.resolve("Main.java"), sb.toString());
   }
