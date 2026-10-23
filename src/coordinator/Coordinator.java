@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.TreeMap;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.LongStream;
@@ -33,6 +34,7 @@ import tools.JavacTool;
 import tools.SourceOracle;
 import tools.SourceOracle.Ref;
 import userMessages.Report;
+import userMessages.UserError;
 import userMessages.Violation;
 import utils.Join;
 import utils.OneOr;
@@ -87,7 +89,23 @@ public interface Coordinator{
     for (var p : compile(project, stLib)){ sb.append(runAllMains(p, Helper.out(project))); }
     return sb.toString();
   }
-  default List<String> compile(Path project, SourceOracle stLib){
+  default List<String> compile(Path project, SourceOracle stLib){ return guardingCache(project, () -> compileNow(project, stLib)); }
+  default Optional<Map<String,String>> mains(Path project, SourceOracle stLib){
+    try{ return Optional.of(guardingCache(project, () -> mainsNow(project, stLib))); }
+    catch (WouldCompile _){ return Optional.empty(); }
+  }
+  static <R> R guardingCache(Path project, Supplier<R> compile){
+    var out= project.resolve(outDir);
+    var cached= Fs.exists(out);
+    try{ return compile.get(); }
+    catch (UserError | WouldCompile e){ throw e; }
+    catch (RuntimeException | AssertionError e){
+      if (!cached){ throw e; }
+      Fs.rmTree(out);
+      throw UserError.cacheCorruptedOrCrash(e);
+    }
+  }
+  private List<String> compileNow(Path project, SourceOracle stLib){
     var o= sourceOracle(project);
     var out= Helper.out(project);
     var l= Helper.layerOf(this, o, project, out, stLib);
@@ -96,16 +114,14 @@ public interface Coordinator{
     l.pkgs().keySet().forEach(p -> out.relocate(p, o, stLib));
     return List.copyOf(l.pkgs().keySet());//by design: only the highest rank number's packages have their Main run
   }
-  default Optional<Map<String,String>> mains(Path project, SourceOracle stLib){
+  private Map<String,String> mainsNow(Path project, SourceOracle stLib){
     var c= new NoCompile(baseCachePath());
     var o= sourceOracle(project);
     var out= new NoCommit(Helper.out(project).rootDir());
-    Layer l;
-    try{ l= Helper.layerOf(c, o, project, out, stLib); l.compile(o, out); }
-    catch (WouldCompile _){ return Optional.empty(); }
+    Helper.layerOf(c, o, project, out, stLib).compile(o, out);
     var res= new TreeMap<String,String>();
     MainsInfo.read(project).orElseThrow().mains().forEach((k,v) -> res.put(k, v.file()));
-    return Optional.of(Collections.unmodifiableMap(res));
+    return Collections.unmodifiableMap(res);
   }
   static ChildJvm startMain(Path project, Path base, String main, Optional<Path> input, Map<String,Path> reads, Map<String,Path> edits, List<String> desk, List<Path> sharedClasspath, Consumer<String> out){
     var jvmArgs= new ArrayList<>(runData(project, base));
