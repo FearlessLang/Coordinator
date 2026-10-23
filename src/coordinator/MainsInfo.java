@@ -3,7 +3,6 @@ package coordinator;
 import java.nio.file.Path;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -109,44 +108,29 @@ public record MainsInfo(Map<String,Main> mains, List<String> attenuators){
     }
     UserError err(Info i, String what){ return Info.err(text, i.span(), "Expected "+what+" here."); }
   }
-  static final TName main= new TName("base.Main", 0, Pos.unknown);
   static final TName attenuator= new TName("base.SystemAttenuator", 0, Pos.unknown);
-  static final List<TName> claims= List.of(new TName("base.OpenWith", 1, Pos.unknown), new TName("base.OpenWith", 2, Pos.unknown), new TName("base.Shortcut", 1, Pos.unknown), new TName("base.Shortcut", 2, Pos.unknown), new TName("base.PreLoadIcon", 1, Pos.unknown));
   public static List<TName> icons(List<T.C> cs){
     var shortcuts= icons(cs, "Shortcut");
     return Stream.of(shortcuts, Stream.of(new TName("base.IconsFearless", 0, Pos.unknown)), icons(cs, "PreLoadIcon"), icons(cs, "OpenWith"))
       .flatMap(s -> s).gather(DistinctBy.of(TName::s)).toList();
   }
-  private static Stream<TName> icons(List<T.C> cs, String kind){ return cs.stream().filter(c -> claims.contains(c.name()) && c.name().simpleName().equals(kind)).map(c -> Of.name(c.ts().getFirst())); }
+  private static Stream<TName> icons(List<T.C> cs, String kind){ return cs.stream().filter(c -> LiteralDeclarations.claims.contains(c.name()) && c.name().simpleName().equals(kind)).map(c -> Of.name(c.ts().getFirst())); }
   static MainsInfo of(List<Literal> core, SourceOracle src, SourceOracle stLib){
     var all= AllLs.of(core).values();
     var of= new Of(src, stLib);
     all.stream().sorted(Comparator.comparingInt((Literal l) -> l.cs().size()).thenComparing(l -> l.name().s())).forEach(of::check);
     var nested= all.stream().filter(l -> LiteralDeclarations.has(l.cs(), LiteralDeclarations.captureFree));
     var named= Stream.concat(core.stream(), nested).distinct().toList();
-    var mains= named.stream().filter(MainsInfo::isMain).collect(Collectors.toUnmodifiableMap(l -> l.name().s(), of::main));
+    var mains= all.stream().filter(MainsInfo::isMain).collect(Collectors.toUnmodifiableMap(l -> l.name().s(), of::main));
     return new MainsInfo(mains, named.stream().filter(l -> concrete(l, attenuator)).map(l -> l.name().s()).sorted().toList());
   }
-  public static boolean isMain(Literal l){ return concrete(l, main); }
+  public static boolean isMain(Literal l){ return concrete(l, LiteralDeclarations.main); }
   private static boolean concrete(Literal l, TName t){ return LiteralDeclarations.has(l.cs(), t) && l.ms().stream().noneMatch(m -> m.sig().abs()); }
   private record Of(SourceOracle src, SourceOracle stLib){
     void check(Literal l){
-      var cs= l.cs().stream().filter(c -> claims.contains(c.name())).toList();
-      if (cs.isEmpty()){ return; }
-      if (!LiteralDeclarations.has(l.cs(), main)){ throw Report.claimNotMain(src, l, cs.getFirst().name()); }
-      var exts= new HashMap<String,T.C>();
-      for (var c : cs){
-        if (!(c.ts().getFirst() instanceof T.RCC i && i.c().ts().isEmpty())){ throw Report.claimIconNotConcrete(src, l, c); }
-        if (SourceOracleWithAutoload.imageAsset(src, stLib, name(c.ts().getFirst())).isEmpty()){ throw Report.claimIconNotAsset(src, l, c); }
-        if (c.ts().size() == 1){ continue; }
-        var lit= c.ts().get(1) instanceof T.RCC e ? e.c().name().simpleName() : "";
-        if (!lit.startsWith("\"") && !lit.startsWith("`")){ throw Report.claimExtNotStr(src, l, c); }
-        var ext= lit.substring(1, lit.length()-1);
-        if (!Fs.isExtSeg(ext) || ext.equals("fearless")){ throw Report.claimExtInvalid(src, l, c, ext); }
-        var shortcut= c.name().simpleName().equals("Shortcut");
-        if (shortcut != ext.matches("fapp[0-9]{3}")){ throw shortcut ? Report.claimShortcutNotFapp(src, l, c, ext) : Report.claimOpenWithFapp(src, l, c, ext); }
-        var prev= exts.putIfAbsent(ext, c);
-        if (prev != null){ throw Report.claimExtTwice(src, l, prev, c, ext); }
+      for (var c : l.cs()){
+        var notAsset= LiteralDeclarations.claims.contains(c.name()) && SourceOracleWithAutoload.imageAsset(src, stLib, name(c.ts().getFirst())).isEmpty();
+        if (notAsset){ throw Report.claimIconNotAsset(src, l, c); }
       }
     }
     Main main(Literal l){
@@ -155,7 +139,7 @@ public record MainsInfo(Map<String,Main> mains, List<String> attenuators){
     }
     List<Claim> claims(Literal l, String kind){
       return l.cs().stream()
-        .filter(c -> claims.contains(c.name()) && c.name().simpleName().equals(kind))
+        .filter(c -> LiteralDeclarations.claims.contains(c.name()) && c.name().simpleName().equals(kind))
         .map(this::claim).toList();
     }
     Claim claim(T.C c){

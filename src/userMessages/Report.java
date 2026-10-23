@@ -595,11 +595,6 @@ File:
     if (l.infName()){ return "object literal instance of "+disp(withArity(l.cs().getFirst().name())); }
     return (l.thisName().equals("this") ? "type declaration " : "object literal ")+disp(withArity(l.name()));
   }
-  private static UserError claim(SourceOracle src, Literal l, String msg){
-    var owner= owner(l);
-    return new UserError(Message.of(src::loadString, List.of(new Frame(owner, l.span().inner)), Character.toUpperCase(owner.charAt(0))+owner.substring(1)+msg));
-  }
-  private static UserError claim(SourceOracle src, Literal l, T.C c, String msg){ return claim(src, l, " implements "+disp(repr(c))+".\n"+msg); }
   private static String withArity(TName n){ return n.s()+Join.of(Collections.nCopies(n.arity(), "_"), "[", ",", "]", ""); }
   private static String repr(T.C c){ return c.name().s()+Join.of(c.ts().stream().map(Report::repr), "[", ",", "]", ""); }
   private static String repr(T t){
@@ -608,38 +603,11 @@ File:
     var lit= n.pkgName().equals("base") && LiteralDeclarations.isPrimitiveLiteral(n.simpleName());
     return r.rc().toStrSpace()+(lit ? n.simpleName() : repr(r.c()));
   }
-  public static UserError claimNotMain(SourceOracle src, Literal l, TName claim){
-    return claim(src, l, " implements "+disp(withArity(claim))+".\n"
-    +"Only a main can implement "+disp(withArity(claim))+": "+owner(l)+" must also implement \"base.Main\", directly or through one of its supertypes.");
-  }
-  public static UserError claimIconNotConcrete(SourceOracle src, Literal l, T.C c){
-    return claim(src, l, c, "The icon "+disp(repr(c.ts().getFirst()))+" is not a concrete type name.\n"
-    +"An icon is a type name with no type variables and no generic arguments, like \"IconsFoo\".");
-  }
   public static UserError claimIconNotAsset(SourceOracle src, Literal l, T.C c){
-    return claim(src, l, c, "The icon "+disp(repr(c.ts().getFirst()))+" is not the type generated for an image file.\n"
-    +"An icon is the type generated for an image file, like \"IconsFoo\" for \"_pkg/icons/foo.png\", or \"base.IconsConflict\".");
-  }
-  public static UserError claimExtNotStr(SourceOracle src, Literal l, T.C c){
-    return claim(src, l, c, "The extension "+disp(repr(c.ts().get(1)))+" is not a string literal type.\n"
-    +"An extension is written as a string literal type, like "+disp("\"foo\"")+" or "+disp("`foo`")+".");
-  }
-  public static UserError claimExtInvalid(SourceOracle src, Literal l, T.C c, String ext){
-    return claim(src, l, c, disp(ext)+" is not a valid extension.\n"
-    +"An extension is 1 to "+Fs.maxExtSeg+" characters, each a lowercase letter \"a\"-\"z\" or a digit \"0\"-\"9\", with no dot; \"fearless\" is reserved.");
-  }
-  public static UserError claimShortcutNotFapp(SourceOracle src, Literal l, T.C c, String ext){
-    return claim(src, l, c, disp(ext)+" is not a shortcut extension: a shortcut file only starts its main, so it must not look like a document of another program or a file of the project.\n"
-    +"A shortcut extension is \"fapp\" followed by three digits, like \"fapp042\"; or implement \"base.Shortcut[_]\" to let the Fearless manager choose one.");
-  }
-  public static UserError claimOpenWithFapp(SourceOracle src, Literal l, T.C c, String ext){
-    return claim(src, l, c, disp(ext)+" is a shortcut extension: \"fapp\" followed by three digits names the shortcut files of the Fearless manager.\n"
-    +"Use an extension of the form \"ffile\" followed by three digits, like \"ffile042\", or a system extension, like \"htm\"; or implement \"base.OpenWith[_]\" to let the Fearless manager choose one.");
-  }
-  public static UserError claimExtTwice(SourceOracle src, Literal l, T.C first, T.C second, String ext){
-    return claim(src, l, " claims the extension "+disp(ext)+" more than once:\n"
-    +"both "+disp(repr(first))+" and "+disp(repr(second))+" claim it.\n"
-    +"A main can claim each extension at most once, across all its \"base.OpenWith[_,_]\" and \"base.Shortcut[_,_]\", since one extension has one icon.");
+    var owner= owner(l);
+    return new UserError(Message.of(src::loadString, List.of(new Frame(owner, l.span().inner)), Character.toUpperCase(owner.charAt(0))+owner.substring(1)+" implements "+disp(repr(c))+".\n"
+    +"The icon "+disp(repr(c.ts().getFirst()))+" is not the type generated for an image file.\n"
+    +"An icon is the type generated for an image file, like \"IconsFoo\" for \"_pkg/icons/foo.png\", or \"base.IconsConflict\"."));
   }
   public static UserError docReferences(List<String> problems){ return new UserError("""
 Broken reference in a doc comment.

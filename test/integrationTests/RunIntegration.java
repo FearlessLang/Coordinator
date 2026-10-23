@@ -645,6 +645,28 @@ MkFree:{.mk:Main->Free:Main,CaptureFree{s->base.Debug#(`free`)}}
     utils.Err.strCmp("free\ntop\n", coordinator(root).main(root, stLib));
     assertEquals(Map.of("col.Free", "_col/_rank_app.fear", "col.Top", "_col/_rank_app.fear"), coordinator(root).mains(root, stLib).orElseThrow());
   }
+  @Test void aMainWithGenericParametersIsRefused(@TempDir Path tmp){
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_col/_rank_app.fear
+iii
+use base.Main as Main;
+Hello:Main{s->base.Debug#(`plain`)}
+Hello[X]:Main{s->base.Debug#(`generic`)}
+""");
+    var ex= assertThrows(UserError.class, () -> coordinator(root).compile(root, stLib));
+    utils.Err.strCmp("""
+In file: fear:/_col/_rank_app.fear
+
+003| Hello[X]:Main{s->base.Debug#(`generic`)}
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+While inspecting type declaration "Hello[_]"
+Type declaration "Hello[_]" implements "base.Main" and has generic parameters.
+A main can not have generic parameters: running a main gives no generic arguments to it.
+Error 7 WellFormedness""", ex.getMessage());
+  }
   @Test void aPackageNamedAfterAJavaKeywordRuns(@TempDir Path tmp) throws InterruptedException{
     var root= tmp.resolve("root");
     UserError.root = root;
@@ -1173,6 +1195,7 @@ Pre:Main, base.PreLoadIcon[base.IconsConflict], base.PreLoadIcon[IconsFoo]{s->ba
     "col.Again": ["_col/_rank_app.fear", [["col.IconsFoo", "_col/icons/foo.png", "", "", ""]], [["col.IconsFoo", "_col/icons/foo.png", "", "", "q"]], [["col.IconsFoo", "_col/icons/foo.png", "", "", ""], ["base.IconsFearless", "icons/fearless.png", "", "", ""]]],
     "col.Exts": ["_col/_rank_app.fear", [["col.IconsFoo", "_col/icons/foo.png", "", "", "fapp123"]], [["col.IconsFoo", "_col/icons/foo.png", "", "", "fear"], ["col.IconsFoo", "_col/icons/foo.png", "", "", "ffile123"], ["col.IconsFoo", "_col/icons/foo.png", "", "", "abcdefghij012345"], ["col.IconsFoo", "_col/icons/foo.png", "", "", "doc"], ["col.IconsFoo", "_col/icons/foo.png", "", "", "htm"]], [["col.IconsFoo", "_col/icons/foo.png", "", "", ""], ["base.IconsFearless", "icons/fearless.png", "", "", ""]]],
     "col.Foo": ["_col/_rank_app.fear", [["col.IconsFoo", "_col/icons/foo.png", "", "", "fapp001"], ["col.IconsFoo", "_col/icons/foo.png", "", "", ""]], [["col.IconsFoo", "_col/icons/foo.png", "", "", "q"], ["col.IconsFoo", "_col/icons/foo.png", "", "", ""]], [["col.IconsFoo", "_col/icons/foo.png", "", "", ""], ["base.IconsFearless", "icons/fearless.png", "", "", ""]]],
+    "col.I": ["_col/_rank_app.fear", [["col.IconsFoo", "_col/icons/foo.png", "", "", ""]], [], [["col.IconsFoo", "_col/icons/foo.png", "", "", ""], ["base.IconsFearless", "icons/fearless.png", "", "", ""]]],
     "col.Inherited": ["_col/_rank_app.fear", [["col.IconsFoo", "_col/icons/foo.png", "", "", "fapp042"]], [], [["col.IconsFoo", "_col/icons/foo.png", "", "", ""], ["base.IconsFearless", "icons/fearless.png", "", "", ""]]],
     "col.Paths": ["_col/_rank_app.fear", [["col.IconsFoo", "_col/icons/foo.png", "", "", ""]], [["col.IconsFoo", "_col/icons/foo.png", "", "", "q"]], [["col.IconsFoo", "_col/icons/foo.png", "", "", ""], ["base.IconsFearless", "icons/fearless.png", "", "", ""]]],
     "col.Pre": ["_col/_rank_app.fear", [], [], [["base.IconsFearless", "icons/fearless.png", "", "", ""], ["base.IconsConflict", "icons/conflict.png", "", "", ""], ["col.IconsFoo", "_col/icons/foo.png", "", "", ""]]],
@@ -1190,9 +1213,10 @@ In file: fear:/_col/_rank_app.fear
 004| Assoc:OpenWith[IconsFoo,"foo"]{}
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-While inspecting type declaration "col.Assoc"
-Type declaration "col.Assoc" implements "base.OpenWith[_,_]".
-Only a main can implement "base.OpenWith[_,_]": type declaration "col.Assoc" must also implement "base.Main", directly or through one of its supertypes."""); }
+While inspecting type declaration "Assoc"
+Type declaration "Assoc" implements "base.OpenWith[_,_]".
+Only a main can implement "base.OpenWith[_,_]": type declaration "Assoc" must also implement "base.Main", directly or through one of its supertypes.
+Error 7 WellFormedness"""); }
   @Test void aClaimOnANamedObjectLiteralWithoutMainIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 Test:{ #: I -> I: Shortcut[IconsFoo]{} }
 """, """
@@ -1201,9 +1225,10 @@ In file: fear:/_col/_rank_app.fear
 004| Test:{ #: I -> I: Shortcut[IconsFoo]{} }
    |                ^^^^^^^^^^^^^^^^^^^^^^^
 
-While inspecting object literal "col.I"
-Object literal "col.I" implements "base.Shortcut[_]".
-Only a main can implement "base.Shortcut[_]": object literal "col.I" must also implement "base.Main", directly or through one of its supertypes."""); }
+While inspecting object literal "I"
+Object literal "I" implements "base.Shortcut[_]".
+Only a main can implement "base.Shortcut[_]": object literal "I" must also implement "base.Main", directly or through one of its supertypes.
+Error 7 WellFormedness"""); }
   @Test void aClaimOnAnAnonymousObjectLiteralWithoutMainIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 Test:{ #: Shortcut[IconsFoo] -> { .foo: base.Void -> base.Void } }
 """, """
@@ -1214,7 +1239,8 @@ In file: fear:/_col/_rank_app.fear
 
 While inspecting object literal instance of "base.Shortcut[_]"
 Object literal instance of "base.Shortcut[_]" implements "base.Shortcut[_]".
-Only a main can implement "base.Shortcut[_]": object literal instance of "base.Shortcut[_]" must also implement "base.Main", directly or through one of its supertypes."""); }
+Only a main can implement "base.Shortcut[_]": object literal instance of "base.Shortcut[_]" must also implement "base.Main", directly or through one of its supertypes.
+Error 7 WellFormedness"""); }
   @Test void aClaimWithoutMainBlamesTheDeclarationAddingIt(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 B:A{}
 A:OpenWith[IconsFoo,"q"]{}
@@ -1225,9 +1251,10 @@ In file: fear:/_col/_rank_app.fear
 005| A:OpenWith[IconsFoo,"q"]{}
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-While inspecting type declaration "col.A"
-Type declaration "col.A" implements "base.OpenWith[_,_]".
-Only a main can implement "base.OpenWith[_,_]": type declaration "col.A" must also implement "base.Main", directly or through one of its supertypes."""); }
+While inspecting type declaration "A"
+Type declaration "A" implements "base.OpenWith[_,_]".
+Only a main can implement "base.OpenWith[_,_]": type declaration "A" must also implement "base.Main", directly or through one of its supertypes.
+Error 7 WellFormedness"""); }
   @Test void aClaimWithoutMainInALowerRankPackageIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 Foo:Main{s->base.Debug#(`foo`)}
 jjj
@@ -1240,9 +1267,10 @@ In file: fear:/_lib/_rank_core.fear
 001| Lib:base.Shortcut[base.IconsConflict]{}
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-While inspecting type declaration "lib.Lib"
-Type declaration "lib.Lib" implements "base.Shortcut[_]".
-Only a main can implement "base.Shortcut[_]": type declaration "lib.Lib" must also implement "base.Main", directly or through one of its supertypes."""); }
+While inspecting type declaration "Lib"
+Type declaration "Lib" implements "base.Shortcut[_]".
+Only a main can implement "base.Shortcut[_]": type declaration "Lib" must also implement "base.Main", directly or through one of its supertypes.
+Error 7 WellFormedness"""); }
   @Test void aClaimWithATypeVariableIconIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 A[X:imm]:Main,OpenWith[X,"q"]{}
 """, """
@@ -1251,10 +1279,11 @@ In file: fear:/_col/_rank_app.fear
 004| A[X:imm]:Main,OpenWith[X,"q"]{}
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-While inspecting type declaration "col.A[_]"
-Type declaration "col.A[_]" implements `base.OpenWith[X,"q"]`.
+While inspecting type declaration "A[_]"
+Type declaration "A[_]" implements `base.OpenWith[X,"q"]`.
 The icon "X" is not a concrete type name.
-An icon is a type name with no type variables and no generic arguments, like "IconsFoo"."""); }
+An icon is a type name with no type variables and no generic arguments, like "IconsFoo".
+Error 7 WellFormedness"""); }
   @Test void aClaimWithAGenericIconIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 Box[X:imm]:{}
 A:Main,Shortcut[Box[IconsFoo]]{}
@@ -1264,10 +1293,11 @@ In file: fear:/_col/_rank_app.fear
 005| A:Main,Shortcut[Box[IconsFoo]]{}
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-While inspecting type declaration "col.A"
-Type declaration "col.A" implements "base.Shortcut[col.Box[col.IconsFoo]]".
-The icon "col.Box[col.IconsFoo]" is not a concrete type name.
-An icon is a type name with no type variables and no generic arguments, like "IconsFoo"."""); }
+While inspecting type declaration "A"
+Type declaration "A" implements "base.Shortcut[Box[IconsFoo]]".
+The icon "Box[IconsFoo]" is not a concrete type name.
+An icon is a type name with no type variables and no generic arguments, like "IconsFoo".
+Error 7 WellFormedness"""); }
   @Test void aClaimWithATypeVariableExtensionIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 A[X:imm]:Main,OpenWith[IconsFoo,X]{}
 """, """
@@ -1276,10 +1306,11 @@ In file: fear:/_col/_rank_app.fear
 004| A[X:imm]:Main,OpenWith[IconsFoo,X]{}
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-While inspecting type declaration "col.A[_]"
-Type declaration "col.A[_]" implements "base.OpenWith[col.IconsFoo,X]".
+While inspecting type declaration "A[_]"
+Type declaration "A[_]" implements "base.OpenWith[IconsFoo,X]".
 The extension "X" is not a string literal type.
-An extension is written as a string literal type, like `"foo"` or "`foo`"."""); }
+An extension is written as a string literal type, like `"foo"` or "`foo`".
+Error 7 WellFormedness"""); }
   @Test void aClaimWithATypeNameExtensionIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 A:Main,OpenWith[IconsFoo,IconsFoo]{}
 """, """
@@ -1288,10 +1319,11 @@ In file: fear:/_col/_rank_app.fear
 004| A:Main,OpenWith[IconsFoo,IconsFoo]{}
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-While inspecting type declaration "col.A"
-Type declaration "col.A" implements "base.OpenWith[col.IconsFoo,col.IconsFoo]".
-The extension "col.IconsFoo" is not a string literal type.
-An extension is written as a string literal type, like `"foo"` or "`foo`"."""); }
+While inspecting type declaration "A"
+Type declaration "A" implements "base.OpenWith[IconsFoo,IconsFoo]".
+The extension "IconsFoo" is not a string literal type.
+An extension is written as a string literal type, like `"foo"` or "`foo`".
+Error 7 WellFormedness"""); }
   @Test void aClaimWithANumberExtensionIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 A:Main,Shortcut[IconsFoo,42]{}
 """, """
@@ -1300,10 +1332,11 @@ In file: fear:/_col/_rank_app.fear
 004| A:Main,Shortcut[IconsFoo,42]{}
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-While inspecting type declaration "col.A"
-Type declaration "col.A" implements "base.Shortcut[col.IconsFoo,42]".
+While inspecting type declaration "A"
+Type declaration "A" implements "base.Shortcut[IconsFoo,42]".
 The extension "42" is not a string literal type.
-An extension is written as a string literal type, like `"foo"` or "`foo`"."""); }
+An extension is written as a string literal type, like `"foo"` or "`foo`".
+Error 7 WellFormedness"""); }
   @Test void anUppercaseExtensionIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 A:Main,OpenWith[IconsFoo,"Txt"]{}
 """, """
@@ -1312,10 +1345,11 @@ In file: fear:/_col/_rank_app.fear
 004| A:Main,OpenWith[IconsFoo,"Txt"]{}
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-While inspecting type declaration "col.A"
-Type declaration "col.A" implements `base.OpenWith[col.IconsFoo,"Txt"]`.
+While inspecting type declaration "A"
+Type declaration "A" implements `base.OpenWith[IconsFoo,"Txt"]`.
 "Txt" is not a valid extension.
-An extension is 1 to 16 characters, each a lowercase letter "a"-"z" or a digit "0"-"9", with no dot; "fearless" is reserved."""); }
+An extension is 1 to 16 characters, each a lowercase letter "a"-"z" or a digit "0"-"9", with no dot; "fearless" is reserved.
+Error 7 WellFormedness"""); }
   @Test void aMultiDotExtensionIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 A:Main,OpenWith[IconsFoo,"tar.gz"]{}
 """, """
@@ -1324,10 +1358,11 @@ In file: fear:/_col/_rank_app.fear
 004| A:Main,OpenWith[IconsFoo,"tar.gz"]{}
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-While inspecting type declaration "col.A"
-Type declaration "col.A" implements `base.OpenWith[col.IconsFoo,"tar.gz"]`.
+While inspecting type declaration "A"
+Type declaration "A" implements `base.OpenWith[IconsFoo,"tar.gz"]`.
 "tar.gz" is not a valid extension.
-An extension is 1 to 16 characters, each a lowercase letter "a"-"z" or a digit "0"-"9", with no dot; "fearless" is reserved."""); }
+An extension is 1 to 16 characters, each a lowercase letter "a"-"z" or a digit "0"-"9", with no dot; "fearless" is reserved.
+Error 7 WellFormedness"""); }
   @Test void aLeadingDotExtensionIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 A:Main,OpenWith[IconsFoo,".txt"]{}
 """, """
@@ -1336,10 +1371,11 @@ In file: fear:/_col/_rank_app.fear
 004| A:Main,OpenWith[IconsFoo,".txt"]{}
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-While inspecting type declaration "col.A"
-Type declaration "col.A" implements `base.OpenWith[col.IconsFoo,".txt"]`.
+While inspecting type declaration "A"
+Type declaration "A" implements `base.OpenWith[IconsFoo,".txt"]`.
 ".txt" is not a valid extension.
-An extension is 1 to 16 characters, each a lowercase letter "a"-"z" or a digit "0"-"9", with no dot; "fearless" is reserved."""); }
+An extension is 1 to 16 characters, each a lowercase letter "a"-"z" or a digit "0"-"9", with no dot; "fearless" is reserved.
+Error 7 WellFormedness"""); }
   @Test void anEmptyExtensionIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 A:Main,OpenWith[IconsFoo,""]{}
 """, """
@@ -1348,10 +1384,11 @@ In file: fear:/_col/_rank_app.fear
 004| A:Main,OpenWith[IconsFoo,""]{}
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-While inspecting type declaration "col.A"
-Type declaration "col.A" implements `base.OpenWith[col.IconsFoo,""]`.
+While inspecting type declaration "A"
+Type declaration "A" implements `base.OpenWith[IconsFoo,""]`.
 "" is not a valid extension.
-An extension is 1 to 16 characters, each a lowercase letter "a"-"z" or a digit "0"-"9", with no dot; "fearless" is reserved."""); }
+An extension is 1 to 16 characters, each a lowercase letter "a"-"z" or a digit "0"-"9", with no dot; "fearless" is reserved.
+Error 7 WellFormedness"""); }
   @Test void aTooLongExtensionIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 A:Main,OpenWith[IconsFoo,"abcdefghij0123456"]{}
 """, """
@@ -1360,10 +1397,11 @@ In file: fear:/_col/_rank_app.fear
 004| A:Main,OpenWith[IconsFoo,"abcdefghij0123456"]{}
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-While inspecting type declaration "col.A"
-Type declaration "col.A" implements `base.OpenWith[col.IconsFoo,"abcdefghij0123456"]`.
+While inspecting type declaration "A"
+Type declaration "A" implements `base.OpenWith[IconsFoo,"abcd-3456"]`.
 "abcdefghij0123456" is not a valid extension.
-An extension is 1 to 16 characters, each a lowercase letter "a"-"z" or a digit "0"-"9", with no dot; "fearless" is reserved."""); }
+An extension is 1 to 16 characters, each a lowercase letter "a"-"z" or a digit "0"-"9", with no dot; "fearless" is reserved.
+Error 7 WellFormedness"""); }
   @Test void theFearlessExtensionIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 A:Main,OpenWith[IconsFoo,`fearless`]{}
 """, """
@@ -1372,10 +1410,11 @@ In file: fear:/_col/_rank_app.fear
 004| A:Main,OpenWith[IconsFoo,`fearless`]{}
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-While inspecting type declaration "col.A"
-Type declaration "col.A" implements "base.OpenWith[col.IconsFoo,`fearless`]".
+While inspecting type declaration "A"
+Type declaration "A" implements "base.OpenWith[IconsFoo,`fearless`]".
 "fearless" is not a valid extension.
-An extension is 1 to 16 characters, each a lowercase letter "a"-"z" or a digit "0"-"9", with no dot; "fearless" is reserved."""); }
+An extension is 1 to 16 characters, each a lowercase letter "a"-"z" or a digit "0"-"9", with no dot; "fearless" is reserved.
+Error 7 WellFormedness"""); }
   @Test void anExtensionClaimedTwiceIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 A:Main,Shortcut[IconsFoo,"fapp042"],Shortcut[base.IconsConflict,"fapp042"]{}
 """, """
@@ -1384,10 +1423,11 @@ In file: fear:/_col/_rank_app.fear
 004| A:Main,Shortcut[IconsFoo,"fapp042"],Shortcut[base.IconsConflict,"fapp042"]{}
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-While inspecting type declaration "col.A"
-Type declaration "col.A" claims the extension "fapp042" more than once:
-both `base.Shortcut[col.IconsFoo,"fapp042"]` and `base.Shortcut[base.IconsConflict,"fapp042"]` claim it.
-A main can claim each extension at most once, across all its "base.OpenWith[_,_]" and "base.Shortcut[_,_]", since one extension has one icon."""); }
+While inspecting type declaration "A"
+Type declaration "A" claims the extension "fapp042" more than once:
+both `base.Shortcut[IconsFoo,"fapp042"]` and `base.Shortcut[base.IconsConflict,"fapp042"]` claim it.
+A main can claim each extension at most once, across all its "base.OpenWith[_,_]" and "base.Shortcut[_,_]", since one extension has one icon.
+Error 7 WellFormedness"""); }
   @Test void anExtensionClaimedTwiceWithDifferentDelimitersIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 A:Main,OpenWith[IconsFoo,"txt"],OpenWith[IconsFoo,`txt`]{}
 """, """
@@ -1396,10 +1436,11 @@ In file: fear:/_col/_rank_app.fear
 004| A:Main,OpenWith[IconsFoo,"txt"],OpenWith[IconsFoo,`txt`]{}
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-While inspecting type declaration "col.A"
-Type declaration "col.A" claims the extension "txt" more than once:
-both `base.OpenWith[col.IconsFoo,"txt"]` and "base.OpenWith[col.IconsFoo,`txt`]" claim it.
-A main can claim each extension at most once, across all its "base.OpenWith[_,_]" and "base.Shortcut[_,_]", since one extension has one icon."""); }
+While inspecting type declaration "A"
+Type declaration "A" claims the extension "txt" more than once:
+both `base.OpenWith[IconsFoo,"txt"]` and "base.OpenWith[IconsFoo,`txt`]" claim it.
+A main can claim each extension at most once, across all its "base.OpenWith[_,_]" and "base.Shortcut[_,_]", since one extension has one icon.
+Error 7 WellFormedness"""); }
   @Test void aShortcutOfAnotherExtensionIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 A:Main,Shortcut[IconsFoo,"bar"]{}
 """, """
@@ -1408,10 +1449,11 @@ In file: fear:/_col/_rank_app.fear
 004| A:Main,Shortcut[IconsFoo,"bar"]{}
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-While inspecting type declaration "col.A"
-Type declaration "col.A" implements `base.Shortcut[col.IconsFoo,"bar"]`.
+While inspecting type declaration "A"
+Type declaration "A" implements `base.Shortcut[IconsFoo,"bar"]`.
 "bar" is not a shortcut extension: a shortcut file only starts its main, so it must not look like a document of another program or a file of the project.
-A shortcut extension is "fapp" followed by three digits, like "fapp042"; or implement "base.Shortcut[_]" to let the Fearless manager choose one."""); }
+A shortcut extension is "fapp" followed by three digits, like "fapp042"; or implement "base.Shortcut[_]" to let the Fearless manager choose one.
+Error 7 WellFormedness"""); }
   @Test void aShortcutOfAFfileExtensionIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 A:Main,Shortcut[IconsFoo,"ffile042"]{}
 """, """
@@ -1420,10 +1462,11 @@ In file: fear:/_col/_rank_app.fear
 004| A:Main,Shortcut[IconsFoo,"ffile042"]{}
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-While inspecting type declaration "col.A"
-Type declaration "col.A" implements `base.Shortcut[col.IconsFoo,"ffile042"]`.
+While inspecting type declaration "A"
+Type declaration "A" implements `base.Shortcut[IconsFoo,"ffile042"]`.
 "ffile042" is not a shortcut extension: a shortcut file only starts its main, so it must not look like a document of another program or a file of the project.
-A shortcut extension is "fapp" followed by three digits, like "fapp042"; or implement "base.Shortcut[_]" to let the Fearless manager choose one."""); }
+A shortcut extension is "fapp" followed by three digits, like "fapp042"; or implement "base.Shortcut[_]" to let the Fearless manager choose one.
+Error 7 WellFormedness"""); }
   @Test void aShortcutOfAFourDigitFappExtensionIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 A:Main,Shortcut[IconsFoo,"fapp0420"]{}
 """, """
@@ -1432,10 +1475,11 @@ In file: fear:/_col/_rank_app.fear
 004| A:Main,Shortcut[IconsFoo,"fapp0420"]{}
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-While inspecting type declaration "col.A"
-Type declaration "col.A" implements `base.Shortcut[col.IconsFoo,"fapp0420"]`.
+While inspecting type declaration "A"
+Type declaration "A" implements `base.Shortcut[IconsFoo,"fapp0420"]`.
 "fapp0420" is not a shortcut extension: a shortcut file only starts its main, so it must not look like a document of another program or a file of the project.
-A shortcut extension is "fapp" followed by three digits, like "fapp042"; or implement "base.Shortcut[_]" to let the Fearless manager choose one."""); }
+A shortcut extension is "fapp" followed by three digits, like "fapp042"; or implement "base.Shortcut[_]" to let the Fearless manager choose one.
+Error 7 WellFormedness"""); }
   @Test void anOpenWithNeverClaimsAFappExtension(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 A:Main,OpenWith[IconsFoo,"fapp042"]{}
 """, """
@@ -1444,10 +1488,11 @@ In file: fear:/_col/_rank_app.fear
 004| A:Main,OpenWith[IconsFoo,"fapp042"]{}
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-While inspecting type declaration "col.A"
-Type declaration "col.A" implements `base.OpenWith[col.IconsFoo,"fapp042"]`.
+While inspecting type declaration "A"
+Type declaration "A" implements `base.OpenWith[IconsFoo,"fapp042"]`.
 "fapp042" is a shortcut extension: "fapp" followed by three digits names the shortcut files of the Fearless manager.
-Use an extension of the form "ffile" followed by three digits, like "ffile042", or a system extension, like "htm"; or implement "base.OpenWith[_]" to let the Fearless manager choose one."""); }
+Use an extension of the form "ffile" followed by three digits, like "ffile042", or a system extension, like "htm"; or implement "base.OpenWith[_]" to let the Fearless manager choose one.
+Error 7 WellFormedness"""); }
   @Test void aClaimWhoseIconIsNotAnImageFileIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 A:Main,OpenWith[base.Str,"q"]{}
 """, """
@@ -1585,10 +1630,11 @@ In file: fear:/_col/_rank_app.fear
 005| Clash:lib.Lib, OpenWith[IconsFoo,"fear"]{s->base.Debug#(`clash`)}
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-While inspecting type declaration "col.Clash"
-Type declaration "col.Clash" claims the extension "fear" more than once:
-both `base.OpenWith[col.IconsFoo,"fear"]` and `base.OpenWith[base.IconsConflict,"fear"]` claim it.
-A main can claim each extension at most once, across all its "base.OpenWith[_,_]" and "base.Shortcut[_,_]", since one extension has one icon.""", ex.getMessage());
+While inspecting type declaration "Clash"
+Type declaration "Clash" claims the extension "fear" more than once:
+both `base.OpenWith[IconsFoo,"fear"]` and `base.OpenWith[base.IconsConflict,"fear"]` claim it.
+A main can claim each extension at most once, across all its "base.OpenWith[_,_]" and "base.Shortcut[_,_]", since one extension has one icon.
+Error 7 WellFormedness""", ex.getMessage());
   }
   static String manifests(Path root){ return MainsInfo.files(root).stream().map(p -> "--- "+p.getFileName()+"\n"+Fs.readUtf8(p)).reduce("", String::concat); }
   @Test void mainsInfoRecordsTheClaimsOfTheTopRankMainsWithTheirIcons(@TempDir Path tmp) throws Exception{
