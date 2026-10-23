@@ -651,6 +651,49 @@ Hello:Main{s->base.Debug#(`hi`)}
 """);
     utils.Err.strCmp("hi\n", coordinator(root).main(root, stLib));
   }
+  @Test void aSingletonRunsAZeroArgumentImmMethodOnlyOneTime(@TempDir Path tmp) throws InterruptedException{
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_col/_rank_app.fear
+iii
+use base.Main as Main;
+use base.Block as Block;
+use base.Debug as Debug;
+use base.Str as Str;
+use base.Nat as Nat;
+use base.Cache as Cache;
+use base.CacheF as CacheF;
+Family:{ .name: Str; .greeting: Str -> Block#(Debug#("greeting "+(this.name)), "hi "+(this.name)) }
+FamilyA:Family{ .name -> "a" }
+FamilyOf:{ #(n: Str): Family -> {.name -> n} }
+OnceF:CacheF[Nat]{ # -> Block#(Debug#("onceF"), 5) }
+Hello:Main{s->Block#
+  .do{ Debug#(FamilyA.greeting) }
+  .do{ Debug#(FamilyA.greeting) }
+  .let c= {FamilyOf#"c"}
+  .do{ Debug#(c.greeting) }
+  .do{ Debug#(c.greeting) }
+  .do{ Debug#(Cache.of OnceF) }
+  .do{ Cache.flush OnceF }
+  .do{ Debug#(Cache.of OnceF) }
+  .done
+  }
+""");
+    utils.Err.strCmp("""
+greeting a
+hi a
+hi a
+greeting c
+hi c
+greeting c
+hi c
+onceF
+5
+onceF
+5
+""", coordinator(root).main(root, stLib));
+  }
   @Test void anAssetWhoseNameStartsWithUnderscoreAutoLoadsAsAPrivateType(@TempDir Path tmp) throws InterruptedException{
     var root= tmp.resolve("root");
     UserError.root = root;
