@@ -19,6 +19,7 @@ import core.OtherPackages;
 import core.TName;
 import metaParser.Message;
 import tools.Fs;
+import tools.SourceOracle;
 import tools.SourceOracle.Ref;
 import userMessages.UserError;
 import userMessages.Violation;
@@ -27,8 +28,7 @@ import utils.Join;
 public interface OutputOracle{
   Path rootDir();
   default Path mapPath(){ return rootDir().resolve("_map.json"); }
-  default Path mainsPath(){ return rootDir().resolve("mains.info"); }
-  private Path mainsPath(String pkg){ return rootDir().resolve(pkg+".mains.info"); }
+  private Path mainsPath(String pkg){ return rootDir().resolve(pkg+MainsInfo.suffix); }
   private Path pkgApiPath(String pkg){ return rootDir().resolve(pkg+".json"); }
   private Path builtPath(String pkg){ return rootDir().resolve(pkg+".built"); }
   default long mapStamp(){ return Fs.lastModified(mapPath()); }
@@ -57,16 +57,17 @@ public interface OutputOracle{
     if (res.isPresent() && OutputHelper.consistent(res.get(), core)){ return pkgApiStamp(pkg); }
     return Fs.writeUtf8(pkgApiPath(pkg), ApiJson.toJson(core), res.isEmpty() ? -1 : minExclusiveMillis);
   }
-  default Optional<MainsInfo> mainsInfo(){ return Optional.of(mainsPath()).filter(Fs::exists).map(MainsInfo::parse); }
-  default long commit(String pkg, List<Literal> core, Map<String,MainsInfo.Main> mains, List<Ref> files, List<String> below, long inputsStamp){
+  default void relocate(String pkg, SourceOracle src, SourceOracle stLib){
+    var m= MainsInfo.parse(mainsPath(pkg));
+    var located= m.located(src, stLib);
+    if (!located.equals(m)){ Fs.writeUtf8(mainsPath(pkg), located.print()); }
+  }
+  default long commit(String pkg, List<Literal> core, MainsInfo mains, List<Ref> files, List<String> below, long inputsStamp){
     var newStamp= commitPkgApi(pkg, core, inputsStamp);
-    Fs.writeUtf8(mainsPath(pkg), new MainsInfo(mains).print());
+    Fs.writeUtf8(mainsPath(pkg), mains.print());
     Fs.writeUtf8(builtPath(pkg), OutputHelper.built(files, below));
     Fs.ofV(() -> Fs.setLastModifiedTime(builtPath(pkg), FileTime.fromMillis(inputsStamp)));
     return newStamp;
-  }
-  default MainsInfo mains(Collection<String> pkgs){
-    return new MainsInfo(pkgs.stream().flatMap(p -> MainsInfo.parse(mainsPath(p)).mains().entrySet().stream()).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
   }
   default long commitMap(Map<String,Map<String,String>> map, long minExclusiveMillis){
     var res= OutputHelper.mapFromJson(mapPath());

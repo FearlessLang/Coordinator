@@ -40,6 +40,7 @@ import com.sun.net.httpserver.HttpServer;
 
 import coordinator.CapabilityEnvironment;
 import coordinator.Coordinator;
+import coordinator.MainsInfo;
 import coordinator.OutputOracle;
 import core.E.Literal;
 import core.OtherPackages;
@@ -619,11 +620,15 @@ Again:Main{s->base.Debug#("again")}
 """);
     coordinator(root).compile(root, stLib);
     utils.Err.strCmp("""
+--- col_manifest.info
 {
-  "col.Again": ["_col/more.fear", [], [], [["base.IconsFearless", "icons/fearless.png", "", "", ""]]],
-  "col.Hello": ["_col/_rank_app.fear", [], [], [["base.IconsFearless", "icons/fearless.png", "", "", ""]]]
+  "mains": {
+    "col.Again": ["_col/more.fear", [], [], [["base.IconsFearless", "icons/fearless.png", "", "", ""]]],
+    "col.Hello": ["_col/_rank_app.fear", [], [], [["base.IconsFearless", "icons/fearless.png", "", "", ""]]]
+  },
+  "attenuators": []
 }
-""", Fs.readUtf8(mainsInfo(root)));
+""", manifests(root));
     assertEquals(Map.of("col.Again", "_col/more.fear", "col.Hello", "_col/_rank_app.fear"), coordinator(root).mains(root, stLib).orElseThrow());
   }
   @Test void aCaptureFreeMainDeclaredInAMethodIsListedLikeTheOnesItRuns(@TempDir Path tmp) throws InterruptedException{
@@ -1118,16 +1123,20 @@ Pre:Main, base.PreLoadIcon[base.IconsConflict], base.PreLoadIcon[IconsFoo]{s->ba
 """);
     coordinator(root).compile(root, stLib);
     utils.Err.strCmp("""
+--- col_manifest.info
 {
-  "col.Again": ["_col/_rank_app.fear", [["col.IconsFoo", "_col/icons/foo.png", "", "", ""]], [["col.IconsFoo", "_col/icons/foo.png", "", "", "q"]], [["col.IconsFoo", "_col/icons/foo.png", "", "", ""], ["base.IconsFearless", "icons/fearless.png", "", "", ""]]],
-  "col.Exts": ["_col/_rank_app.fear", [["col.IconsFoo", "_col/icons/foo.png", "", "", "fapp123"]], [["col.IconsFoo", "_col/icons/foo.png", "", "", "fear"], ["col.IconsFoo", "_col/icons/foo.png", "", "", "ffile123"], ["col.IconsFoo", "_col/icons/foo.png", "", "", "abcdefghij012345"], ["col.IconsFoo", "_col/icons/foo.png", "", "", "doc"], ["col.IconsFoo", "_col/icons/foo.png", "", "", "htm"]], [["col.IconsFoo", "_col/icons/foo.png", "", "", ""], ["base.IconsFearless", "icons/fearless.png", "", "", ""]]],
-  "col.Foo": ["_col/_rank_app.fear", [["col.IconsFoo", "_col/icons/foo.png", "", "", "fapp001"], ["col.IconsFoo", "_col/icons/foo.png", "", "", ""]], [["col.IconsFoo", "_col/icons/foo.png", "", "", "q"], ["col.IconsFoo", "_col/icons/foo.png", "", "", ""]], [["col.IconsFoo", "_col/icons/foo.png", "", "", ""], ["base.IconsFearless", "icons/fearless.png", "", "", ""]]],
-  "col.Inherited": ["_col/_rank_app.fear", [["col.IconsFoo", "_col/icons/foo.png", "", "", "fapp042"]], [], [["col.IconsFoo", "_col/icons/foo.png", "", "", ""], ["base.IconsFearless", "icons/fearless.png", "", "", ""]]],
-  "col.Paths": ["_col/_rank_app.fear", [["col.IconsFoo", "_col/icons/foo.png", "", "", ""]], [["col.IconsFoo", "_col/icons/foo.png", "", "", "q"]], [["col.IconsFoo", "_col/icons/foo.png", "", "", ""], ["base.IconsFearless", "icons/fearless.png", "", "", ""]]],
-  "col.Pre": ["_col/_rank_app.fear", [], [], [["base.IconsFearless", "icons/fearless.png", "", "", ""], ["base.IconsConflict", "icons/conflict.png", "", "", ""], ["col.IconsFoo", "_col/icons/foo.png", "", "", ""]]],
-  "col.Two": ["_col/_rank_app.fear", [], [["col.IconsFoo", "_col/icons/foo.png", "", "", "q"], ["base.IconsConflict", "icons/conflict.png", "", "", "b"]], [["base.IconsFearless", "icons/fearless.png", "", "", ""], ["col.IconsFoo", "_col/icons/foo.png", "", "", ""], ["base.IconsConflict", "icons/conflict.png", "", "", ""]]]
+  "mains": {
+    "col.Again": ["_col/_rank_app.fear", [["col.IconsFoo", "_col/icons/foo.png", "", "", ""]], [["col.IconsFoo", "_col/icons/foo.png", "", "", "q"]], [["col.IconsFoo", "_col/icons/foo.png", "", "", ""], ["base.IconsFearless", "icons/fearless.png", "", "", ""]]],
+    "col.Exts": ["_col/_rank_app.fear", [["col.IconsFoo", "_col/icons/foo.png", "", "", "fapp123"]], [["col.IconsFoo", "_col/icons/foo.png", "", "", "fear"], ["col.IconsFoo", "_col/icons/foo.png", "", "", "ffile123"], ["col.IconsFoo", "_col/icons/foo.png", "", "", "abcdefghij012345"], ["col.IconsFoo", "_col/icons/foo.png", "", "", "doc"], ["col.IconsFoo", "_col/icons/foo.png", "", "", "htm"]], [["col.IconsFoo", "_col/icons/foo.png", "", "", ""], ["base.IconsFearless", "icons/fearless.png", "", "", ""]]],
+    "col.Foo": ["_col/_rank_app.fear", [["col.IconsFoo", "_col/icons/foo.png", "", "", "fapp001"], ["col.IconsFoo", "_col/icons/foo.png", "", "", ""]], [["col.IconsFoo", "_col/icons/foo.png", "", "", "q"], ["col.IconsFoo", "_col/icons/foo.png", "", "", ""]], [["col.IconsFoo", "_col/icons/foo.png", "", "", ""], ["base.IconsFearless", "icons/fearless.png", "", "", ""]]],
+    "col.Inherited": ["_col/_rank_app.fear", [["col.IconsFoo", "_col/icons/foo.png", "", "", "fapp042"]], [], [["col.IconsFoo", "_col/icons/foo.png", "", "", ""], ["base.IconsFearless", "icons/fearless.png", "", "", ""]]],
+    "col.Paths": ["_col/_rank_app.fear", [["col.IconsFoo", "_col/icons/foo.png", "", "", ""]], [["col.IconsFoo", "_col/icons/foo.png", "", "", "q"]], [["col.IconsFoo", "_col/icons/foo.png", "", "", ""], ["base.IconsFearless", "icons/fearless.png", "", "", ""]]],
+    "col.Pre": ["_col/_rank_app.fear", [], [], [["base.IconsFearless", "icons/fearless.png", "", "", ""], ["base.IconsConflict", "icons/conflict.png", "", "", ""], ["col.IconsFoo", "_col/icons/foo.png", "", "", ""]]],
+    "col.Two": ["_col/_rank_app.fear", [], [["col.IconsFoo", "_col/icons/foo.png", "", "", "q"], ["base.IconsConflict", "icons/conflict.png", "", "", "b"]], [["base.IconsFearless", "icons/fearless.png", "", "", ""], ["col.IconsFoo", "_col/icons/foo.png", "", "", ""], ["base.IconsConflict", "icons/conflict.png", "", "", ""]]]
+  },
+  "attenuators": []
 }
-""", Fs.readUtf8(mainsInfo(root)));
+""", manifests(root));
   }
   @Test void aClaimWithoutMainIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 Assoc:OpenWith[IconsFoo,"foo"]{}
@@ -1537,7 +1546,7 @@ Type declaration "col.Clash" claims the extension "fear" more than once:
 both `base.OpenWith[col.IconsFoo,"fear"]` and `base.OpenWith[base.IconsConflict,"fear"]` claim it.
 A main can claim each extension at most once, across all its "base.OpenWith[_,_]" and "base.Shortcut[_,_]", since one extension has one icon.""", ex.getMessage());
   }
-  static Path mainsInfo(Path root){ return root.resolve(Coordinator.outDir).resolve("mains.info"); }
+  static String manifests(Path root){ return MainsInfo.files(root).stream().map(p -> "--- "+p.getFileName()+"\n"+Fs.readUtf8(p)).reduce("", String::concat); }
   @Test void mainsInfoRecordsTheClaimsOfTheTopRankMainsWithTheirIcons(@TempDir Path tmp) throws Exception{
     var root= claimsProject(tmp, """
 Foo:Main, OpenWith[IconsFoo,"foo"], OpenWith[lib.IconsLib], Shortcut[base.IconsConflict,`fapp042`], Shortcut[ZInBar]{s->base.Debug#(`foo`)}
@@ -1556,10 +1565,21 @@ not read by the compiler
 """);
     coordinator(root).compile(root, stLib);
     utils.Err.strCmp("""
+--- col_manifest.info
 {
-  "col.Foo": ["_col/_rank_app.fear", [["base.IconsConflict", "icons/conflict.png", "", "", "fapp042"], ["col.ZInBar", "_col/z.zip", "", "in/bar.png", ""]], [["col.IconsFoo", "_col/icons/foo.png", "", "", "foo"], ["lib.IconsLib", "_lib/icons/lib.png", "", "", ""]], [["base.IconsConflict", "icons/conflict.png", "", "", ""], ["col.ZInBar", "_col/z.zip", "", "in/bar.png", ""], ["base.IconsFearless", "icons/fearless.png", "", "", ""], ["col.IconsFoo", "_col/icons/foo.png", "", "", ""], ["lib.IconsLib", "_lib/icons/lib.png", "", "", ""]]]
+  "mains": {
+    "col.Foo": ["_col/_rank_app.fear", [["base.IconsConflict", "icons/conflict.png", "", "", "fapp042"], ["col.ZInBar", "_col/z.zip", "", "in/bar.png", ""]], [["col.IconsFoo", "_col/icons/foo.png", "", "", "foo"], ["lib.IconsLib", "_lib/icons/lib.png", "", "", ""]], [["base.IconsConflict", "icons/conflict.png", "", "", ""], ["col.ZInBar", "_col/z.zip", "", "in/bar.png", ""], ["base.IconsFearless", "icons/fearless.png", "", "", ""], ["col.IconsFoo", "_col/icons/foo.png", "", "", ""], ["lib.IconsLib", "_lib/icons/lib.png", "", "", ""]]]
+  },
+  "attenuators": []
 }
-""", Fs.readUtf8(mainsInfo(root)));
+--- lib_manifest.info
+{
+  "mains": {
+    "lib.Lib": ["_lib/_rank_core.fear", [], [["base.IconsConflict", "icons/conflict.png", "", "", "fear"]], [["base.IconsFearless", "icons/fearless.png", "", "", ""], ["base.IconsConflict", "icons/conflict.png", "", "", ""]]]
+  },
+  "attenuators": []
+}
+""", manifests(root));
   }
   @Test void aSecondCompileKeepsTheMainsInfoEntriesOfAnUnchangedPackage(@TempDir Path tmp) throws Exception{
     var root= tmp.resolve("root");
@@ -1584,28 +1604,38 @@ B:Main{s->base.Debug#(`b`)}
     editAndTouch(root.resolve("_b", "_rank_app.fear"), "B:Main", "C:Main{s->base.Debug#(`c`)}\nB:Main");
     coordinator(root).compile(root, stLib);
     utils.Err.strCmp("""
+--- a_manifest.info
 {
-  "a.A": ["_a/_rank_app.fear", [], [["a.IconsA", "_a/icons/a.png", "", "", ""]], [["base.IconsFearless", "icons/fearless.png", "", "", ""], ["a.IconsA", "_a/icons/a.png", "", "", ""]]],
-  "b.B": ["_b/_rank_app.fear", [], [], [["base.IconsFearless", "icons/fearless.png", "", "", ""]]],
-  "b.C": ["_b/_rank_app.fear", [], [], [["base.IconsFearless", "icons/fearless.png", "", "", ""]]]
+  "mains": {
+    "a.A": ["_a/_rank_app.fear", [], [["a.IconsA", "_a/icons/a.png", "", "", ""]], [["base.IconsFearless", "icons/fearless.png", "", "", ""], ["a.IconsA", "_a/icons/a.png", "", "", ""]]]
+  },
+  "attenuators": []
 }
-""", Fs.readUtf8(mainsInfo(root)));
+--- b_manifest.info
+{
+  "mains": {
+    "b.B": ["_b/_rank_app.fear", [], [], [["base.IconsFearless", "icons/fearless.png", "", "", ""]]],
+    "b.C": ["_b/_rank_app.fear", [], [], [["base.IconsFearless", "icons/fearless.png", "", "", ""]]]
+  },
+  "attenuators": []
+}
+""", manifests(root));
   }
   @Test void aDeletedPackageMainsInfoForcesARecompile(@TempDir Path tmp) throws Exception{
     var root= claimsProject(tmp, """
 Foo:Main, OpenWith[IconsFoo,"foo"]{s->base.Debug#(`foo`)}
 """);
     coordinator(root).compile(root, stLib);
-    var text= Fs.readUtf8(mainsInfo(root));
+    var text= manifests(root);
     assertEquals(Map.of("col", true), Coordinator.pkgsBuilt(root, baseCache));
-    Fs.delete(root.resolve(Coordinator.outDir).resolve("col.mains.info"));
+    Fs.delete(root.resolve(Coordinator.outDir).resolve("col_manifest.info"));
     assertEquals(Map.of("col", false), Coordinator.pkgsBuilt(root, baseCache));
     assertEquals(Optional.empty(), coordinator(root).mains(root, stLib));
     coordinator(root).compile(root, stLib);
-    utils.Err.strCmp(text, Fs.readUtf8(mainsInfo(root)));
+    utils.Err.strCmp(text, manifests(root));
     assertEquals(Map.of("col.Foo", "_col/_rank_app.fear"), coordinator(root).mains(root, stLib).orElseThrow());
   }
-  @Test void aPackageReachingTheTopRankListsItsMains(@TempDir Path tmp) throws Exception{
+  @Test void everyPackageListsItsMainsAndARemovedPackageLosesItsManifest(@TempDir Path tmp) throws Exception{
     var root= claimsProject(tmp, """
 Foo:Main{s->base.Debug#(`foo`)}
 jjj
@@ -1614,17 +1644,21 @@ iii
 Lib:base.Main, base.OpenWith[base.IconsConflict,"fear"]{s->base.Debug#(`lib`)}
 """);
     coordinator(root).compile(root, stLib);
-    assertEquals(Map.of("col.Foo", "_col/_rank_app.fear"), coordinator(root).mains(root, stLib).orElseThrow());
+    assertEquals(Map.of("col.Foo", "_col/_rank_app.fear", "lib.Lib", "_lib/_rank_core.fear"), coordinator(root).mains(root, stLib).orElseThrow());
     Fs.rmTree(root.resolve("_col"));
     assertEquals(Map.of("lib", true), Coordinator.pkgsBuilt(root, baseCache));
     utils.Err.strCmp("lib\n", coordinator(root).main(root, stLib));
     utils.Err.strCmp("""
+--- lib_manifest.info
 {
-  "lib.Lib": ["_lib/_rank_core.fear", [], [["base.IconsConflict", "icons/conflict.png", "", "", "fear"]], [["base.IconsFearless", "icons/fearless.png", "", "", ""], ["base.IconsConflict", "icons/conflict.png", "", "", ""]]]
+  "mains": {
+    "lib.Lib": ["_lib/_rank_core.fear", [], [["base.IconsConflict", "icons/conflict.png", "", "", "fear"]], [["base.IconsFearless", "icons/fearless.png", "", "", ""], ["base.IconsConflict", "icons/conflict.png", "", "", ""]]]
+  },
+  "attenuators": []
 }
-""", Fs.readUtf8(mainsInfo(root)));
+""", manifests(root));
   }
-  @Test void aDeletedMainsInfoListsTheMainsOfEveryTopRankPackage(@TempDir Path tmp) throws Exception{
+  @Test void deletedManifestsForceARecompileOfEveryPackage(@TempDir Path tmp) throws Exception{
     var root= claimsProject(tmp, """
 Foo:Main{s->base.Debug#(`foo`)}
 jjj
@@ -1633,11 +1667,11 @@ iii
 More:base.Main{s->base.Debug#(`more`)}
 """);
     coordinator(root).compile(root, stLib);
-    var text= Fs.readUtf8(mainsInfo(root));
-    Fs.delete(mainsInfo(root));
+    var text= manifests(root);
+    for (var p : MainsInfo.files(root)){ Fs.delete(p); }
     assertEquals(Map.of("col", false, "more", false), Coordinator.pkgsBuilt(root, baseCache));
     coordinator(root).compile(root, stLib);
-    utils.Err.strCmp(text, Fs.readUtf8(mainsInfo(root)));
+    utils.Err.strCmp(text, manifests(root));
     assertEquals(Map.of("col", true, "more", true), Coordinator.pkgsBuilt(root, baseCache));
   }
   @Test void aBaseApiNewerThanAPackageMakesThatPackageNotBuilt(@TempDir Path tmp) throws Exception{
@@ -1677,7 +1711,7 @@ A:Main{s->base.Debug#(`hi`)}
     aCorruptedCacheFileIsDeletedWithTheWholeCache(tmp, "p.built", _ -> new byte[]{(byte)0xff}, "Unexpected character");
   }
   @Test void aGarbledMainsInfoDeletesTheCache(@TempDir Path tmp){
-    aCorruptedCacheFileIsDeletedWithTheWholeCache(tmp, "p.mains.info", _ -> "[".getBytes(UTF_8), "mains.info");
+    aCorruptedCacheFileIsDeletedWithTheWholeCache(tmp, "p_manifest.info", _ -> "[".getBytes(UTF_8), "p_manifest.info");
   }
   @Test void anApiJsonWithAnUnknownReferenceCapabilityDeletesTheCache(@TempDir Path tmp){
     aCorruptedCacheFileIsDeletedWithTheWholeCache(tmp, "p.json", bs -> new String(bs, UTF_8).replaceFirst("\"imm\"", "\"imx\"").getBytes(UTF_8), "imx");
@@ -1728,10 +1762,19 @@ not read by the compiler
     Fs.move(root.resolve("_lib", "icons", "lib.png"), root.resolve("_lib", "icons", "lib.gif"));
     coordinator(root).compile(root, stLib);
     utils.Err.strCmp("""
+--- col_manifest.info
 {
-  "col.Foo": ["_col/_rank_app.fear", [], [["lib.IconsLib", "_lib/icons/lib.gif", "", "", ""]], [["base.IconsFearless", "icons/fearless.png", "", "", ""], ["lib.IconsLib", "_lib/icons/lib.gif", "", "", ""]]]
+  "mains": {
+    "col.Foo": ["_col/_rank_app.fear", [], [["lib.IconsLib", "_lib/icons/lib.gif", "", "", ""]], [["base.IconsFearless", "icons/fearless.png", "", "", ""], ["lib.IconsLib", "_lib/icons/lib.gif", "", "", ""]]]
+  },
+  "attenuators": []
 }
-""", Fs.readUtf8(mainsInfo(root)));
+--- lib_manifest.info
+{
+  "mains": {},
+  "attenuators": []
+}
+""", manifests(root));
   }
   @Test void inheritedClaimsAreListedOnce(@TempDir Path tmp) throws Exception{
     var root= claimsProject(tmp, """
@@ -1741,10 +1784,14 @@ Foo:Opener, Other, Shortcut[base.IconsConflict,"fapp042"], OpenWith[IconsFoo]{s-
 """);
     coordinator(root).compile(root, stLib);
     utils.Err.strCmp("""
+--- col_manifest.info
 {
-  "col.Foo": ["_col/_rank_app.fear", [["base.IconsConflict", "icons/conflict.png", "", "", "fapp042"], ["col.IconsFoo", "_col/icons/foo.png", "", "", ""]], [["col.IconsFoo", "_col/icons/foo.png", "", "", ""], ["col.IconsFoo", "_col/icons/foo.png", "", "", "foo"]], [["base.IconsConflict", "icons/conflict.png", "", "", ""], ["col.IconsFoo", "_col/icons/foo.png", "", "", ""], ["base.IconsFearless", "icons/fearless.png", "", "", ""]]]
+  "mains": {
+    "col.Foo": ["_col/_rank_app.fear", [["base.IconsConflict", "icons/conflict.png", "", "", "fapp042"], ["col.IconsFoo", "_col/icons/foo.png", "", "", ""]], [["col.IconsFoo", "_col/icons/foo.png", "", "", ""], ["col.IconsFoo", "_col/icons/foo.png", "", "", "foo"]], [["base.IconsConflict", "icons/conflict.png", "", "", ""], ["col.IconsFoo", "_col/icons/foo.png", "", "", ""], ["base.IconsFearless", "icons/fearless.png", "", "", ""]]]
+  },
+  "attenuators": []
 }
-""", Fs.readUtf8(mainsInfo(root)));
+""", manifests(root));
   }
   @Test void literalTypesInSignaturesCompileRunAndAreReadBackFromTheApiJson(@TempDir Path tmp) throws Exception{
     var root= tmp.resolve("root");

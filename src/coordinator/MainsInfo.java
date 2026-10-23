@@ -26,18 +26,43 @@ import userMessages.Violation;
 import utils.DistinctBy;
 import utils.Pos;
 
-public record MainsInfo(Map<String,Main> mains){
-  public MainsInfo{ mains = Collections.unmodifiableMap(new TreeMap<>(mains)); }
+public record MainsInfo(Map<String,Main> mains, List<String> attenuators){
+  public MainsInfo{ mains = Collections.unmodifiableMap(new TreeMap<>(mains)); attenuators = attenuators.stream().sorted().toList(); }
+  public MainsInfo(Map<String,Main> mains){ this(mains, List.of()); }
   public record Main(String file, List<Claim> shortcuts, List<Claim> openWiths, List<Claim> icons){}
   public record Claim(String icon, String diskPath, String zipSteps, String zipEntry, String extension){}
-  public static Optional<MainsInfo> read(Path project){ return Helper.out(project).mainsInfo(); }
+  static final String suffix= "_manifest.info";
+  public static List<Path> files(Path project){
+    var out= Helper.out(project).rootDir();
+    if (!Fs.isDirectory(out)){ return List.of(); }
+    try (var s= Fs.of(() -> Fs.list(out))){ return s.filter(p -> p.getFileName().toString().endsWith(suffix)).sorted().toList(); }
+  }
+  public static Optional<MainsInfo> read(Path project){
+    var fs= files(project);
+    if (fs.isEmpty()){ return Optional.empty(); }
+    return Optional.of(merge(fs.stream().map(MainsInfo::parse)));
+  }
+  static MainsInfo merge(Stream<MainsInfo> infos){
+    var all= infos.toList();
+    var mains= all.stream().flatMap(i -> i.mains().entrySet().stream()).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+    return new MainsInfo(mains, all.stream().flatMap(i -> i.attenuators().stream()).sorted().toList());
+  }
+  public static void write(Path project, MainsInfo info){
+    for (var f : files(project)){
+      var old= parse(f);
+      var now= new MainsInfo(old.mains().keySet().stream().collect(Collectors.toMap(k -> k, k -> info.mains().get(k))), old.attenuators());
+      if (!now.equals(old)){ Fs.writeUtf8(f, now.print()); }
+    }
+  }
   public String print(){
-    var fields= mains.entrySet().stream().map(e -> new Info.Obj.Field(e.getKey(), Info.noSpan, info(e.getValue()))).toList();
+    var ms= mains.entrySet().stream().map(e -> new Info.Obj.Field(e.getKey(), Info.noSpan, info(e.getValue()))).toList();
+    var as= lst(attenuators.stream().map(MainsInfo::str).toList());
+    var fields= List.of(new Info.Obj.Field("mains", Info.noSpan, new Info.Obj(ms, Info.noSpan)), new Info.Obj.Field("attenuators", Info.noSpan, as));
     return Info.print(new Info.Obj(fields, Info.noSpan));
   }
   MainsInfo located(SourceOracle src, SourceOracle stLib){
     var of= new Of(src, stLib);
-    return new MainsInfo(mains.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, e -> of.located(e.getValue()))));
+    return new MainsInfo(mains.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, e -> of.located(e.getValue()))), attenuators);
   }
   private static Info info(Main m){ return lst(List.of(str(m.file()), claims(m.shortcuts()), claims(m.openWiths()), claims(m.icons()))); }
   private static Info claims(List<Claim> cs){ return lst(cs.stream().map(MainsInfo::info).toList()); }
@@ -51,8 +76,14 @@ public record MainsInfo(Map<String,Main> mains){
   }
   private record Shape(String text){
     MainsInfo all(Info i){
+      var shape= i instanceof Info.Obj o && o.fields().size() == 2 && o.fields().get(0).key().equals("mains") && o.fields().get(1).key().equals("attenuators");
+      if (!shape){ throw err(i, "an object {\"mains\": {...}, \"attenuators\": [...]}"); }
+      var fs= ((Info.Obj)i).fields();
+      return new MainsInfo(mains(fs.get(0).value()), lst(fs.get(1).value(), "a list [...] of attenuator names").stream().map(this::str).toList());
+    }
+    Map<String,Main> mains(Info i){
       if (!(i instanceof Info.Obj o)){ throw err(i, "an object {...} mapping each main to [file, [shortcut claims], [openWith claims], [icon claims]]"); }
-      return new MainsInfo(o.fields().stream().collect(Collectors.toMap(Info.Obj.Field::key, f -> main(f.value()))));
+      return o.fields().stream().collect(Collectors.toMap(Info.Obj.Field::key, f -> main(f.value())));
     }
     Main main(Info i){
       var l= lst(i, 4, "a main as [file, [shortcut claims], [openWith claims], [icon claims]]");
@@ -79,6 +110,7 @@ public record MainsInfo(Map<String,Main> mains){
     UserError err(Info i, String what){ return Info.err(text, i.span(), "Expected "+what+" here."); }
   }
   static final TName main= new TName("base.Main", 0, Pos.unknown);
+  static final TName attenuator= new TName("base.SystemAttenuator", 0, Pos.unknown);
   static final List<TName> claims= List.of(new TName("base.OpenWith", 1, Pos.unknown), new TName("base.OpenWith", 2, Pos.unknown), new TName("base.Shortcut", 1, Pos.unknown), new TName("base.Shortcut", 2, Pos.unknown), new TName("base.PreLoadIcon", 1, Pos.unknown));
   public static List<TName> icons(List<T.C> cs){
     var shortcuts= icons(cs, "Shortcut");
@@ -86,18 +118,17 @@ public record MainsInfo(Map<String,Main> mains){
       .flatMap(s -> s).gather(DistinctBy.of(TName::s)).toList();
   }
   private static Stream<TName> icons(List<T.C> cs, String kind){ return cs.stream().filter(c -> claims.contains(c.name()) && c.name().simpleName().equals(kind)).map(c -> Of.name(c.ts().getFirst())); }
-  static Map<String,Main> of(List<Literal> core, SourceOracle src, SourceOracle stLib){
+  static MainsInfo of(List<Literal> core, SourceOracle src, SourceOracle stLib){
     var all= AllLs.of(core).values();
     var of= new Of(src, stLib);
     all.stream().sorted(Comparator.comparingInt((Literal l) -> l.cs().size()).thenComparing(l -> l.name().s())).forEach(of::check);
     var nested= all.stream().filter(l -> LiteralDeclarations.has(l.cs(), LiteralDeclarations.captureFree));
-    return Stream.concat(core.stream(), nested).filter(MainsInfo::isMain).distinct()
-      .collect(Collectors.toUnmodifiableMap(l -> l.name().s(), of::main));
+    var named= Stream.concat(core.stream(), nested).distinct().toList();
+    var mains= named.stream().filter(MainsInfo::isMain).collect(Collectors.toUnmodifiableMap(l -> l.name().s(), of::main));
+    return new MainsInfo(mains, named.stream().filter(l -> concrete(l, attenuator)).map(l -> l.name().s()).sorted().toList());
   }
-  public static boolean isMain(Literal l){
-    return LiteralDeclarations.has(l.cs(), main)
-      && l.ms().stream().noneMatch(m -> m.sig().abs());
-  }
+  public static boolean isMain(Literal l){ return concrete(l, main); }
+  private static boolean concrete(Literal l, TName t){ return LiteralDeclarations.has(l.cs(), t) && l.ms().stream().noneMatch(m -> m.sig().abs()); }
   private record Of(SourceOracle src, SourceOracle stLib){
     void check(Literal l){
       var cs= l.cs().stream().filter(c -> claims.contains(c.name())).toList();

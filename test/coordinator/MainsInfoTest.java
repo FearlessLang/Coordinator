@@ -23,28 +23,48 @@ final class MainsInfoTest{
   static{ utils.Err.setUp(AssertionFailedError.class, Assertions::assertEquals, Assertions::assertTrue); }
   static final String text= """
 {
-  "hello.Bar": ["_hello/bar.fear", [["hello.IconsBar", "_hello/icons/bar.png", "", "", "bar"]], [["base.IconsConflict", "icons/conflict.png", "", "", ""], ["hello.ZInFoo", "_hello/z.zip", "y.zip", "in/foo.png", "ffile042"]], [["hello.IconsBar", "_hello/icons/bar.png", "", "", ""], ["base.IconsFearless", "icons/fearless.png", "", "", ""]]],
-  "hello.Beer": ["_hello/beer.fear", [], [], [["base.IconsFearless", "icons/fearless.png", "", "", ""]]]
+  "mains": {
+    "hello.Bar": ["_hello/bar.fear", [["hello.IconsBar", "_hello/icons/bar.png", "", "", "bar"]], [["base.IconsConflict", "icons/conflict.png", "", "", ""], ["hello.ZInFoo", "_hello/z.zip", "y.zip", "in/foo.png", "ffile042"]], [["hello.IconsBar", "_hello/icons/bar.png", "", "", ""], ["base.IconsFearless", "icons/fearless.png", "", "", ""]]],
+    "hello.Beer": ["_hello/beer.fear", [], [], [["base.IconsFearless", "icons/fearless.png", "", "", ""]]]
+  },
+  "attenuators": ["hello.NoDownload", "hello.NoGui"]
 }
 """;
+  static Path manifest(Path project, String pkg){ return project.resolve(Coordinator.outDir).resolve(pkg+"_manifest.info"); }
   @Test void printsSortedAndReadsBack(@TempDir Path project){
     var info= new MainsInfo(Map.of(
       "hello.Beer", new Main("_hello/beer.fear", List.of(), List.of(), List.of(new Claim("base.IconsFearless", "icons/fearless.png", "", "", ""))),
       "hello.Bar", new Main("_hello/bar.fear",
         List.of(new Claim("hello.IconsBar", "_hello/icons/bar.png", "", "", "bar")),
         List.of(new Claim("base.IconsConflict", "icons/conflict.png", "", "", ""), new Claim("hello.ZInFoo", "_hello/z.zip", "y.zip", "in/foo.png", "ffile042")),
-        List.of(new Claim("hello.IconsBar", "_hello/icons/bar.png", "", "", ""), new Claim("base.IconsFearless", "icons/fearless.png", "", "", "")))));
+        List.of(new Claim("hello.IconsBar", "_hello/icons/bar.png", "", "", ""), new Claim("base.IconsFearless", "icons/fearless.png", "", "", "")))),
+      List.of("hello.NoGui", "hello.NoDownload"));
     utils.Err.strCmp(text, info.print());
-    Fs.writeUtf8(project.resolve(Coordinator.outDir).resolve("mains.info"), info.print());
+    Fs.writeUtf8(manifest(project, "hello"), info.print());
     var back= MainsInfo.read(project).orElseThrow();
     assertEquals(info, back);
     assertEquals(List.of("hello.Bar", "hello.Beer"), List.copyOf(back.mains().keySet()));
   }
+  @Test void readsEveryManifestOfTheProjectAndWritesBackEachOne(@TempDir Path project){
+    var beer= new Main("_hello/beer.fear", List.of(), List.of(), List.of());
+    var lib= new Main("_lib/lib.fear", List.of(new Claim("lib.IconsLib", "_lib/lib.png", "", "", "")), List.of(), List.of());
+    Fs.writeUtf8(manifest(project, "hello"), new MainsInfo(Map.of("hello.Beer", beer), List.of("hello.NoGui")).print());
+    Fs.writeUtf8(manifest(project, "lib"), new MainsInfo(Map.of("lib.Lib", lib), List.of()).print());
+    var all= MainsInfo.read(project).orElseThrow();
+    assertEquals(new MainsInfo(Map.of("hello.Beer", beer, "lib.Lib", lib), List.of("hello.NoGui")), all);
+    var filled= new Main("_lib/lib.fear", List.of(new Claim("lib.IconsLib", "_lib/lib.png", "", "", "fapp007")), List.of(), List.of());
+    MainsInfo.write(project, new MainsInfo(Map.of("hello.Beer", beer, "lib.Lib", filled), List.of("hello.NoGui")));
+    assertEquals(new MainsInfo(Map.of("hello.Beer", beer), List.of("hello.NoGui")), MainsInfo.parse(manifest(project, "hello")));
+    assertEquals(new MainsInfo(Map.of("lib.Lib", filled), List.of()), MainsInfo.parse(manifest(project, "lib")));
+  }
   @Test void aMissingFileReadsAsEmpty(@TempDir Path project){ assertEquals(Optional.empty(), MainsInfo.read(project)); }
   @Test void aClaimWithFourStringsIsRefused(@TempDir Path project){
-    Fs.writeUtf8(project.resolve(Coordinator.outDir).resolve("mains.info"), """
+    Fs.writeUtf8(manifest(project, "hello"), """
 {
-  "hello.Beer": ["_hello/beer.fear", [["hello.IconsBar", "_hello/icons/bar.png", "", ""]], [], []]
+  "mains": {
+    "hello.Beer": ["_hello/beer.fear", [["hello.IconsBar", "_hello/icons/bar.png", "", ""]], [], []]
+  },
+  "attenuators": []
 }
 """);
     var ex= assertThrows(UserError.class, () -> MainsInfo.read(project));
@@ -52,10 +72,10 @@ final class MainsInfoTest{
 Build cache contains an invalid cached file.
 [###]
 Parse error:
-  In file: [###]mains.info
+  In file: [###]hello_manifest.info
 
-002|   "hello.Beer": ["_hello/beer.fear", [["hello.IconsBar", "_hello/icons/bar.png", "", ""]], [], []]
-   |                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+003|     "hello.Beer": ["_hello/beer.fear", [["hello.IconsBar", "_hello/icons/bar.png", "", ""]], [], []]
+   |                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 While inspecting the file
 Expected a claim as [icon, diskPath, zipSteps, zipEntry, extension] here.

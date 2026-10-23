@@ -72,15 +72,13 @@ public interface Coordinator{
     var ranks= map.values().stream().map(Helper::okPkgContent).toList();
     var out= Helper.out(path);
     var mapCommitted= OutputHelper.mapFromJson(out.mapPath()).filter(Helper.rankMap(o, ranks)::equals).isPresent();
-    var top= ranks.stream().mapToInt(Helper::rankNumber).max().getAsInt();
-    var listed= Fs.exists(out.mainsPath());
     var res= new LinkedHashMap<String,Boolean>();
     for (var r : ranks){
       var pkg= Helper.pkgName(r);
       var lower= ranks.stream().filter(d -> Helper.rankNumber(d) < Helper.rankNumber(r)).map(Helper::pkgName).toList();
       var below= lower.stream().mapToLong(out::pkgApiStamp);
       var maxIn= LongStream.concat(LongStream.concat(map.get(pkg).stream().mapToLong(Ref::lastModified), below), LongStream.of(out.mapStamp(), baseApi)).max().getAsLong();
-      res.put(pkg, mapCommitted && out.stillBuilt(pkg, map.get(pkg), Push.of(lower, "base"), maxIn) && (listed || Helper.rankNumber(r)!=top));
+      res.put(pkg, mapCommitted && out.stillBuilt(pkg, map.get(pkg), Push.of(lower, "base"), maxIn));
     }
     return Collections.unmodifiableMap(res);
   }
@@ -95,7 +93,7 @@ public interface Coordinator{
     var l= Helper.layerOf(this, o, project, out, stLib);
     out.forgetAllBut(l.pkgNames());
     l.compile(o, out);
-    Fs.writeUtf8(out.mainsPath(), out.mains(l.pkgs().keySet()).located(o, stLib).print());
+    l.pkgs().keySet().forEach(p -> out.relocate(p, o, stLib));
     return List.copyOf(l.pkgs().keySet());//by design: only the highest rank number's packages have their Main run
   }
   default Optional<Map<String,String>> mains(Path project, SourceOracle stLib){
@@ -106,7 +104,7 @@ public interface Coordinator{
     try{ l= Helper.layerOf(c, o, project, out, stLib); l.compile(o, out); }
     catch (WouldCompile _){ return Optional.empty(); }
     var res= new TreeMap<String,String>();
-    out.mains(l.pkgs().keySet()).mains().forEach((k,v) -> res.put(k, v.file()));
+    MainsInfo.read(project).orElseThrow().mains().forEach((k,v) -> res.put(k, v.file()));
     return Optional.of(Collections.unmodifiableMap(res));
   }
   static ChildJvm startMain(Path project, Path base, String main, Optional<Path> input, Map<String,Path> reads, Map<String,Path> edits, List<String> desk, List<Path> sharedClasspath, Consumer<String> out){
