@@ -25,7 +25,6 @@ import utils.Pos;
 
 final class RecompilationCacheTest{
   private static final SourceOracle emptySrc= List::of;
-
   private record FakeRef(String fearPath, long lastModified) implements Ref{
     @Override public byte[] loadBytes(){ return new byte[0]; }
     @Override public String toString(){ return fearPath; }
@@ -55,10 +54,8 @@ final class RecompilationCacheTest{
     @Override public void backend(String pkgName, List<Literal> core, SourceOracle oracle, OtherPackages other, CapabilityEnvironment capabilities){}
     int calls(String pkg){ return frontendCalls.getOrDefault(pkg, 0); }
   }
-
   private static final long margin= 30_000;
   private static final long touchGap= 500;
-
   @Test void fullyCachedRebuildRecomputesNothingAndTouchesNoFiles(@TempDir Path tmp){
     var start= System.currentTimeMillis();
     OutputOracle out= () -> tmp;
@@ -69,20 +66,17 @@ final class RecompilationCacheTest{
     pkgs.put("a", refs("a", start-margin));
     pkgs.put("b", refs("b", start-margin));
     var layer= new MiddleLayer(stub, fixedBase(start-margin), pkgs);
-
     layer.compile(emptySrc, out);
     assertEquals(1, stub.calls("a"));
     assertEquals(1, stub.calls("b"));
     var stampA= out.pkgApiStamp("a");
     var stampB= out.pkgApiStamp("b");
-
     layer.compile(emptySrc, out);
     assertEquals(1, stub.calls("a"));
     assertEquals(1, stub.calls("b"));
     assertEquals(stampA, out.pkgApiStamp("a"));
     assertEquals(stampB, out.pkgApiStamp("b"));
   }
-
   @Test void sourceTouchedWithUnchangedApiRecomputesButDoesNotRewriteAndLeavesSiblingAlone(@TempDir Path tmp){
     var start= System.currentTimeMillis();
     OutputOracle out= () -> tmp;
@@ -93,21 +87,17 @@ final class RecompilationCacheTest{
     pkgs.put("a", refs("a", start-margin));
     pkgs.put("b", refs("b", start-margin));
     var layer= new MiddleLayer(stub, fixedBase(start-margin), pkgs);
-
     layer.compile(emptySrc, out);
     var stampA= out.pkgApiStamp("a");
     var stampB= out.pkgApiStamp("b");
-
     var afterBuild1= System.currentTimeMillis();
     pkgs.put("a", refs("a", afterBuild1+touchGap));
     layer.compile(emptySrc, out);
-
     assertEquals(2, stub.calls("a"));
     assertEquals(1, stub.calls("b"));
     assertEquals(stampA, out.pkgApiStamp("a"));
     assertEquals(stampB, out.pkgApiStamp("b"));
   }
-
   @Test void apiChangeRewritesAndCascadesToDependentLayerWithUpdatedData(@TempDir Path tmp){
     var start= System.currentTimeMillis();
     OutputOracle out= () -> tmp;
@@ -123,19 +113,16 @@ final class RecompilationCacheTest{
     var pkgs2= new LinkedHashMap<String,List<Ref>>();
     pkgs2.put("c", refs("c", start-margin));
     var layer2= new MiddleLayer(stub, layer1, pkgs2);
-
     layer2.compile(emptySrc, out);
     assertEquals(1, stub.calls("a"));
     assertEquals(1, stub.calls("c"));
     var stampA= out.pkgApiStamp("a");
     var stampC= out.pkgApiStamp("c");
     assertEquals(RC.imm, stub.lastOtherSeen.get("c").__of(aName).rc());
-
     var afterBuild1= System.currentTimeMillis();
     pkgs1.put("a", refs("a", afterBuild1+touchGap));
     stub.fixedOutput("a", List.of(literal("A1", RC.mut)));
     layer2.compile(emptySrc, out);
-
     assertEquals(2, stub.calls("a"));
     assertEquals(1, stub.calls("b"));
     assertEquals(2, stub.calls("c"));
@@ -143,7 +130,6 @@ final class RecompilationCacheTest{
     assertNotEquals(stampC, out.pkgApiStamp("c"));
     assertEquals(RC.mut, stub.lastOtherSeen.get("c").__of(aName).rc());
   }
-
   @Test void apiPreservingEditMustNotCascadeToTheDependentLayer(@TempDir Path tmp){
     var start= System.currentTimeMillis();
     OutputOracle out= () -> tmp;
@@ -156,19 +142,15 @@ final class RecompilationCacheTest{
     var pkgs2= new LinkedHashMap<String,List<Ref>>();
     pkgs2.put("c", refs("c", start-margin));
     var layer2= new MiddleLayer(stub, layer1, pkgs2);
-
     layer2.compile(emptySrc, out);
     assertEquals(1, stub.calls("a"));
     assertEquals(1, stub.calls("c"));
-
     var afterBuild1= System.currentTimeMillis();
     pkgs1.put("a", refs("a", afterBuild1+touchGap));
     layer2.compile(emptySrc, out);
-
     assertEquals(2, stub.calls("a"));
     assertEquals(1, stub.calls("c"));
   }
-
   @Test void rebuildAfterAnApiPreservingEditMustNotRecompileAgain(@TempDir Path tmp){
     var start= System.currentTimeMillis();
     OutputOracle out= () -> tmp;
@@ -177,19 +159,15 @@ final class RecompilationCacheTest{
     var pkgs= new LinkedHashMap<String,List<Ref>>();
     pkgs.put("a", refs("a", start-margin));
     var layer= new MiddleLayer(stub, fixedBase(start-margin), pkgs);
-
     layer.compile(emptySrc, out);
     assertEquals(1, stub.calls("a"));
-
     var afterBuild1= System.currentTimeMillis();
     pkgs.put("a", refs("a", afterBuild1+touchGap));
     layer.compile(emptySrc, out);
     assertEquals(2, stub.calls("a"));
-
     layer.compile(emptySrc, out);
     assertEquals(2, stub.calls("a"));
   }
-
   @Test void layerStampMustTrackTheFreshestSiblingNotJustTheLastOneMerged(@TempDir Path tmp){
     var start= System.currentTimeMillis();
     OutputOracle out= () -> tmp;
@@ -202,26 +180,22 @@ final class RecompilationCacheTest{
     var layer= new MiddleLayer(stub, fixedBase(start-margin), pkgs);
     layer.compile(emptySrc, out);
     var stampB= out.pkgApiStamp("b");
-
     var afterBuild1= System.currentTimeMillis();
     pkgs.put("a", refs("a", afterBuild1+touchGap));
     pkgs.put("b", refs("b", afterBuild1+touchGap/2));
     stub.fixedOutput("a", List.of(literal("A1", RC.mut)));
     var result= layer.compile(emptySrc, out);
-
     assertEquals(2, stub.calls("a"));
     assertEquals(2, stub.calls("b"));
     assertEquals(stampB, out.pkgApiStamp("b"));
     assertEquals(out.pkgApiStamp("a"), result.stamp());
     assertNotEquals(stampB, result.stamp());
   }
-
   private static List<Ref> twoRefs(long mtime){
     return List.of(
       new FakeRef(SourceOracle.root+"_a/a.fear", mtime),
       new FakeRef(SourceOracle.root+"_a/b.fear", mtime));
   }
-
   @Test void deletingASourceFileMustRecompileThePackage(@TempDir Path tmp){
     var start= System.currentTimeMillis();
     OutputOracle out= () -> tmp;
@@ -230,17 +204,14 @@ final class RecompilationCacheTest{
     var pkgs= new LinkedHashMap<String,List<Ref>>();
     pkgs.put("a", twoRefs(start-margin));
     var layer= new MiddleLayer(stub, fixedBase(start-margin), pkgs);
-
     layer.compile(emptySrc, out);
     assertEquals(1, stub.calls("a"));
     layer.compile(emptySrc, out);
     assertEquals(1, stub.calls("a"));
-
     pkgs.put("a", refs("a", start-margin));
     layer.compile(emptySrc, out);
     assertEquals(2, stub.calls("a"));
   }
-
   @Test void addingASourceFileWithAnOldMtimeMustRecompileThePackage(@TempDir Path tmp){
     var start= System.currentTimeMillis();
     OutputOracle out= () -> tmp;
@@ -249,15 +220,12 @@ final class RecompilationCacheTest{
     var pkgs= new LinkedHashMap<String,List<Ref>>();
     pkgs.put("a", refs("a", start-margin));
     var layer= new MiddleLayer(stub, fixedBase(start-margin), pkgs);
-
     layer.compile(emptySrc, out);
     assertEquals(1, stub.calls("a"));
-
     pkgs.put("a", twoRefs(start-margin));
     layer.compile(emptySrc, out);
     assertEquals(2, stub.calls("a"));
   }
-
   @Test void deletingALowerPackageMustRecompileThePackageBuiltAgainstIt(@TempDir Path tmp){
     var start= System.currentTimeMillis();
     OutputOracle out= () -> tmp;
@@ -269,11 +237,9 @@ final class RecompilationCacheTest{
     var pkgsB= new LinkedHashMap<String,List<Ref>>();
     pkgsB.put("b", refs("b", start-margin));
     var base= fixedBase(start-margin);
-
     new MiddleLayer(stub, new MiddleLayer(stub, base, pkgsA), pkgsB).compile(emptySrc, out);
     assertEquals(1, stub.calls("a"));
     assertEquals(1, stub.calls("b"));
-
     new MiddleLayer(stub, base, pkgsB).compile(emptySrc, out);
     assertEquals(2, stub.calls("b"));
   }
@@ -288,7 +254,6 @@ final class RecompilationCacheTest{
     var pkgsB= new LinkedHashMap<String,List<Ref>>();
     pkgsB.put("b", refs("b", start-margin));
     var base= fixedBase(start-margin);
-
     new MiddleLayer(stub, new MiddleLayer(stub, base, pkgsA), pkgsB).compile(emptySrc, out);
     var both= new LinkedHashMap<String,List<Ref>>();
     both.put("a", refs("a", start-margin));
@@ -297,7 +262,6 @@ final class RecompilationCacheTest{
     assertEquals(1, stub.calls("a"));
     assertEquals(2, stub.calls("b"));
   }
-
   private static final class EditableRef implements Ref{
     final String fearPath;
     volatile long lastModified;
@@ -319,22 +283,16 @@ final class RecompilationCacheTest{
     var pkgs= new LinkedHashMap<String,List<Ref>>();
     pkgs.put("a", List.of(edited));
     var layer= new MiddleLayer(stub, fixedBase(start-margin), pkgs);
-
     layer.compile(emptySrc, out);
     assertEquals(1, stub.calls("a"));
-
     layer.compile(emptySrc, out);
     assertEquals(2, stub.calls("a"));
-
     layer.compile(emptySrc, out);
     assertEquals(2, stub.calls("a"));
   }
-
   private static final TName aName= new TName("A1", 0, Pos.unknown);
   private static final TName bName= new TName("B1", 0, Pos.unknown);
-
   private record Stack(ScriptedCoordinator stub, LinkedHashMap<String,List<Ref>> a, Layer top){}
-
   private static Stack stack(long start){
     var stub= new ScriptedCoordinator();
     var pkgsA= new LinkedHashMap<String,List<Ref>>();
@@ -347,7 +305,6 @@ final class RecompilationCacheTest{
     var l2= new MiddleLayer(stub, l1, pkgsB);
     return new Stack(stub, pkgsA, new MiddleLayer(stub, l2, pkgsC));
   }
-
   @Test void apiChangeInTheBottomLayerCascadesThroughEveryLayerAbove(@TempDir Path tmp){
     var start= System.currentTimeMillis();
     OutputOracle out= () -> tmp;
@@ -355,23 +312,19 @@ final class RecompilationCacheTest{
     s.stub().fixedOutput("a", List.of(literal("A1", RC.imm)));
     s.stub().scripts.put("b", other -> List.of(literal("B1", other.__of(aName).rc())));
     s.stub().scripts.put("c", other -> List.of(literal("C1", other.__of(bName).rc())));
-
     s.top().compile(emptySrc, out);
     assertEquals(1, s.stub().calls("a"));
     assertEquals(1, s.stub().calls("b"));
     assertEquals(1, s.stub().calls("c"));
-
     var afterBuild1= System.currentTimeMillis();
     s.a().put("a", refs("a", afterBuild1+touchGap));
     s.stub().fixedOutput("a", List.of(literal("A1", RC.mut)));
     s.top().compile(emptySrc, out);
-
     assertEquals(2, s.stub().calls("a"));
     assertEquals(2, s.stub().calls("b"));
     assertEquals(2, s.stub().calls("c"));
     assertEquals(RC.mut, s.stub().lastOtherSeen.get("c").__of(bName).rc());
   }
-
   @Test void apiPreservingEditInTheBottomLayerMustNotReachAnyLayerAbove(@TempDir Path tmp){
     var start= System.currentTimeMillis();
     OutputOracle out= () -> tmp;
@@ -379,20 +332,16 @@ final class RecompilationCacheTest{
     s.stub().fixedOutput("a", List.of(literal("A1", RC.imm)));
     s.stub().fixedOutput("b", List.of(literal("B1", RC.imm)));
     s.stub().fixedOutput("c", List.of(literal("C1", RC.imm)));
-
     s.top().compile(emptySrc, out);
     var stampC= out.pkgApiStamp("c");
-
     var afterBuild1= System.currentTimeMillis();
     s.a().put("a", refs("a", afterBuild1+touchGap));
     s.top().compile(emptySrc, out);
-
     assertEquals(2, s.stub().calls("a"));
     assertEquals(1, s.stub().calls("b"));
     assertEquals(1, s.stub().calls("c"));
     assertEquals(stampC, out.pkgApiStamp("c"));
   }
-
   @Test void aBottomLayerApiChangeReachesTheTopEvenWhenTheMiddleApiIsUnchanged(@TempDir Path tmp){
     var start= System.currentTimeMillis();
     OutputOracle out= () -> tmp;
@@ -400,22 +349,18 @@ final class RecompilationCacheTest{
     s.stub().fixedOutput("a", List.of(literal("A1", RC.imm)));
     s.stub().fixedOutput("b", List.of(literal("B1", RC.imm)));
     s.stub().fixedOutput("c", List.of(literal("C1", RC.imm)));
-
     s.top().compile(emptySrc, out);
     var stampB= out.pkgApiStamp("b");
-
     var afterBuild1= System.currentTimeMillis();
     s.a().put("a", refs("a", afterBuild1+touchGap));
     s.stub().fixedOutput("a", List.of(literal("A1", RC.mut)));
     s.top().compile(emptySrc, out);
-
     assertEquals(2, s.stub().calls("a"));
     assertEquals(2, s.stub().calls("b"));
     assertEquals(2, s.stub().calls("c"));
     assertEquals(stampB, out.pkgApiStamp("b"));
     assertEquals(RC.mut, s.stub().lastOtherSeen.get("c").__of(aName).rc());
   }
-
   @Test void aChangeInTheMiddleLayerMustNotReachTheLayerBelowIt(@TempDir Path tmp){
     var start= System.currentTimeMillis();
     OutputOracle out= () -> tmp;
@@ -432,22 +377,18 @@ final class RecompilationCacheTest{
     var l1= new MiddleLayer(stub, fixedBase(start-margin), pkgsA);
     var l2= new MiddleLayer(stub, l1, pkgsB);
     var top= new MiddleLayer(stub, l2, pkgsC);
-
     top.compile(emptySrc, out);
     var stampA= out.pkgApiStamp("a");
-
     var afterBuild1= System.currentTimeMillis();
     pkgsB.put("b", refs("b", afterBuild1+touchGap));
     stub.fixedOutput("b", List.of(literal("B1", RC.mut)));
     top.compile(emptySrc, out);
-
     assertEquals(1, stub.calls("a"));
     assertEquals(2, stub.calls("b"));
     assertEquals(2, stub.calls("c"));
     assertEquals(stampA, out.pkgApiStamp("a"));
     assertEquals(RC.mut, stub.lastOtherSeen.get("c").__of(bName).rc());
   }
-
   @Test void aFullyCachedRebuildOfAThreeLayerStackRecomputesNothing(@TempDir Path tmp){
     var start= System.currentTimeMillis();
     OutputOracle out= () -> tmp;
@@ -455,19 +396,16 @@ final class RecompilationCacheTest{
     s.stub().fixedOutput("a", List.of(literal("A1", RC.imm)));
     s.stub().fixedOutput("b", List.of(literal("B1", RC.imm)));
     s.stub().fixedOutput("c", List.of(literal("C1", RC.imm)));
-
     s.top().compile(emptySrc, out);
     var afterBuild1= System.currentTimeMillis();
     s.a().put("a", refs("a", afterBuild1+touchGap));
     s.top().compile(emptySrc, out);
     assertEquals(2, s.stub().calls("a"));
-
     s.top().compile(emptySrc, out);
     assertEquals(2, s.stub().calls("a"));
     assertEquals(1, s.stub().calls("b"));
     assertEquals(1, s.stub().calls("c"));
   }
-
   private static final class RecordingCoordinator implements Coordinator{
     private final Path mods;
     final LinkedHashMap<String,Integer> frontendCalls= new LinkedHashMap<>();
@@ -482,7 +420,6 @@ final class RecompilationCacheTest{
     int calls(String pkg){ return frontendCalls.getOrDefault(pkg, 0); }
   }
   private static void touch(Path p, long millis){ Fs.ofV(() -> Fs.setLastModifiedTime(p, FileTime.fromMillis(millis))); }
-
   @Test void touchingOnePackageMustNotRecompileAnIndependentPackage(@TempDir Path tmp) throws InterruptedException{
     var project= tmp.resolve("project");
     var stdLib= tmp.resolve("stdLib");
@@ -493,21 +430,17 @@ final class RecompilationCacheTest{
     Fs.writeUtf8(stdLib.resolve("x.fear"), "");
     Fs.writeUtf8(mods.resolve("dummy.jar"), "");
     var c= new RecordingCoordinator(stdLib, mods);
-
     c.main(project, c.sourceOracle(stdLib));
     assertEquals(1, c.calls("a"));
     assertEquals(1, c.calls("b"));
-
     c.main(project, c.sourceOracle(stdLib));
     assertEquals(1, c.calls("a"));
     assertEquals(1, c.calls("b"));
-
     touch(aRank, System.currentTimeMillis()+touchGap);
     c.main(project, c.sourceOracle(stdLib));
     assertEquals(2, c.calls("a"));
     assertEquals(1, c.calls("b"));
   }
-
   @Test void deletingAFileFromOnePackageMustRecompileOnlyThatPackage(@TempDir Path tmp) throws InterruptedException{
     var project= tmp.resolve("project");
     var stdLib= tmp.resolve("stdLib");
@@ -519,11 +452,9 @@ final class RecompilationCacheTest{
     Fs.writeUtf8(stdLib.resolve("x.fear"), "");
     Fs.writeUtf8(mods.resolve("dummy.jar"), "");
     var c= new RecordingCoordinator(stdLib, mods);
-
     c.main(project, c.sourceOracle(stdLib));
     assertEquals(1, c.calls("a"));
     assertEquals(1, c.calls("b"));
-
     Fs.ofV(() -> Fs.delete(extra));
     c.main(project, c.sourceOracle(stdLib));
     assertEquals(2, c.calls("a"));

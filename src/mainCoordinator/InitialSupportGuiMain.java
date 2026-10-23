@@ -47,7 +47,6 @@ public final class InitialSupportGuiMain{
     for (var k : d.keySet()){ if (d.get(k) instanceof Font){ d.put(k, new FontUIResource(uiFont)); } }
     SwingUtilities.invokeLater(InitialSupportGuiMain::new);
   }
-
   private final JFrame frame= new JFrame("Welcome to Fearless");
   private final JPanel actions= vbox();
   private final JPanel advanced= vbox();
@@ -96,7 +95,6 @@ public final class InitialSupportGuiMain{
     frame.setLocationRelativeTo(null);
     frame.setVisible(true);
   }
-
   private void toggleMore(JButton more){
     var now= !advanced.isVisible();
     advanced.setVisible(now);

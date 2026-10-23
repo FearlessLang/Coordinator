@@ -49,28 +49,23 @@ public final class UserError extends RuntimeException{
   private boolean bare;
   public UserError(String msg){ super(msg); }
   public UserError(String msg, Throwable cause){ super(msg, cause); }
-
   public UserError withRecovery(String label, Runnable action){
     recoveryLabel = label; recovery = action;
     return this;
   }
   public UserError bare(){ bare = true; return this; }
   public UserError followedBy(String more){ var res= new UserError(getMessage()+more, this).withRecovery(recoveryLabel, recovery); res.bare = bare; return res; }
-
   //The project root this run actually used, so that a message always shows the folder
   //that was really involved. Tests set it to whatever fake root they use; a real run
   //keeps the default, since Fearless is launched from inside the project folder.
   public static Path root= Path.of(".").toAbsolutePath();
-
   //Set by controller.Main at the single point where this process becomes the manager
   //owner. Read only when a message is displayed: what this process is about to do is
   //known then, and is not a property of what went wrong.
   private static boolean managerOwner= false;
   public static void becameManagerOwner(){ managerOwner = true; }
-
   private static Window owner= null;
   public static void owner(Window w){ owner = w; }
-
   //-- building
   static UserError die(String first, String... more){
     return new UserError("Error: "+first+"\n"+Join.of(Stream.of(more).map(s -> "  "+s+"\n"), "", "", "", ""));
@@ -87,7 +82,6 @@ public final class UserError extends RuntimeException{
     //explained failure, but gathering some of the extra details failed too
     return new UserError("After a failed file operation, Fearless could not gather all the failure details; the system is likely unstable.\n"+actionTxt+"\n\n"+reportTxt);
   }
-
   //-- path rendering, shared by both message files
   public static String disp(String s){ return Message.displayString(s); }
   public static String showRel(Path rel){ return showRelText(rel.toString().replace("\\", "/")); }
@@ -104,7 +98,6 @@ public final class UserError extends RuntimeException{
     return showRelText(zipPath)+(simple ? "Entry: " : "Entry contains non-standard characters.\nShown as: ")+disp(entryName)+"\n";
   }
   public static String path(String path){ return "  "+PrettyFileName.sanitizeAscii(path); }
-
   //-- reaching a human
   public static String crash(Throwable t){
     var sw= new StringWriter();

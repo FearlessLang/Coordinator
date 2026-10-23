@@ -62,7 +62,6 @@ public final class DocNames{
     "Void",
     "WidenTo"
   );
-
   public static Map<String,String> uses(String pkgName, Collection<Literal> core){
     assert Require.nonNull(pkgName, core);
     var local= core.stream()

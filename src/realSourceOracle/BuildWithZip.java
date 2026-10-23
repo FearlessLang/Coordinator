@@ -133,7 +133,6 @@ public final class BuildWithZip{
     tail.chars().filter(c -> !Fs.isExtSegChar((char)c)).findFirst().ifPresent(c -> { throw Report.extInvalidChar(kid, (char)c); });
   }
   private static final String winBadChars= "<>:\"/\\|?*";
-
   private static void checkIndividualInvisibleSegment(RefParent kid){
     assert isInvisible(kid);
     checkTooLong(kid);

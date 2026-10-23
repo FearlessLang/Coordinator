@@ -31,7 +31,6 @@ public final class Violation{
     If this keeps happening, report the problem.
     """;
   }
-
   //-- how this copy of Fearless was started
   public static UserError mustUseLauncher(){ return die(
     "Fearless has been started without using its launcher.",
@@ -46,7 +45,6 @@ public final class Violation{
     (hasConsole ? "The OS provided" : "fearless received")+" a broken path for the input file.",
     "Value: "+s
   );}
-
   //-- the operating system does not provide a service we need
   public static UserError unsupportedOperatingSystem(){
     return new UserError("""
@@ -70,7 +68,6 @@ public final class Violation{
       %s""".formatted(path(what), freshCopyThenReport()), cause);
   }
   public static UserError couldNotForceEnglish(String what){ return couldNotForceEnglish(what, null); }
-
   //-- the packaged runtime, or this copy of Fearless, is damaged
   public static UserError cacheMissingBaseApiFile(Path apiJson){
     return new UserError("""
@@ -84,7 +81,6 @@ public final class Violation{
         freshCopyThenReport()
       ));
   }
-
   public static UserError associationsAmbiguous(String reported){
     return new UserError("""
       Fearless cannot tell which of your Fearless installs should open Fearless
@@ -165,7 +161,6 @@ public final class Violation{
       Where the undoing stopped:
       %s""".formatted(reported));
   }
-
   //-- our own generated files, changed under us
   //Either in generated outputs under ".fearless_out", or in the other files of the
   //project after the initial verification checks. Reaching one of these means another

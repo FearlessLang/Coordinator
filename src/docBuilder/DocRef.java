@@ -16,7 +16,6 @@ sealed interface DocRef{
   record LocalName(String name) implements Receiver{}
   record MethodName(Optional<Receiver> owner, String selector, OptionalInt arity) implements DocRef{}
 }
-
 /// One thing a reference could mean. localMethod is set only for a method of a type
 /// rendered on this page, and carries the MethodDoc so the link reaches its anchor;
 /// a method of another package can only link to its owner type's page.
@@ -29,7 +28,6 @@ record Candidate(TName owner, Optional<String> selector, OptionalInt arity, Opti
     return new Candidate(owner, Optional.of(m.s()), OptionalInt.of(m.arity()), Optional.of(method));
   }
 }
-
 sealed interface DocLink{
   record Resolved(Candidate hit) implements DocLink{}
   record Ambiguous(String title, List<Candidate> options) implements DocLink{}

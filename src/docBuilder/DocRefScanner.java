@@ -18,16 +18,13 @@ import utils.Join;
 final class DocRefScanner{
   record Found(int start, int end, DocRef.TypeName ref){}
   record CodeSpan(int start, int end, int fence){}
-
   private static final Pattern fenced= Pattern.compile("(?s)(?<!`)(`+)(?!`)(.*?)(?<!`)\\1(?!`)");
   static List<CodeSpan> codeSpans(String text){
     return fenced.matcher(text).results().map(m -> new CodeSpan(m.start(2), m.end(2), m.group(1).length())).toList();
   }
-
   static List<CodeSpan> refSpans(String text){
     return codeSpans(text).stream().filter(sp -> sp.fence() == 1).toList();
   }
-
   //the whole span must be the name: "`Foo.bar`" is one, "`this.foo(x)`" is not, and
   //the caller reports that rather than linking part of it.
   static Optional<DocRef> wholeRef(String text, CodeSpan sp){
@@ -35,7 +32,6 @@ final class DocRefScanner{
     var res= p.ref();
     return (p.ok && p.i==p.s.length()) ? res : Optional.empty();
   }
-
   //a rendered signature is code, not prose: every maximal word that is a type name is
   //offered, and nothing here can be an error. Taking maximal words is what keeps
   //"ieeeEq" from being read as ending in the type "Eq".
@@ -46,7 +42,6 @@ final class DocRefScanner{
       .toList();
   }
   private static final Pattern word= Pattern.compile("[\\p{L}\\p{Nd}_']+");
-
   /// One reference, read left to right: an optional receiver, then an optional
   /// selector. Each name is handed to core to be judged.
   private static final class Parse{
@@ -54,16 +49,13 @@ final class DocRefScanner{
     int i= 0;
     boolean ok= true;
     Parse(String s){ this.s= s; }
-
     Optional<DocRef> ref(){
       var receiver= startsSelector() ? Optional.<DocRef.Receiver>empty() : receiver();
       var sel= selector();
       if (sel.isEmpty()){ return receiver.map(r -> (DocRef)r); }
       return Optional.of(new DocRef.MethodName(receiver, sel.get(), arity(callArity)));
     }
-
     boolean startsSelector(){ return s.startsWith(".", i) || !ops(i).isEmpty(); }
-
     //".foo" or an operator such as "++": an operator method is named like any other,
     //so "Foo++(_,_)" reads the same way as "Foo.foo(_,_)".
     Optional<String> selector(){
@@ -73,11 +65,9 @@ final class DocRefScanner{
       i += sel.length();
       return Optional.of(sel);
     }
-
     //core decides what an operator character is: a one character operator is itself a
     //method name, while a letter, a digit or a "." is not.
     String ops(int from){ return Join.of(s.substring(from).chars().mapToObj(Character::toString).takeWhile(MName::isMethodName), "", "", "", ""); }
-
     //a type, possibly package qualified, or a name bound where the comment is written
     Optional<DocRef.Receiver> receiver(){
       var first= word(i);
@@ -89,12 +79,10 @@ final class DocRefScanner{
       i += 1+second.length();
       return Optional.of(new DocRef.TypeName(Optional.of(first), second, arity(typeArity)));
     }
-
     String word(int from){
       var m= word.matcher(s).region(Math.min(from, s.length()), s.length());
       return m.lookingAt() ? m.group() : "";
     }
-
     //"[_,_]" or "()" only: a real argument list like "[Int]" is not an arity marker,
     //and leaves the arity unspecified with nothing consumed.
     OptionalInt arity(Pattern p){

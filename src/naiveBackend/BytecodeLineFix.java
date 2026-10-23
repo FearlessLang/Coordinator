@@ -41,7 +41,7 @@ final class BytecodeLineFix implements Consumer<List<Path>>{
     var prev= lineMap.putIfAbsent(javaLine, fl);
     assert prev==null || prev.intValue()==fl :
       "Two fearless lines on one java line "+javaLine+": "+prev+" vs "+fl
-      + sb.toString();
+      +sb.toString();
     return a(s);
   }
   @Override public void accept(List<Path> classFiles){
