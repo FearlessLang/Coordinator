@@ -144,20 +144,18 @@ imm MyTests# error line: 5 in file _hello/_rank_app.fear
 """, out);
   }
   @Test void mapAToPkc(){ utils.Err.strCmp("CTEXT\n", run("map_a_to_pkc"));}
-  // What counts as a main of a package: a top level type implementing base.Main, and
-  // also one declared inside a method when it implements base.CaptureFree, since that
-  // is the promise that it captures nothing and so the backend gives it an instance.
-  // A main declared inside a method WITHOUT that promise may capture the parameters
-  // and the "this" of its enclosing method, so there is no instance of it to run, and
-  // it is correctly left out: "MkCapturing.mk" is the only way to obtain one.
+  // What counts as a main of a package: every type implementing base.Main, declared at
+  // the top level or inside a method: base.Main implements base.CaptureFree, so a main
+  // captures nothing and the backend gives it an instance.
   @Test void mainInMethod(){
     utils.Err.strCmp("""
-capture free main in a method
+main in a method
 top level main
 """, run("mainInMethod"));
   }
   @Test void testingStandardLibrary(){ testOk("testingStandardLibrary");}
   //every main runs under proc.NoManager, Child and Failing on their own first; every process Parent starts keeps that attenuator and adds its own
+  //Failing run as a new process prints nothing: its Info reaches Parent, which prints it
   @Test void testProcessAttenuation(){
     utils.Err.strCmp("""
 child starts
@@ -165,7 +163,7 @@ child: download ok
 child: manager revoked
 child ends
 the failing main throws
-imm Failing.main(_) error line: 37 in file _proc/_rank_app.fear
+imm Failing.main(_) error line: 38 in file _proc/_rank_app.fear
 parent starts
 parent: manager revoked
 child starts
@@ -178,8 +176,6 @@ child: download revoked
 child: manager revoked
 child ends
 parent: child ok
-the failing main throws
-imm Failing.main(_) error line: 37 in file _proc/_rank_app.fear
 parent: failing failed: the failing main throws
 parent ends
 """, main(freshIntegrationRoot("testProcessAttenuation"), List.of("-DfearlessAttenuators=proc.NoManager")));

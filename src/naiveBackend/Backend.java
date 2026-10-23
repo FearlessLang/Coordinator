@@ -69,7 +69,7 @@ public final class Backend{
     if (hasInstance && LiteralDeclarations.has(l.cs(), attenuator)){ attenuators.put(l.name().s(), iface); }
     fixers.add(sb);
   }
-  static final TName attenuator= new TName("base.Attenuator", 0, Pos.unknown);
+  static final TName attenuator= new TName("base.SystemAttenuator", 0, Pos.unknown);
   private String preloaded(Literal l){ return Join.of(MainsInfo.icons(l.cs()).stream().map(n -> javaStrLit(n.s())+", "+typeName(n)+".instance"), "", ", ", ""); }
   private static boolean implementsType(Literal l, String name, int arity){ return LiteralDeclarations.has(l.cs(), new TName(name, arity, Pos.unknown)); }
   private static String cacheField(Literal l){
