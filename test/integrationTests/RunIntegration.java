@@ -149,7 +149,7 @@ imm MyTests# error line: 5 in file _hello/_rank_app.fear
   // captures nothing and the backend gives it an instance.
   @Test void mainInMethod(){
     utils.Err.strCmp("""
-main in a method
+capture free main in a method
 top level main
 """, run("mainInMethod"));
   }
