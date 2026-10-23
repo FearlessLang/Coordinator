@@ -1036,9 +1036,10 @@ NoLinks: Main{s -> base.Block#
 The message "Show" is not sent: this program was not started by the Fearless manager.
 The message "Register" is not sent: this program was not started by the Fearless manager.
 """, dataRun(tmp, """
+Caught: { #(a: mut base.Action[base.Void]): base.Str -> a.run{.ok _ -> "ok"; .info i -> (i.getMap.get "msg").getMsg} }
 NoManager: Main{s -> base.Block#
-  .do{Debug#(Wr#(s.manager.show))}
-  .return{Debug#(Wr#(s.manager.register("%s".u.%s)))}
+  .do{Debug#(Caught#(s.try#(s.iso.close, {t -> t.manager.show})))}
+  .return{Debug#(Caught#(s.try#(s.iso.close, {t -> t.manager.register("%s".u.%s)})))}
   }
 """.formatted(tmp.toAbsolutePath(), pathEncoding()), List.of()));
   }
@@ -1075,20 +1076,20 @@ ok
 The manager refuses to forget nope.
 The path "relative" of the message "Register" is not an absolute path of this system.
 """, dataRun(tmp, """
-Out: { #(a: mut base.Action[base.UStr]): base.Str -> a.run{.ok u -> u.tryGetStr.run{.ok o -> o; .info i -> i.getMsg}; .info i -> i.getMsg} }
+Caught: { #(a: mut base.Action[base.Void]): base.Str -> a.run{.ok _ -> "ok"; .info i -> (i.getMap.get "msg").getMsg} }
+Out: { #(a: mut base.Action[base.UStr]): base.Str -> a.run{.ok u -> u.tryGetStr.run{.ok o -> o; .info i -> i.getMsg}; .info i -> (i.getMap.get "msg").getMsg} }
 Send: Main{s -> base.Block#
-  .let m= {s.manager}
-  .do{Debug#(Wr#(m.register("%1$s".u.%2$s)))}
-  .do{Debug#(Wr#(m.show))}
-  .do{Debug#(Wr#(m.show "hello"))}
-  .do{Debug#(Out#(m.run("hello", L#("hello.A", "hello.B"))))}
-  .do{Debug#(Out#(m.compile "hello"))}
-  .do{Debug#(Wr#(m.kindDataReadOnly "hello"))}
-  .do{Debug#(Wr#(m.linkWrite("hello", "notes", L#("Notes", "Pub"))))}
-  .do{Debug#(Wr#(m.linkRead("hello", "pub", {})))}
-  .do{Debug#(Wr#(m.openWithOrShortcut("%1$s".u.%2$s, "hello", "hello.A")))}
-  .do{Debug#(Wr#(m.forget "nope"))}
-  .return{Debug#(Wr#(m.register("relative".u.%2$s)))}
+  .do{Debug#(Caught#(s.try#(s.iso.close, {t -> t.manager.register("%1$s".u.%2$s)})))}
+  .do{Debug#(Caught#(s.try#(s.iso.close, {t -> t.manager.show})))}
+  .do{Debug#(Caught#(s.try#(s.iso.close, {t -> t.manager.show "hello"})))}
+  .do{Debug#(Out#(s.try#(s.iso.close, {t -> t.manager.run("hello", L#("hello.A", "hello.B"))})))}
+  .do{Debug#(Out#(s.try#(s.iso.close, {t -> t.manager.compile "hello"})))}
+  .do{Debug#(Caught#(s.try#(s.iso.close, {t -> t.manager.kindDataReadOnly "hello"})))}
+  .do{Debug#(Caught#(s.try#(s.iso.close, {t -> t.manager.linkWrite("hello", "notes", L#("Notes", "Pub"))})))}
+  .do{Debug#(Caught#(s.try#(s.iso.close, {t -> t.manager.linkRead("hello", "pub", {})})))}
+  .do{Debug#(Caught#(s.try#(s.iso.close, {t -> t.manager.openWithOrShortcut("%1$s".u.%2$s, "hello", "hello.A")})))}
+  .do{Debug#(Caught#(s.try#(s.iso.close, {t -> t.manager.forget "nope"})))}
+  .return{Debug#(Caught#(s.try#(s.iso.close, {t -> t.manager.register("relative".u.%2$s)})))}
   }
 """.formatted(path, pathEncoding()), List.of("-DfearlessManager.launcher="+launcher)));
     utils.Err.strCmp("""
