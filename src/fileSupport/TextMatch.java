@@ -286,7 +286,11 @@ enum TextMatch{
     // Microsoft System Error Codes page lines 155-159:
     // ERROR_BAD_UNIT: "The system cannot find the device specified."
     // https://learn.microsoft.com/en-us/windows/win32/debug/system-error-codes--0-499-
-    "the system cannot find the device specified"
+    "the system cannot find the device specified",
+    // Microsoft System Error Codes page:
+    // ERROR_DEVICE_NOT_CONNECTED (1167): "The device is not connected."
+    // https://learn.microsoft.com/en-us/windows/win32/debug/system-error-codes--1000-1299-
+    "the device is not connected"
     ),
   MStorageUnavailable_TransportEndpointDisconnected(StorageUnavailable_TransportEndpointDisconnected,
     // glibc sysdeps/gnu/errlist.h line 395:
@@ -390,7 +394,10 @@ enum TextMatch{
     // ERROR_OUTOFMEMORY:
     // "Not enough storage is available to complete this operation."
     // https://learn.microsoft.com/en-us/windows/win32/debug/system-error-codes--0-499-
-    "not enough storage is available to complete this operation"
+    "not enough storage is available to complete this operation",
+    // FormatMessage on Windows 11 gives ERROR_OUTOFMEMORY (14) a text other than the documented one:
+    // "Not enough memory resources are available to complete this operation."
+    "not enough memory resources are available to complete this operation"
     ),
   MResourceExhausted_SystemResources(ResourceExhausted_SystemResources,
     // glibc sysdeps/gnu/errlist.h line 381:
@@ -403,7 +410,12 @@ enum TextMatch{
     // ERROR_IS_JOIN_PATH:
     // "Not enough resources are available to process this command."
     // https://learn.microsoft.com/en-us/windows/win32/debug/system-error-codes--0-499-
-    "not enough resources are available to process this command"
+    "not enough resources are available to process this command",
+    // Microsoft System Error Codes page:
+    // ERROR_NO_SYSTEM_RESOURCES (1450), ERROR_NONPAGED_SYSTEM_RESOURCES (1451), ERROR_PAGED_SYSTEM_RESOURCES (1452):
+    // "Insufficient system resources exist to complete the requested service."
+    // https://learn.microsoft.com/en-us/windows/win32/debug/system-error-codes--1300-1699-
+    "insufficient system resources exist to complete the requested service"
     ),
   MMediaIoFailure_Generic(MediaIoFailure_Generic,
     // glibc sysdeps/gnu/errlist.h line 34:
