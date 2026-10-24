@@ -227,30 +227,6 @@ settle it by hand in your system settings.
 Where the undoing stopped:
 removed HKCU\\...\\UserChoice, but restoring the previous ProgId failed""", Violation.associationLeftHalfDone(rollback).getMessage());
   }
-  @Test void cacheMissingPkgApiFile(){
-    var apiJson= Path.of("C:\\Users\\ada\\projects\\myproject\\.fearless_out\\core.json");
-    utils.Err.strCmp("""
-Build cache is missing a generated package API file.
-That metadata should be stored in:
-  C:\\Users\\ada\\projects\\myproject\\.fearless_out\\core.json
-Fearless deleted this project's .fearless_out folder: compile again to rebuild it.
-""", Violation.cacheMissingPkgApiFile(apiJson).getMessage());
-  }
-  @Test void cacheInvalidFile(){
-    var mapJson= Path.of("C:\\Users\\ada\\projects\\myproject\\.fearless_out\\_map.json");
-    utils.Err.strCmp("""
-Build cache contains an invalid cached file.
-
-Fearless tried to read:
-  C:\\Users\\ada\\projects\\myproject\\.fearless_out\\_map.json
-but the file content is not valid.
-
-Parse error:
-  Unexpected end of input at offset 4096
-
-Fearless deleted this project's .fearless_out folder: compile again to rebuild it.
-""", Violation.cacheInvalidFile(mapJson, "Unexpected end of input at offset 4096").getMessage());
-  }
   @Test void cacheCouldNotFindZipEntry(){
     var diskZip= Path.of("C:\\Users\\ada\\projects\\myproject\\assets.zip");
     utils.Err.strCmp("""

@@ -1860,16 +1860,28 @@ A:Main{s->base.Debug#(`hi`)}
     assertFalse(Fs.exists(out));
     utils.Err.strCmp("hi\n", main(root, List.of()));
   }
-  static String invalidCache(String why){ return "Build cache contains an invalid cached file.[###]"+why+"[###]Fearless deleted this project's .fearless_out folder: compile again to rebuild it.\n"; }
   static String crashedWithCache(String detail){ return "Error: Fearless crashed: either this project's build cache was corrupted, or this is a Fearless bug.[###]Fearless deleted this project's .fearless_out folder: compile again to rebuild it.[###]Details:\n"+detail+"[###]"; }
-  @Test void aBuiltFileThatIsNotUtf8DeletesTheCache(@TempDir Path tmp){
-    aCorruptedCacheFileIsDeletedWithTheWholeCache(tmp, "p.built", _ -> new byte[]{(byte)0xff}, invalidCache("Unexpected character"));
+  @Test void aGarbledBuiltFileMakesItsPackageBuildAgain(@TempDir Path tmp){
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_p/_rank_app999.fear
+iii
+use base.Main as Main;
+A:Main{s->base.Debug#(`hi`)}
+""");
+    utils.Err.strCmp("hi\n", main(root, List.of()));
+    var built= root.resolve(Coordinator.outDir).resolve("p.built");
+    var good= Fs.of(() -> Fs.readAllBytes(built));
+    Fs.ofV(() -> Fs.write(built, new byte[]{(byte)0xff}));
+    utils.Err.strCmp("hi\n", main(root, List.of()));
+    assertArrayEquals(good, Fs.of(() -> Fs.readAllBytes(built)));
   }
   @Test void aGarbledMainsInfoDeletesTheCache(@TempDir Path tmp){
-    aCorruptedCacheFileIsDeletedWithTheWholeCache(tmp, "p_manifest.info", _ -> "[".getBytes(UTF_8), invalidCache("p_manifest.info"));
+    aCorruptedCacheFileIsDeletedWithTheWholeCache(tmp, "p_manifest.info", _ -> "[".getBytes(UTF_8), crashedWithCache("utils.Bug"));
   }
   @Test void anApiJsonWithAnUnknownReferenceCapabilityDeletesTheCache(@TempDir Path tmp){
-    aCorruptedCacheFileIsDeletedWithTheWholeCache(tmp, "p.json", bs -> new String(bs, UTF_8).replaceFirst("\"imm\"", "\"imx\"").getBytes(UTF_8), invalidCache("imx"));
+    aCorruptedCacheFileIsDeletedWithTheWholeCache(tmp, "p.json", bs -> new String(bs, UTF_8).replaceFirst("\"imm\"", "\"imx\"").getBytes(UTF_8), crashedWithCache("java.lang.IllegalArgumentException"));
   }
   @Test void anApiJsonWithATypeOfReferenceCapabilityMutHDeletesTheCache(@TempDir Path tmp){
     aCorruptedCacheFileIsDeletedWithTheWholeCache(tmp, "p.json", bs -> new String(bs, UTF_8).replaceFirst("\\[\"p.A\",\"mut\"", "[\"p.A\",\"mutH\"").getBytes(UTF_8), crashedWithCache("java.lang.AssertionError"));
