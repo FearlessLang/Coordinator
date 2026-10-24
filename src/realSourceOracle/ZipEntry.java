@@ -23,6 +23,7 @@ public record ZipEntry(Path root, Path local, List<String> segments, List<String
   @Override public String fearPath(){ return Join.of(Push.of(dropZipExt(PathEntry.localSegments(local)), segments), SourceOracle.root, "/", ""); }
   @Override public byte[] loadBytes(){ return ZipLocator.entryBytes(root.resolve(local), zips, lastZips); }
   @Override public long lastModified(){ return Fs.lastModified(root.resolve(local)); }
+  @Override public RuntimeException notUtf8(long line, int offset){ return Report.notUtf8(this, line, offset); }
   @Override public String toString(){ return fearPath(); }
   private static final int maxZipNesting= 64;
   public static List<ZipEntry> allEntryPaths(Path root, Path local){
