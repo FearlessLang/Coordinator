@@ -54,9 +54,8 @@ public final class Backend{
       sb.a("  default java.util.ArrayList<Object> _log(){ return _logStore; }\n");
     }
     if (hasInstance && implementsType(l, "base.FileLog", 0)){
-      sb.a(l.name().arity()==0
-        ? "  _base.AppLog _appLog= _base.AppLog.open(java.nio.file.Path.of(\".out\",\"logs\",\"_"+tools.pkgName()+"\",\""+Fs.fileNameOfType(l.name().simpleName()).orElseThrow()+".log\"), false);\n  default _base.AppLog _log(){ return _appLog; }\n"
-        : "  default _base.AppLog _log(){ return null; }\n");
+      assert l.name().arity()==0;
+      sb.a("  _base.AppLog _appLog= _base.AppLog.open(java.nio.file.Path.of(\".out\",\"logs\",\"_"+tools.pkgName()+"\",\""+Fs.fileNameOfType(l.name().simpleName()).orElseThrow()+".log\"), false);\n  default _base.AppLog _log(){ return _appLog; }\n");
     }
     if (isRepr(l)){
       sb.a("  Object _reprCacheGet(Object k, java.util.function.Supplier<Object> f, long time);\n");
