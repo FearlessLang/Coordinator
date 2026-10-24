@@ -9,7 +9,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 import apiJson.ApiJson;
 import core.AllLs;
@@ -17,12 +16,9 @@ import core.E.Literal;
 import core.M;
 import core.OtherPackages;
 import core.TName;
-import metaParser.Message;
 import tools.Fs;
 import tools.SourceOracle;
 import tools.SourceOracle.Ref;
-import userMessages.UserError;
-import userMessages.Violation;
 import utils.Join;
 
 public interface OutputOracle{
@@ -34,7 +30,7 @@ public interface OutputOracle{
   default long mapStamp(){ return Fs.lastModified(mapPath()); }
   default long pkgApiStamp(String pkg){ return Fs.lastModified(pkgApiPath(pkg)); }
   default boolean stillBuilt(String pkg, List<Ref> files, List<String> below, long minMillis){
-    return Fs.lastModified(builtPath(pkg))>=minMillis && OutputHelper.readAllowed(builtPath(pkg)).orElseThrow().equals(OutputHelper.built(files, below)) && Fs.exists(mainsPath(pkg));
+    return Fs.lastModified(builtPath(pkg))>=minMillis && OutputHelper.read(builtPath(pkg)).orElseThrow().equals(OutputHelper.built(files, below)) && Fs.exists(mainsPath(pkg));
   }
   default void forgetAllBut(List<String> pkgs){
     if (!Fs.isDirectory(rootDir())){ return; }
@@ -84,26 +80,17 @@ final class OutputHelper{
     if (map.isEmpty()){ return "{}"; }
     return obj(map, m -> obj(m, s -> "\""+s+"\""));
   }
-  static Optional<Map<TName,Literal>> pkgApiFromJson(Path p){ return readAllowed(p).map(s -> new LimitedJsonParser(s, p).apiJsonToMap()); }
-  static Map<TName,Literal> cachedPkgApi(Path p){ return pkgApiFromJson(p).orElseThrow(() -> dropCache(p, Violation.cacheMissingPkgApiFile(p))); }
+  static Optional<Map<TName,Literal>> pkgApiFromJson(Path p){ return read(p).map(s -> new LimitedJsonParser(s, p).apiJsonToMap()); }
+  static Map<TName,Literal> cachedPkgApi(Path p){ return pkgApiFromJson(p).orElseThrow(); }
   private static <T> String obj(Map<String,T> m, Function<T,String> v){
     return Join.of(m.entrySet().stream()
       .map(e -> "\""+e.getKey()+"\":"+v.apply(e.getValue())),
       "{", ",\n", "}\n");//correctly throw for empty
   }
-  static Optional<Map<String,Map<String,String>>> mapFromJson(Path p){ return readAllowed(p).map(s -> new LimitedJsonParser(s, p).obj2()); }
-  static Optional<String> readAllowed(Path p){
+  static Optional<Map<String,Map<String,String>>> mapFromJson(Path p){ return read(p).map(s -> new LimitedJsonParser(s, p).obj2()); }
+  static Optional<String> read(Path p){
     if (!Fs.exists(p)){ return Optional.empty(); }
-    var bs= Fs.of(() -> Fs.readAllBytes(p));
-    IntStream.range(0, bs.length).filter(i -> Fs.allowed.indexOf(bs[i]) < 0).findFirst()
-      .ifPresent(i -> { throw dropCache(p, Violation.cacheInvalidFile(p, "Unexpected character "+Message.displayChar((char)(bs[i] & 0xff))+" at "+i)); });
-    return Optional.of(new String(bs, StandardCharsets.US_ASCII));
-  }
-  static UserError dropCache(Path file, UserError err){
-    var out= file.getParent();
-    assert out.getFileName().toString().equals(Coordinator.outDir);
-    Fs.rmTree(out);
-    return err;
+    return Optional.of(new String(Fs.of(() -> Fs.readAllBytes(p)), StandardCharsets.US_ASCII));
   }
   static boolean consistent(Map<TName,Literal> map, List<Literal> core){
     //Not filtered to public-only: privates can still be mentioned in meth parameters and ret types.

@@ -21,7 +21,7 @@ import tools.Fs;
 import tools.SourceOracle;
 import userMessages.Report;
 import userMessages.UserError;
-import userMessages.Violation;
+import utils.Bug;
 import utils.DistinctBy;
 import utils.Pos;
 
@@ -36,7 +36,8 @@ public record MainsInfo(Map<String,Main> mains, List<String> attenuators){
     if (!Fs.isDirectory(out)){ return List.of(); }
     try (var s= Fs.of(() -> Fs.list(out))){ return s.filter(p -> p.getFileName().toString().endsWith(suffix)).sorted().toList(); }
   }
-  public static Optional<MainsInfo> read(Path project){
+  public static Optional<MainsInfo> read(Path project){ return Coordinator.guardingCache(project, () -> readNow(project)); }
+  private static Optional<MainsInfo> readNow(Path project){
     var fs= files(project);
     if (fs.isEmpty()){ return Optional.empty(); }
     return Optional.of(merge(fs.stream().map(MainsInfo::parse)));
@@ -69,9 +70,9 @@ public record MainsInfo(Map<String,Main> mains, List<String> attenuators){
   private static Info str(String s){ return new Info.Str(s, Info.noSpan); }
   private static Info lst(List<Info> items){ return new Info.Lst(items, Info.noSpan); }
   static MainsInfo parse(Path file){
-    var text= OutputHelper.readAllowed(file).orElseThrow();
+    var text= OutputHelper.read(file).orElseThrow();
     try{ return new Shape(text).all(Info.parse(text, file.toUri())); }
-    catch (UserError e){ throw OutputHelper.dropCache(file, Violation.cacheInvalidFile(file, e.getMessage())); }
+    catch (UserError e){ throw Bug.of(e); }
   }
   private record Shape(String text){
     MainsInfo all(Info i){

@@ -22,7 +22,7 @@ import core.Src;
 import core.T;
 import core.TName;
 import core.TSpan;
-import userMessages.Violation;
+import utils.Bug;
 import utils.Pos;
 
 final class LimitedJsonParser{
@@ -53,8 +53,7 @@ final class LimitedJsonParser{
   }
   Map<TName,Literal> apiJsonToMap(){
     var types= end(arr());
-    try{ return Collections.unmodifiableMap(types.stream().map(x -> typeLit(asArr(x))).collect(Collectors.toMap(Literal::name, l -> l, this::dup, LinkedHashMap::new))); }
-    catch (IllegalArgumentException e){ throw err(e.getMessage()); }
+    return Collections.unmodifiableMap(types.stream().map(x -> typeLit(asArr(x))).collect(Collectors.toMap(Literal::name, l -> l, this::dup, LinkedHashMap::new)));
   }
   private Literal dup(Literal a, Literal b){ throw err("Duplicate type "+a.name().s()); }
   private Literal typeLit(List<Object> a){
@@ -147,7 +146,5 @@ final class LimitedJsonParser{
     if (i>=s.length() || s.charAt(i)!=c){ return false; }
     i += 1; return true;
   }
-  private RuntimeException err(String msg){
-    return OutputHelper.dropCache(forErr, Violation.cacheInvalidFile(forErr, msg+" at "+i));
-  }
+  private RuntimeException err(String msg){ return Bug.of(forErr+": "+msg+" at "+i); }
 }

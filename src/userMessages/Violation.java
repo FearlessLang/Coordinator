@@ -166,28 +166,6 @@ public final class Violation{
   //project after the initial verification checks. Reaching one of these means another
   //actor touched what only Fearless should write, a previous run stopped mid-build, or
   //the filesystem returned partial writes or stale directory state.
-  public static UserError cacheMissingPkgApiFile(Path apiJson){
-    return new UserError("""
-      Build cache is missing a generated package API file.
-      That metadata should be stored in:
-      %s
-      Fearless deleted this project's .fearless_out folder: compile again to rebuild it.
-      """.formatted(path(apiJson.toString())));
-  }
-  public static UserError cacheInvalidFile(Path file, String parseErr){
-    return new UserError("""
-      Build cache contains an invalid cached file.
-
-      Fearless tried to read:
-      %s
-      but the file content is not valid.
-
-      Parse error:
-        %s
-
-      Fearless deleted this project's .fearless_out folder: compile again to rebuild it.
-      """.formatted(path(file.toString()), parseErr));
-  }
   public static UserError cacheCouldNotFindZipEntry(Path diskZip, List<String> steps, String entryName){
     return new UserError("""
       Cannot find entry in zip (that was found before).

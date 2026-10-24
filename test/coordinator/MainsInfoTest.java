@@ -69,19 +69,19 @@ final class MainsInfoTest{
 """);
     var ex= assertThrows(UserError.class, () -> MainsInfo.read(project));
     utils.Err.strCmp("""
-Build cache contains an invalid cached file.
-[###]
-Parse error:
-  In file: [###]hello_manifest.info
+Error: Fearless crashed: either this project's build cache was corrupted, or this is a Fearless bug.
+  Fearless deleted this project's .fearless_out folder: compile again to rebuild it.
+  If Fearless crashes again, please report that error.
+
+Details:
+utils.Bug: userMessages.UserError: In file: [###]hello_manifest.info
 
 003|     "hello.Beer": ["_hello/beer.fear", [["hello.IconsBar", "_hello/icons/bar.png", "", ""]], [], []]
    |                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 While inspecting the file
 Expected a claim as [icon, diskPath, zipSteps, zipEntry, extension] here.
-
-Fearless deleted this project's .fearless_out folder: compile again to rebuild it.
-""", ex.getMessage());
+[###]""", ex.getMessage());
     assertFalse(Fs.exists(project.resolve(Coordinator.outDir)));
   }
 }
