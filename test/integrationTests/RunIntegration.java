@@ -1802,7 +1802,7 @@ Foo:Main{s->base.Debug#(`foo`)}
     }
     finally{ Fs.setLastModifiedTime(baseApi, old); }
   }
-  void aCorruptedCacheFileIsDeletedWithTheWholeCache(Path tmp, String file, java.util.function.UnaryOperator<byte[]> corrupt, String why){
+  void aCorruptedCacheFileIsDeletedWithTheWholeCache(Path tmp, String file, java.util.function.UnaryOperator<byte[]> corrupt, String expected){
     var root= tmp.resolve("root");
     UserError.root = root;
     FsDsl.materialize(root, """
@@ -1816,27 +1816,29 @@ A:Main{s->base.Debug#(`hi`)}
     var cached= out.resolve(file);
     Fs.ofV(() -> Fs.write(cached, corrupt.apply(Fs.readAllBytes(cached))));
     var ex= assertThrows(UserError.class, () -> main(root, List.of()));
-    utils.Err.strCmp("Build cache contains an invalid cached file.[###]"+why+"[###]Fearless deleted this project's .fearless_out folder: compile again to rebuild it.\n", ex.getMessage());
+    utils.Err.strCmp(expected, ex.getMessage());
     assertFalse(Fs.exists(out));
     utils.Err.strCmp("hi\n", main(root, List.of()));
   }
+  static String invalidCache(String why){ return "Build cache contains an invalid cached file.[###]"+why+"[###]Fearless deleted this project's .fearless_out folder: compile again to rebuild it.\n"; }
+  static String crashedWithCache(String detail){ return "Error: Fearless crashed: either this project's build cache was corrupted, or this is a Fearless bug.[###]Fearless deleted this project's .fearless_out folder: compile again to rebuild it.[###]Details:\n"+detail+"[###]"; }
   @Test void aBuiltFileThatIsNotUtf8DeletesTheCache(@TempDir Path tmp){
-    aCorruptedCacheFileIsDeletedWithTheWholeCache(tmp, "p.built", _ -> new byte[]{(byte)0xff}, "Unexpected character");
+    aCorruptedCacheFileIsDeletedWithTheWholeCache(tmp, "p.built", _ -> new byte[]{(byte)0xff}, invalidCache("Unexpected character"));
   }
   @Test void aGarbledMainsInfoDeletesTheCache(@TempDir Path tmp){
-    aCorruptedCacheFileIsDeletedWithTheWholeCache(tmp, "p_manifest.info", _ -> "[".getBytes(UTF_8), "p_manifest.info");
+    aCorruptedCacheFileIsDeletedWithTheWholeCache(tmp, "p_manifest.info", _ -> "[".getBytes(UTF_8), invalidCache("p_manifest.info"));
   }
   @Test void anApiJsonWithAnUnknownReferenceCapabilityDeletesTheCache(@TempDir Path tmp){
-    aCorruptedCacheFileIsDeletedWithTheWholeCache(tmp, "p.json", bs -> new String(bs, UTF_8).replaceFirst("\"imm\"", "\"imx\"").getBytes(UTF_8), "imx");
+    aCorruptedCacheFileIsDeletedWithTheWholeCache(tmp, "p.json", bs -> new String(bs, UTF_8).replaceFirst("\"imm\"", "\"imx\"").getBytes(UTF_8), invalidCache("imx"));
   }
   @Test void anApiJsonWithATypeOfReferenceCapabilityMutHDeletesTheCache(@TempDir Path tmp){
-    aCorruptedCacheFileIsDeletedWithTheWholeCache(tmp, "p.json", bs -> new String(bs, UTF_8).replaceFirst("\\[\"p.A\",\"mut\"", "[\"p.A\",\"mutH\"").getBytes(UTF_8), "Bad type reference capability mutH");
+    aCorruptedCacheFileIsDeletedWithTheWholeCache(tmp, "p.json", bs -> new String(bs, UTF_8).replaceFirst("\\[\"p.A\",\"mut\"", "[\"p.A\",\"mutH\"").getBytes(UTF_8), crashedWithCache("java.lang.AssertionError"));
   }
   @Test void anApiJsonWithAnIsoMethodDeletesTheCache(@TempDir Path tmp){
-    aCorruptedCacheFileIsDeletedWithTheWholeCache(tmp, "p.json", bs -> new String(bs, UTF_8).replaceFirst("\\[\".main\",\"imm\"", "[\".main\",\"iso\"").getBytes(UTF_8), "Bad method reference capability iso");
+    aCorruptedCacheFileIsDeletedWithTheWholeCache(tmp, "p.json", bs -> new String(bs, UTF_8).replaceFirst("\\[\".main\",\"imm\"", "[\".main\",\"iso\"").getBytes(UTF_8), crashedWithCache("java.lang.AssertionError"));
   }
   @Test void anApiJsonWithARepeatedSupertypeDeletesTheCache(@TempDir Path tmp){
-    aCorruptedCacheFileIsDeletedWithTheWholeCache(tmp, "p.json", bs -> new String(bs, UTF_8).replaceFirst("\\[\"base.Main\"\\]", "[\"base.Main\"],[\"base.Main\"]").getBytes(UTF_8), "Repeated supertype");
+    aCorruptedCacheFileIsDeletedWithTheWholeCache(tmp, "p.json", bs -> new String(bs, UTF_8).replaceFirst("\\[\"base.Main\"\\]", "[\"base.Main\"],[\"base.Main\"]").getBytes(UTF_8), crashedWithCache("java.lang.AssertionError"));
   }
   @Test void aMapDirectiveEditedInAHigherRankPackageMakesItsTargetPackageNotBuilt(@TempDir Path tmp) throws IOException{
     var root= tmp.resolve("root");
