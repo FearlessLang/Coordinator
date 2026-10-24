@@ -878,10 +878,10 @@ use base.Main as Main;
 use base.Debug as Debug;
 use base.Lists as L;
 Recover: base.BadStrUnitRecover { reason, byteOffset, byteLength, rejectedValue -> "?" }
-Ls: { #(a: mut base.Action[base.List[base.Str]]): base.Str -> a.run{.ok xs -> xs.str{::}; .info i -> i.getMsg} }
-Rd: { #(a: mut base.Action[mut base.InputCursorNode]): base.Str -> a.run{.ok n -> n.label+": "+(n.readStrUtf8 Recover); .info i -> i.getMsg} }
-Wr: { #(a: mut base.Action[base.Void]): base.Str -> a.run{.ok _ -> "ok"; .info i -> i.getMsg} }
-Sz: { #(a: mut base.Action[mut base.InputCursorNode]): base.Str -> a.run{.ok n -> n.readBytes.size.str; .info i -> i.getMsg} }
+Ls: { #(a: mut base.Action[base.List[base.Str]]): base.Str -> a.run{.ok xs -> xs.str{::}; .info i -> (i.getMap.get "msg").getMsg} }
+Rd: { #(a: mut base.Action[mut base.InputCursorNode]): base.Str -> a.run{.ok n -> n.label+": "+(n.readStrUtf8 Recover); .info i -> (i.getMap.get "msg").getMsg} }
+Wr: { #(a: mut base.Action[base.Void]): base.Str -> a.run{.ok _ -> "ok"; .info i -> (i.getMap.get "msg").getMsg} }
+Sz: { #(a: mut base.Action[mut base.InputCursorNode]): base.Str -> a.run{.ok n -> n.readBytes.size.str; .info i -> (i.getMap.get "msg").getMsg} }
 Q: base.UnencodableRecover{ scalar, index -> L#(63.getByte) }
 """+main);
     return main(root, links);
@@ -917,24 +917,24 @@ The path "data.fearless" of "Pub" is not valid: the top of a data project holds 
 Reads: Main{s -> base.Block#
   .do{Debug#(s.dataRead.roots.str{::})}
   .do{Debug#(s.dataReadWrite.roots.str{::})}
-  .do{Debug#(Ls#(s.dataRead.paths("Pub", {})))}
-  .do{Debug#(Ls#(s.dataRead.paths("Pub", L#("pics"))))}
-  .do{Debug#(Ls#(s.dataReadWrite.paths("Notes", L#("pics", "inner"))))}
-  .do{Debug#(Ls#(s.dataRead.paths("Pub", L#("readme"))))}
-  .do{Debug#(Ls#(s.dataRead.paths("Pub", L#("none"))))}
-  .do{Debug#(Ls#(s.dataRead.paths("Pub", L#(".hidden"))))}
-  .do{Debug#(Ls#(s.dataRead.paths("Nope", {})))}
-  .do{Debug#(Rd#(s.dataRead.read("Notes", L#("readme"))))}
-  .do{Debug#(Rd#(s.dataReadWrite.read("Pub", L#("readme"))))}
-  .do{Debug#(Rd#(s.dataRead.read("Pub", L#("readme"))))}
-  .do{Debug#(Sz#(s.dataRead.read("Pub", L#("readme"))))}
-  .do{Debug#(Rd#(s.dataRead.read("Pub", L#("pics", "deep", "two.txt"))))}
-  .do{Debug#(Rd#(s.dataReadWrite.read("Notes", L#("pics", "inner", "three.txt"))))}
-  .do{Debug#(Rd#(s.dataReadWrite.read("Notes", L#("notes", "a.txt"))))}
-  .do{Debug#(Rd#(s.dataRead.read("Pub", L#("notes", "b.txt"))))}
-  .do{Debug#(Rd#(s.dataRead.read("Pub", L#("todo"))))}
-  .do{Debug#(Rd#(s.dataRead.read("Pub", {})))}
-  .return{Debug#(Rd#(s.dataRead.read("Pub", L#("data.fearless"))))}
+  .do{Debug#(Ls#(s.try#(s.iso.close, {t -> t.dataRead.paths("Pub", {})})))}
+  .do{Debug#(Ls#(s.try#(s.iso.close, {t -> t.dataRead.paths("Pub", L#("pics"))})))}
+  .do{Debug#(Ls#(s.try#(s.iso.close, {t -> t.dataReadWrite.paths("Notes", L#("pics", "inner"))})))}
+  .do{Debug#(Ls#(s.try#(s.iso.close, {t -> t.dataRead.paths("Pub", L#("readme"))})))}
+  .do{Debug#(Ls#(s.try#(s.iso.close, {t -> t.dataRead.paths("Pub", L#("none"))})))}
+  .do{Debug#(Ls#(s.try#(s.iso.close, {t -> t.dataRead.paths("Pub", L#(".hidden"))})))}
+  .do{Debug#(Ls#(s.try#(s.iso.close, {t -> t.dataRead.paths("Nope", {})})))}
+  .do{Debug#(Rd#(s.try#(s.iso.close, {t -> t.dataRead.read("Notes", L#("readme"))})))}
+  .do{Debug#(Rd#(s.try#(s.iso.close, {t -> t.dataReadWrite.read("Pub", L#("readme"))})))}
+  .do{Debug#(Rd#(s.try#(s.iso.close, {t -> t.dataRead.read("Pub", L#("readme"))})))}
+  .do{Debug#(Sz#(s.try#(s.iso.close, {t -> t.dataRead.read("Pub", L#("readme"))})))}
+  .do{Debug#(Rd#(s.try#(s.iso.close, {t -> t.dataRead.read("Pub", L#("pics", "deep", "two.txt"))})))}
+  .do{Debug#(Rd#(s.try#(s.iso.close, {t -> t.dataReadWrite.read("Notes", L#("pics", "inner", "three.txt"))})))}
+  .do{Debug#(Rd#(s.try#(s.iso.close, {t -> t.dataReadWrite.read("Notes", L#("notes", "a.txt"))})))}
+  .do{Debug#(Rd#(s.try#(s.iso.close, {t -> t.dataRead.read("Pub", L#("notes", "b.txt"))})))}
+  .do{Debug#(Rd#(s.try#(s.iso.close, {t -> t.dataRead.read("Pub", L#("todo"))})))}
+  .do{Debug#(Rd#(s.try#(s.iso.close, {t -> t.dataRead.read("Pub", {})})))}
+  .return{Debug#(Rd#(s.try#(s.iso.close, {t -> t.dataRead.read("Pub", L#("data.fearless"))})))}
   }
 """, dataLinks(data, data)));
   }
@@ -961,24 +961,23 @@ The path "readme.md" of "Notes" is not written: its folder holds "readme", and a
 The path "todo" of "Notes" names a folder, not a resource.
 """.formatted(resourceName, resourceName), dataRun(tmp, """
 Writes: Main{s -> base.Block#
-  .let w= {s.dataReadWrite}
-  .do{Debug#(Wr#(w.writeStrUtf8("Notes", L#("notes", "b.txt"), "second")))}
-  .do{Debug#(Wr#(w.writeStrAscii("Notes", L#("fresh", "deeper", "c.txt"), "third")))}
-  .do{Debug#(Wr#(w.writeStrLatin1("Notes", L#("pics", "deep", "four.txt"), "zipped")))}
-  .do{Debug#(Wr#(w.writeStrUtf8("Notes", L#("pics", "inner", "three.txt"), "renested")))}
-  .do{Debug#(Wr#(w.writeStrUtf8("Notes", L#("pics", "new", "five.txt"), "in a new folder of a zip")))}
-  .do{Debug#(Wr#(w.writeUStrUtf16Le("Notes", L#("u16.txt"), "caf".u("00E9"))))}
-  .do{Debug#(Wr#(w.writeBytes("Notes", L#("raw.bin"), L#(72.getByte, 105.getByte))))}
-  .do{Debug#(Wr#(w.writeStrUtf32Be("Notes", L#("u32.txt"), "A")))}
-  .do{Debug#(Wr#(w.writeUStrAscii("Notes", L#("ascii.txt"), "caf".u("00E9"), Q)))}
-  .do{Debug#(Wr#(w.writeUStrLatin1("Notes", L#("latin1.txt"), "caf".u("00E9 1F600"), Q)))}
-  .do{Debug#(Wr#(w.writeStrUtf8("Pub", L#("x.txt"), "no")))}
-  .do{Debug#(Wr#(w.writeStrUtf8("Notes", L#("Bad.txt"), "no")))}
-  .do{Debug#(Wr#(w.writeStrUtf8("Notes", L#("pics", "x.zip"), "no")))}
-  .do{Debug#(Wr#(w.writeStrUtf8("Notes", L#("other.fearless"), "no")))}
-  .do{Debug#(Wr#(w.writeStrUtf8("Notes", L#("readme", "x.txt"), "no")))}
-  .do{Debug#(Wr#(w.writeStrUtf8("Notes", L#("readme.md"), "no")))}
-  .return{Debug#(Wr#(w.writeStrUtf8("Notes", L#("todo"), "no")))}
+  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataReadWrite.writeStrUtf8("Notes", L#("notes", "b.txt"), "second")})))}
+  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataReadWrite.writeStrAscii("Notes", L#("fresh", "deeper", "c.txt"), "third")})))}
+  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataReadWrite.writeStrLatin1("Notes", L#("pics", "deep", "four.txt"), "zipped")})))}
+  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataReadWrite.writeStrUtf8("Notes", L#("pics", "inner", "three.txt"), "renested")})))}
+  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataReadWrite.writeStrUtf8("Notes", L#("pics", "new", "five.txt"), "in a new folder of a zip")})))}
+  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataReadWrite.writeUStrUtf16Le("Notes", L#("u16.txt"), "caf".u("00E9"))})))}
+  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataReadWrite.writeBytes("Notes", L#("raw.bin"), L#(72.getByte, 105.getByte))})))}
+  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataReadWrite.writeStrUtf32Be("Notes", L#("u32.txt"), "A")})))}
+  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataReadWrite.writeUStrAscii("Notes", L#("ascii.txt"), "caf".u("00E9"), Q)})))}
+  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataReadWrite.writeUStrLatin1("Notes", L#("latin1.txt"), "caf".u("00E9 1F600"), Q)})))}
+  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataReadWrite.writeStrUtf8("Pub", L#("x.txt"), "no")})))}
+  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataReadWrite.writeStrUtf8("Notes", L#("Bad.txt"), "no")})))}
+  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataReadWrite.writeStrUtf8("Notes", L#("pics", "x.zip"), "no")})))}
+  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataReadWrite.writeStrUtf8("Notes", L#("other.fearless"), "no")})))}
+  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataReadWrite.writeStrUtf8("Notes", L#("readme", "x.txt"), "no")})))}
+  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataReadWrite.writeStrUtf8("Notes", L#("readme.md"), "no")})))}
+  .return{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataReadWrite.writeStrUtf8("Notes", L#("todo"), "no")})))}
   }
 """, dataLinks(data, data)));
     assertEquals(List.of("fear:/ascii.txt", "fear:/data.fearless", "fear:/fresh/deeper/c.txt", "fear:/latin1.txt", "fear:/notes/a.txt", "fear:/notes/b.txt",
@@ -1005,16 +1004,15 @@ The path "data.fearless" of "Notes" is not valid: the top of a data project hold
 [readme, todo]
 """, dataRun(tmp, """
 Deletes: Main{s -> base.Block#
-  .let w= {s.dataReadWrite}
-  .do{Debug#(Wr#(w.delete("Notes", L#("pics", "inner", "three.txt"))))}
-  .do{Debug#(Ls#(w.paths("Notes", L#("pics"))))}
-  .do{Debug#(Wr#(w.delete("Notes", L#("pics", "deep", "two.txt"))))}
-  .do{Debug#(Wr#(w.delete("Notes", L#("pics", "one.txt"))))}
-  .do{Debug#(Wr#(w.delete("Notes", L#("notes", "a.txt"))))}
-  .do{Debug#(Wr#(w.delete("Notes", L#("notes", "a.txt"))))}
-  .do{Debug#(Wr#(w.delete("Notes", L#("data.fearless"))))}
-  .do{Debug#(Wr#(w.delete("Pub", L#("readme"))))}
-  .return{Debug#(Ls#(w.paths("Notes", {})))}
+  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataReadWrite.delete("Notes", L#("pics", "inner", "three.txt"))})))}
+  .do{Debug#(Ls#(s.try#(s.iso.close, {t -> t.dataReadWrite.paths("Notes", L#("pics"))})))}
+  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataReadWrite.delete("Notes", L#("pics", "deep", "two.txt"))})))}
+  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataReadWrite.delete("Notes", L#("pics", "one.txt"))})))}
+  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataReadWrite.delete("Notes", L#("notes", "a.txt"))})))}
+  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataReadWrite.delete("Notes", L#("notes", "a.txt"))})))}
+  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataReadWrite.delete("Notes", L#("data.fearless"))})))}
+  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataReadWrite.delete("Pub", L#("readme"))})))}
+  .return{Debug#(Ls#(s.try#(s.iso.close, {t -> t.dataReadWrite.paths("Notes", {})})))}
   }
 """, dataLinks(data, data)));
     assertEquals(List.of("fear:/data.fearless", "fear:/readme", "fear:/todo/item.txt"), fearPaths(data));
@@ -1031,8 +1029,8 @@ Deletes: Main{s -> base.Block#
     Fs.write(data.resolve("pic.png"), bout.toByteArray());
     utils.Err.strCmp("ok\n", dataRun(tmp, """
 Images: Main{s -> base.Block#
-  .let img= {s.dataRead.read("Pub", L#("pic.png")).run{.ok n -> n.readImage(1000); .info i -> base.Error!i}}
-  .return{Debug#(Wr#(s.dataReadWrite.writeImagePng("Notes", L#("copy.png"), img)))}
+  .let img= {s.dataRead.read("Pub", L#("pic.png")).readImage(1000)}
+  .return{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataReadWrite.writeImagePng("Notes", L#("copy.png"), img)})))}
   }
 """, dataLinks(data, data)));
     var copy= ImageIO.read(data.resolve("copy.png").toFile());
@@ -1047,7 +1045,7 @@ ok
 Painted: Main{s -> base.Block#
   .let img= {base.Images#(base.WidthNat#4, base.HeightNat#3, base.Color.rgb(0, 0, 255))
     .paint{g -> g.color(base.Color.rgb(255, 0, 0)).position(base.XInt#(+1), base.YInt#(+1)).rect(base.WidthNat#2, base.HeightNat#5)}}
-  .return{Debug#(Wr#(s.dataReadWrite.writeImagePng("Notes", L#("painted.png"), img)))}
+  .return{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataReadWrite.writeImagePng("Notes", L#("painted.png"), img)})))}
   }
 """, dataLinks(data, data)));
     var png= ImageIO.read(data.resolve("painted.png").toFile());
@@ -1059,13 +1057,13 @@ Painted: Main{s -> base.Block#
 ok
 [###]The resource "Notes/readme" could not be read: NoSuchFileException[###]""", dataRun(tmp, """
 Gone: Main{s -> base.Block#
-  .let n= {s.dataReadWrite.read("Notes", L#("readme")).run{.ok n -> n; .info i -> base.Error!i}}
-  .do{Debug#(Wr#(s.dataReadWrite.delete("Notes", L#("readme"))))}
+  .let n= {s.dataReadWrite.read("Notes", L#("readme"))}
+  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataReadWrite.delete("Notes", L#("readme"))})))}
   .return{Debug#(n.readStrUtf8 Recover)}
   }
 """, dataLinks(data, data)));
     utils.Err.strCmp("[###]The path \"\" of \"Pub\" could not be read: NoSuchFileException[###]", dataRun(tmp, """
-Gone: Main{s -> Debug#(Ls#(s.dataRead.paths("Pub", {})))}
+Gone: Main{s -> Debug#(s.dataRead.paths("Pub", {}).str{::})}
 """, dataLinks(tmp.resolve("gone"), data)));
   }
   @Test void aProgramWithNoLinksHasNoRoot(@TempDir Path tmp){
@@ -1076,8 +1074,8 @@ Gone: Main{s -> Debug#(Ls#(s.dataRead.paths("Pub", {})))}
 """, dataRun(tmp, """
 NoLinks: Main{s -> base.Block#
   .do{Debug#(s.dataRead.roots.str{::})}
-  .do{Debug#(Ls#(s.dataRead.paths("Pub", {})))}
-  .return{Debug#(Wr#(s.dataReadWrite.writeStrUtf8("Notes", L#("a.txt"), "no")))}
+  .do{Debug#(Ls#(s.try#(s.iso.close, {t -> t.dataRead.paths("Pub", {})})))}
+  .return{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataReadWrite.writeStrUtf8("Notes", L#("a.txt"), "no")})))}
   }
 """, List.of()));
   }
