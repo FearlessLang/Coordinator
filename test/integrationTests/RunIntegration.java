@@ -164,7 +164,7 @@ child: download ok
 child: manager revoked
 child ends
 the failing main throws
-imm Failing.main(_) error line: 36 in file _proc/_rank_app.fear
+imm Failing.main(_) error line: 37 in file _proc/_rank_app.fear
 parent starts
 parent: manager revoked
 child starts
