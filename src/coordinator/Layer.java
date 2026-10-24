@@ -55,7 +55,7 @@ record BaseLayer(Coordinator coordinator, Map<String,Map<String,String>> map, lo
     var capabilities= new CapabilityEnvironment(rich.autoloadedAssets());
     var core= coordinator.frontend(pkgName, rich.sources(stLib.allFiles()), rich.oracle(), other, Map.of(), capabilities);
     coordinator.backend(pkgName, core, rich.oracle(), other, capabilities);
-    var newStamp= out.commit(pkgName, core, new MainsInfo(Map.of()), stLib.allFiles(), List.of(), maxIn);
+    var newStamp= out.commit(pkgName, core, new MainsInfo(Map.of(), MainsInfo.attenuators(core)), stLib.allFiles(), List.of(), maxIn);
     return OtherPackages.start(map, AllLs.of(core).values(), Math.max(baseStamp, newStamp));
   }
   private OtherPackages deployedBaseApi(Path cacheDir, String pkgName){
