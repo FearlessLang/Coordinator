@@ -100,14 +100,22 @@ public final class UserError extends RuntimeException{
   public static String path(String path){ return "  "+PrettyFileName.sanitizeAscii(path); }
   //-- reaching a human
   public static String crash(Throwable t){
-    var sw= new StringWriter();
-    t.printStackTrace(new PrintWriter(sw));
     return """
 Error: Fearless crashed (this is a bug).
   Please report this error and include the details below.
-
-Details:
-"""+sw;
+"""+details(t);
+  }
+  public static UserError cacheCorruptedOrCrash(Throwable t){
+    return new UserError("""
+Error: Fearless crashed: either this project's build cache was corrupted, or this is a Fearless bug.
+  Fearless deleted this project's .fearless_out folder: compile again to rebuild it.
+  If Fearless crashes again, please report that error.
+"""+details(t), t);
+  }
+  private static String details(Throwable t){
+    var sw= new StringWriter();
+    t.printStackTrace(new PrintWriter(sw));
+    return "\nDetails:\n"+sw;
   }
   //A bug still has to reach the user of a windowed program. Wrapping it here is only
   //about how it is shown: what it MEANS is still utils.Bug.

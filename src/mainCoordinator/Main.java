@@ -85,6 +85,7 @@ public final class Main{
     if (!belongsToFamily.test(identity)){ return; }
     var icon= appDir.resolve("icon.png");
     FileAssociations.reconcile(identity, belongsToFamily, l, List.of(new Icon(".fearless", l, icon)), List.of(), l, icon,
+      c -> JavacTool.managerFolderOf(c).ifPresent(Fs::rmTree),
       reported -> Violation.associationsAmbiguous(reported).withRecovery(
         "Remove all Fearless registrations", () -> FileAssociations.eradicateAll(belongsToFamily, Violation::associationLeftHalfDone)),
       locked -> Violation.associationUserLocked(locked, e -> ""),

@@ -24,6 +24,7 @@ import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import javax.imageio.ImageIO;
@@ -107,7 +108,7 @@ final class RunIntegration{
     var fails= out.lines().filter(l -> l.startsWith("Test failure ")).toList();
     assertTrue(fails.isEmpty(), () -> Join.of(fails, "Fearless unit tests failed in "+name+":\n", "\n", ""));
     var lines= out.lines().toList();
-    var mains= coordinator(root).mains(root, stLib).orElseThrow().size();
+    var mains= coordinator(root).mains(root, stLib).orElseThrow().mains().size();
     var allCompleted= lines.stream().filter(marker::equals).count() == mains && lines.getLast().equals(marker);
     assertTrue(allCompleted, () -> "Not all the "+mains+" mains of "+name+" completed: a main that completes prints the line \""+marker+"\", and the output must end with that line. Output:\n"+out);
   }
@@ -154,7 +155,7 @@ top level main
 """, run("mainInMethod"));
   }
   @Test void testingStandardLibrary(){ testOk("testingStandardLibrary");}
-  //every main runs under proc.NoManager, Child and Failing on their own first; every process Parent starts keeps that attenuator and adds its own
+  //every main runs under base.NoManager, Child and Failing on their own first; every process Parent starts keeps that attenuator and adds its own
   //Failing run as a new process prints nothing: its Info reaches Parent, which prints it
   @Test void testProcessAttenuation(){
     utils.Err.strCmp("""
@@ -163,7 +164,7 @@ child: download ok
 child: manager revoked
 child ends
 the failing main throws
-imm Failing.main(_) error line: 38 in file _proc/_rank_app.fear
+imm Failing.main(_) error line: 31 in file _proc/_rank_app.fear
 parent starts
 parent: manager revoked
 child starts
@@ -178,7 +179,7 @@ child ends
 parent: child ok
 parent: failing failed: the failing main throws
 parent ends
-""", main(freshIntegrationRoot("testProcessAttenuation"), List.of("-DfearlessAttenuators=proc.NoManager")));
+""", main(freshIntegrationRoot("testProcessAttenuation"), List.of("-DfearlessAttenuators=base.NoManager")));
   }
   @Test void baseGeneratedExamples(@TempDir Path tmp) throws InterruptedException{
     var out= Coordinator.runMains(Coordinator.runData(tmp, ResolveResource.stLibPath), List.of(ResolveResource.coordinatorJars, baseCache), "_base.Main");
@@ -652,7 +653,7 @@ Again:Main{s->base.Debug#("again")}
   "attenuators": []
 }
 """, manifests(root));
-    assertEquals(Map.of("col.Again", "_col/more.fear", "col.Hello", "_col/_rank_app.fear"), coordinator(root).mains(root, stLib).orElseThrow());
+    assertEquals(Map.of("col.Again", "_col/more.fear", "col.Hello", "_col/_rank_app.fear"), files(coordinator(root).mains(root, stLib).orElseThrow()));
   }
   @Test void aCaptureFreeMainDeclaredInAMethodIsListedLikeTheOnesItRuns(@TempDir Path tmp) throws InterruptedException{
     var root= tmp.resolve("root");
@@ -666,7 +667,7 @@ Top:Main{s->base.Debug#(`top`)}
 MkFree:{.mk:Main->Free:Main,CaptureFree{s->base.Debug#(`free`)}}
 """);
     utils.Err.strCmp("free\ntop\n", coordinator(root).main(root, stLib));
-    assertEquals(Map.of("col.Free", "_col/_rank_app.fear", "col.Top", "_col/_rank_app.fear"), coordinator(root).mains(root, stLib).orElseThrow());
+    assertEquals(Map.of("col.Free", "_col/_rank_app.fear", "col.Top", "_col/_rank_app.fear"), files(coordinator(root).mains(root, stLib).orElseThrow()));
   }
   @Test void aMainWithGenericParametersIsRefused(@TempDir Path tmp){
     var root= tmp.resolve("root");
@@ -1093,6 +1094,7 @@ NoLinks: Main{s -> base.Block#
   }
 """, List.of()));
   }
+  static Map<String,String> files(MainsInfo info){ return info.mains().entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().file())); }
   static String pathEncoding(){ return Fs.isWindows() ? "utf16Le" : "utf8"; }
   @Test void aProgramStartedWithoutTheManagerSendsNoMessage(@TempDir Path tmp){
     utils.Err.strCmp("""
@@ -1136,6 +1138,8 @@ ok
 ok
 ok
 ok
+ok
+ok
 The manager refuses to forget nope.
 The path "relative" of the message "Register" is not an absolute path of this system.
 """, dataRun(tmp, """
@@ -1150,6 +1154,8 @@ Send: Main{s -> base.Block#
   .do{Debug#(Caught#(s.try#(s.iso.close, {t -> t.manager.kindDataReadOnly "hello"})))}
   .do{Debug#(Caught#(s.try#(s.iso.close, {t -> t.manager.linkWrite("hello", "notes", L#("Notes", "Pub"))})))}
   .do{Debug#(Caught#(s.try#(s.iso.close, {t -> t.manager.linkRead("hello", "pub", {})})))}
+  .do{Debug#(Caught#(s.try#(s.iso.close, {t -> t.manager.attenuate("hello", "hello.A", L#("base.NoManagerQuit", "hello.NoGui"))})))}
+  .do{Debug#(Caught#(s.try#(s.iso.close, {t -> t.manager.attenuate("hello", "hello.B", {})})))}
   .do{Debug#(Caught#(s.try#(s.iso.close, {t -> t.manager.openWithOrShortcut("%1$s".u.%2$s, "hello", "hello.A")})))}
   .do{Debug#(Caught#(s.try#(s.iso.close, {t -> t.manager.forget "nope"})))}
   .return{Debug#(Caught#(s.try#(s.iso.close, {t -> t.manager.register("relative".u.%2$s)})))}
@@ -1164,6 +1170,8 @@ FearlessCommandCompile hello
 FearlessCommandKind hello data:readOnly
 FearlessCommandLink hello notes write Notes Pub
 FearlessCommandLink hello pub read
+FearlessCommandAttenuate hello hello.A base.NoManagerQuit hello.NoGui
+FearlessCommandAttenuate hello hello.B
 FearlessCommandOpenWithOrShortcut %1$s hello hello.A
 FearlessCommandForget nope
 """.formatted(base16), Fs.readUtf8(log).replace("\r\n", "\n"));
@@ -1759,7 +1767,7 @@ Foo:Main, OpenWith[IconsFoo,"foo"]{s->base.Debug#(`foo`)}
     assertEquals(Optional.empty(), coordinator(root).mains(root, stLib));
     coordinator(root).compile(root, stLib);
     utils.Err.strCmp(text, manifests(root));
-    assertEquals(Map.of("col.Foo", "_col/_rank_app.fear"), coordinator(root).mains(root, stLib).orElseThrow());
+    assertEquals(Map.of("col.Foo", "_col/_rank_app.fear"), files(coordinator(root).mains(root, stLib).orElseThrow()));
   }
   @Test void everyPackageListsItsMainsAndARemovedPackageLosesItsManifest(@TempDir Path tmp) throws Exception{
     var root= claimsProject(tmp, """
@@ -1770,7 +1778,7 @@ iii
 Lib:base.Main, base.OpenWith[base.IconsConflict,"fear"]{s->base.Debug#(`lib`)}
 """);
     coordinator(root).compile(root, stLib);
-    assertEquals(Map.of("col.Foo", "_col/_rank_app.fear", "lib.Lib", "_lib/_rank_core.fear"), coordinator(root).mains(root, stLib).orElseThrow());
+    assertEquals(Map.of("col.Foo", "_col/_rank_app.fear", "lib.Lib", "_lib/_rank_core.fear"), files(coordinator(root).mains(root, stLib).orElseThrow()));
     Fs.rmTree(root.resolve("_col"));
     assertEquals(Map.of("lib", true), Coordinator.pkgsBuilt(root, baseCache));
     utils.Err.strCmp("lib\n", coordinator(root).main(root, stLib));
@@ -1815,7 +1823,7 @@ Foo:Main{s->base.Debug#(`foo`)}
     }
     finally{ Fs.setLastModifiedTime(baseApi, old); }
   }
-  void aCorruptedCacheFileIsDeletedWithTheWholeCache(Path tmp, String file, java.util.function.UnaryOperator<byte[]> corrupt, String why){
+  void aCorruptedCacheFileIsDeletedWithTheWholeCache(Path tmp, String file, java.util.function.UnaryOperator<byte[]> corrupt, String expected){
     var root= tmp.resolve("root");
     UserError.root = root;
     FsDsl.materialize(root, """
@@ -1829,27 +1837,29 @@ A:Main{s->base.Debug#(`hi`)}
     var cached= out.resolve(file);
     Fs.ofV(() -> Fs.write(cached, corrupt.apply(Fs.readAllBytes(cached))));
     var ex= assertThrows(UserError.class, () -> main(root, List.of()));
-    utils.Err.strCmp("Build cache contains an invalid cached file.[###]"+why+"[###]Fearless deleted this project's .fearless_out folder: compile again to rebuild it.\n", ex.getMessage());
+    utils.Err.strCmp(expected, ex.getMessage());
     assertFalse(Fs.exists(out));
     utils.Err.strCmp("hi\n", main(root, List.of()));
   }
+  static String invalidCache(String why){ return "Build cache contains an invalid cached file.[###]"+why+"[###]Fearless deleted this project's .fearless_out folder: compile again to rebuild it.\n"; }
+  static String crashedWithCache(String detail){ return "Error: Fearless crashed: either this project's build cache was corrupted, or this is a Fearless bug.[###]Fearless deleted this project's .fearless_out folder: compile again to rebuild it.[###]Details:\n"+detail+"[###]"; }
   @Test void aBuiltFileThatIsNotUtf8DeletesTheCache(@TempDir Path tmp){
-    aCorruptedCacheFileIsDeletedWithTheWholeCache(tmp, "p.built", _ -> new byte[]{(byte)0xff}, "Unexpected character");
+    aCorruptedCacheFileIsDeletedWithTheWholeCache(tmp, "p.built", _ -> new byte[]{(byte)0xff}, invalidCache("Unexpected character"));
   }
   @Test void aGarbledMainsInfoDeletesTheCache(@TempDir Path tmp){
-    aCorruptedCacheFileIsDeletedWithTheWholeCache(tmp, "p_manifest.info", _ -> "[".getBytes(UTF_8), "p_manifest.info");
+    aCorruptedCacheFileIsDeletedWithTheWholeCache(tmp, "p_manifest.info", _ -> "[".getBytes(UTF_8), invalidCache("p_manifest.info"));
   }
   @Test void anApiJsonWithAnUnknownReferenceCapabilityDeletesTheCache(@TempDir Path tmp){
-    aCorruptedCacheFileIsDeletedWithTheWholeCache(tmp, "p.json", bs -> new String(bs, UTF_8).replaceFirst("\"imm\"", "\"imx\"").getBytes(UTF_8), "imx");
+    aCorruptedCacheFileIsDeletedWithTheWholeCache(tmp, "p.json", bs -> new String(bs, UTF_8).replaceFirst("\"imm\"", "\"imx\"").getBytes(UTF_8), invalidCache("imx"));
   }
   @Test void anApiJsonWithATypeOfReferenceCapabilityMutHDeletesTheCache(@TempDir Path tmp){
-    aCorruptedCacheFileIsDeletedWithTheWholeCache(tmp, "p.json", bs -> new String(bs, UTF_8).replaceFirst("\\[\"p.A\",\"mut\"", "[\"p.A\",\"mutH\"").getBytes(UTF_8), "Bad type reference capability mutH");
+    aCorruptedCacheFileIsDeletedWithTheWholeCache(tmp, "p.json", bs -> new String(bs, UTF_8).replaceFirst("\\[\"p.A\",\"mut\"", "[\"p.A\",\"mutH\"").getBytes(UTF_8), crashedWithCache("java.lang.AssertionError"));
   }
   @Test void anApiJsonWithAnIsoMethodDeletesTheCache(@TempDir Path tmp){
-    aCorruptedCacheFileIsDeletedWithTheWholeCache(tmp, "p.json", bs -> new String(bs, UTF_8).replaceFirst("\\[\".main\",\"imm\"", "[\".main\",\"iso\"").getBytes(UTF_8), "Bad method reference capability iso");
+    aCorruptedCacheFileIsDeletedWithTheWholeCache(tmp, "p.json", bs -> new String(bs, UTF_8).replaceFirst("\\[\".main\",\"imm\"", "[\".main\",\"iso\"").getBytes(UTF_8), crashedWithCache("java.lang.AssertionError"));
   }
   @Test void anApiJsonWithARepeatedSupertypeDeletesTheCache(@TempDir Path tmp){
-    aCorruptedCacheFileIsDeletedWithTheWholeCache(tmp, "p.json", bs -> new String(bs, UTF_8).replaceFirst("\\[\"base.Main\"\\]", "[\"base.Main\"],[\"base.Main\"]").getBytes(UTF_8), "Repeated supertype");
+    aCorruptedCacheFileIsDeletedWithTheWholeCache(tmp, "p.json", bs -> new String(bs, UTF_8).replaceFirst("\\[\"base.Main\"\\]", "[\"base.Main\"],[\"base.Main\"]").getBytes(UTF_8), crashedWithCache("java.lang.AssertionError"));
   }
   @Test void aMapDirectiveEditedInAHigherRankPackageMakesItsTargetPackageNotBuilt(@TempDir Path tmp) throws IOException{
     var root= tmp.resolve("root");
@@ -2050,7 +2060,7 @@ Hello:Main{s->base.Debug#("from z")}
     var c= coordinator(project);
     c.compile(project, stLib);
     var out= new StringBuilder();
-    var child= Coordinator.startMain(project, ResolveResource.stLibPath, "term.FirstDoesNotWaitForTheRest", Optional.empty(), Map.of(), Map.of(), List.of(), c.sharedClasspath(), out::append);
+    var child= Coordinator.startMain(project, ResolveResource.stLibPath, "term.FirstDoesNotWaitForTheRest", Optional.empty(), Map.of(), Map.of(), List.of(), List.of(), c.sharedClasspath(), out::append);
     var waiter= new Thread(() -> {
       try{ child.await(); }
       catch (InterruptedException _){ child.kill(); }
@@ -2065,7 +2075,7 @@ Hello:Main{s->base.Debug#("from z")}
     var root= ResolveResource.integrationTests.resolve("runRecursion");
     if (!recursionCompiled){ compileOk("runRecursion"); recursionCompiled = true; }
     var out= new StringBuilder();
-    Coordinator.startMain(root, ResolveResource.stLibPath, main, Optional.empty(), Map.of(), Map.of(), List.of(), coordinator(root).sharedClasspath(), out::append).await();
+    Coordinator.startMain(root, ResolveResource.stLibPath, main, Optional.empty(), Map.of(), Map.of(), List.of(), List.of(), coordinator(root).sharedClasspath(), out::append).await();
     return out.toString();
   }
   @Test void aDeepRecursionOverflowsTheStackOfMain() throws InterruptedException{
@@ -2172,14 +2182,14 @@ b
     var cp= Push.of(Coordinator.genJava(root.resolve(Coordinator.outDir)), c.sharedClasspath());
     var out= new StringBuilder();
     assertEquals(1, JavaTool.startMainFromJars(Coordinator.runData(root, c.stdLibBase()), cp, "_col.Main", out::append).await(), out::toString);
-    assertEquals(1, Coordinator.startMain(root, c.stdLibBase(), "col.A", Optional.empty(), Map.of(), Map.of(), List.of(), c.sharedClasspath(), out::append).await(), out::toString);
-    assertEquals(0, Coordinator.startMain(root, c.stdLibBase(), "col.B", Optional.empty(), Map.of(), Map.of(), List.of(), c.sharedClasspath(), out::append).await(), out::toString);
+    assertEquals(1, Coordinator.startMain(root, c.stdLibBase(), "col.A", Optional.empty(), Map.of(), Map.of(), List.of(), List.of(), c.sharedClasspath(), out::append).await(), out::toString);
+    assertEquals(0, Coordinator.startMain(root, c.stdLibBase(), "col.B", Optional.empty(), Map.of(), Map.of(), List.of(), List.of(), c.sharedClasspath(), out::append).await(), out::toString);
   }
   @Test void aMainEndingWithAJavaErrorExitsWith1() throws InterruptedException{
     var root= ResolveResource.integrationTests.resolve("runRecursion");
     if (!recursionCompiled){ compileOk("runRecursion"); recursionCompiled = true; }
     var out= new StringBuilder();
-    assertEquals(1, Coordinator.startMain(root, ResolveResource.stLibPath, "rec.NaiveSum", Optional.empty(), Map.of(), Map.of(), List.of(), coordinator(root).sharedClasspath(), out::append).await(), out::toString);
+    assertEquals(1, Coordinator.startMain(root, ResolveResource.stLibPath, "rec.NaiveSum", Optional.empty(), Map.of(), Map.of(), List.of(), List.of(), coordinator(root).sharedClasspath(), out::append).await(), out::toString);
     utils.Err.strCmp("[###]java.lang.StackOverflowError[###]", out.toString());
   }
   @Test void virtualizationMapMentionsAPackageThatDoesNotExist(@TempDir Path tmp) throws InterruptedException{

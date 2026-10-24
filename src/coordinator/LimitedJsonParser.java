@@ -8,7 +8,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -62,11 +61,10 @@ final class LimitedJsonParser{
     if (a.size() != 6){ throw err("Bad type record size"); }
     var nameS= asStr(a.get(0));
     var rc= RC.valueOf(asStr(a.get(1)));
-    if (rc.isH()){ throw err("Bad type reference capability "+rc); }
-    var bs= distinct(asArr(a.get(2)).stream().map(x -> bFrom(asArr(x))).toList(), "generic parameter");
+    var bs= asArr(a.get(2)).stream().map(x -> bFrom(asArr(x))).toList();
     var tn= new TName(nameS, bs.size(), Pos.unknown);
-    var cs= distinct(asArr(a.get(3)).stream().map(x -> cFrom(asArr(x))).toList(), "supertype");
-    var ms= distinct(asArr(a.get(4)).stream().map(x -> mFrom(asArr(x))).toList(), "method");
+    var cs= asArr(a.get(3)).stream().map(x -> cFrom(asArr(x))).toList();
+    var ms= asArr(a.get(4)).stream().map(x -> mFrom(asArr(x))).toList();
     //Non-public types are kept too: needed for subtyping reasoning.
     return new Literal(rc, tn, bs, cs, asStr(a.get(5)), ms, Src.synthetic, false);
   }
@@ -74,8 +72,7 @@ final class LimitedJsonParser{
     if (a.size() != 8){ throw err("Bad M"); }
     var nameS= asStr(a.get(0));
     var rc= RC.valueOf(asStr(a.get(1)));
-    if (rc.isH() || rc == RC.iso){ throw err("Bad method reference capability "+rc); }
-    var bs= distinct(asArr(a.get(2)).stream().map(x -> bFrom(asArr(x))).toList(), "generic parameter");
+    var bs= asArr(a.get(2)).stream().map(x -> bFrom(asArr(x))).toList();
     var ts= asArr(a.get(3)).stream().map(x -> tFrom(asArr(x))).toList();
     var ret= tFrom(asArr(a.get(4)));
     var originS= asStr(a.get(5));
@@ -85,10 +82,6 @@ final class LimitedJsonParser{
     if (!abs && !tag.equals("concrete")){ throw err("Bad abs/concrete tag"); }
     return new M(new Sig(rc, new MName(nameS, ts.size()), bs, ts, ret, new TName(originS, originA, Pos.unknown), abs, dummySpan()),
       IntStream.range(0, ts.size()).mapToObj(j -> "x"+j).toList(), Optional.empty());
-  }
-  private <E> List<E> distinct(List<E> es, String what){
-    if (Set.copyOf(es).size() != es.size()){ throw err("Repeated "+what); }
-    return es;
   }
   private int nat(Object o){
     try{ return Integer.parseInt("+"+asStr(o)); }//to reject negatives

@@ -30,7 +30,7 @@ public record MainsInfo(Map<String,Main> mains, List<String> attenuators){
   public MainsInfo(Map<String,Main> mains){ this(mains, List.of()); }
   public record Main(String file, List<Claim> shortcuts, List<Claim> openWiths, List<Claim> icons){}
   public record Claim(String icon, String diskPath, String zipSteps, String zipEntry, String extension){}
-  static final String suffix= "_manifest.info";
+  public static final String suffix= "_manifest.info";
   public static List<Path> files(Path project){
     var out= Helper.out(project).rootDir();
     if (!Fs.isDirectory(out)){ return List.of(); }
@@ -119,8 +119,9 @@ public record MainsInfo(Map<String,Main> mains, List<String> attenuators){
     var of= new Of(src, stLib);
     all.stream().sorted(Comparator.comparingInt((Literal l) -> l.cs().size()).thenComparing(l -> l.name().s())).forEach(of::check);
     var mains= all.stream().filter(MainsInfo::isMain).collect(Collectors.toUnmodifiableMap(l -> l.name().s(), of::main));
-    return new MainsInfo(mains, all.stream().filter(l -> concrete(l, LiteralDeclarations.attenuator)).map(l -> l.name().s()).sorted().toList());
+    return new MainsInfo(mains, attenuators(core));
   }
+  public static List<String> attenuators(List<Literal> core){ return AllLs.of(core).values().stream().filter(l -> concrete(l, LiteralDeclarations.attenuator)).map(l -> l.name().s()).toList(); }
   public static boolean isMain(Literal l){ return concrete(l, LiteralDeclarations.main); }
   private static boolean concrete(Literal l, TName t){ return LiteralDeclarations.has(l.cs(), t) && l.ms().stream().noneMatch(m -> m.sig().abs()); }
   private record Of(SourceOracle src, SourceOracle stLib){
