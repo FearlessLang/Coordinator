@@ -340,9 +340,11 @@ code{
     sb.append("</section>\n");
   }
   void renderMethod(StringBuilder sb, MethodDoc m, Map<DocOcc,Object> claims){
-    sb.append("<details class=\"method\" id=\"").append(methodId(m.owner.main().name(), m.main())).append("\">\n")
-      .append("<summary><span class=\"disclosure\">&#9656;</span><span class=\"sig\">")
-      .append(renderSig(m)).append("</span></summary>\n");
+    var ids= m.variants.stream().map(v -> methodId(m.owner.main().name(), v)).distinct().toList();
+    sb.append("<details class=\"method\" id=\"").append(ids.getFirst()).append("\">\n")
+      .append("<summary><span class=\"disclosure\">&#9656;</span>");
+    ids.stream().skip(1).forEach(id -> sb.append("<span id=\"").append(id).append("\"></span>"));
+    sb.append("<span class=\"sig\">").append(renderSig(m)).append("</span></summary>\n");
     if (m.declared){ renderDoc(sb, m, m.docs, claims); }
     sb.append(Join.of(fromRefs(m).stream().map(this::fromLink), "<p class=\"doc from\">From: ", ", ", ".</p>\n", ""));
     renderVariants(sb, "Typed method variants", m.variants, v -> toStr.sig(v.sig()));
@@ -491,7 +493,7 @@ code{
     return "type-"+id(n.s())+"-"+n.arity();
   }
   static String methodId(TName owner, M m){
-    return "method-"+id(owner.s())+"-"+id(m.sig().rc().name())+"-"+id(m.sig().m().s())+"-"+m.sig().m().arity();
+    return "method-"+id(owner.s())+"-"+owner.arity()+"-"+id(m.sig().rc().name())+"-"+id(m.sig().m().s())+"-"+m.sig().m().arity();
   }
   private static final Pattern notPlain= Pattern.compile("[^a-zA-Z0-9]");
   static String id(String s){ return notPlain.matcher(s).replaceAll(m -> "_"+Integer.toHexString(m.group().codePointAt(0))+"_"); }
