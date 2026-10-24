@@ -702,7 +702,7 @@ In file: fear:/_col/_rank_app.fear
 
 While inspecting type declaration "Hello[_]"
 Type declaration "Hello[_]" implements "base.Main" and has generic parameters.
-A main can not have generic parameters: running a main gives no generic arguments to it.
+A type implementing "base.Main" must have zero generic parameters.
 Error 7 WellFormedness""", ex.getMessage());
   }
   @Test void aSourceFileThatIsNotUtf8IsAUserError(@TempDir Path tmp) throws IOException{
