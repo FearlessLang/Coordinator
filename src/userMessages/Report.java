@@ -146,6 +146,11 @@ This usually comes from a computer whose clock is wrong, from a shared or networ
 whose clock is ahead, or from unpacking an archive made in another time zone.
 Save the file again, or correct the clock of this computer.
 """);}
+  public static UserError notUtf8(Ref kid, long line, int offset){
+    return new UserError(showRel(kid)+"\nThis file is not valid UTF-8 text.\nThe first invalid byte sequence is on line "+line+", at byte offset "+offset+" (counting from zero).\n"+"""
+Fearless reads the source files of a project as UTF-8 text.
+Save the file again as UTF-8, or remove it from the project folder.
+""");}
   public static UserError dateUnset(Path kid, long t){
     return new UserError(showRel(kid)+"\nThis file is dated "+dateOf(t)+"."+unset+"Save the file again, so that it gets the current date.\n");}
   public static UserError zipEntryDateInTheFuture(Path diskZip, List<String> steps, String entryName, long t, long now){

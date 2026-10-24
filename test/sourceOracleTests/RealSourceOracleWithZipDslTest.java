@@ -6,7 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static testHelperFs.FsDsl.runErrIOE;
 
 import java.io.ByteArrayOutputStream;
-import java.io.UncheckedIOException;
 import java.nio.file.AccessDeniedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -1597,7 +1596,12 @@ Optional.empty
     Fs.write(diskRoot.resolve("_pkg/a.fear"), bad);
     var diskRef= OneOr.of("one fear:/_pkg/a.fear", new RealSourceOracleWithZip(diskRoot).allFiles().stream()
       .filter(r -> r.fearPath().equals("fear:/_pkg/a.fear")));
-    assertThrows(UncheckedIOException.class, diskRef::loadString);
+    utils.Err.strCmp("""
+[###]Path: "_pkg/a.fear"
+
+This file is not valid UTF-8 text.
+The first invalid byte sequence is on line 1, at byte offset 0 (counting from zero).
+[###]""", assertThrows(UserError.class, diskRef::loadString).getMessage());
     var zipRoot= tmp.resolve("zip").toAbsolutePath().normalize();
     UserError.root = zipRoot;
     Fs.createDirectories(zipRoot.resolve("_pkg"));
@@ -1610,6 +1614,11 @@ Optional.empty
     Fs.write(zipRoot.resolve("_pkg/z.zip"), bytes.toByteArray());
     var zipRef= OneOr.of("one fear:/_pkg/z/a.fear", new RealSourceOracleWithZip(zipRoot).allFiles().stream()
       .filter(r -> r.fearPath().equals("fear:/_pkg/z/a.fear")));
-    assertThrows(UncheckedIOException.class, zipRef::loadString);
+    utils.Err.strCmp("""
+[###]Path: "_pkg/z/a.fear"
+
+This file is not valid UTF-8 text.
+The first invalid byte sequence is on line 1, at byte offset 0 (counting from zero).
+[###]""", assertThrows(UserError.class, zipRef::loadString).getMessage());
   }
 }
