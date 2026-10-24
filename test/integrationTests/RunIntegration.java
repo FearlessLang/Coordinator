@@ -164,7 +164,7 @@ child: download ok
 child: manager revoked
 child ends
 the failing main throws
-imm Failing.main(_) error line: 31 in file _proc/_rank_app.fear
+imm Failing.main(_) error line: 36 in file _proc/_rank_app.fear
 parent starts
 parent: manager revoked
 child starts
@@ -179,6 +179,20 @@ child ends
 parent: child ok
 parent: failing failed: the failing main throws
 parent ends
+spin ends
+starter starts
+child starts
+child: download ok
+child: manager revoked
+child ends
+child awaited: True
+child again: RunningMain.await was called on a surely terminated RunningMain.
+spin awaited: False
+spin terminated
+spin again: RunningMain.terminate was called on a surely terminated RunningMain.
+spin ends
+failing terminated: the failing main throws
+starter ends
 """, main(freshIntegrationRoot("testProcessAttenuation"), List.of("-DfearlessAttenuators=base.NoManager")));
   }
   @Test void baseGeneratedExamples(@TempDir Path tmp) throws InterruptedException{
