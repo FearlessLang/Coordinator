@@ -17,13 +17,10 @@ import utils.DistinctBy;
 import utils.Join;
 import utils.OneOr;
 
-/// Where a doc comment is written: the type it documents, and the method when it
-/// documents one. This is what makes "this" and the parameter names mean something.
 record Scope(Literal owner, Optional<M> method){
   static Scope of(Literal owner){ return new Scope(owner, Optional.empty()); }
   static Scope of(Literal owner, M method){ return new Scope(owner, Optional.of(method)); }
 }
-/// Resolves a scanned DocRef to the declarations it could name.
 record DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other){
   Optional<DocLink> resolve(DocRef ref, Scope scope){
     return switch (ref){
@@ -32,8 +29,6 @@ record DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other){
       case DocRef.MethodName m -> resolveMethod(m, scope);
     };
   }
-  //"this" and the method's parameters. A parameter typed by a type variable is in
-  //scope but has no page to point at, so it is a reference with no link.
   private Optional<DocLink> resolveLocal(DocRef.LocalName ref, Scope scope){
     if (!inScope(ref.name(), scope)){ return Optional.empty(); }
     return Optional.of(localType(ref.name(), scope)
@@ -53,9 +48,6 @@ record DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other){
     var cands= typeCandidates(ref).stream().map(Candidate::ofType).toList();
     return pack("Type "+ref.pkg().map(p -> p+".").orElse("")+ref.simpleName()+shape(ref.arity(), "[", "]"), cands);
   }
-  //a name declared here always wins over a same-named one elsewhere; only when nothing
-  //local matches do the other packages get a say, and then all of them do, so a valid
-  //cross-package reference is a link (or a disambiguation) rather than an error.
   private List<TName> typeCandidates(DocRef.TypeName ref){
     var pkg= ref.pkg();
     if (pkg.isEmpty() || pkg.get().equals(pkgName)){
@@ -64,8 +56,6 @@ record DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other){
     }
     return matching(foreign().filter(n -> pkg.isEmpty() || n.pkgName().equals(pkg.get())), ref);
   }
-  //the domain of the other packages has no order of its own, and the pages are compared
-  //byte for byte; an anonymous literal of another package has no anchor on its page.
   private Stream<TName> foreign(){
     return other.dom().stream().filter(n -> !other.__of(n).infName()).sorted(Comparator.comparing(TName::s).thenComparing(TName::arity));
   }
@@ -115,9 +105,6 @@ record DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other){
   private Optional<Literal> literalOf(TName n){
     return localTypeDoc(n).map(TypeDoc::main).or(() -> Optional.ofNullable(other.__of(n)));
   }
-  //every type that has the method, not only the one declaring it: this page answers
-  //"who has a .foo?". Only what the renderer emits an anchor for can be a candidate,
-  //since an invisible type or method has no id on the page to land on.
   private Optional<DocLink> resolveBareSelector(String selector, OptionalInt arity){
     var localCands= types.stream()
       .filter(TypeDoc::visible)
