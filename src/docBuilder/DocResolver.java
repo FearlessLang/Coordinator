@@ -2,6 +2,7 @@ package docBuilder;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.OptionalInt;
@@ -61,7 +62,12 @@ record DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other){
       var local= matching(types.stream().map(TypeDoc::main).filter(l -> !l.infName()).map(Literal::name), ref);
       if (!local.isEmpty() || pkg.isPresent()){ return local; }
     }
-    return matching(other.dom().stream().filter(n -> pkg.isEmpty() || n.pkgName().equals(pkg.get())), ref);
+    return matching(foreign().filter(n -> pkg.isEmpty() || n.pkgName().equals(pkg.get())), ref);
+  }
+  //the domain of the other packages has no order of its own, and the pages are compared
+  //byte for byte; an anonymous literal of another package has no anchor on its page.
+  private Stream<TName> foreign(){
+    return other.dom().stream().filter(n -> !other.__of(n).infName()).sorted(Comparator.comparing(TName::s).thenComparing(TName::arity));
   }
   private List<TName> matching(Stream<TName> names, DocRef.TypeName ref){
     return names
@@ -119,7 +125,7 @@ record DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other){
         .filter(MethodDoc::visible)
         .filter(m -> named(m.main(), selector, arity))
         .map(m -> Candidate.ofLocalMethod(t.main().name(), m)));
-    var foreignCands= other.dom().stream()
+    var foreignCands= foreign()
       .flatMap(n -> foreignCandidates(n, other.__of(n).ms(), selector, arity));
     return pack(selector+shape(arity, "(", ")"), Stream.concat(localCands, foreignCands).toList());
   }
