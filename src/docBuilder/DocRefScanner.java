@@ -16,7 +16,6 @@ import utils.Join;
 /// What counts as a name is asked of core (TName.isTypeName, TName.isPkgName,
 /// MName.isMethodName), so this never grows its own idea of the grammar.
 final class DocRefScanner{
-  record Found(int start, int end, DocRef.TypeName ref){}
   record CodeSpan(int start, int end, int fence){}
   private static final Pattern fenced= Pattern.compile("(?s)(?<!`)(`+)(?!`)(.*?)(?<!`)\\1(?!`)");
   static List<CodeSpan> codeSpans(String text){
@@ -31,15 +30,6 @@ final class DocRefScanner{
     var p= new Parse(text.substring(sp.start(), sp.end()));
     var res= p.ref();
     return (p.ok && p.i==p.s.length()) ? res : Optional.empty();
-  }
-  //a rendered signature is code, not prose: every maximal word that is a type name is
-  //offered, and nothing here can be an error. Taking maximal words is what keeps
-  //"ieeeEq" from being read as ending in the type "Eq".
-  static List<Found> signatureTypes(String text){
-    return word.matcher(text).results()
-      .filter(w -> TName.isTypeName(w.group()))
-      .map(w -> new Found(w.start(), w.end(), new DocRef.TypeName(Optional.empty(), w.group(), OptionalInt.empty())))
-      .toList();
   }
   private static final Pattern word= Pattern.compile("[\\p{L}\\p{Nd}_']+");
   /// One reference, read left to right: an optional receiver, then an optional
