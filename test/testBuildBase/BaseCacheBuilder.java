@@ -7,6 +7,7 @@ import java.util.Optional;
 
 import coordinator.CapabilityEnvironment;
 import coordinator.Coordinator;
+import coordinator.MainsInfo;
 import coordinator.OutputOracle;
 import core.E.Literal;
 import core.OtherPackages;
@@ -53,6 +54,7 @@ public final class BaseCacheBuilder{
       Fs.copyFresh(Coordinator.genJava(scratch).resolve("base.jar"), baseCache.resolve("base.jar"));
       Fs.copyFresh(Coordinator.genJava(scratch).resolve("base.html"), baseCache.resolve("base.html"));
       Fs.copyFresh(Coordinator.genJava(scratch).resolve("base.txt"), baseCache.resolve("base.txt"));
+      Fs.writeUtf8(baseCache.resolve(pkgName+MainsInfo.suffix), new MainsInfo(Map.of(), MainsInfo.attenuators(core)).print());
     }
     finally{ Fs.rmTree(scratch); }
   }

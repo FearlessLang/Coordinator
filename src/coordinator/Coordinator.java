@@ -90,7 +90,7 @@ public interface Coordinator{
     return sb.toString();
   }
   default List<String> compile(Path project, SourceOracle stLib){ return guardingCache(project, () -> compileNow(project, stLib)); }
-  default Optional<Map<String,String>> mains(Path project, SourceOracle stLib){
+  default Optional<MainsInfo> mains(Path project, SourceOracle stLib){
     try{ return Optional.of(guardingCache(project, () -> mainsNow(project, stLib))); }
     catch (WouldCompile _){ return Optional.empty(); }
   }
@@ -114,20 +114,20 @@ public interface Coordinator{
     l.pkgs().keySet().forEach(p -> out.relocate(p, o, stLib));
     return List.copyOf(l.pkgs().keySet());//by design: only the highest rank number's packages have their Main run
   }
-  private Map<String,String> mainsNow(Path project, SourceOracle stLib){
+  private MainsInfo mainsNow(Path project, SourceOracle stLib){
     var c= new NoCompile(baseCachePath());
     var o= sourceOracle(project);
     var out= new NoCommit(Helper.out(project).rootDir());
     Helper.layerOf(c, o, project, out, stLib).compile(o, out);
-    var res= new TreeMap<String,String>();
-    MainsInfo.read(project).orElseThrow().mains().forEach((k,v) -> res.put(k, v.file()));
-    return Collections.unmodifiableMap(res);
+    var res= MainsInfo.read(project).orElseThrow();
+    return baseCachePath().map(b -> MainsInfo.merge(Stream.of(res, MainsInfo.parse(b.resolve("base"+MainsInfo.suffix))))).orElse(res);
   }
-  static ChildJvm startMain(Path project, Path base, String main, Optional<Path> input, Map<String,Path> reads, Map<String,Path> edits, List<String> desk, List<Path> sharedClasspath, Consumer<String> out){
+  static ChildJvm startMain(Path project, Path base, String main, Optional<Path> input, Map<String,Path> reads, Map<String,Path> edits, List<String> attenuators, List<String> desk, List<Path> sharedClasspath, Consumer<String> out){
     var jvmArgs= new ArrayList<>(runData(project, base));
     input.ifPresent(i -> jvmArgs.add("-DfearlessInput.file="+i));
     reads.forEach((k,v) -> jvmArgs.add("-DfearlessDataRead."+k+"="+v));
     edits.forEach((k,v) -> jvmArgs.add("-DfearlessDataWrite."+k+"="+v));
+    if (!attenuators.isEmpty()){ jvmArgs.add("-DfearlessAttenuators="+String.join(",", attenuators)); }
     jvmArgs.addAll(desk);
     return JavaTool.startMainFromJars(jvmArgs, Push.of(genJava(project.resolve(outDir)), sharedClasspath), "_"+main.substring(0, main.indexOf('.'))+".Main", out, main);
   }
