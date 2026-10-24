@@ -6,7 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static testHelperFs.FsDsl.runErrIOE;
 
 import java.io.ByteArrayOutputStream;
-import java.io.UncheckedIOException;
 import java.nio.file.AccessDeniedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -1584,11 +1583,10 @@ Optional.empty
 Optional.empty
 """, Join.of(Stream.of("a.IconsFoo", "b.XYBar", "base.IconsConflict", "a.Foo", "a.A", "base.Str", "b.IconsNotes").map(asset), "", "\n", "\n", ""));
   }
-  // A .fear file with invalid UTF-8 bytes fails loudly (Files.readString is strict) when
-  // read directly off disk. The same bytes, read through a zip entry, must fail the same
-  // way: FrontendLogicMain.of calls Ref.loadString() on every source file regardless of
-  // whether it came from disk or from inside a zip, so silently swallowing the invalid
-  // bytes into U+FFFD instead of failing would feed corrupted source text to the parser.
+  // A .fear file with invalid UTF-8 bytes is an error of the user, read off disk or
+  // through a zip entry: FrontendLogicMain.of calls Ref.loadString() on every source file
+  // regardless of where it came from, so silently swallowing the invalid bytes into U+FFFD
+  // would feed corrupted source text to the parser.
   @Test void errZipEntryInvalidUtf8MatchesDiskEntry(@TempDir Path tmp) throws Exception{
     byte[] bad= {(byte)0xFF, (byte)0xFE, 'X'};
     var diskRoot= tmp.resolve("disk").toAbsolutePath().normalize();
@@ -1597,7 +1595,7 @@ Optional.empty
     Fs.write(diskRoot.resolve("_pkg/a.fear"), bad);
     var diskRef= OneOr.of("one fear:/_pkg/a.fear", new RealSourceOracleWithZip(diskRoot).allFiles().stream()
       .filter(r -> r.fearPath().equals("fear:/_pkg/a.fear")));
-    assertThrows(UncheckedIOException.class, diskRef::loadString);
+    utils.Err.strCmp("Fearless could not read this file:[###]a.fear[###]Line:        1\n  Column:      1\n  Byte offset: 0[###]", assertThrows(UserError.class, diskRef::loadString).getMessage());
     var zipRoot= tmp.resolve("zip").toAbsolutePath().normalize();
     UserError.root = zipRoot;
     Fs.createDirectories(zipRoot.resolve("_pkg"));
@@ -1610,6 +1608,6 @@ Optional.empty
     Fs.write(zipRoot.resolve("_pkg/z.zip"), bytes.toByteArray());
     var zipRef= OneOr.of("one fear:/_pkg/z/a.fear", new RealSourceOracleWithZip(zipRoot).allFiles().stream()
       .filter(r -> r.fearPath().equals("fear:/_pkg/z/a.fear")));
-    assertThrows(UncheckedIOException.class, zipRef::loadString);
+    utils.Err.strCmp("[###]z.zip[###]a.fear[###]not valid UTF-8 text: the first invalid UTF-8 sequence begins at byte offset 0[###]", assertThrows(UserError.class, zipRef::loadString).getMessage());
   }
 }

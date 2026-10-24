@@ -1,5 +1,8 @@
 package realSourceOracle;
 
+import java.nio.ByteBuffer;
+import java.nio.charset.CharacterCodingException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -22,6 +25,11 @@ import utils.Push;
 public record ZipEntry(Path root, Path local, List<String> segments, List<String> zips, String lastZips) implements SourceOracle.Ref{
   @Override public String fearPath(){ return Join.of(Push.of(dropZipExt(PathEntry.localSegments(local)), segments), SourceOracle.root, "/", ""); }
   @Override public byte[] loadBytes(){ return ZipLocator.entryBytes(root.resolve(local), zips, lastZips); }
+  @Override public String loadString(){
+    var input= ByteBuffer.wrap(loadBytes());
+    try{ return StandardCharsets.UTF_8.newDecoder().decode(input).toString(); }
+    catch (CharacterCodingException e){ throw Report.zipEntryNotUtf8(root.resolve(local), zips, lastZips, input.position()); }
+  }
   @Override public long lastModified(){ return Fs.lastModified(root.resolve(local)); }
   @Override public String toString(){ return fearPath(); }
   private static final int maxZipNesting= 64;

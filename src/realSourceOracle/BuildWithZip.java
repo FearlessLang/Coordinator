@@ -16,6 +16,7 @@ import java.util.function.LongFunction;
 import java.util.function.Supplier;
 
 import docBuilder.HtmlDocBuilder;
+import fileSupport.StringFiles;
 import tools.Fs;
 import tools.SourceOracle;
 import tools.SourceOracle.Ref;
@@ -87,7 +88,7 @@ public final class BuildWithZip{
   }
   private static boolean isGeneratedTests(Path abs){
     var shape= abs.getParent().getFileName().toString().equals("auto_tests") && abs.getFileName().toString().endsWith("_test.fear");
-    return shape && Fs.isRegularFile(abs) && HtmlDocBuilder.generated(Fs.readUtf8(abs));
+    return shape && Fs.isRegularFile(abs) && HtmlDocBuilder.generated(StringFiles.read(abs, UserError.onFileError()));
   }
   private void collectBodyDiskZip(Path rel){
     for (var e : ZipEntry.allEntryPaths(root, rel)){

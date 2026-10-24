@@ -4,13 +4,16 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.stream.StreamSupport;
 
+import fileSupport.StringFiles;
 import tools.Fs;
 import tools.SourceOracle;
+import userMessages.UserError;
 import utils.Join;
 
 public record PathEntry(Path root, Path local) implements SourceOracle.Ref{
   @Override public String fearPath(){ return Join.of(localSegments(local), SourceOracle.root, "/", ""); }
   @Override public byte[] loadBytes(){ return Fs.of(() -> Fs.readAllBytes(root.resolve(local))); }
+  @Override public String loadString(){ return StringFiles.read(root.resolve(local), UserError.onFileError()); }
   @Override public long lastModified(){ return Fs.lastModified(root.resolve(local)); }
   @Override public String toString(){ return fearPath(); }
   static List<String> localSegments(Path local){

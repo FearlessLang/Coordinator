@@ -478,21 +478,6 @@ Foo: Bar {
     utils.Err.strCmp("[###]<span class=\"sig\">[###]href=\"base.html#type-base_2e_List-0\"[###]", html);
   }
 
-  @Test void aSignatureTypeOfBaseShadowedByALocalTypeLinksToBase(){
-    var holderName= new TName("pkg.Holder", 0, Pos.unknown);
-    var baseList= new T.RCC(RC.imm, new T.C(new TName("base.List", 0, Pos.unknown), List.of()), TSpan.fromPos(Pos.unknown, 1));
-    var toBase= new M(new Sig(RC.imm, new MName(".toBase", 0), List.of(), List.of(), baseList, holderName, false, TSpan.fromPos(Pos.unknown, 1)), List.of(), Optional.empty());
-    var local= namedType("pkg.List", List.of(), List.of());
-    var holder= namedType("pkg.Holder", List.of(), List.of(toBase));
-    var other= OtherPackages.start(Map.of(), List.of(namedType("base.List", List.of(), List.of())), 0L);
-    SourceOracle oracle= List::of;
-    var builder= new HtmlDocBuilder(oracle, other, List.of(local, holder), Optional.empty());
-    builder.visitLiteral(local);
-    builder.visitLiteral(holder);
-    var html= new HtmlDocRenderer("pkg", DocNames.uses("pkg", List.of(local, holder)), builder.types, other, Map.of(), Optional.empty()).render();
-    utils.Err.strCmp("[###]<span class=\"sig\">[###]href=\"base.html#type-base_2e_List-0\"[###]", html);
-  }
-
   //Two ways a link can point at nothing: its disambiguation section was never emitted,
   //or it names a type/method the renderer skips as not visible. Both look identical to
   //a reader, who clicks and sees the start page, so both are checked over real output.

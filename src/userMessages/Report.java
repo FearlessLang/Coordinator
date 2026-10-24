@@ -372,6 +372,12 @@ Invalid entry names (based on the exact text of the entry name):
 - name contains special or invisible characters: may be changed, hidden, or lost
 """);
   }
+  public static UserError zipEntryNotUtf8(Path diskZip, List<String> steps, String entryName, int offset){
+    return directFail(showZipRel(diskZip, steps, entryName),
+      "This zip entry is not valid UTF-8 text: the first invalid UTF-8 sequence begins at byte offset "+offset+" (counting from zero).\n"
+     +"Fearless reads every source file as UTF-8 text.\n"
+     +"Save the file as UTF-8 and make the zip again.");
+  }
   public static UserError zipDuplicateEntryName(Path diskZip, List<String> steps, String entryName){
     return directFail(showZipRel(diskZip, steps, entryName),
       "This zip contains more than one entry called "+disp(entryName)+".\n"
