@@ -8,9 +8,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.OptionalInt;
 import java.util.function.Function;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import core.B;
@@ -363,21 +363,29 @@ code{
   //back at itself. A name that fails to resolve, or that names one of this method's own
   //bound parameters (eg. "R" in ".toOpt[R:*]"), stays plain text and is never an error.
   String renderSig(MethodDoc m){
-    var text= toStr.sig(m.main().sig());
-    var bound= Stream.concat(m.owner.main().bs().stream(), m.main().sig().bs().stream()).map(B::x).collect(Collectors.toSet());
+    var sig= m.main().sig();
+    var text= toStr.sig(sig);
     var sb= new StringBuilder();
     var i= 0;
-    for (var f : DocRefScanner.signatureTypes(text)){
-      if (bound.contains(f.ref().simpleName())){ continue; }
-      var link= resolver.resolveType(f.ref());
+    var from= 0;
+    for (var n : Stream.concat(sig.ts().stream(), Stream.of(sig.ret())).flatMap(HtmlDocRenderer::typeNames).toList()){
+      var printed= toStr.typeName(n);
+      var at= Pattern.compile("(?<![\\p{L}\\p{Nd}_.])"+Pattern.quote(printed)+"(?![\\p{L}\\p{Nd}_])").matcher(text);
+      var found= at.find(from);
+      assert found;
+      from = at.end();
+      var link= resolver.resolveType(new DocRef.TypeName(Optional.of(n.pkgName()), n.simpleName(), OptionalInt.of(n.arity())));
       if (link.isEmpty()){ continue; }
-      sb.append(h(text.substring(i, f.start())));
-      sb.append("<a href=\"").append(h(href(link.get()))).append("\">")
-        .append(h(text.substring(f.start(), f.end()))).append("</a>");
-      i = f.end();
+      sb.append(h(text.substring(i, at.start())));
+      sb.append("<a href=\"").append(h(href(link.get()))).append("\">").append(h(printed)).append("</a>");
+      i = from;
     }
     sb.append(h(text.substring(i)));
     return sb.toString();
+  }
+  private static Stream<TName> typeNames(T t){
+    if (!(t instanceof T.RCC rcc)){ return Stream.of(); }
+    return Stream.concat(Stream.of(rcc.c().name()), rcc.c().ts().stream().flatMap(HtmlDocRenderer::typeNames));
   }
   void renderDoc(StringBuilder sb, Object owner, List<DocOcc> docs, Map<DocOcc,Object> claims){
     var visible= visibleDocs(owner, docs, claims);
