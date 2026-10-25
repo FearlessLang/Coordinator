@@ -39,6 +39,6 @@ public record ProgrammaticMain(StringBuilder out, StringBuilder err, String fNam
         return BackendTools.of(pkgName, o, other, core, dest.resolve(Coordinator.outDir), baseCachePath(), stdRt, capabilities);
       }
     };
-    c.main(dest, new RealSourceOracleWithZip(stdLib));
+    c.main(dest, RealSourceOracleWithZip.stdLib(stdLib));
   }
 }

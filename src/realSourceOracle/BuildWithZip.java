@@ -28,10 +28,14 @@ public final class BuildWithZip{
     return AutoloadHandler.components(r.fearPath()).stream().anyMatch(s -> s.startsWith("."));
   }
   private final Path root;
+  private final boolean dated;
   private final ArrayList<Ref> visibleFiles= new ArrayList<>();
   private final LinkedHashMap<RefParent,LinkedHashSet<RefParent>> visKidsByDir= new LinkedHashMap<>();
   private final LinkedHashMap<RefParent,LinkedHashSet<RefParent>> dotKidsByDir= new LinkedHashMap<>();
-  BuildWithZip(Path root){ this.root= root.toAbsolutePath().normalize(); }
+  BuildWithZip(Path root, boolean dated){
+    this.root= root.toAbsolutePath().normalize();
+    this.dated= dated;
+  }
   List<Ref> build(){
     reqNoEmptyDirs();
     Fs.walkV(root, s -> s
@@ -58,7 +62,7 @@ public final class BuildWithZip{
       ? Report.invisibleOnlyRegularFilesAndDirs(abs)
       : Report.onlyRegularFilesAndDirs(abs);
     }
-    if (!invisible){ reqTime(abs, rel); }
+    if (!invisible && dated){ reqTime(abs, rel); }
     if (!invisible && rel.getFileName().toString().endsWith(".zip")){ reqNoSiblingForZipName(rel); collectBodyDiskZip(rel); return; }
     addKids(pe);
     if (!invisible){ visibleFiles.add(pe); }
