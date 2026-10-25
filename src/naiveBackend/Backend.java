@@ -3,6 +3,7 @@ package naiveBackend;
 import java.math.BigInteger;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.TreeMap;
@@ -71,7 +72,8 @@ public final class Backend{
     var named= new TName("base.Named", 0, Pos.unknown);
     var fromNamed= l.ms().stream().anyMatch(m -> m.sig().m().equals(new MName(".name", 0)) && m.sig().origin().equals(named));
     if (!fromNamed){ return ""; }
-    return "  "+modifier+" Object read$name$0(){ return _base.Str$c$0Instance.instance("+javaStrLit(l.name().s())+"); }\n";
+    var name= l.name().s()+Join.of(Collections.nCopies(l.name().arity(), "_"), "[", ",", "]", "");
+    return "  "+modifier+" Object read$name$0(){ return _base.Str$c$0Instance.instance("+javaStrLit(name)+"); }\n";
   }
   private static boolean implementsType(Literal l, String name, int arity){ return LiteralDeclarations.has(l.cs(), new TName(name, arity, Pos.unknown)); }
   private static String cacheField(Literal l){
