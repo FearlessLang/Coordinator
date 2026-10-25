@@ -112,10 +112,11 @@ Error: Fearless crashed: either this project's build cache was corrupted, or thi
   If Fearless crashes again, please report that error.
 """+details(t), t);
   }
-  private static String details(Throwable t){
+  private static String details(Throwable t){ return "\nDetails:\n"+stackTrace(t); }
+  public static String stackTrace(Throwable t){
     var sw= new StringWriter();
-    t.printStackTrace(new PrintWriter(sw));
-    return "\nDetails:\n"+sw;
+    t.printStackTrace(new PrintWriter(sw){ @Override public void println(){ write('\n'); } });
+    return sw.toString();
   }
   //A bug still has to reach the user of a windowed program. Wrapping it here is only
   //about how it is shown: what it MEANS is still utils.Bug.

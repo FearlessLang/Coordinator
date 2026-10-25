@@ -3,8 +3,6 @@ package fileSupport;
 import static fileSupport.ByteFiles.Kind.*;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
-import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.charset.CharacterCodingException;
@@ -19,6 +17,7 @@ import java.util.stream.IntStream;
 import fileSupport.ByteFiles.Kind;
 import fileSupport.ByteFiles.Op;
 import metaParser.Message;
+import userMessages.UserError;
 import utils.Bug;
 import utils.Join;
 
@@ -61,8 +60,8 @@ public final class StringFiles{
       Explanation explanation,
       Throwable cause){
     var errors= explanation.suppressed();
-    var details= (!report && errors.isEmpty()) ? "" : "\nOriginal failure:\n"+stackTrace(cause)
-      +Join.of(IntStream.range(0, errors.size()).mapToObj(i -> "\nSuppressed error "+i+":\n"+stackTrace(errors.get(i))), "", "", "", "");
+    var details= (!report && errors.isEmpty()) ? "" : "\nOriginal failure:\n"+UserError.stackTrace(cause)
+      +Join.of(IntStream.range(0, errors.size()).mapToObj(i -> "\nSuppressed error "+i+":\n"+UserError.stackTrace(errors.get(i))), "", "", "", "");
     onError.accept(report ? "" : explanation.text(), (report ? explanation.text() : "")+details);
     throw Bug.unreachable();
   }
@@ -94,10 +93,5 @@ Nearby bytes:  %s
   }
   private static String hex(byte[] bytes, int from, int to){
     return HexFormat.ofDelimiter(" ").withUpperCase().formatHex(bytes, from, to);
-  }
-  private static String stackTrace(Throwable error){
-    var sw= new StringWriter();
-    error.printStackTrace(new PrintWriter(sw));
-    return sw.toString();
   }
 }
