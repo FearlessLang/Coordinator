@@ -54,7 +54,7 @@ public final class BaseCacheBuilder{
       Fs.copyFresh(Coordinator.genJava(scratch).resolve("base.jar"), baseCache.resolve("base.jar"));
       Fs.copyFresh(Coordinator.genJava(scratch).resolve("base.html"), baseCache.resolve("base.html"));
       Fs.copyFresh(Coordinator.genJava(scratch).resolve("base.txt"), baseCache.resolve("base.txt"));
-      Fs.writeUtf8(baseCache.resolve(pkgName+MainsInfo.suffix), new MainsInfo(Map.of(), MainsInfo.attenuators(core)).print());
+      Fs.writeUtf8(baseCache.resolve(pkgName+MainsInfo.suffix), new MainsInfo(Map.of(), MainsInfo.attenuators(core), List.of(), List.of()).print());
     }
     finally{ Fs.rmTree(scratch); }
   }

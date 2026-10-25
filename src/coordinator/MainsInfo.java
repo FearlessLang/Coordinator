@@ -25,9 +25,9 @@ import utils.Bug;
 import utils.DistinctBy;
 import utils.Pos;
 
-public record MainsInfo(Map<String,Main> mains, List<String> attenuators){
-  public MainsInfo{ mains = Collections.unmodifiableMap(new TreeMap<>(mains)); attenuators = attenuators.stream().sorted().toList(); }
-  public MainsInfo(Map<String,Main> mains){ this(mains, List.of()); }
+public record MainsInfo(Map<String,Main> mains, List<String> attenuators, List<String> dataRead, List<String> dataEdit){
+  public MainsInfo{ mains = Collections.unmodifiableMap(new TreeMap<>(mains)); attenuators = attenuators.stream().sorted().toList(); dataRead = dataRead.stream().sorted().toList(); dataEdit = dataEdit.stream().sorted().toList(); }
+  public MainsInfo(Map<String,Main> mains){ this(mains, List.of(), List.of(), List.of()); }
   public record Main(String file, List<Claim> shortcuts, List<Claim> openWiths, List<Claim> icons){}
   public record Claim(String icon, String diskPath, String zipSteps, String zipEntry, String extension){}
   public static final String suffix= "_manifest.info";
@@ -45,28 +45,28 @@ public record MainsInfo(Map<String,Main> mains, List<String> attenuators){
   static MainsInfo merge(Stream<MainsInfo> infos){
     var all= infos.toList();
     var mains= all.stream().flatMap(i -> i.mains().entrySet().stream()).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-    return new MainsInfo(mains, all.stream().flatMap(i -> i.attenuators().stream()).sorted().toList());
+    return new MainsInfo(mains, all.stream().flatMap(i -> i.attenuators().stream()).toList(), all.stream().flatMap(i -> i.dataRead().stream()).toList(), all.stream().flatMap(i -> i.dataEdit().stream()).toList());
   }
   public static void write(Path project, MainsInfo info){
     for (var f : files(project)){
       var old= parse(f);
-      var now= new MainsInfo(old.mains().keySet().stream().collect(Collectors.toMap(k -> k, k -> info.mains().get(k))), old.attenuators());
+      var now= new MainsInfo(old.mains().keySet().stream().collect(Collectors.toMap(k -> k, k -> info.mains().get(k))), old.attenuators(), old.dataRead(), old.dataEdit());
       if (!now.equals(old)){ Fs.writeUtf8(f, now.print()); }
     }
   }
   public String print(){
     var ms= mains.entrySet().stream().map(e -> new Info.Obj.Field(e.getKey(), Info.noSpan, info(e.getValue()))).toList();
-    var as= lst(attenuators.stream().map(MainsInfo::str).toList());
-    var fields= List.of(new Info.Obj.Field("mains", Info.noSpan, new Info.Obj(ms, Info.noSpan)), new Info.Obj.Field("attenuators", Info.noSpan, as));
+    var fields= List.of(new Info.Obj.Field("mains", Info.noSpan, new Info.Obj(ms, Info.noSpan)), names("attenuators", attenuators), names("dataRead", dataRead), names("dataEdit", dataEdit));
     return Info.print(new Info.Obj(fields, Info.noSpan));
   }
   MainsInfo located(SourceOracle src, SourceOracle stLib){
     var of= new Of(src, stLib);
-    return new MainsInfo(mains.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, e -> of.located(e.getValue()))), attenuators);
+    return new MainsInfo(mains.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, e -> of.located(e.getValue()))), attenuators, dataRead, dataEdit);
   }
   private static Info info(Main m){ return lst(List.of(str(m.file()), claims(m.shortcuts()), claims(m.openWiths()), claims(m.icons()))); }
   private static Info claims(List<Claim> cs){ return lst(cs.stream().map(MainsInfo::info).toList()); }
   private static Info info(Claim c){ return lst(Stream.of(c.icon(), c.diskPath(), c.zipSteps(), c.zipEntry(), c.extension()).map(MainsInfo::str).toList()); }
+  private static Info.Obj.Field names(String key, List<String> names){ return new Info.Obj.Field(key, Info.noSpan, lst(names.stream().map(MainsInfo::str).toList())); }
   private static Info str(String s){ return new Info.Str(s, Info.noSpan); }
   private static Info lst(List<Info> items){ return new Info.Lst(items, Info.noSpan); }
   static MainsInfo parse(Path file){
@@ -76,11 +76,12 @@ public record MainsInfo(Map<String,Main> mains, List<String> attenuators){
   }
   private record Shape(String text){
     MainsInfo all(Info i){
-      var shape= i instanceof Info.Obj o && o.fields().size() == 2 && o.fields().get(0).key().equals("mains") && o.fields().get(1).key().equals("attenuators");
-      if (!shape){ throw err(i, "an object {\"mains\": {...}, \"attenuators\": [...]}"); }
+      var shape= i instanceof Info.Obj o && o.fields().stream().map(Info.Obj.Field::key).toList().equals(List.of("mains", "attenuators", "dataRead", "dataEdit"));
+      if (!shape){ throw err(i, "an object {\"mains\": {...}, \"attenuators\": [...], \"dataRead\": [...], \"dataEdit\": [...]}"); }
       var fs= ((Info.Obj)i).fields();
-      return new MainsInfo(mains(fs.get(0).value()), lst(fs.get(1).value(), "a list [...] of attenuator names").stream().map(this::str).toList());
+      return new MainsInfo(mains(fs.get(0).value()), names(fs.get(1).value(), "attenuator"), names(fs.get(2).value(), "DataRead type"), names(fs.get(3).value(), "DataEdit type"));
     }
+    List<String> names(Info i, String what){ return lst(i, "a list [...] of "+what+" names").stream().map(this::str).toList(); }
     Map<String,Main> mains(Info i){
       if (!(i instanceof Info.Obj o)){ throw err(i, "an object {...} mapping each main to [file, [shortcut claims], [openWith claims], [icon claims]]"); }
       return o.fields().stream().collect(Collectors.toMap(Info.Obj.Field::key, f -> main(f.value())));
@@ -120,9 +121,12 @@ public record MainsInfo(Map<String,Main> mains, List<String> attenuators){
     var of= new Of(src, stLib);
     all.stream().sorted(Comparator.comparingInt((Literal l) -> l.cs().size()).thenComparing(l -> l.name().s())).forEach(of::check);
     var mains= all.stream().filter(MainsInfo::isMain).collect(Collectors.toUnmodifiableMap(l -> l.name().s(), of::main));
-    return new MainsInfo(mains, attenuators(core));
+    var dataEdit= concrete(core, new TName("base.DataEdit", 0, Pos.unknown));
+    var dataRead= concrete(core, LiteralDeclarations.dataRead).stream().filter(n -> !dataEdit.contains(n)).toList();
+    return new MainsInfo(mains, attenuators(core), dataRead, dataEdit);
   }
-  public static List<String> attenuators(List<Literal> core){ return AllLs.of(core).values().stream().filter(l -> concrete(l, LiteralDeclarations.attenuator)).map(l -> l.name().s()).toList(); }
+  public static List<String> attenuators(List<Literal> core){ return concrete(core, LiteralDeclarations.attenuator); }
+  private static List<String> concrete(List<Literal> core, TName t){ return AllLs.of(core).values().stream().filter(l -> concrete(l, t)).map(l -> l.name().s()).toList(); }
   public static boolean isMain(Literal l){ return concrete(l, LiteralDeclarations.main); }
   private static boolean concrete(Literal l, TName t){ return LiteralDeclarations.has(l.cs(), t) && l.ms().stream().noneMatch(m -> m.sig().abs()); }
   private record Of(SourceOracle src, SourceOracle stLib){

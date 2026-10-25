@@ -126,7 +126,7 @@ public interface Coordinator{
     var jvmArgs= new ArrayList<>(runData(project, base));
     input.ifPresent(i -> jvmArgs.add("-DfearlessInput.file="+i));
     reads.forEach((k,v) -> jvmArgs.add("-DfearlessDataRead."+k+"="+v));
-    edits.forEach((k,v) -> jvmArgs.add("-DfearlessDataWrite."+k+"="+v));
+    edits.forEach((k,v) -> jvmArgs.add("-DfearlessDataEdit."+k+"="+v));
     if (!attenuators.isEmpty()){ jvmArgs.add("-DfearlessAttenuators="+String.join(",", attenuators)); }
     jvmArgs.addAll(desk);
     return JavaTool.startMainFromJars(jvmArgs, Push.of(genJava(project.resolve(outDir)), sharedClasspath), "_"+main.substring(0, main.indexOf('.'))+".Main", out, main);
