@@ -26,9 +26,9 @@ public final class Violation{
   public static void running(Supplier<List<String>> live){ running = live; }
   static String associatedPrograms(){ return Join.of(running.get().stream().map(s -> "  "+s), "", "\n", "", ""); }
   public static String freshCopyThenReport(){ return """
-    Replace this Fearless folder with a fresh copy.
-    If this keeps happening, report the problem.
-    """;
+Replace this Fearless folder with a fresh copy.
+If this keeps happening, report the problem.
+""";
   }
   //-- how this copy of Fearless was started
   public static UserError mustUseLauncher(){ return die(
@@ -47,117 +47,117 @@ public final class Violation{
   //-- the operating system does not provide a service we need
   public static UserError unsupportedOperatingSystem(){
     return new UserError("""
-      Fearless does not know this operating system.
+Fearless does not know this operating system.
 
-      Fearless runs on Windows, macOS and Linux.
+Fearless runs on Windows, macOS and Linux.
 
-      The operating system reported itself as:
-      %s""".formatted(path(System.getProperty("os.name", "<not reported>"))));
+The operating system reported itself as:
+%s""".formatted(path(System.getProperty("os.name", "<not reported>"))));
   }
   //Fearless asks the operating system for English so that the failures it reports back
   //to us are text we can recognise. Without it we cannot tell one failure from another.
   public static UserError couldNotForceEnglish(String what, Throwable cause){
     return new UserError("""
-      Fearless could not set its own language.
+Fearless could not set its own language.
 
-      Fearless asks the operating system to report failures in English, so that
-      it can recognise them and explain them to you. This request failed:
-      %s
+Fearless asks the operating system to report failures in English, so that
+it can recognise them and explain them to you. This request failed:
+%s
 
-      %s""".formatted(path(what), freshCopyThenReport()), cause);
+%s""".formatted(path(what), freshCopyThenReport()), cause);
   }
   public static UserError couldNotForceEnglish(String what){ return couldNotForceEnglish(what, null); }
   //-- the packaged runtime, or this copy of Fearless, is damaged
   public static UserError cacheMissingBaseApiFile(Path apiJson){
     return new UserError("""
-      Fearless could not load the API of its own standard library.
+Fearless could not load the API of its own standard library.
 
-      This copy of Fearless should already have this file:
-      %s
+This copy of Fearless should already have this file:
+%s
 
-      %s""".formatted(
+%s""".formatted(
         path(apiJson.toString()),
         freshCopyThenReport()
       ));
   }
   public static UserError associationsAmbiguous(String reported){
     return new UserError("""
-      Fearless cannot tell which of your Fearless installs should open Fearless
-      projects: more than one is registered with your system at once.
+Fearless cannot tell which of your Fearless installs should open Fearless
+projects: more than one is registered with your system at once.
 
-      Fearless stopped before touching anything: your system is exactly as it
-      was.
+Fearless stopped before touching anything: your system is exactly as it
+was.
 
-      What is registered:
-      %s""".formatted(reported));
+What is registered:
+%s""".formatted(reported));
   }
   public static UserError associationUserLocked(List<String> locked, Function<String,String> claimedBy){
     return new UserError("""
-      Fearless cannot become the program that opens the kinds of file listed
-      below.
+Fearless cannot become the program that opens the kinds of file listed
+below.
 
-      Your system remembers a choice you made by hand for these kinds of file,
-      and no program can change or remove that choice, including this one.
-      Fearless stopped before touching anything: your system is exactly as it
-      was.
+Your system remembers a choice you made by hand for these kinds of file,
+and no program can change or remove that choice, including this one.
+Fearless stopped before touching anything: your system is exactly as it
+was.
 
-      The only way to clear it is Settings, Apps, Default apps, Reset - which
-      resets every app default on your machine, not only this one.
+The only way to clear it is Settings, Apps, Default apps, Reset - which
+resets every app default on your machine, not only this one.
 
-      What is locked:
-      %s""".formatted(Join.of(locked.stream().map(e -> e+claimedBy.apply(e)), "", "\n", "")));
+What is locked:
+%s""".formatted(Join.of(locked.stream().map(e -> e+claimedBy.apply(e)), "", "\n", "")));
   }
   public static UserError associationNotOurs(Map<String,List<String>> held, Function<String,String> claimedBy){
     var lines= new ArrayList<String>();
     held.forEach((e,cs) -> cs.forEach(c -> lines.add(e+claimedBy.apply(e)+" -> "+c)));
     return new UserError("""
-      Fearless cannot become the program that opens the kinds of file listed
-      below.
+Fearless cannot become the program that opens the kinds of file listed
+below.
 
-      Another program already answers for these kinds of file. Fearless
-      stopped before touching anything: your system is exactly as it was.
+Another program already answers for these kinds of file. Fearless
+stopped before touching anything: your system is exactly as it was.
 
-      What stood in the way:
-      %s""".formatted(Join.of(lines, "", "\n", "")));
+What stood in the way:
+%s""".formatted(Join.of(lines, "", "\n", "")));
   }
   public static UserError associationChosenDefault(List<String> locked, Function<String,String> claimedBy){
     return new UserError("""
-      Fearless cannot become the program that opens the kinds of file listed
-      below.
+Fearless cannot become the program that opens the kinds of file listed
+below.
 
-      Your system remembers a choice you made by hand for these kinds of file:
-      the [Default Applications] section of a mimeapps.list file names another
-      program for their type. Fearless does not undo a choice of yours, and
-      stopped before touching anything: your system is exactly as it was.
+Your system remembers a choice you made by hand for these kinds of file:
+the [Default Applications] section of a mimeapps.list file names another
+program for their type. Fearless does not undo a choice of yours, and
+stopped before touching anything: your system is exactly as it was.
 
-      Removing the line of that type from the section, or choosing Fearless
-      for these files, clears the choice.
+Removing the line of that type from the section, or choosing Fearless
+for these files, clears the choice.
 
-      What is locked:
-      %s""".formatted(Join.of(locked.stream().map(e -> e+claimedBy.apply(e)+" -> "+LinuxAssociations.typeOf(e)), "", "\n", "")));
+What is locked:
+%s""".formatted(Join.of(locked.stream().map(e -> e+claimedBy.apply(e)+" -> "+LinuxAssociations.typeOf(e)), "", "\n", "")));
   }
   public static UserError associationNotWritable(String reported){
     return new UserError("""
-      Fearless cannot become the program that opens Fearless projects and the
-      other kinds of file it registers.
+Fearless cannot become the program that opens Fearless projects and the
+other kinds of file it registers.
 
-      What Fearless would need to write, or remove, is not yours to change.
-      Fearless stopped before touching anything: your system is exactly as it
-      was.
+What Fearless would need to write, or remove, is not yours to change.
+Fearless stopped before touching anything: your system is exactly as it
+was.
 
-      What stood in the way:
-      %s""".formatted(reported));
+What stood in the way:
+%s""".formatted(reported));
   }
   public static UserError associationLeftHalfDone(String reported){
     return new UserError("""
-      Fearless could not put your system back as it was.
+Fearless could not put your system back as it was.
 
-      A step failed, and undoing what had already been written failed too, so
-      your system is left part way. Which program opens Fearless projects, and
-      the other kinds of file Fearless registers, may now be wrong, and you can
-      settle it by hand in your system settings.
+A step failed, and undoing what had already been written failed too, so
+your system is left part way. Which program opens Fearless projects, and
+the other kinds of file Fearless registers, may now be wrong, and you can
+settle it by hand in your system settings.
 
-      Where the undoing stopped:
-      %s""".formatted(reported));
+Where the undoing stopped:
+%s""".formatted(reported));
   }
 }

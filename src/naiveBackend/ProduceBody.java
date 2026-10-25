@@ -67,17 +67,17 @@ record ProduceBody(BytecodeLineFix sb, Backend b, String thisName, M m){
     sb.a("new ").a(b.ifaceNameFor(lit)).a("(){");
     if (b.isRepr(lit)){
       sb.a("""
-        volatile java.util.concurrent.ConcurrentHashMap<Object,Entry> _reprCache;
-        public Object _reprCacheGet(Object k, java.util.function.Supplier<Object> f, long time){
-          var m= _reprCache;
-          if (m == null){ synchronized(this){ if (_reprCache == null){ _reprCache= new java.util.concurrent.ConcurrentHashMap<>(); } m= _reprCache; } }
-          var fresh= new Entry();
-          var e= m.putIfAbsent(k,fresh);
-          if (e == null){ return fresh.computeNow(f); }
-          return e.joinWait(time,f);
-        }
-        public void _reprCacheFlush(){ var m= _reprCache; if (m != null){ m.clear(); } }
-        """);
+volatile java.util.concurrent.ConcurrentHashMap<Object,Entry> _reprCache;
+public Object _reprCacheGet(Object k, java.util.function.Supplier<Object> f, long time){
+  var m= _reprCache;
+  if (m == null){ synchronized(this){ if (_reprCache == null){ _reprCache= new java.util.concurrent.ConcurrentHashMap<>(); } m= _reprCache; } }
+  var fresh= new Entry();
+  var e= m.putIfAbsent(k,fresh);
+  if (e == null){ return fresh.computeNow(f); }
+  return e.joinWait(time,f);
+}
+public void _reprCacheFlush(){ var m= _reprCache; if (m != null){ m.clear(); } }
+""");
     }
     sb.a(b.nameMethod(lit, "public"));
     for (var m : lit.ms()){
