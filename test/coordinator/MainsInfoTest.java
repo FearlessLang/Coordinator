@@ -69,7 +69,7 @@ final class MainsInfoTest{
 """);
     var ex= assertThrows(UserError.class, () -> MainsInfo.read(project));
     utils.Err.strCmp("""
-Error: Fearless crashed: either this project's build cache was corrupted, or this is a Fearless bug.
+Error: Fearless crashed: either this project's compilation cache was corrupted, or this is a Fearless bug.
   Fearless deleted this project's .fearless_out folder: compile again to rebuild it.
   If Fearless crashes again, please report that error.
 
