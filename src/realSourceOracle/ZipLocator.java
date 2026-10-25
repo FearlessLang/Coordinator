@@ -18,7 +18,7 @@ import tools.Fs;
 import tools.ReadZip;
 import userMessages.Report;
 import userMessages.UserError;
-import userMessages.Violation;
+import utils.Bug;
 import utils.Range;
 
 public final class ZipLocator{
@@ -43,7 +43,7 @@ public final class ZipLocator{
   private static final byte[] emptyZipSignature= {'P', 'K', 5, 6};
   public static byte[] entryBytes(Path diskZip, List<String> steps, String entryName){
     var res= fetch(diskZip, steps, bytes -> readHere(diskZip, steps, bytes).get(entryName));
-    if (res == null){ throw Violation.cacheCouldNotFindZipEntry(diskZip, steps, entryName); }
+    if (res == null){ throw Bug.of("The entry "+entryName+" of "+diskZip+" "+steps+" is gone"); }
     return res;
   }
   private static void reqTime(String name, long t, Supplier<UserError> unset, LongFunction<UserError> future){
@@ -60,7 +60,7 @@ public final class ZipLocator{
     for (int i : Range.of(steps)){
       var upTo= steps.subList(0, i+1);
       bytes = readHere(diskZip, upTo, bytes).get(steps.get(i));
-      if (bytes == null){ throw Violation.cacheCouldNotFindZipEntry(diskZip, upTo, steps.get(i)); }
+      if (bytes == null){ throw Bug.of("The entry "+steps.get(i)+" of "+diskZip+" "+upTo+" is gone"); }
     }
     return onFinal.apply(bytes);
   }

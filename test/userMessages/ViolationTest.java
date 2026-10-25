@@ -227,16 +227,4 @@ settle it by hand in your system settings.
 Where the undoing stopped:
 removed HKCU\\...\\UserChoice, but restoring the previous ProgId failed""", Violation.associationLeftHalfDone(rollback).getMessage());
   }
-  @Test void cacheCouldNotFindZipEntry(){
-    var diskZip= Path.of("C:\\Users\\ada\\projects\\myproject\\assets.zip");
-    utils.Err.strCmp("""
-Cannot find entry in zip (that was found before).
-Zip:
-  C:\\Users\\ada\\projects\\myproject\\assets.zip
-Steps:
-  ["textures.zip"]
-Entry name:
-  "sprite_01.png"
-""", Violation.cacheCouldNotFindZipEntry(diskZip, List.of("textures.zip"), "sprite_01.png").getMessage());
-  }
 }

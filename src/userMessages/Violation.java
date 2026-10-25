@@ -11,7 +11,6 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 import fileAssociations.LinuxAssociations;
-import metaParser.Message;
 import utils.Join;
 
 /// Violation: Fearless can no longer do its safe job.
@@ -160,25 +159,5 @@ public final class Violation{
 
       Where the undoing stopped:
       %s""".formatted(reported));
-  }
-  //-- our own generated files, changed under us
-  //Either in generated outputs under ".fearless_out", or in the other files of the
-  //project after the initial verification checks. Reaching one of these means another
-  //actor touched what only Fearless should write, a previous run stopped mid-build, or
-  //the filesystem returned partial writes or stale directory state.
-  public static UserError cacheCouldNotFindZipEntry(Path diskZip, List<String> steps, String entryName){
-    return new UserError("""
-      Cannot find entry in zip (that was found before).
-      Zip:
-      %s
-      Steps:
-        %s
-      Entry name:
-        %s
-      """.formatted(
-        path(diskZip.toString()),
-        Join.of(steps.stream().map(Message::displayString), "[", ", ", "]", "<no steps>"),
-        Message.displayString(entryName)
-      ));
   }
 }
