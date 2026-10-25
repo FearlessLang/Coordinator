@@ -167,7 +167,7 @@ Make the zip again from files with the correct dates, or correct the clock of th
   private static final String unset= """
 
 Fearless uses dates at or before the start of 1970 to mean "no date"
-when deciding what needs compiling, so such a date can not be trusted.
+when deciding what needs compiling, so such a date cannot be trusted.
 """;
   private static String future(long t, long now){
     var ahead= Duration.ofMillis(t-now);

@@ -1034,7 +1034,7 @@ The path "Bad.txt" of "col.Notes" is not valid: "Bad.txt" %s
 The path "pics/x.zip" of "col.Notes" is not valid: "x.zip" %s
 The path "other.fearless" of "col.Notes" is not valid: the top of a data project holds no resource with the extension "fearless": that is the place of the marker of the project, which is not part of the data project.
 The path "readme/x.txt" of "col.Notes" is not valid: "readme" is a resource, not a folder.
-The path "readme.md" of "col.Notes" is not written: its folder holds "readme", and a resource without extension can not share its name with a resource with an extension.
+The path "readme.md" of "col.Notes" is not written: its folder holds "readme", and a resource without extension cannot share its name with a resource with an extension.
 The path "todo" of "col.Notes" names a folder, not a resource.
 """.formatted(resourceName, resourceName), dataRun(tmp, """
 Writes: Main{s -> base.Block#

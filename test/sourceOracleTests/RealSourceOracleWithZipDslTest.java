@@ -189,7 +189,7 @@ Path: "_pkg/a.fear"
 
 This file is dated 19[###].
 Fearless uses dates at or before the start of 1970 to mean "no date"
-when deciding what needs compiling, so such a date can not be trusted.
+when deciding what needs compiling, so such a date cannot be trusted.
 Save the file again, so that it gets the current date.
 """, FsDsl.dumpErr(root, ex));
   }
