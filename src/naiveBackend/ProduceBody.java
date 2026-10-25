@@ -79,6 +79,7 @@ record ProduceBody(BytecodeLineFix sb, Backend b, String thisName, M m){
         public void _reprCacheFlush(){ var m= _reprCache; if (m != null){ m.clear(); } }
         """);
     }
+    sb.a(b.nameMethod(lit, "public"));
     for (var m : lit.ms()){
       if (!m.sig().origin().equals(lit.name())){ continue; }
       assert m.e().isPresent();
