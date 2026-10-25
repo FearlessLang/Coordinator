@@ -1211,9 +1211,9 @@ Send: Main{s -> base.Block#
   .do{Debug#(Caught#(s.try#(s.iso.close, {t -> t.manager.show "hello"})))}
   .do{Debug#(Out#(s.try#(s.iso.close, {t -> t.manager.run("hello", L#("hello.A", "hello.B"))})))}
   .do{Debug#(Out#(s.try#(s.iso.close, {t -> t.manager.compile "hello"})))}
-  .do{Debug#(Caught#(s.try#(s.iso.close, {t -> t.manager.kindDataReadOnly "hello"})))}
-  .do{Debug#(Caught#(s.try#(s.iso.close, {t -> t.manager.linkWrite("hello", "notes", L#("Notes", "Pub"))})))}
-  .do{Debug#(Caught#(s.try#(s.iso.close, {t -> t.manager.linkRead("hello", "pub", {})})))}
+  .do{Debug#(Caught#(s.try#(s.iso.close, {t -> t.manager.kindDataRead "hello"})))}
+  .do{Debug#(Caught#(s.try#(s.iso.close, {t -> t.manager.mount("hello", "hello.Notes", "notes")})))}
+  .do{Debug#(Caught#(s.try#(s.iso.close, {t -> t.manager.unmount("hello", "hello.Pub")})))}
   .do{Debug#(Caught#(s.try#(s.iso.close, {t -> t.manager.attenuate("hello", "hello.A", L#("base.NoManagerQuit", "hello.NoGui"))})))}
   .do{Debug#(Caught#(s.try#(s.iso.close, {t -> t.manager.attenuate("hello", "hello.B", {})})))}
   .do{Debug#(Caught#(s.try#(s.iso.close, {t -> t.manager.openWithOrShortcut("%1$s".u.%2$s, "hello", "hello.A")})))}
@@ -1227,9 +1227,9 @@ FearlessCommandShow
 FearlessCommandShow hello
 FearlessCommandRun hello hello.A hello.B
 FearlessCommandCompile hello
-FearlessCommandKind hello data:readOnly
-FearlessCommandLink hello notes write Notes Pub
-FearlessCommandLink hello pub read
+FearlessCommandKind hello dataRead
+FearlessCommandMount hello hello.Notes notes
+FearlessCommandMount hello hello.Pub
 FearlessCommandAttenuate hello hello.A base.NoManagerQuit hello.NoGui
 FearlessCommandAttenuate hello hello.B
 FearlessCommandOpenWithOrShortcut %1$s hello hello.A
