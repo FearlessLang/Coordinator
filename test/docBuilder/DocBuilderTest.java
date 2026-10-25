@@ -879,6 +879,32 @@ Holder
     builder.packageLocation("pkg", tmp.resolve("pkg.html"), Optional.of(tmp));
     builder.complete(Optional.of(tests));
   }
+  @Test void aFromLinkToAnyReceiverCapabilityOfAMethodReachesAnAnchor(){
+    var subName= new TName("pkg.Sub", 0, Pos.unknown);
+    var subMut= fooMethod(RC.mut, subName);
+    var subImm= fooMethod(RC.imm, subName);
+    var sub= namedType("pkg.Sub", List.of(), List.of(subMut, subImm));
+    var top= namedType("pkg.Top", List.of(new T.C(subName, List.of())), List.of(subImm));
+    SourceOracle oracle= List::of;
+    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(sub, top), Optional.empty());
+    builder.visitLiteral(sub);
+    builder.visitLiteral(top);
+    var html= new HtmlDocRenderer("pkg", Map.of(), builder.types, OtherPackages.empty(), Map.of(), Optional.empty()).render();
+    assertTrue(idsIn(html, "id=\"").containsAll(idsIn(html, "href=\"#")));
+    utils.Err.strCmp("[###]From: <a href=\"#method-pkg_2e_Sub-0-imm-_2e_foo-0\">Sub.foo</a>.[###]", html);
+  }
+  @Test void twoArityVariantsOfATypeGiveTheirMethodsDistinctAnchors(){
+    var oneName= new TName("pkg.Pair", 0, Pos.unknown);
+    var twoName= new TName("pkg.Pair", 2, Pos.unknown);
+    var one= namedType("pkg.Pair", List.of(), List.of(namedMethod(".bar", oneName)));
+    var two= new Literal(RC.imm, twoName, twoBounds(), List.of(), "this", List.of(namedMethod(".bar", twoName)), freshSrc(), false);
+    SourceOracle oracle= List::of;
+    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(one, two), Optional.empty());
+    builder.visitLiteral(one);
+    builder.visitLiteral(two);
+    var html= new HtmlDocRenderer("pkg", Map.of(), builder.types, OtherPackages.empty(), Map.of(), Optional.empty()).render();
+    assertEquals(List.of("method-pkg_2e_Pair-0-imm-_2e_bar-0", "method-pkg_2e_Pair-2-imm-_2e_bar-0"), idsIn(html, "id=\"method-").stream().map(i -> "method-"+i).toList());
+  }
   private static HtmlDocBuilder fixtureBuilder(){
     var aName= new TName("pkg.A", 0, Pos.unknown);
     var bName= new TName("pkg.B", 0, Pos.unknown);
