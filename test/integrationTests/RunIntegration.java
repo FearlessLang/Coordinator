@@ -682,10 +682,36 @@ Again:Main{s->base.Debug#("again")}
     "col.Again": ["_col/more.fear", [], [], [["base.IconsFearless", "icons/fearless.png", "", "", ""]]],
     "col.Hello": ["_col/_rank_app.fear", [], [], [["base.IconsFearless", "icons/fearless.png", "", "", ""]]]
   },
-  "attenuators": []
+  "attenuators": [],
+  "dataRead": [],
+  "dataEdit": []
 }
 """, manifests(root));
     assertEquals(Map.of("col.Again", "_col/more.fear", "col.Hello", "_col/_rank_app.fear"), files(coordinator(root).mains(root, stLib).orElseThrow()));
+  }
+  @Test void theConcreteDataReadAndDataEditTypesAreListed(@TempDir Path tmp){
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_col/_rank_app.fear
+iii
+use base.DataRead as DataRead;
+use base.DataEdit as DataEdit;
+Pub: DataRead{}
+Archive: Pub{}
+Diary: DataEdit{}
+Shape: DataRead{ .extra: base.Nat }
+""");
+    coordinator(root).compile(root, stLib);
+    utils.Err.strCmp("""
+--- col_manifest.info
+{
+  "mains": {},
+  "attenuators": [],
+  "dataRead": ["col.Archive", "col.Pub"],
+  "dataEdit": ["col.Diary"]
+}
+""", manifests(root));
   }
   @Test void aCaptureFreeMainDeclaredInAMethodIsListedLikeTheOnesItRuns(@TempDir Path tmp) throws InterruptedException{
     var root= tmp.resolve("root");
@@ -935,58 +961,57 @@ Rd: { #(a: mut base.Action[mut base.InputCursorNode]): base.Str -> a.run{.ok n -
 Wr: { #(a: mut base.Action[base.Void]): base.Str -> a.run{.ok _ -> "ok"; .info i -> (i.getMap.get "msg").getMsg} }
 Sz: { #(a: mut base.Action[mut base.InputCursorNode]): base.Str -> a.run{.ok n -> n.readBytes.size.str; .info i -> (i.getMap.get "msg").getMsg} }
 Q: base.UnencodableRecover{ scalar, index -> L#(63.getByte) }
+Pub: base.DataRead{}
+Notes: base.DataEdit{}
+Nope: base.DataEdit{}
 """+main);
     return main(root, links);
   }
-  static List<String> dataLinks(Path pub, Path notes){ return List.of("-DfearlessDataRead.Pub="+pub, "-DfearlessDataWrite.Notes="+notes); }
+  static List<String> dataLinks(Path pub, Path notes){ return List.of("-DfearlessDataRead.col.Pub="+pub, "-DfearlessDataEdit.col.Notes="+notes); }
   static List<String> fearPaths(Path data){ return new RealSourceOracleWithZip(data).allFiles().stream().map(Ref::fearPath).toList(); }
   static String fearFile(Path data, String fearPath){ return OneOr.of(fearPath, new RealSourceOracleWithZip(data).allFiles().stream().filter(r -> r.fearPath().equals(fearPath))).loadString(); }
   @Test void aDataProjectIsReadThroughTheRootsOfACapabilityAndAZipIsAFolder(@TempDir Path tmp){
     var data= dataProject(tmp);
     utils.Err.strCmp("""
-[Notes, Pub]
-[Notes]
 [notes, pics, readme, todo]
 [deep, inner, one.txt]
 [three.txt]
-The path "readme" of "Pub" names a resource, not a folder.
-The path "none" of "Pub" names no folder.
-The path ".hidden" of "Pub" is not valid: ".hidden" is not a valid folder name. A folder name uses only lowercase letters, digits and underscores, starts with a letter or an underscore, and is not "con", "prn", "aux", "nul", "com1" to "com9" or "lpt1" to "lpt9".
-"Nope" is not a root of this capability. Its roots are "Notes", "Pub".
-Notes/readme: hi
-"Pub" is not a root of this capability. Its roots are "Notes".
-Pub/readme: hi
+The path "readme" of "col.Pub" names a resource, not a folder.
+The path "none" of "col.Pub" names no folder.
+The path ".hidden" of "col.Pub" is not valid: ".hidden" is not a valid folder name. A folder name uses only lowercase letters, digits and underscores, starts with a letter or an underscore, and is not "con", "prn", "aux", "nul", "com1" to "com9" or "lpt1" to "lpt9".
+No data project is mounted on "col.Nope".
+col.Notes/readme: hi
+No dataEdit project is mounted on "col.Nope".
+col.Pub/readme: hi
 2
-Pub/pics/deep/two.txt: deeper
-Notes/pics/inner/three.txt: nested
+col.Pub/pics/deep/two.txt: deeper
+col.Notes/pics/inner/three.txt: nested
 
-Notes/notes/a.txt: first
-The path "notes/b.txt" of "Pub" names no resource.
-The path "todo" of "Pub" names a folder, not a resource.
-The path "" of "Pub" names the root folder, not a resource.
-The path "data.fearless" of "Pub" is not valid: the top of a data project holds no resource with the extension "fearless": that is the place of the marker of the project, which is not part of the data project.
+col.Notes/notes/a.txt: first
+The path "notes/b.txt" of "col.Pub" names no resource.
+The path "todo" of "col.Pub" names a folder, not a resource.
+The path "" of "col.Pub" names the root folder, not a resource.
+The path "data.fearless" of "col.Pub" is not valid: the top of a data project holds no resource with the extension "fearless": that is the place of the marker of the project, which is not part of the data project.
 """, dataRun(tmp, """
 Reads: Main{s -> base.Block#
-  .do{Debug#(s.dataRead.roots.str{::})}
-  .do{Debug#(s.dataReadWrite.roots.str{::})}
-  .do{Debug#(Ls#(s.try#(s.iso.close, {t -> t.dataRead.paths("Pub", {})})))}
-  .do{Debug#(Ls#(s.try#(s.iso.close, {t -> t.dataRead.paths("Pub", L#("pics"))})))}
-  .do{Debug#(Ls#(s.try#(s.iso.close, {t -> t.dataReadWrite.paths("Notes", L#("pics", "inner"))})))}
-  .do{Debug#(Ls#(s.try#(s.iso.close, {t -> t.dataRead.paths("Pub", L#("readme"))})))}
-  .do{Debug#(Ls#(s.try#(s.iso.close, {t -> t.dataRead.paths("Pub", L#("none"))})))}
-  .do{Debug#(Ls#(s.try#(s.iso.close, {t -> t.dataRead.paths("Pub", L#(".hidden"))})))}
-  .do{Debug#(Ls#(s.try#(s.iso.close, {t -> t.dataRead.paths("Nope", {})})))}
-  .do{Debug#(Rd#(s.try#(s.iso.close, {t -> t.dataRead.read("Notes", L#("readme"))})))}
-  .do{Debug#(Rd#(s.try#(s.iso.close, {t -> t.dataReadWrite.read("Pub", L#("readme"))})))}
-  .do{Debug#(Rd#(s.try#(s.iso.close, {t -> t.dataRead.read("Pub", L#("readme"))})))}
-  .do{Debug#(Sz#(s.try#(s.iso.close, {t -> t.dataRead.read("Pub", L#("readme"))})))}
-  .do{Debug#(Rd#(s.try#(s.iso.close, {t -> t.dataRead.read("Pub", L#("pics", "deep", "two.txt"))})))}
-  .do{Debug#(Rd#(s.try#(s.iso.close, {t -> t.dataReadWrite.read("Notes", L#("pics", "inner", "three.txt"))})))}
-  .do{Debug#(Rd#(s.try#(s.iso.close, {t -> t.dataReadWrite.read("Notes", L#("notes", "a.txt"))})))}
-  .do{Debug#(Rd#(s.try#(s.iso.close, {t -> t.dataRead.read("Pub", L#("notes", "b.txt"))})))}
-  .do{Debug#(Rd#(s.try#(s.iso.close, {t -> t.dataRead.read("Pub", L#("todo"))})))}
-  .do{Debug#(Rd#(s.try#(s.iso.close, {t -> t.dataRead.read("Pub", {})})))}
-  .return{Debug#(Rd#(s.try#(s.iso.close, {t -> t.dataRead.read("Pub", L#("data.fearless"))})))}
+  .do{Debug#(Ls#(s.try#(s.iso.close, {t -> t.dataRead(Pub).paths({})})))}
+  .do{Debug#(Ls#(s.try#(s.iso.close, {t -> t.dataRead(Pub).paths(L#("pics"))})))}
+  .do{Debug#(Ls#(s.try#(s.iso.close, {t -> t.dataEdit(Notes).paths(L#("pics", "inner"))})))}
+  .do{Debug#(Ls#(s.try#(s.iso.close, {t -> t.dataRead(Pub).paths(L#("readme"))})))}
+  .do{Debug#(Ls#(s.try#(s.iso.close, {t -> t.dataRead(Pub).paths(L#("none"))})))}
+  .do{Debug#(Ls#(s.try#(s.iso.close, {t -> t.dataRead(Pub).paths(L#(".hidden"))})))}
+  .do{Debug#(Ls#(s.try#(s.iso.close, {t -> t.dataRead(Nope).paths({})})))}
+  .do{Debug#(Rd#(s.try#(s.iso.close, {t -> t.dataRead(Notes).read(L#("readme"))})))}
+  .do{Debug#(Rd#(s.try#(s.iso.close, {t -> t.dataEdit(Nope).read(L#("readme"))})))}
+  .do{Debug#(Rd#(s.try#(s.iso.close, {t -> t.dataRead(Pub).read(L#("readme"))})))}
+  .do{Debug#(Sz#(s.try#(s.iso.close, {t -> t.dataRead(Pub).read(L#("readme"))})))}
+  .do{Debug#(Rd#(s.try#(s.iso.close, {t -> t.dataRead(Pub).read(L#("pics", "deep", "two.txt"))})))}
+  .do{Debug#(Rd#(s.try#(s.iso.close, {t -> t.dataEdit(Notes).read(L#("pics", "inner", "three.txt"))})))}
+  .do{Debug#(Rd#(s.try#(s.iso.close, {t -> t.dataEdit(Notes).read(L#("notes", "a.txt"))})))}
+  .do{Debug#(Rd#(s.try#(s.iso.close, {t -> t.dataRead(Pub).read(L#("notes", "b.txt"))})))}
+  .do{Debug#(Rd#(s.try#(s.iso.close, {t -> t.dataRead(Pub).read(L#("todo"))})))}
+  .do{Debug#(Rd#(s.try#(s.iso.close, {t -> t.dataRead(Pub).read({})})))}
+  .return{Debug#(Rd#(s.try#(s.iso.close, {t -> t.dataRead(Pub).read(L#("data.fearless"))})))}
   }
 """, dataLinks(data, data)));
   }
@@ -1004,32 +1029,32 @@ ok
 ok
 ok
 ok
-"Pub" is not a root of this capability. Its roots are "Notes".
-The path "Bad.txt" of "Notes" is not valid: "Bad.txt" %s
-The path "pics/x.zip" of "Notes" is not valid: "x.zip" %s
-The path "other.fearless" of "Notes" is not valid: the top of a data project holds no resource with the extension "fearless": that is the place of the marker of the project, which is not part of the data project.
-The path "readme/x.txt" of "Notes" is not valid: "readme" is a resource, not a folder.
-The path "readme.md" of "Notes" is not written: its folder holds "readme", and a resource without extension can not share its name with a resource with an extension.
-The path "todo" of "Notes" names a folder, not a resource.
+No dataEdit project is mounted on "col.Nope".
+The path "Bad.txt" of "col.Notes" is not valid: "Bad.txt" %s
+The path "pics/x.zip" of "col.Notes" is not valid: "x.zip" %s
+The path "other.fearless" of "col.Notes" is not valid: the top of a data project holds no resource with the extension "fearless": that is the place of the marker of the project, which is not part of the data project.
+The path "readme/x.txt" of "col.Notes" is not valid: "readme" is a resource, not a folder.
+The path "readme.md" of "col.Notes" is not written: its folder holds "readme", and a resource without extension can not share its name with a resource with an extension.
+The path "todo" of "col.Notes" names a folder, not a resource.
 """.formatted(resourceName, resourceName), dataRun(tmp, """
 Writes: Main{s -> base.Block#
-  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataReadWrite.writeStrUtf8("Notes", L#("notes", "b.txt"), "second")})))}
-  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataReadWrite.writeStrAscii("Notes", L#("fresh", "deeper", "c.txt"), "third")})))}
-  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataReadWrite.writeStrLatin1("Notes", L#("pics", "deep", "four.txt"), "zipped")})))}
-  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataReadWrite.writeStrUtf8("Notes", L#("pics", "inner", "three.txt"), "renested")})))}
-  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataReadWrite.writeStrUtf8("Notes", L#("pics", "new", "five.txt"), "in a new folder of a zip")})))}
-  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataReadWrite.writeUStrUtf16Le("Notes", L#("u16.txt"), "caf".u("00E9"))})))}
-  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataReadWrite.writeBytes("Notes", L#("raw.bin"), L#(72.getByte, 105.getByte))})))}
-  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataReadWrite.writeStrUtf32Be("Notes", L#("u32.txt"), "A")})))}
-  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataReadWrite.writeUStrAscii("Notes", L#("ascii.txt"), "caf".u("00E9"), Q)})))}
-  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataReadWrite.writeUStrLatin1("Notes", L#("latin1.txt"), "caf".u("00E9 1F600"), Q)})))}
-  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataReadWrite.writeStrUtf8("Pub", L#("x.txt"), "no")})))}
-  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataReadWrite.writeStrUtf8("Notes", L#("Bad.txt"), "no")})))}
-  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataReadWrite.writeStrUtf8("Notes", L#("pics", "x.zip"), "no")})))}
-  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataReadWrite.writeStrUtf8("Notes", L#("other.fearless"), "no")})))}
-  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataReadWrite.writeStrUtf8("Notes", L#("readme", "x.txt"), "no")})))}
-  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataReadWrite.writeStrUtf8("Notes", L#("readme.md"), "no")})))}
-  .return{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataReadWrite.writeStrUtf8("Notes", L#("todo"), "no")})))}
+  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataEdit(Notes).writeStrUtf8(L#("notes", "b.txt"), "second")})))}
+  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataEdit(Notes).writeStrAscii(L#("fresh", "deeper", "c.txt"), "third")})))}
+  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataEdit(Notes).writeStrLatin1(L#("pics", "deep", "four.txt"), "zipped")})))}
+  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataEdit(Notes).writeStrUtf8(L#("pics", "inner", "three.txt"), "renested")})))}
+  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataEdit(Notes).writeStrUtf8(L#("pics", "new", "five.txt"), "in a new folder of a zip")})))}
+  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataEdit(Notes).writeUStrUtf16Le(L#("u16.txt"), "caf".u("00E9"))})))}
+  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataEdit(Notes).writeBytes(L#("raw.bin"), L#(72.getByte, 105.getByte))})))}
+  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataEdit(Notes).writeStrUtf32Be(L#("u32.txt"), "A")})))}
+  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataEdit(Notes).writeUStrAscii(L#("ascii.txt"), "caf".u("00E9"), Q)})))}
+  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataEdit(Notes).writeUStrLatin1(L#("latin1.txt"), "caf".u("00E9 1F600"), Q)})))}
+  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataEdit(Nope).writeStrUtf8(L#("x.txt"), "no")})))}
+  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataEdit(Notes).writeStrUtf8(L#("Bad.txt"), "no")})))}
+  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataEdit(Notes).writeStrUtf8(L#("pics", "x.zip"), "no")})))}
+  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataEdit(Notes).writeStrUtf8(L#("other.fearless"), "no")})))}
+  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataEdit(Notes).writeStrUtf8(L#("readme", "x.txt"), "no")})))}
+  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataEdit(Notes).writeStrUtf8(L#("readme.md"), "no")})))}
+  .return{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataEdit(Notes).writeStrUtf8(L#("todo"), "no")})))}
   }
 """, dataLinks(data, data)));
     assertEquals(List.of("fear:/ascii.txt", "fear:/data.fearless", "fear:/fresh/deeper/c.txt", "fear:/latin1.txt", "fear:/notes/a.txt", "fear:/notes/b.txt",
@@ -1050,21 +1075,21 @@ ok
 ok
 ok
 ok
-The path "notes/a.txt" of "Notes" names no resource.
-The path "data.fearless" of "Notes" is not valid: the top of a data project holds no resource with the extension "fearless": that is the place of the marker of the project, which is not part of the data project.
-"Pub" is not a root of this capability. Its roots are "Notes".
+The path "notes/a.txt" of "col.Notes" names no resource.
+The path "data.fearless" of "col.Notes" is not valid: the top of a data project holds no resource with the extension "fearless": that is the place of the marker of the project, which is not part of the data project.
+No dataEdit project is mounted on "col.Nope".
 [readme, todo]
 """, dataRun(tmp, """
 Deletes: Main{s -> base.Block#
-  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataReadWrite.delete("Notes", L#("pics", "inner", "three.txt"))})))}
-  .do{Debug#(Ls#(s.try#(s.iso.close, {t -> t.dataReadWrite.paths("Notes", L#("pics"))})))}
-  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataReadWrite.delete("Notes", L#("pics", "deep", "two.txt"))})))}
-  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataReadWrite.delete("Notes", L#("pics", "one.txt"))})))}
-  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataReadWrite.delete("Notes", L#("notes", "a.txt"))})))}
-  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataReadWrite.delete("Notes", L#("notes", "a.txt"))})))}
-  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataReadWrite.delete("Notes", L#("data.fearless"))})))}
-  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataReadWrite.delete("Pub", L#("readme"))})))}
-  .return{Debug#(Ls#(s.try#(s.iso.close, {t -> t.dataReadWrite.paths("Notes", {})})))}
+  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataEdit(Notes).delete(L#("pics", "inner", "three.txt"))})))}
+  .do{Debug#(Ls#(s.try#(s.iso.close, {t -> t.dataEdit(Notes).paths(L#("pics"))})))}
+  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataEdit(Notes).delete(L#("pics", "deep", "two.txt"))})))}
+  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataEdit(Notes).delete(L#("pics", "one.txt"))})))}
+  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataEdit(Notes).delete(L#("notes", "a.txt"))})))}
+  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataEdit(Notes).delete(L#("notes", "a.txt"))})))}
+  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataEdit(Notes).delete(L#("data.fearless"))})))}
+  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataEdit(Nope).delete(L#("readme"))})))}
+  .return{Debug#(Ls#(s.try#(s.iso.close, {t -> t.dataEdit(Notes).paths({})})))}
   }
 """, dataLinks(data, data)));
     assertEquals(List.of("fear:/data.fearless", "fear:/readme", "fear:/todo/item.txt"), fearPaths(data));
@@ -1081,8 +1106,8 @@ Deletes: Main{s -> base.Block#
     Fs.write(data.resolve("pic.png"), bout.toByteArray());
     utils.Err.strCmp("ok\n", dataRun(tmp, """
 Images: Main{s -> base.Block#
-  .let img= {s.dataRead.read("Pub", L#("pic.png")).readImage(1000)}
-  .return{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataReadWrite.writeImagePng("Notes", L#("copy.png"), img)})))}
+  .let img= {s.dataRead(Pub).read(L#("pic.png")).readImage(1000)}
+  .return{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataEdit(Notes).writeImagePng(L#("copy.png"), img)})))}
   }
 """, dataLinks(data, data)));
     var copy= ImageIO.read(data.resolve("copy.png").toFile());
@@ -1097,7 +1122,7 @@ ok
 Painted: Main{s -> base.Block#
   .let img= {base.Images#(base.WidthNat#4, base.HeightNat#3, base.Color.rgb(0, 0, 255))
     .paint{g -> g.color(base.Color.rgb(255, 0, 0)).position(base.XInt#(+1), base.YInt#(+1)).rect(base.WidthNat#2, base.HeightNat#5)}}
-  .return{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataReadWrite.writeImagePng("Notes", L#("painted.png"), img)})))}
+  .return{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataEdit(Notes).writeImagePng(L#("painted.png"), img)})))}
   }
 """, dataLinks(data, data)));
     var png= ImageIO.read(data.resolve("painted.png").toFile());
@@ -1107,27 +1132,25 @@ Painted: Main{s -> base.Block#
     var data= dataProject(tmp);
     utils.Err.strCmp("""
 ok
-[###]The resource "Notes/readme" could not be read: NoSuchFileException[###]""", dataRun(tmp, """
+[###]The resource "col.Notes/readme" could not be read: NoSuchFileException[###]""", dataRun(tmp, """
 Gone: Main{s -> base.Block#
-  .let n= {s.dataReadWrite.read("Notes", L#("readme"))}
-  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataReadWrite.delete("Notes", L#("readme"))})))}
+  .let n= {s.dataEdit(Notes).read(L#("readme"))}
+  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataEdit(Notes).delete(L#("readme"))})))}
   .return{Debug#(n.readStrUtf8 Recover)}
   }
 """, dataLinks(data, data)));
-    utils.Err.strCmp("[###]The path \"\" of \"Pub\" could not be read: NoSuchFileException[###]", dataRun(tmp, """
-Gone: Main{s -> Debug#(s.dataRead.paths("Pub", {}).str{::})}
+    utils.Err.strCmp("[###]The path \"\" of \"col.Pub\" could not be read: NoSuchFileException[###]", dataRun(tmp, """
+Gone: Main{s -> Debug#(s.dataRead(Pub).paths({}).str{::})}
 """, dataLinks(tmp.resolve("gone"), data)));
   }
-  @Test void aProgramWithNoLinksHasNoRoot(@TempDir Path tmp){
+  @Test void aProgramWithNoMountsHasNoDataProject(@TempDir Path tmp){
     utils.Err.strCmp("""
-[]
-"Pub" is not a root of this capability. This capability has no root.
-"Notes" is not a root of this capability. This capability has no root.
+No data project is mounted on "col.Pub".
+No dataEdit project is mounted on "col.Notes".
 """, dataRun(tmp, """
-NoLinks: Main{s -> base.Block#
-  .do{Debug#(s.dataRead.roots.str{::})}
-  .do{Debug#(Ls#(s.try#(s.iso.close, {t -> t.dataRead.paths("Pub", {})})))}
-  .return{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataReadWrite.writeStrUtf8("Notes", L#("a.txt"), "no")})))}
+NoMounts: Main{s -> base.Block#
+  .do{Debug#(Ls#(s.try#(s.iso.close, {t -> t.dataRead(Pub).paths({})})))}
+  .return{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataEdit(Notes).writeStrUtf8(L#("a.txt"), "no")})))}
   }
 """, List.of()));
   }
@@ -1282,7 +1305,9 @@ Pre:Main, base.PreLoadIcon[base.IconsConflict], base.PreLoadIcon[IconsFoo]{s->ba
     "col.Pre": ["_col/_rank_app.fear", [], [], [["base.IconsFearless", "icons/fearless.png", "", "", ""], ["base.IconsConflict", "icons/conflict.png", "", "", ""], ["col.IconsFoo", "_col/icons/foo.png", "", "", ""]]],
     "col.Two": ["_col/_rank_app.fear", [], [["col.IconsFoo", "_col/icons/foo.png", "", "", "q"], ["base.IconsConflict", "icons/conflict.png", "", "", "b"]], [["base.IconsFearless", "icons/fearless.png", "", "", ""], ["col.IconsFoo", "_col/icons/foo.png", "", "", ""], ["base.IconsConflict", "icons/conflict.png", "", "", ""]]]
   },
-  "attenuators": []
+  "attenuators": [],
+  "dataRead": [],
+  "dataEdit": []
 }
 """, manifests(root));
   }
@@ -1741,14 +1766,18 @@ not read by the compiler
   "mains": {
     "col.Foo": ["_col/_rank_app.fear", [["base.IconsConflict", "icons/conflict.png", "", "", "fapp042"], ["col.ZInBar", "_col/z.zip", "", "in/bar.png", ""]], [["col.IconsFoo", "_col/icons/foo.png", "", "", "foo"], ["lib.IconsLib", "_lib/icons/lib.png", "", "", ""]], [["base.IconsConflict", "icons/conflict.png", "", "", ""], ["col.ZInBar", "_col/z.zip", "", "in/bar.png", ""], ["base.IconsFearless", "icons/fearless.png", "", "", ""], ["col.IconsFoo", "_col/icons/foo.png", "", "", ""], ["lib.IconsLib", "_lib/icons/lib.png", "", "", ""]]]
   },
-  "attenuators": []
+  "attenuators": [],
+  "dataRead": [],
+  "dataEdit": []
 }
 --- lib_manifest.info
 {
   "mains": {
     "lib.Lib": ["_lib/_rank_core.fear", [], [["base.IconsConflict", "icons/conflict.png", "", "", "fear"]], [["base.IconsFearless", "icons/fearless.png", "", "", ""], ["base.IconsConflict", "icons/conflict.png", "", "", ""]]]
   },
-  "attenuators": []
+  "attenuators": [],
+  "dataRead": [],
+  "dataEdit": []
 }
 """, manifests(root));
   }
@@ -1780,7 +1809,9 @@ B:Main{s->base.Debug#(`b`)}
   "mains": {
     "a.A": ["_a/_rank_app.fear", [], [["a.IconsA", "_a/icons/a.png", "", "", ""]], [["base.IconsFearless", "icons/fearless.png", "", "", ""], ["a.IconsA", "_a/icons/a.png", "", "", ""]]]
   },
-  "attenuators": []
+  "attenuators": [],
+  "dataRead": [],
+  "dataEdit": []
 }
 --- b_manifest.info
 {
@@ -1788,7 +1819,9 @@ B:Main{s->base.Debug#(`b`)}
     "b.B": ["_b/_rank_app.fear", [], [], [["base.IconsFearless", "icons/fearless.png", "", "", ""]]],
     "b.C": ["_b/_rank_app.fear", [], [], [["base.IconsFearless", "icons/fearless.png", "", "", ""]]]
   },
-  "attenuators": []
+  "attenuators": [],
+  "dataRead": [],
+  "dataEdit": []
 }
 """, manifests(root));
   }
@@ -1825,7 +1858,9 @@ Lib:base.Main, base.OpenWith[base.IconsConflict,"fear"]{s->base.Debug#(`lib`)}
   "mains": {
     "lib.Lib": ["_lib/_rank_core.fear", [], [["base.IconsConflict", "icons/conflict.png", "", "", "fear"]], [["base.IconsFearless", "icons/fearless.png", "", "", ""], ["base.IconsConflict", "icons/conflict.png", "", "", ""]]]
   },
-  "attenuators": []
+  "attenuators": [],
+  "dataRead": [],
+  "dataEdit": []
 }
 """, manifests(root));
   }
@@ -1961,12 +1996,16 @@ not read by the compiler
   "mains": {
     "col.Foo": ["_col/_rank_app.fear", [], [["lib.IconsLib", "_lib/icons/lib.gif", "", "", ""]], [["base.IconsFearless", "icons/fearless.png", "", "", ""], ["lib.IconsLib", "_lib/icons/lib.gif", "", "", ""]]]
   },
-  "attenuators": []
+  "attenuators": [],
+  "dataRead": [],
+  "dataEdit": []
 }
 --- lib_manifest.info
 {
   "mains": {},
-  "attenuators": []
+  "attenuators": [],
+  "dataRead": [],
+  "dataEdit": []
 }
 """, manifests(root));
   }
@@ -1983,7 +2022,9 @@ Foo:Opener, Other, Shortcut[base.IconsConflict,"fapp042"], OpenWith[IconsFoo]{s-
   "mains": {
     "col.Foo": ["_col/_rank_app.fear", [["base.IconsConflict", "icons/conflict.png", "", "", "fapp042"], ["col.IconsFoo", "_col/icons/foo.png", "", "", ""]], [["col.IconsFoo", "_col/icons/foo.png", "", "", ""], ["col.IconsFoo", "_col/icons/foo.png", "", "", "foo"]], [["base.IconsConflict", "icons/conflict.png", "", "", ""], ["col.IconsFoo", "_col/icons/foo.png", "", "", ""], ["base.IconsFearless", "icons/fearless.png", "", "", ""]]]
   },
-  "attenuators": []
+  "attenuators": [],
+  "dataRead": [],
+  "dataEdit": []
 }
 """, manifests(root));
   }
