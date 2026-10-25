@@ -178,7 +178,7 @@ child: download ok
 child: manager revoked
 child ends
 the failing main throws
-imm Failing.main(_) error line: 37 in file _proc/_rank_app.fear
+imm Failing.main(_) error line: 40 in file _proc/_rank_app.fear
 parent starts
 parent: manager revoked
 child starts
@@ -201,6 +201,8 @@ child: manager revoked
 child ends
 child awaited: True
 child again: RunningMain.await was called on a surely terminated RunningMain.
+twice: [{"line":"a \\"quoted\\" word"},{"line":"a \\"quoted\\" word"}]
+twice awaited: Opt[["ab","ab"]]
 spin awaited: False
 spin terminated
 spin again: RunningMain.terminate was called on a surely terminated RunningMain.
