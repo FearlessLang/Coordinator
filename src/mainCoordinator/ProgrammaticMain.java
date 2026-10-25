@@ -5,6 +5,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import java.io.PrintStream;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Optional;
 
 import coordinator.CapabilityEnvironment;
 import coordinator.Coordinator;
@@ -36,7 +37,7 @@ public record ProgrammaticMain(StringBuilder out, StringBuilder err, String fNam
       @Override public SourceOracle sourceOracle(Path path){ return oracle; }
       @Override public Path stdLibBase(){ return stdLib; }
       @Override public BackendTools backendTools(String pkgName, SourceOracle o, OtherPackages other, List<Literal> core, CapabilityEnvironment capabilities){
-        return BackendTools.of(pkgName, o, other, core, dest.resolve(Coordinator.outDir), baseCachePath(), stdRt, capabilities);
+        return BackendTools.of(pkgName, o, other, core, dest.resolve(Coordinator.outDir), baseCachePath(), Optional.of(dest).filter(_ -> !pkgName.equals("base")), stdRt, capabilities);
       }
     };
     c.main(dest, RealSourceOracleWithZip.stdLib(stdLib));

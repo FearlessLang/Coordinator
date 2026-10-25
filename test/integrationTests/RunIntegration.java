@@ -46,6 +46,7 @@ import coordinator.OutputOracle;
 import core.E.Literal;
 import core.OtherPackages;
 import fileSupport.JUnitReport;
+import mainCoordinator.ProgrammaticMain;
 import naiveBackend.Backend;
 import naiveBackend.BackendTools;
 import realSourceOracle.RealSourceOracleWithZip;
@@ -130,6 +131,19 @@ imm Bar.bar error line: 16 in file _hello/_rank_app.fear
 imm Foo.foo error line: 15 in file _hello/_rank_app.fear
 imm Hello6.main(_) error line: 14 in file _hello/_rank_app.fear
 """, run("helloWorld"));
+  }
+  @Test void programmaticMainBuildsBaseWithoutWritingItsGeneratedTests(@TempDir Path tmp){
+    var app= tmp.resolve("app");
+    Fs.copyTree(ResolveResource.coordinatorJars, app.resolve(JavacTool.deployedModsDirName));
+    System.setProperty(JavacTool.appDirKey, app.toString());
+    System.setProperty(JavacTool.launcherKey, JavacTool.consoleKey);
+    var dest= tmp.resolve("dest");
+    var m= new ProgrammaticMain(new StringBuilder(), new StringBuilder(), "_hi/_rank_app111.fear", "Hi:base.Main{s->base.Debug#(\"hi\")}\n", ResolveResource.stLibPath, ResolveResource.stLibRTPath, dest);
+    try{ m.runFearless(); }
+    finally{ System.clearProperty(JavacTool.launcherKey); }
+    assertEquals("", m.err().toString());
+    assertEquals("hi\n", m.out().toString());
+    assertEquals(List.of(), Fs.walk(dest, s -> s.filter(f -> f.getFileName().toString().equals("auto_tests")).toList()));
   }
   //testUnitTests is the project that checks the failure report itself, so it must fail
   @Test void testUnitTests(){
