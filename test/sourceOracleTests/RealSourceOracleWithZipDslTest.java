@@ -172,6 +172,14 @@ Save the file again, or correct the clock of this computer.
     var root= dated(tmp, aFear+"jjj\n_pkg/.cache/b.txt\niii\nB\n", "_pkg/.cache/b.txt", System.currentTimeMillis()+3_600_000);
     assertEquals(1, new RealSourceOracleWithZip(root).allFiles().size());
   }
+  @Test void okStdLibFileDatedInTheFuture(@TempDir Path tmp){
+    var root= dated(tmp, aFear, "_pkg/a.fear", System.currentTimeMillis()+3_600_000);
+    assertEquals(1, RealSourceOracleWithZip.stdLib(root).allFiles().size());
+  }
+  @Test void okStdLibFileDatedAtTheStartOf1970(@TempDir Path tmp){
+    var root= dated(tmp, aFear, "_pkg/a.fear", 0);
+    assertEquals(1, RealSourceOracleWithZip.stdLib(root).allFiles().size());
+  }
   @Test void errFileDatedAtTheStartOf1970(@TempDir Path tmp){
     var root= dated(tmp, aFear, "_pkg/a.fear", 0);
     var ex= assertThrows(UserError.class, () -> new RealSourceOracleWithZip(root));

@@ -33,6 +33,7 @@ import core.OtherPackages;
 import fileAssociations.FileAssociations;
 import fileAssociations.Icon;
 import naiveBackend.BackendTools;
+import realSourceOracle.RealSourceOracleWithZip;
 import tools.Fs;
 import tools.JavacTool;
 import tools.SourceOracle;
@@ -73,7 +74,7 @@ public final class Main{
         return BackendTools.of(pkgName, oracle, other, core, project.resolve(Coordinator.outDir), baseCachePath(), rt, capabilities);
       }
     };
-    c.main(project, c.sourceOracle(base));
+    c.main(project, RealSourceOracleWithZip.stdLib(base));
   }
   private static final Predicate<String> belongsToFamily= s -> s.contains("earless");
   private static void offerAssociation(Path appDir){
