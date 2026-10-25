@@ -1878,7 +1878,7 @@ A:Main{s->base.Debug#(`hi`)}
     assertFalse(Fs.exists(out));
     utils.Err.strCmp("hi\n", main(root, List.of()));
   }
-  static String crashedWithCache(String detail){ return "Error: Fearless crashed: either this project's build cache was corrupted, or this is a Fearless bug.[###]Fearless deleted this project's .fearless_out folder: compile again to rebuild it.[###]Details:\n"+detail+"[###]"; }
+  static String crashedWithCache(String detail){ return "Error: Fearless crashed: either this project's compilation cache was corrupted, or this is a Fearless bug.[###]Fearless deleted this project's .fearless_out folder: compile again to rebuild it.[###]Details:\n"+detail+"[###]"; }
   @Test void aGarbledBuiltFileMakesItsPackageBuildAgain(@TempDir Path tmp){
     var root= tmp.resolve("root");
     UserError.root = root;
