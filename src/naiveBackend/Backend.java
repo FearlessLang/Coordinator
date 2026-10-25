@@ -3,6 +3,7 @@ package naiveBackend;
 import java.math.BigInteger;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.TreeMap;
@@ -61,12 +62,19 @@ public final class Backend{
       sb.a("  Object _reprCacheGet(Object k, java.util.function.Supplier<Object> f, long time);\n");
       sb.a("  void _reprCacheFlush();\n");
     }
-    if (hasInstance){ sb.a("  "+iface+" instance= new _Instance();\n  final class _Instance implements "+iface+"{"+onceMethods(l, iface)+"}\n"+cacheField(l)); }
+    if (hasInstance){ sb.a(nameMethod(l, "default")+"  "+iface+" instance= new _Instance();\n  final class _Instance implements "+iface+"{"+onceMethods(l, iface)+"}\n"+cacheField(l)); }
     Fs.writeUtf8(out.resolve(iface+".java"), sb.a("}").toString());
     if (hasInstance && MainsInfo.isMain(l)){ mains.put(l.name().s(), iface); preloaded.put(l.name().s(), preloaded(l)); }
     fixers.add(sb);
   }
   private String preloaded(Literal l){ return Join.of(MainsInfo.icons(l.cs()).stream().map(n -> javaStrLit(n.s())+", "+typeName(n)+".instance"), "", ", ", ""); }
+  String nameMethod(Literal l, String modifier){
+    var named= new TName("base.Named", 0, Pos.unknown);
+    var fromNamed= l.ms().stream().anyMatch(m -> m.sig().m().equals(new MName(".name", 0)) && m.sig().origin().equals(named));
+    if (!fromNamed){ return ""; }
+    var name= l.name().s()+Join.of(Collections.nCopies(l.name().arity(), "_"), "[", ",", "]", "");
+    return "  "+modifier+" Object read$name$0(){ return _base.Str$c$0Instance.instance("+javaStrLit(name)+"); }\n";
+  }
   private static boolean implementsType(Literal l, String name, int arity){ return LiteralDeclarations.has(l.cs(), new TName(name, arity, Pos.unknown)); }
   private static String cacheField(Literal l){
     for (int shape : Range.of(0, 3)){
