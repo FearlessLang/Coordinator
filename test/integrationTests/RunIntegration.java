@@ -200,14 +200,14 @@ child: download ok
 child: manager revoked
 child ends
 child awaited: True
-child again: RunningMain.await was called on a surely terminated RunningMain.
+child again: CapRunningMain.await was called on a surely terminated CapRunningMain.
 twice: [{"line":"a \\"quoted\\" word"},{"line":"a \\"quoted\\" word"}]
 twice awaited: Opt[["ab","ab"]]
 failing info failed: the failing info main throws
 spin info terminated
 spin awaited: False
 spin terminated
-spin again: RunningMain.terminate was called on a surely terminated RunningMain.
+spin again: CapRunningMain.terminate was called on a surely terminated CapRunningMain.
 spin ends
 failing terminated: the failing main throws
 starter ends
@@ -957,9 +957,9 @@ use base.Debug as Debug;
 use base.Lists as L;
 Recover: base.BadStrUnitRecover { reason, byteOffset, byteLength, rejectedValue -> "?" }
 Ls: { #(a: mut base.Action[base.List[base.Str]]): base.Str -> a.run{.ok xs -> xs.str{::}; .info i -> (i.getMap.get "msg").getMsg} }
-Rd: { #(a: mut base.Action[mut base.InputCursorNode]): base.Str -> a.run{.ok n -> n.label+": "+(n.readStrUtf8 Recover); .info i -> (i.getMap.get "msg").getMsg} }
+Rd: { #(a: mut base.Action[mut base.CapInputCursorNode]): base.Str -> a.run{.ok n -> n.label+": "+(n.readStrUtf8 Recover); .info i -> (i.getMap.get "msg").getMsg} }
 Wr: { #(a: mut base.Action[base.Void]): base.Str -> a.run{.ok _ -> "ok"; .info i -> (i.getMap.get "msg").getMsg} }
-Sz: { #(a: mut base.Action[mut base.InputCursorNode]): base.Str -> a.run{.ok n -> n.readBytes.size.str; .info i -> (i.getMap.get "msg").getMsg} }
+Sz: { #(a: mut base.Action[mut base.CapInputCursorNode]): base.Str -> a.run{.ok n -> n.readBytes.size.str; .info i -> (i.getMap.get "msg").getMsg} }
 Q: base.UnencodableRecover{ scalar, index -> L#(63.getByte) }
 Pub: base.DataRead{}
 Notes: base.DataEdit{}
@@ -2381,7 +2381,7 @@ Hello:Main{s->base.Debug#("hi")}
     c.main(root, stLib);
     c.main(root, stLib);
   }
-  // --- DownloadCapability -------------------------------------------------
+  // --- CapDownload -------------------------------------------------
   // Each test starts a local HttpServer (no external network needed) and
   // materializes a fresh Fearless project whose source references its port.
   static HttpServer startServer(HttpHandler handler) throws IOException{
