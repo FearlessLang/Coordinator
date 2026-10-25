@@ -203,6 +203,8 @@ child awaited: True
 child again: RunningMain.await was called on a surely terminated RunningMain.
 twice: [{"line":"a \\"quoted\\" word"},{"line":"a \\"quoted\\" word"}]
 twice awaited: Opt[["ab","ab"]]
+failing info failed: the failing info main throws
+spin info terminated
 spin awaited: False
 spin terminated
 spin again: RunningMain.terminate was called on a surely terminated RunningMain.
