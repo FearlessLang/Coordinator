@@ -93,7 +93,7 @@ public final class Backend{
   }
   private boolean hasInstance(Literal l){
     assert !l.thisName().isEmpty() || LiteralDeclarations.has(l.cs(), LiteralDeclarations.captureFree);
-    return l.ms().stream().noneMatch(m -> m.sig().abs());
+    return l.ms().stream().noneMatch(m -> m.sig().abs() && m.sig().rc() != RC.mut);
   }
 
   String extendsClause(Literal lit){ return Join.of(
