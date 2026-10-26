@@ -18,6 +18,7 @@ import java.util.concurrent.FutureTask;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import javax.imageio.ImageIO;
@@ -37,6 +38,7 @@ import naiveBackend.BackendTools;
 import realSourceOracle.RealSourceOracleWithZip;
 import tools.Fs;
 import tools.JavacTool;
+import tools.PathBytes;
 import tools.SourceOracle;
 import tools.Utf8Sink;
 import userMessages.Report;
@@ -48,14 +50,14 @@ public final class Main{
   public static void main(String[] args){
     NativeLocaleForcer.forceEnglish();
     JavacTool.reqAppDir(Violation::mustUseLauncher);
-    try{ if (!hasConsoleFlag()){ hookStd(); } run(args); }
+    try{ if (!hasConsoleFlag()){ hookStd(); } NativeLocaleForcer.requireUtf8FileNames(); run(args); }
     catch (UserError e){ System.err.print(e.getMessage()); }
     catch (Throwable e){ System.err.print(UserError.crash(e)); }
   }
   private static void run(String[] args) throws InterruptedException{
     var appDir= JavacTool.reqAppDir(Violation::mustUseLauncher);
     offerAssociation(appDir);
-    var launch= Stream.of(args).filter(a -> !a.startsWith("-psn_")).findFirst().map(Main::normalize);
+    var launch= IntStream.range(0, args.length).filter(i -> !args[i].startsWith("-psn_")).boxed().findFirst().map(i -> normalize(args, i));
     if (Fs.isMac() && !hasConsoleFlag()){ Desktop.getDesktop().setOpenFileHandler(e -> e.getFiles().forEach(f -> spawnMac(appDir, f.toPath()))); }
     if (launch.isEmpty()){
       if (Fs.isMac()){ Thread.sleep(1000); }
@@ -132,17 +134,14 @@ public final class Main{
     });
   }
   private static boolean hasConsoleFlag(){ return JavacTool.consoleKey.equals(System.getProperty(JavacTool.launcherKey)); }
-  //The operating system hands the arguments over as bytes (16 bit units on Windows), and the JVM
-  //decodes them as text with the file name encoding of the system before main sees them: bytes not
-  //valid in that encoding become U+FFFD, and the path loses the name it had. From here on the
-  //compiler holds the project as a Path, which keeps every byte. Plain text holding U+FFFD is refused,
-  //also when a name on the path truly contains that character. A "file:" URI writes every byte as an
-  //escape, so it reaches Fearless intact under any encoding.
-  private static Path normalize(String s){
+  //The JVM hands main the arguments decoded as text, and bytes not valid in the file name encoding
+  //are lost: PathBytes.arg reads the bytes the process received. A "file:" URI writes every byte as
+  //an escape. From here on the compiler holds the project as a Path, which keeps every byte.
+  private static Path normalize(String[] args, int i){
+    var s= args[i];
     assert !s.isEmpty();
-    if (s.indexOf('\uFFFD') >= 0){ throw Report.launchPathNotText(s); }
     Path p;
-    try{ p= s.startsWith("file:") ? Path.of(URI.create(s)) : Path.of(s); }
+    try{ p= s.startsWith("file:") ? Path.of(URI.create(s)) : PathBytes.arg(args, i); }
     catch (RuntimeException _){ throw Violation.badLaunchArg(s, hasConsoleFlag()); }
     return p.toAbsolutePath().normalize();
   }
