@@ -24,7 +24,7 @@ import userMessages.Violation;
 // Code to be executed at the very beginning of main.
 // Java is forced to Locale.ROOT.
 // Windows process UI language is forced to en-US.
-// Native C/CRT locale is forced to the invariant C locale.
+// Native C/CRT locale is forced to the invariant C locale; on Linux to C.UTF-8, since Fearless reads text as UTF-8.
 // No code will set up thread-specific languages.
 // Code should fail instead of gracefully degrading.
 //
@@ -51,9 +51,9 @@ public final class NativeLocaleForcer{
   public static void forceEnglish(){
     Locale.setDefault(Locale.ROOT);
     try{
-      if (Fs.isWindows()){ forceWindowsUiLanguage(); setCLocale(0); return; }//WINDOWS_LC_ALL
-      if (Fs.isMac()){ setCLocale(0); return; }//MACOS_LC_ALL
-      if (Fs.isLinux()){ setCLocale(6); return; }//LINUX_LC_ALL
+      if (Fs.isWindows()){ forceWindowsUiLanguage(); setCLocale(0, "C"); return; }//WINDOWS_LC_ALL
+      if (Fs.isMac()){ setCLocale(0, "C"); return; }//MACOS_LC_ALL
+      if (Fs.isLinux()){ setCLocale(6, "C.UTF-8"); return; }//LINUX_LC_ALL
       throw Violation.unsupportedOperatingSystem();
     }
     catch (UserError e){ throw e; }
@@ -62,13 +62,13 @@ public final class NativeLocaleForcer{
   // char* setlocale(int category, const char* locale);
   // Returns NULL when the request is rejected; per the fail-loudly policy NULL is an Error.
   @SuppressWarnings("restricted")
-  private static void setCLocale(int lcAll) throws Throwable{
+  private static void setCLocale(int lcAll, String name) throws Throwable{
     var setlocale= linker.downcallHandle(
       linker.defaultLookup().findOrThrow("setlocale"),
       FunctionDescriptor.of(ADDRESS, JAVA_INT, ADDRESS));
     try (var arena= Arena.ofConfined()){
-      var res= (MemorySegment)setlocale.invokeExact(lcAll, arena.allocateFrom("C"));
-      if (MemorySegment.NULL.equals(res)){ throw Violation.couldNotForceEnglish("The C runtime rejected setlocale(LC_ALL, \"C\")"); }
+      var res= (MemorySegment)setlocale.invokeExact(lcAll, arena.allocateFrom(name));
+      if (MemorySegment.NULL.equals(res)){ throw Violation.couldNotForceEnglish("The C runtime rejected setlocale(LC_ALL, \""+name+"\")"); }
     }
   }
   @SuppressWarnings("restricted")
