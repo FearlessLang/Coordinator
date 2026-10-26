@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.Locale;
 
 import tools.Fs;
+import userMessages.Report;
 import userMessages.UserError;
 import userMessages.Violation;
 
@@ -42,6 +43,11 @@ public final class NativeLocaleForcer{
   private static final int maxProcessUiLanguageChars= 1_000;
   private static final String enUs= "en-US";
   private static final Linker linker= Linker.nativeLinker();
+  //Fearless reads file names as UTF-8 on every system: on Linux the locale of the process decides it.
+  public static void requireUtf8FileNames(){
+    var names= System.getProperty("sun.jnu.encoding");
+    if (Fs.isLinux() && !names.equals("UTF-8")){ throw Report.fileNamesNotUtf8(names); }
+  }
   public static void forceEnglish(){
     Locale.setDefault(Locale.ROOT);
     try{

@@ -9,20 +9,16 @@ import org.opentest4j.AssertionFailedError;
 final class ReportPathTest{
   static{ utils.Err.setUp(AssertionFailedError.class, Assertions::assertEquals, Assertions::assertTrue); }
   static final String names= System.getProperty("sun.jnu.encoding");
-  @Test void launchPathNotText(){
+  @Test void fileNamesNotUtf8(){
     utils.Err.strCmp("""
-Fearless was given a path that this system could not read as text.
+Fearless was started with file names read as ANSI_X3.4-1968.
 
-Path, as this system read it:
-  /home/me/caf{U+FFFD}/hello
-
-A name on this path holds bytes that are not valid in %s, the encoding
-this system uses for file names. The system replaced them with U+FFFD, so the
-path no longer names the folder it named.
-
-Give Fearless the path as a file URI, where every byte is written as an escape
-(for example file:///home/me/caf%%E9), or rename the folders on the path.
-""".formatted(names), Report.launchPathNotText("/home/me/caf\uFFFD/hello").getMessage());
+Fearless reads file names as UTF-8. On Linux the locale of a program decides how
+it reads them, and the locale of this start is not a UTF-8 one (for example
+LANG=C). The launchers Fearless installs set it; from a terminal, start Fearless
+with a UTF-8 locale, for example:
+  LC_ALL=C.UTF-8 <the command you used>
+""", Report.fileNamesNotUtf8("ANSI_X3.4-1968").getMessage());
   }
   @Test void installationNotUtf8(){
     utils.Err.strCmp("""

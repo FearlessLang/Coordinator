@@ -126,19 +126,15 @@ Path:
 Start Fearless on an existing project folder, or on a file inside one.
 """.formatted(path(given.toString())));
   }
-  public static UserError launchPathNotText(String given){ return new UserError("""
-Fearless was given a path that this system could not read as text.
+  public static UserError fileNamesNotUtf8(String encoding){ return new UserError("""
+Fearless was started with file names read as %s.
 
-Path, as this system read it:
-%s
-
-A name on this path holds bytes that are not valid in %s, the encoding
-this system uses for file names. The system replaced them with U+FFFD, so the
-path no longer names the folder it named.
-
-Give Fearless the path as a file URI, where every byte is written as an escape
-(for example file:///home/me/caf%%E9), or rename the folders on the path.
-""".formatted(path(given), System.getProperty("sun.jnu.encoding")));
+Fearless reads file names as UTF-8. On Linux the locale of a program decides how
+it reads them, and the locale of this start is not a UTF-8 one (for example
+LANG=C). The launchers Fearless installs set it; from a terminal, start Fearless
+with a UTF-8 locale, for example:
+  LC_ALL=C.UTF-8 <the command you used>
+""".formatted(encoding));
   }
   public static UserError installationNotUtf8(Path folder){ return new UserError("""
 Fearless cannot start a program from this installation.
