@@ -18,7 +18,6 @@ import core.OtherPackages;
 import naiveBackend.BackendTools;
 import realSourceOracle.SourceOracleWithAutoload;
 import resources.ResolveResource;
-import tools.JavaTool;
 import tools.SourceOracle;
 import utils.Push;
 
@@ -37,7 +36,7 @@ final class TestBuildBase{
       var core= frontend(pkgName, rich.sources(stLib.allFiles()), rich.oracle(), other, Map.of(), capabilities);
       backend(pkgName, core, rich.oracle(), other, capabilities);
       var jars= Push.of(Coordinator.genJava(out.rootDir()), sharedClasspath());
-      var runOut= JavaTool.runMainFromJars(Coordinator.runData(out.rootDir().getParent(), ResolveResource.stLibPath), jars, "_"+pkgName+".Main");
+      var runOut= Coordinator.runMains(Coordinator.runData(out.rootDir().getParent(), ResolveResource.stLibPath), jars, "_"+pkgName+".Main");
       assertEquals("", runOut);
       return runOut;
     }

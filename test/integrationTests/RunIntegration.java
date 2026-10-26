@@ -16,6 +16,8 @@ import java.io.IOException;
 import java.math.BigInteger;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.URI;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
 import java.security.SecureRandom;
@@ -55,8 +57,8 @@ import resources.ResolveResource;
 import testBuildBase.BaseCacheBuilder;
 import testHelperFs.FsDsl;
 import tools.Fs;
-import tools.JavaTool;
 import tools.JavacTool;
+import tools.PathClassLoader;
 import tools.SourceOracle;
 import tools.SourceOracle.Ref;
 import userMessages.UserError;
@@ -905,7 +907,21 @@ First: Main{s -> base.Block#
     var root= inputProject(tmp);
     var file= tmp.resolve("not"+(Fs.isWindows() ? "é" : "\t")+"s.txt");
     Fs.writeUtf8(file, "caf\u00e9 time");
-    utils.Err.strCmp("True\nnot?s.txt: caf? time\nFalse\n", main(root, List.of("-DfearlessInput.file="+file)));
+    utils.Err.strCmp("True\nnot?s.txt: caf? time\nFalse\n", main(root, List.of("-DfearlessInput.file="+PathClassLoader.text(file))));
+  }
+  @Test void aProgramRunsFromAProjectInAFolderWhoseNameIsNotUtf8(@TempDir Path tmp) throws InterruptedException{
+    var root= inputProject(tmp);
+    coordinator(root).compile(root, stLib);
+    var odd= Fs.isLinux() ? Path.of(URI.create(tmp.toUri()+"caf%E9")) : tmp.resolve("caf\u00e9");
+    var moved= odd.resolve("root");
+    Fs.ofV(() -> Files.createDirectories(odd));
+    Fs.ofV(() -> Files.move(root, moved));
+    var file= odd.resolve("in.txt");
+    Fs.writeUtf8(file, "caf\u00e9 time");
+    var out= new StringBuilder();
+    var exit= Coordinator.startMain(moved, ResolveResource.stLibPath, "col.First", Optional.of(file), Map.of(), Map.of(), List.of(), List.of(), coordinator(moved).sharedClasspath(), out::append).await();
+    assertEquals(0, exit, out::toString);
+    utils.Err.strCmp("True\nin.txt: caf? time\nFalse\n", out.toString());
   }
   @Test void withNoOpenedFileTheInputFilesStartEmpty(@TempDir Path tmp) throws InterruptedException{
     utils.Err.strCmp("False\nnone\nFalse\n", main(inputProject(tmp), List.of()));
@@ -913,7 +929,7 @@ First: Main{s -> base.Block#
   @Test void anInputFileThatCanNotBeReadIsADeterministicError(@TempDir Path tmp){
     utils.Err.strCmp("The input file \"gone.txt\" could not be read: NoSuchFileException\n", dataRun(tmp, """
 Gone: Main{s -> Debug#(St#(base.Try#(s.iso.close, {t -> t.inputCursor#.match{.some n -> n.readStrUtf8 Recover; .empty -> "none"}})))}
-""", List.of("-DfearlessInput.file="+tmp.resolve("gone.txt"))));
+""", List.of("-DfearlessInput.file="+PathClassLoader.text(tmp.resolve("gone.txt")))));
   }
   static Path dataProject(Path tmp){
     var data= tmp.resolve("data");
@@ -974,7 +990,7 @@ Nope: base.DataEdit{}
 """+main);
     return main(root, links);
   }
-  static List<String> dataLinks(Path pub, Path notes){ return List.of("-DfearlessDataRead.col.Pub="+pub, "-DfearlessDataEdit.col.Notes="+notes); }
+  static List<String> dataLinks(Path pub, Path notes){ return List.of("-DfearlessDataRead.col.Pub="+PathClassLoader.text(pub), "-DfearlessDataEdit.col.Notes="+PathClassLoader.text(notes)); }
   static List<String> fearPaths(Path data){ return new RealSourceOracleWithZip(data).allFiles().stream().map(Ref::fearPath).toList(); }
   static String fearFile(Path data, String fearPath){ return OneOr.of(fearPath, new RealSourceOracleWithZip(data).allFiles().stream().filter(r -> r.fearPath().equals(fearPath))).loadString(); }
   @Test void aDataProjectIsReadThroughTheRootsOfACapabilityAndAZipIsAFolder(@TempDir Path tmp){
@@ -2299,7 +2315,7 @@ b
 """, c.main(root, stLib));
     var cp= Push.of(Coordinator.genJava(root.resolve(Coordinator.outDir)), c.sharedClasspath());
     var out= new StringBuilder();
-    assertEquals(1, JavaTool.startMainFromJars(Coordinator.runData(root, c.stdLibBase()), cp, "_col.Main", out::append).await(), out::toString);
+    assertEquals(1, Coordinator.startProgram(Coordinator.runData(root, c.stdLibBase()), cp, "_col.Main", out::append).await(), out::toString);
     assertEquals(1, Coordinator.startMain(root, c.stdLibBase(), "col.A", Optional.empty(), Map.of(), Map.of(), List.of(), List.of(), c.sharedClasspath(), out::append).await(), out::toString);
     assertEquals(0, Coordinator.startMain(root, c.stdLibBase(), "col.B", Optional.empty(), Map.of(), Map.of(), List.of(), List.of(), c.sharedClasspath(), out::append).await(), out::toString);
   }

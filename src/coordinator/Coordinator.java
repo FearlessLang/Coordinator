@@ -1,6 +1,10 @@
 package coordinator;
 
 import java.net.URI;
+import java.nio.ByteBuffer;
+import java.nio.charset.CharacterCodingException;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -29,8 +33,8 @@ import realSourceOracle.RealSourceOracleWithZip;
 import realSourceOracle.ZipEntry;
 import tools.ChildJvm;
 import tools.Fs;
-import tools.JavaTool;
 import tools.JavacTool;
+import tools.PathClassLoader;
 import tools.SourceOracle;
 import tools.SourceOracle.Ref;
 import userMessages.Report;
@@ -46,7 +50,7 @@ public interface Coordinator{
   }
   static String runMains(List<String> jvmArgs, List<Path> jarDirs, String mainClass) throws InterruptedException{
     var sb= new StringBuilder();
-    var jvm= JavaTool.startMainFromJars(jvmArgs, jarDirs, mainClass, s -> { sb.append(s); System.out.print(s); });
+    var jvm= startProgram(jvmArgs, jarDirs, mainClass, s -> { sb.append(s); System.out.print(s); });
     var ec= jvm.await();
     Require.check(ec==0 || ec==1, "Exit code "+ec+" from\n"+Join.of(jvm.cmd(), "", "\n", "")+"\nOutput:\n"+sb);
     return sb.toString();
@@ -58,8 +62,24 @@ public interface Coordinator{
       "--add-exports=java.desktop/sun.awt=ALL-UNNAMED",
       Fs.isWindows() ? "--add-opens=java.desktop/sun.awt.windows=ALL-UNNAMED" : "--add-opens=java.desktop/sun.awt.X11=ALL-UNNAMED",
       "-Dsun.java2d.d3d=false",
-      "-DfearlessUser.dir="+project,
-      "-DfearlessBase.dir="+base);
+      "-DfearlessUser.dir="+PathClassLoader.text(project),
+      "-DfearlessBase.dir="+PathClassLoader.text(base));
+  }
+  ///A Fearless program decodes file names as UTF-8 on every system: on Linux LC_ALL=C.UTF-8 sets it.
+  ///Its code is loaded through PathClassLoader, and the paths it reads arrive as PathClassLoader.text,
+  ///so the names of the project and of the data are bytes the program keeps as they are. The JVM itself
+  ///and the jar of PathClassLoader are found through the text of their paths: this JVM writes that text
+  ///as the bytes naming the installation, and the program decodes them as UTF-8, so they must be valid UTF-8.
+  static ChildJvm startProgram(List<String> jvmArgs, List<Path> codeDirs, String mainClass, Consumer<String> out, String... mainArgs){
+    var boot= PathClassLoader.jar();
+    Stream.of(boot, Path.of(System.getProperty("java.home"))).filter(p -> !namedInUtf8(p)).findFirst().ifPresent(p -> { throw Report.installationNotUtf8(p); });
+    var args= Push.of(List.of(jvmArgs, PathClassLoader.codeArgs(codeDirs), List.of("-cp", boot.toString(), PathClassLoader.class.getName(), mainClass), List.of(mainArgs)));
+    return ChildJvm.start(args, Fs.isLinux() ? Map.of("LC_ALL", "C.UTF-8") : Map.of(), out);
+  }
+  private static boolean namedInUtf8(Path p){
+    var bytes= p.toString().getBytes(Charset.forName(System.getProperty("sun.jnu.encoding")));
+    try{ StandardCharsets.UTF_8.newDecoder().decode(ByteBuffer.wrap(bytes)); return true; }
+    catch (CharacterCodingException _){ return false; }
   }
   static Optional<URI> testsUri(String pkg, List<Ref> files){
     var rank= OneOr.of("One rank file per package", files.stream().filter(Helper::hasReservedRankPrefix));
@@ -124,12 +144,12 @@ public interface Coordinator{
   }
   static ChildJvm startMain(Path project, Path base, String main, Optional<Path> input, Map<String,Path> reads, Map<String,Path> edits, List<String> attenuators, List<String> desk, List<Path> sharedClasspath, Consumer<String> out){
     var jvmArgs= new ArrayList<>(runData(project, base));
-    input.ifPresent(i -> jvmArgs.add("-DfearlessInput.file="+i));
-    reads.forEach((k,v) -> jvmArgs.add("-DfearlessDataRead."+k+"="+v));
-    edits.forEach((k,v) -> jvmArgs.add("-DfearlessDataEdit."+k+"="+v));
+    input.ifPresent(i -> jvmArgs.add("-DfearlessInput.file="+PathClassLoader.text(i)));
+    reads.forEach((k,v) -> jvmArgs.add("-DfearlessDataRead."+k+"="+PathClassLoader.text(v)));
+    edits.forEach((k,v) -> jvmArgs.add("-DfearlessDataEdit."+k+"="+PathClassLoader.text(v)));
     if (!attenuators.isEmpty()){ jvmArgs.add("-DfearlessAttenuators="+String.join(",", attenuators)); }
     jvmArgs.addAll(desk);
-    return JavaTool.startMainFromJars(jvmArgs, Push.of(genJava(project.resolve(outDir)), sharedClasspath), "_"+main.substring(0, main.indexOf('.'))+".Main", out, main);
+    return startProgram(jvmArgs, Push.of(genJava(project.resolve(outDir)), sharedClasspath), "_"+main.substring(0, main.indexOf('.'))+".Main", out, main);
   }
   static Path genJava(Path outRoot){ return outRoot.resolve("gen_java"); }
   String outDir= ".fearless_out";

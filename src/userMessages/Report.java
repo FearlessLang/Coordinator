@@ -126,6 +126,33 @@ Path:
 Start Fearless on an existing project folder, or on a file inside one.
 """.formatted(path(given.toString())));
   }
+  public static UserError launchPathNotText(String given){ return new UserError("""
+Fearless was given a path that this system cannot write as text.
+
+Path, as this system writes it:
+%s
+
+A name on this path holds bytes that are not valid in %s, the encoding
+this system uses for file names. Fearless compiles a project through tools
+that name its files as text, so it cannot compile a project on this path.
+
+Rename the folders on the path so that their names are valid in %s.
+""".formatted(path(given), System.getProperty("sun.jnu.encoding"), System.getProperty("sun.jnu.encoding")));
+  }
+  public static UserError installationNotUtf8(Path folder){ return new UserError("""
+Fearless cannot start a program from this installation.
+
+Folder:
+%s
+
+A Fearless program reads file names as UTF-8, and it finds the Java runtime
+and the code of Fearless through the name of this folder. This system writes
+file names in %s, and the bytes naming this folder are not valid UTF-8,
+so the program would look for a folder that does not exist.
+
+Move Fearless to a folder whose path uses only ASCII characters.
+""".formatted(path(folder.toString()), System.getProperty("sun.jnu.encoding")));
+  }
   public static UserError rootNotDirectory(){
     return fail(".",
       "- The project root is not a folder.",
