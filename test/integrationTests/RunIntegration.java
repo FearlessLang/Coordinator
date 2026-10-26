@@ -1430,8 +1430,8 @@ In file: fear:/_col/_rank_app.fear
 
 While inspecting type declaration "A[_]"
 Type declaration "A[_]" implements `base.OpenWith[X,"q"]`.
-The icon "X" is not a concrete type name.
-An icon is a type name with no type variables and no generic arguments, like "IconsFoo".
+"X" is not a valid icon.
+Only concrete types with zero generic arguments are valid icons.
 Error 7 WellFormedness"""); }
   @Test void aClaimWithAGenericIconIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 Box[X:imm]:{}
@@ -1444,8 +1444,8 @@ In file: fear:/_col/_rank_app.fear
 
 While inspecting type declaration "A"
 Type declaration "A" implements "base.Shortcut[Box[IconsFoo]]".
-The icon "Box[IconsFoo]" is not a concrete type name.
-An icon is a type name with no type variables and no generic arguments, like "IconsFoo".
+"Box[IconsFoo]" is not a valid icon.
+Only concrete types with zero generic arguments are valid icons.
 Error 7 WellFormedness"""); }
   @Test void aClaimWithATypeVariableExtensionIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 A[X:imm]:Main,OpenWith[IconsFoo,X]{}
@@ -1458,7 +1458,7 @@ In file: fear:/_col/_rank_app.fear
 While inspecting type declaration "A[_]"
 Type declaration "A[_]" implements "base.OpenWith[IconsFoo,X]".
 The extension "X" is not a string literal type.
-An extension is written as a string literal type, like `"foo"` or "`foo`".
+An extension is written as a string literal type, like `"ffile347"`, `"xml"` or `"txt"`; or implement "base.OpenWith[_]" to let the Fearless manager choose one.
 Error 7 WellFormedness"""); }
   @Test void aClaimWithATypeNameExtensionIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 A:Main,OpenWith[IconsFoo,IconsFoo]{}
@@ -1471,7 +1471,7 @@ In file: fear:/_col/_rank_app.fear
 While inspecting type declaration "A"
 Type declaration "A" implements "base.OpenWith[IconsFoo,IconsFoo]".
 The extension "IconsFoo" is not a string literal type.
-An extension is written as a string literal type, like `"foo"` or "`foo`".
+An extension is written as a string literal type, like `"ffile347"`, `"xml"` or `"txt"`; or implement "base.OpenWith[_]" to let the Fearless manager choose one.
 Error 7 WellFormedness"""); }
   @Test void aClaimWithANumberExtensionIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 A:Main,Shortcut[IconsFoo,42]{}
@@ -1484,7 +1484,7 @@ In file: fear:/_col/_rank_app.fear
 While inspecting type declaration "A"
 Type declaration "A" implements "base.Shortcut[IconsFoo,42]".
 The extension "42" is not a string literal type.
-An extension is written as a string literal type, like `"foo"` or "`foo`".
+An extension is written as a string literal type, like `"fapp042"`; or implement "base.Shortcut[_]" to let the Fearless manager choose one.
 Error 7 WellFormedness"""); }
   @Test void anUppercaseExtensionIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 A:Main,OpenWith[IconsFoo,"Txt"]{}
@@ -1497,7 +1497,7 @@ In file: fear:/_col/_rank_app.fear
 While inspecting type declaration "A"
 Type declaration "A" implements `base.OpenWith[IconsFoo,"Txt"]`.
 "Txt" is not a valid extension.
-An extension is 1 to 16 characters, each a lowercase letter "a"-"z" or a digit "0"-"9", with no dot; "fearless" is reserved.
+An extension is 1 to 16 characters, each a lowercase letter "a"-"z" or a digit "0"-"9", with no dot; or implement "base.OpenWith[_]" to let the Fearless manager choose one.
 Error 7 WellFormedness"""); }
   @Test void aMultiDotExtensionIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 A:Main,OpenWith[IconsFoo,"tar.gz"]{}
@@ -1510,7 +1510,7 @@ In file: fear:/_col/_rank_app.fear
 While inspecting type declaration "A"
 Type declaration "A" implements `base.OpenWith[IconsFoo,"tar.gz"]`.
 "tar.gz" is not a valid extension.
-An extension is 1 to 16 characters, each a lowercase letter "a"-"z" or a digit "0"-"9", with no dot; "fearless" is reserved.
+An extension is 1 to 16 characters, each a lowercase letter "a"-"z" or a digit "0"-"9", with no dot; or implement "base.OpenWith[_]" to let the Fearless manager choose one.
 Error 7 WellFormedness"""); }
   @Test void aLeadingDotExtensionIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 A:Main,OpenWith[IconsFoo,".txt"]{}
@@ -1523,7 +1523,7 @@ In file: fear:/_col/_rank_app.fear
 While inspecting type declaration "A"
 Type declaration "A" implements `base.OpenWith[IconsFoo,".txt"]`.
 ".txt" is not a valid extension.
-An extension is 1 to 16 characters, each a lowercase letter "a"-"z" or a digit "0"-"9", with no dot; "fearless" is reserved.
+An extension is 1 to 16 characters, each a lowercase letter "a"-"z" or a digit "0"-"9", with no dot; or implement "base.OpenWith[_]" to let the Fearless manager choose one.
 Error 7 WellFormedness"""); }
   @Test void anEmptyExtensionIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 A:Main,OpenWith[IconsFoo,""]{}
@@ -1536,7 +1536,7 @@ In file: fear:/_col/_rank_app.fear
 While inspecting type declaration "A"
 Type declaration "A" implements `base.OpenWith[IconsFoo,""]`.
 "" is not a valid extension.
-An extension is 1 to 16 characters, each a lowercase letter "a"-"z" or a digit "0"-"9", with no dot; "fearless" is reserved.
+An extension is 1 to 16 characters, each a lowercase letter "a"-"z" or a digit "0"-"9", with no dot; or implement "base.OpenWith[_]" to let the Fearless manager choose one.
 Error 7 WellFormedness"""); }
   @Test void aTooLongExtensionIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 A:Main,OpenWith[IconsFoo,"abcdefghij0123456"]{}
@@ -1549,7 +1549,7 @@ In file: fear:/_col/_rank_app.fear
 While inspecting type declaration "A"
 Type declaration "A" implements `base.OpenWith[IconsFoo,"abcd-3456"]`.
 "abcdefghij0123456" is not a valid extension.
-An extension is 1 to 16 characters, each a lowercase letter "a"-"z" or a digit "0"-"9", with no dot; "fearless" is reserved.
+An extension is 1 to 16 characters, each a lowercase letter "a"-"z" or a digit "0"-"9", with no dot; or implement "base.OpenWith[_]" to let the Fearless manager choose one.
 Error 7 WellFormedness"""); }
   @Test void theFearlessExtensionIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 A:Main,OpenWith[IconsFoo,`fearless`]{}
@@ -1562,7 +1562,7 @@ In file: fear:/_col/_rank_app.fear
 While inspecting type declaration "A"
 Type declaration "A" implements "base.OpenWith[IconsFoo,`fearless`]".
 "fearless" is not a valid extension.
-An extension is 1 to 16 characters, each a lowercase letter "a"-"z" or a digit "0"-"9", with no dot; "fearless" is reserved.
+The extension "fearless" is reserved; or implement "base.OpenWith[_]" to let the Fearless manager choose one.
 Error 7 WellFormedness"""); }
   @Test void anExtensionClaimedTwiceIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 A:Main,Shortcut[IconsFoo,"fapp042"],Shortcut[base.IconsConflict,"fapp042"]{}
