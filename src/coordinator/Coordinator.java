@@ -62,11 +62,11 @@ public interface Coordinator{
       "--add-exports=java.desktop/sun.awt=ALL-UNNAMED",
       Fs.isWindows() ? "--add-opens=java.desktop/sun.awt.windows=ALL-UNNAMED" : "--add-opens=java.desktop/sun.awt.X11=ALL-UNNAMED",
       "-Dsun.java2d.d3d=false",
-      "-DfearlessUser.dir="+PathClassLoader.text(project),
-      "-DfearlessBase.dir="+PathClassLoader.text(base));
+      "-DfearlessUser.dir="+PathClassLoader.argOf(project),
+      "-DfearlessBase.dir="+PathClassLoader.argOf(base));
   }
   ///A Fearless program decodes file names as UTF-8 on every system: on Linux LC_ALL=C.UTF-8 sets it.
-  ///Its code is loaded through PathClassLoader, and the paths it reads arrive as PathClassLoader.text,
+  ///Its code is loaded through PathClassLoader, and the paths it reads arrive as PathClassLoader.argOf,
   ///so the names of the project and of the data are bytes the program keeps as they are. The JVM itself
   ///and the jar of PathClassLoader are found through the text of their paths: this JVM writes that text
   ///as the bytes naming the installation, and the program decodes them as UTF-8, so they must be valid UTF-8.
@@ -144,9 +144,9 @@ public interface Coordinator{
   }
   static ChildJvm startMain(Path project, Path base, String main, Optional<Path> input, Map<String,Path> reads, Map<String,Path> edits, List<String> attenuators, List<String> desk, List<Path> sharedClasspath, Consumer<String> out){
     var jvmArgs= new ArrayList<>(runData(project, base));
-    input.ifPresent(i -> jvmArgs.add("-DfearlessInput.file="+PathClassLoader.text(i)));
-    reads.forEach((k,v) -> jvmArgs.add("-DfearlessDataRead."+k+"="+PathClassLoader.text(v)));
-    edits.forEach((k,v) -> jvmArgs.add("-DfearlessDataEdit."+k+"="+PathClassLoader.text(v)));
+    input.ifPresent(i -> jvmArgs.add("-DfearlessInput.file="+PathClassLoader.argOf(i)));
+    reads.forEach((k,v) -> jvmArgs.add("-DfearlessDataRead."+k+"="+PathClassLoader.argOf(v)));
+    edits.forEach((k,v) -> jvmArgs.add("-DfearlessDataEdit."+k+"="+PathClassLoader.argOf(v)));
     if (!attenuators.isEmpty()){ jvmArgs.add("-DfearlessAttenuators="+String.join(",", attenuators)); }
     jvmArgs.addAll(desk);
     return startProgram(jvmArgs, Push.of(genJava(project.resolve(outDir)), sharedClasspath), "_"+main.substring(0, main.indexOf('.'))+".Main", out, main);
