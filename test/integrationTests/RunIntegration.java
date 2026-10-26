@@ -907,21 +907,20 @@ First: Main{s -> base.Block#
     var root= inputProject(tmp);
     var file= tmp.resolve("not"+(Fs.isWindows() ? "é" : "\t")+"s.txt");
     Fs.writeUtf8(file, "caf\u00e9 time");
-    utils.Err.strCmp("True\nnot?s.txt: caf? time\nFalse\n", main(root, List.of("-DfearlessInput.file="+PathClassLoader.text(file))));
+    utils.Err.strCmp("True\nnot?s.txt: caf? time\nFalse\n", main(root, List.of("-DfearlessInput.file="+PathClassLoader.argOf(file))));
   }
-  @Test void aProgramRunsFromAProjectInAFolderWhoseNameIsNotUtf8(@TempDir Path tmp) throws InterruptedException{
-    var root= inputProject(tmp);
-    coordinator(root).compile(root, stLib);
+  @Test void aProjectInAFolderWhoseNameIsNotUtf8CompilesAndRuns(@TempDir Path tmp){
     var odd= Fs.isLinux() ? Path.of(URI.create(tmp.toUri()+"caf%E9")) : tmp.resolve("caf\u00e9");
-    var moved= odd.resolve("root");
-    Fs.ofV(() -> Files.createDirectories(odd));
-    Fs.ofV(() -> Files.move(root, moved));
+    var root= inputProject(odd);
     var file= odd.resolve("in.txt");
     Fs.writeUtf8(file, "caf\u00e9 time");
-    var out= new StringBuilder();
-    var exit= Coordinator.startMain(moved, ResolveResource.stLibPath, "col.First", Optional.of(file), Map.of(), Map.of(), List.of(), List.of(), coordinator(moved).sharedClasspath(), out::append).await();
-    assertEquals(0, exit, out::toString);
-    utils.Err.strCmp("True\nin.txt: caf? time\nFalse\n", out.toString());
+    utils.Err.strCmp("True\nin.txt: caf? time\nFalse\n", main(root, List.of("-DfearlessInput.file="+PathClassLoader.argOf(file))));
+  }
+  @Test void aProjectOfSeveralPackagesInAFolderWhoseNameIsNotUtf8PassesItsTests(@TempDir Path tmp){
+    var odd= Fs.isLinux() ? Path.of(URI.create(tmp.toUri()+"caf%E9")) : tmp.resolve("caf\u00e9");
+    var root= odd.resolve("testAssets");
+    Fs.copyTree(freshIntegrationRoot("testAssets"), root);
+    unitTestsOk("testAssetsNotUtf8", root);
   }
   @Test void withNoOpenedFileTheInputFilesStartEmpty(@TempDir Path tmp) throws InterruptedException{
     utils.Err.strCmp("False\nnone\nFalse\n", main(inputProject(tmp), List.of()));
@@ -929,7 +928,7 @@ First: Main{s -> base.Block#
   @Test void anInputFileThatCanNotBeReadIsADeterministicError(@TempDir Path tmp){
     utils.Err.strCmp("The input file \"gone.txt\" could not be read: NoSuchFileException\n", dataRun(tmp, """
 Gone: Main{s -> Debug#(St#(base.Try#(s.iso.close, {t -> t.inputCursor#.match{.some n -> n.readStrUtf8 Recover; .empty -> "none"}})))}
-""", List.of("-DfearlessInput.file="+PathClassLoader.text(tmp.resolve("gone.txt")))));
+""", List.of("-DfearlessInput.file="+PathClassLoader.argOf(tmp.resolve("gone.txt")))));
   }
   static Path dataProject(Path tmp){
     var data= tmp.resolve("data");
@@ -990,7 +989,7 @@ Nope: base.DataEdit{}
 """+main);
     return main(root, links);
   }
-  static List<String> dataLinks(Path pub, Path notes){ return List.of("-DfearlessDataRead.col.Pub="+PathClassLoader.text(pub), "-DfearlessDataEdit.col.Notes="+PathClassLoader.text(notes)); }
+  static List<String> dataLinks(Path pub, Path notes){ return List.of("-DfearlessDataRead.col.Pub="+PathClassLoader.argOf(pub), "-DfearlessDataEdit.col.Notes="+PathClassLoader.argOf(notes)); }
   static List<String> fearPaths(Path data){ return new RealSourceOracleWithZip(data).allFiles().stream().map(Ref::fearPath).toList(); }
   static String fearFile(Path data, String fearPath){ return OneOr.of(fearPath, new RealSourceOracleWithZip(data).allFiles().stream().filter(r -> r.fearPath().equals(fearPath))).loadString(); }
   @Test void aDataProjectIsReadThroughTheRootsOfACapabilityAndAZipIsAFolder(@TempDir Path tmp){
