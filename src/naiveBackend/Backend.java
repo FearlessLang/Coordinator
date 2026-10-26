@@ -144,7 +144,7 @@ public final class Backend{
     var sb= new StringBuilder(8_000)
       .append("package _").append(tools.pkgName()).append(";\n\n")
       .append("public final class Main{\n")
-      .append("  static{ _base.Util.installParentLifeline(); }\n")
+      .append("  static{ _base.NativeLocale.force(); _base.Util.installParentLifeline(); }\n")
       .append("  static final String[] all= ").append(all).append(";\n")
       .append("  public static final String[][] autoloadedAssets= ").append(assets).append(";\n")
       .append("  public static void main(String[] args){ var ok= true; for (String n: args.length == 0 ? all : args){ ok&= run(n); } if (!ok){ System.exit(1); } }\n")
