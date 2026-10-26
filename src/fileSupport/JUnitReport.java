@@ -43,7 +43,7 @@ public final class JUnitReport{
     var body= disabled.matcher(complete(log)).replaceAll(JUnitReport::skipped)
       .replaceAll("(?m)^PLAN\\|RUN\\|.*$\\r?\\n?", "");
     return """
-<testsuite name="%s" tests="%d" failures="%d" errors="0">
+<testsuite name="%s" tests="%s" failures="%s" errors="0">
 %s</testsuite>
 """.formatted(name, count(body, "<testcase "), count(body, "<failure>"), body);
   }

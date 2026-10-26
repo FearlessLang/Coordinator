@@ -6,6 +6,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 import fileSupport.ByteFiles.Op;
 import metaParser.Message;
@@ -651,7 +652,7 @@ This describes a momentary state of the whole computer, not a property of this f
 final class FileTooLargeForByteArray{
   static String of(Path path, Suppressed suppressed){
     String size;
-    try{ size= String.format("%,d bytes", Fs.size(path)); }
+    try{ size= String.format(Locale.ROOT, "%,d bytes", Fs.size(path)); }
     catch (IOException e){ size = "<reading the size failed>"+suppressed.mark(e); }//documented: Files.size throws when the file cannot be read
     return "This file is "+size+" long. Fearless reads a file into one block of memory, and\n"
       +"one block can hold at most 2,147,483,647 bytes (about 2 GB).\n";

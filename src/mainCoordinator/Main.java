@@ -32,6 +32,7 @@ import core.E.Literal;
 import core.OtherPackages;
 import fileAssociations.FileAssociations;
 import fileAssociations.Icon;
+import fileSupport.NativeLocaleForcer;
 import naiveBackend.BackendTools;
 import realSourceOracle.RealSourceOracleWithZip;
 import tools.Fs;
@@ -45,6 +46,7 @@ import userMessages.Violation;
 public final class Main{
   private static final AtomicInteger macSpawnOk= new AtomicInteger(0);
   public static void main(String[] args){
+    NativeLocaleForcer.forceEnglish();
     JavacTool.reqAppDir(Violation::mustUseLauncher);
     try{ if (!hasConsoleFlag()){ hookStd(); } run(args); }
     catch (UserError e){ System.err.print(e.getMessage()); }

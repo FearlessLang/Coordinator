@@ -73,9 +73,9 @@ public final class StringFiles{
 The file's bytes were read successfully, but they do not form valid UTF-8 text.
 
 The first invalid UTF-8 sequence begins at:
-  Line:        %d
-  Column:      %d
-  Byte offset: %d (counting from zero)
+  Line:        %s
+  Column:      %s
+  Byte offset: %s (counting from zero)
 
 Valid text immediately before it on that line:
   %s

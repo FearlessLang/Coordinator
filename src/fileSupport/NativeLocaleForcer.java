@@ -21,7 +21,7 @@ import userMessages.UserError;
 import userMessages.Violation;
 
 // Code to be executed at the very beginning of main.
-// Java is forced to Locale.US.
+// Java is forced to Locale.ROOT.
 // Windows process UI language is forced to en-US.
 // Native C/CRT locale is forced to the invariant C locale.
 // No code will set up thread-specific languages.
@@ -43,7 +43,7 @@ public final class NativeLocaleForcer{
   private static final String enUs= "en-US";
   private static final Linker linker= Linker.nativeLinker();
   public static void forceEnglish(){
-    Locale.setDefault(Locale.US);
+    Locale.setDefault(Locale.ROOT);
     try{
       if (Fs.isWindows()){ forceWindowsUiLanguage(); setCLocale(0); return; }//WINDOWS_LC_ALL
       if (Fs.isMac()){ setCLocale(0); return; }//MACOS_LC_ALL
