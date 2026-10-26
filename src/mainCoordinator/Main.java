@@ -10,6 +10,7 @@ import java.io.PrintStream;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URI;
 import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
@@ -132,11 +133,23 @@ public final class Main{
     });
   }
   private static boolean hasConsoleFlag(){ return JavacTool.consoleKey.equals(System.getProperty(JavacTool.launcherKey)); }
+  //The compiler names the files of a project as text: javac and the JVM take their paths as text,
+  //decoded and encoded with the file name encoding of the system. So the path of the project must be
+  //text in that encoding. The operating system hands the arguments over as bytes (16 bit units on
+  //Windows), and the JVM decodes them before main sees them: bytes not valid in the encoding become
+  //U+FFFD. Plain text holding U+FFFD is refused, also when a name on the path truly contains that
+  //character. A "file:" URI keeps every byte, and it is refused when its path is not text.
   private static Path normalize(String s){
     assert !s.isEmpty();
+    if (s.indexOf('\uFFFD') >= 0){ throw Report.launchPathNotText(s); }
     Path p;
     try{ p= s.startsWith("file:") ? Path.of(URI.create(s)) : Path.of(s); }
     catch (RuntimeException _){ throw Violation.badLaunchArg(s, hasConsoleFlag()); }
+    if (!isText(p)){ throw Report.launchPathNotText(p.toString()); }
     return p.toAbsolutePath().normalize();
+  }
+  private static boolean isText(Path p){
+    try{ return Path.of(p.toString()).equals(p); }
+    catch (InvalidPathException _){ return false; }
   }
 }
