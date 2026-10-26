@@ -905,9 +905,10 @@ First: Main{s -> base.Block#
   @Test void withNoOpenedFileTheInputFilesStartEmpty(@TempDir Path tmp) throws InterruptedException{
     utils.Err.strCmp("False\nnone\nFalse\n", main(inputProject(tmp), List.of()));
   }
-  @Test void anInputFileThatCanNotBeReadIsANonDeterministicError(@TempDir Path tmp) throws InterruptedException{
-    var root= inputProject(tmp);
-    utils.Err.strCmp("True\n[###]The input file \"gone.txt\" could not be read: NoSuchFileException[###]", main(root, List.of("-DfearlessInput.file="+tmp.resolve("gone.txt"))));
+  @Test void anInputFileThatCanNotBeReadIsADeterministicError(@TempDir Path tmp){
+    utils.Err.strCmp("The input file \"gone.txt\" could not be read: NoSuchFileException\n", dataRun(tmp, """
+Gone: Main{s -> Debug#(St#(base.Try#(s.iso.close, {t -> t.inputCursor#.match{.some n -> n.readStrUtf8 Recover; .empty -> "none"}})))}
+""", List.of("-DfearlessInput.file="+tmp.resolve("gone.txt"))));
   }
   static Path dataProject(Path tmp){
     var data= tmp.resolve("data");
@@ -956,10 +957,11 @@ use base.Main as Main;
 use base.Debug as Debug;
 use base.Lists as L;
 Recover: base.BadStrUnitRecover { reason, byteOffset, byteLength, rejectedValue -> "?" }
-Ls: { #(a: mut base.Action[base.List[base.Str]]): base.Str -> a.run{.ok xs -> xs.str{::}; .info i -> (i.getMap.get "msg").getMsg} }
-Rd: { #(a: mut base.Action[mut base.CapInputCursorNode]): base.Str -> a.run{.ok n -> n.label+": "+(n.readStrUtf8 Recover); .info i -> (i.getMap.get "msg").getMsg} }
-Wr: { #(a: mut base.Action[base.Void]): base.Str -> a.run{.ok _ -> "ok"; .info i -> (i.getMap.get "msg").getMsg} }
-Sz: { #(a: mut base.Action[mut base.CapInputCursorNode]): base.Str -> a.run{.ok n -> n.readBytes.size.str; .info i -> (i.getMap.get "msg").getMsg} }
+Ls: { #(a: mut base.Action[base.List[base.Str]]): base.Str -> a.run{.ok xs -> xs.str{::}; .info i -> i.msg.match{.some m -> m; .empty -> (i.getMap.get "msg").getMsg}} }
+Rd: { #(a: mut base.Action[mut base.CapInputCursorNode]): base.Str -> a.run{.ok n -> n.label+": "+(n.readStrUtf8 Recover); .info i -> i.msg.match{.some m -> m; .empty -> (i.getMap.get "msg").getMsg}} }
+Wr: { #(a: mut base.Action[base.Void]): base.Str -> a.run{.ok _ -> "ok"; .info i -> i.msg.match{.some m -> m; .empty -> (i.getMap.get "msg").getMsg}} }
+Sz: { #(a: mut base.Action[mut base.CapInputCursorNode]): base.Str -> a.run{.ok n -> n.readBytes.size.str; .info i -> i.msg.match{.some m -> m; .empty -> (i.getMap.get "msg").getMsg}} }
+St: { #(a: mut base.Action[base.Str]): base.Str -> a.run{.ok x -> x; .info i -> i.msg.match{.some m -> m; .empty -> (i.getMap.get "msg").getMsg}} }
 Q: base.UnencodableRecover{ scalar, index -> L#(63.getByte) }
 Pub: base.DataRead{}
 Notes: base.DataEdit{}
@@ -994,24 +996,24 @@ The path "" of "col.Pub" names the root folder, not a resource.
 The path "data.fearless" of "col.Pub" is not valid: the top of a data project holds no resource with the extension "fearless": that is the place of the marker of the project, which is not part of the data project.
 """, dataRun(tmp, """
 Reads: Main{s -> base.Block#
-  .do{Debug#(Ls#(s.try#(s.iso.close, {t -> t.dataRead(Pub).paths({})})))}
-  .do{Debug#(Ls#(s.try#(s.iso.close, {t -> t.dataRead(Pub).paths(L#("pics"))})))}
-  .do{Debug#(Ls#(s.try#(s.iso.close, {t -> t.dataEdit(Notes).paths(L#("pics", "inner"))})))}
-  .do{Debug#(Ls#(s.try#(s.iso.close, {t -> t.dataRead(Pub).paths(L#("readme"))})))}
-  .do{Debug#(Ls#(s.try#(s.iso.close, {t -> t.dataRead(Pub).paths(L#("none"))})))}
-  .do{Debug#(Ls#(s.try#(s.iso.close, {t -> t.dataRead(Pub).paths(L#(".hidden"))})))}
+  .do{Debug#(Ls#(base.Try#(s.iso.close, {t -> t.dataRead(Pub).paths({})})))}
+  .do{Debug#(Ls#(base.Try#(s.iso.close, {t -> t.dataRead(Pub).paths(L#("pics"))})))}
+  .do{Debug#(Ls#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).paths(L#("pics", "inner"))})))}
+  .do{Debug#(Ls#(base.Try#(s.iso.close, {t -> t.dataRead(Pub).paths(L#("readme"))})))}
+  .do{Debug#(Ls#(base.Try#(s.iso.close, {t -> t.dataRead(Pub).paths(L#("none"))})))}
+  .do{Debug#(Ls#(base.Try#(s.iso.close, {t -> t.dataRead(Pub).paths(L#(".hidden"))})))}
   .do{Debug#(Ls#(s.try#(s.iso.close, {t -> t.dataRead(Nope).paths({})})))}
-  .do{Debug#(Rd#(s.try#(s.iso.close, {t -> t.dataRead(Notes).read(L#("readme"))})))}
+  .do{Debug#(Rd#(base.Try#(s.iso.close, {t -> t.dataRead(Notes).read(L#("readme"))})))}
   .do{Debug#(Rd#(s.try#(s.iso.close, {t -> t.dataEdit(Nope).read(L#("readme"))})))}
-  .do{Debug#(Rd#(s.try#(s.iso.close, {t -> t.dataRead(Pub).read(L#("readme"))})))}
-  .do{Debug#(Sz#(s.try#(s.iso.close, {t -> t.dataRead(Pub).read(L#("readme"))})))}
-  .do{Debug#(Rd#(s.try#(s.iso.close, {t -> t.dataRead(Pub).read(L#("pics", "deep", "two.txt"))})))}
-  .do{Debug#(Rd#(s.try#(s.iso.close, {t -> t.dataEdit(Notes).read(L#("pics", "inner", "three.txt"))})))}
-  .do{Debug#(Rd#(s.try#(s.iso.close, {t -> t.dataEdit(Notes).read(L#("notes", "a.txt"))})))}
-  .do{Debug#(Rd#(s.try#(s.iso.close, {t -> t.dataRead(Pub).read(L#("notes", "b.txt"))})))}
-  .do{Debug#(Rd#(s.try#(s.iso.close, {t -> t.dataRead(Pub).read(L#("todo"))})))}
-  .do{Debug#(Rd#(s.try#(s.iso.close, {t -> t.dataRead(Pub).read({})})))}
-  .return{Debug#(Rd#(s.try#(s.iso.close, {t -> t.dataRead(Pub).read(L#("data.fearless"))})))}
+  .do{Debug#(Rd#(base.Try#(s.iso.close, {t -> t.dataRead(Pub).read(L#("readme"))})))}
+  .do{Debug#(Sz#(base.Try#(s.iso.close, {t -> t.dataRead(Pub).read(L#("readme"))})))}
+  .do{Debug#(Rd#(base.Try#(s.iso.close, {t -> t.dataRead(Pub).read(L#("pics", "deep", "two.txt"))})))}
+  .do{Debug#(Rd#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).read(L#("pics", "inner", "three.txt"))})))}
+  .do{Debug#(Rd#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).read(L#("notes", "a.txt"))})))}
+  .do{Debug#(Rd#(base.Try#(s.iso.close, {t -> t.dataRead(Pub).read(L#("notes", "b.txt"))})))}
+  .do{Debug#(Rd#(base.Try#(s.iso.close, {t -> t.dataRead(Pub).read(L#("todo"))})))}
+  .do{Debug#(Rd#(base.Try#(s.iso.close, {t -> t.dataRead(Pub).read({})})))}
+  .return{Debug#(Rd#(base.Try#(s.iso.close, {t -> t.dataRead(Pub).read(L#("data.fearless"))})))}
   }
 """, dataLinks(data, data)));
   }
@@ -1038,23 +1040,23 @@ The path "readme.md" of "col.Notes" is not written: its folder holds "readme", a
 The path "todo" of "col.Notes" names a folder, not a resource.
 """.formatted(resourceName, resourceName), dataRun(tmp, """
 Writes: Main{s -> base.Block#
-  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataEdit(Notes).writeStrUtf8(L#("notes", "b.txt"), "second")})))}
-  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataEdit(Notes).writeStrAscii(L#("fresh", "deeper", "c.txt"), "third")})))}
-  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataEdit(Notes).writeStrLatin1(L#("pics", "deep", "four.txt"), "zipped")})))}
-  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataEdit(Notes).writeStrUtf8(L#("pics", "inner", "three.txt"), "renested")})))}
-  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataEdit(Notes).writeStrUtf8(L#("pics", "new", "five.txt"), "in a new folder of a zip")})))}
-  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataEdit(Notes).writeUStrUtf16Le(L#("u16.txt"), "caf".u("00E9"))})))}
-  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataEdit(Notes).writeBytes(L#("raw.bin"), L#(72.getByte, 105.getByte))})))}
-  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataEdit(Notes).writeStrUtf32Be(L#("u32.txt"), "A")})))}
-  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataEdit(Notes).writeUStrAscii(L#("ascii.txt"), "caf".u("00E9"), Q)})))}
-  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataEdit(Notes).writeUStrLatin1(L#("latin1.txt"), "caf".u("00E9 1F600"), Q)})))}
+  .do{Debug#(Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).writeStrUtf8(L#("notes", "b.txt"), "second")})))}
+  .do{Debug#(Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).writeStrAscii(L#("fresh", "deeper", "c.txt"), "third")})))}
+  .do{Debug#(Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).writeStrLatin1(L#("pics", "deep", "four.txt"), "zipped")})))}
+  .do{Debug#(Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).writeStrUtf8(L#("pics", "inner", "three.txt"), "renested")})))}
+  .do{Debug#(Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).writeStrUtf8(L#("pics", "new", "five.txt"), "in a new folder of a zip")})))}
+  .do{Debug#(Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).writeUStrUtf16Le(L#("u16.txt"), "caf".u("00E9"))})))}
+  .do{Debug#(Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).writeBytes(L#("raw.bin"), L#(72.getByte, 105.getByte))})))}
+  .do{Debug#(Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).writeStrUtf32Be(L#("u32.txt"), "A")})))}
+  .do{Debug#(Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).writeUStrAscii(L#("ascii.txt"), "caf".u("00E9"), Q)})))}
+  .do{Debug#(Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).writeUStrLatin1(L#("latin1.txt"), "caf".u("00E9 1F600"), Q)})))}
   .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataEdit(Nope).writeStrUtf8(L#("x.txt"), "no")})))}
-  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataEdit(Notes).writeStrUtf8(L#("Bad.txt"), "no")})))}
-  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataEdit(Notes).writeStrUtf8(L#("pics", "x.zip"), "no")})))}
-  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataEdit(Notes).writeStrUtf8(L#("other.fearless"), "no")})))}
-  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataEdit(Notes).writeStrUtf8(L#("readme", "x.txt"), "no")})))}
-  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataEdit(Notes).writeStrUtf8(L#("readme.md"), "no")})))}
-  .return{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataEdit(Notes).writeStrUtf8(L#("todo"), "no")})))}
+  .do{Debug#(Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).writeStrUtf8(L#("Bad.txt"), "no")})))}
+  .do{Debug#(Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).writeStrUtf8(L#("pics", "x.zip"), "no")})))}
+  .do{Debug#(Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).writeStrUtf8(L#("other.fearless"), "no")})))}
+  .do{Debug#(Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).writeStrUtf8(L#("readme", "x.txt"), "no")})))}
+  .do{Debug#(Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).writeStrUtf8(L#("readme.md"), "no")})))}
+  .return{Debug#(Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).writeStrUtf8(L#("todo"), "no")})))}
   }
 """, dataLinks(data, data)));
     assertEquals(List.of("fear:/ascii.txt", "fear:/data.fearless", "fear:/fresh/deeper/c.txt", "fear:/latin1.txt", "fear:/notes/a.txt", "fear:/notes/b.txt",
@@ -1081,15 +1083,15 @@ No dataEdit project is mounted on "col.Nope".
 [readme, todo]
 """, dataRun(tmp, """
 Deletes: Main{s -> base.Block#
-  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataEdit(Notes).delete(L#("pics", "inner", "three.txt"))})))}
-  .do{Debug#(Ls#(s.try#(s.iso.close, {t -> t.dataEdit(Notes).paths(L#("pics"))})))}
-  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataEdit(Notes).delete(L#("pics", "deep", "two.txt"))})))}
-  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataEdit(Notes).delete(L#("pics", "one.txt"))})))}
-  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataEdit(Notes).delete(L#("notes", "a.txt"))})))}
-  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataEdit(Notes).delete(L#("notes", "a.txt"))})))}
-  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataEdit(Notes).delete(L#("data.fearless"))})))}
+  .do{Debug#(Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).delete(L#("pics", "inner", "three.txt"))})))}
+  .do{Debug#(Ls#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).paths(L#("pics"))})))}
+  .do{Debug#(Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).delete(L#("pics", "deep", "two.txt"))})))}
+  .do{Debug#(Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).delete(L#("pics", "one.txt"))})))}
+  .do{Debug#(Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).delete(L#("notes", "a.txt"))})))}
+  .do{Debug#(Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).delete(L#("notes", "a.txt"))})))}
+  .do{Debug#(Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).delete(L#("data.fearless"))})))}
   .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataEdit(Nope).delete(L#("readme"))})))}
-  .return{Debug#(Ls#(s.try#(s.iso.close, {t -> t.dataEdit(Notes).paths({})})))}
+  .return{Debug#(Ls#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).paths({})})))}
   }
 """, dataLinks(data, data)));
     assertEquals(List.of("fear:/data.fearless", "fear:/readme", "fear:/todo/item.txt"), fearPaths(data));
@@ -1107,7 +1109,7 @@ Deletes: Main{s -> base.Block#
     utils.Err.strCmp("ok\n", dataRun(tmp, """
 Images: Main{s -> base.Block#
   .let img= {s.dataRead(Pub).read(L#("pic.png")).readImage(1000)}
-  .return{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataEdit(Notes).writeImagePng(L#("copy.png"), img)})))}
+  .return{Debug#(Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).writeImagePng(L#("copy.png"), img)})))}
   }
 """, dataLinks(data, data)));
     var copy= ImageIO.read(data.resolve("copy.png").toFile());
@@ -1122,26 +1124,47 @@ ok
 Painted: Main{s -> base.Block#
   .let img= {base.Images#(base.WidthNat#4, base.HeightNat#3, base.Color.rgb(0, 0, 255))
     .paint{g -> g.color(base.Color.rgb(255, 0, 0)).position(base.XInt#(+1), base.YInt#(+1)).rect(base.WidthNat#2, base.HeightNat#5)}}
-  .return{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataEdit(Notes).writeImagePng(L#("painted.png"), img)})))}
+  .return{Debug#(Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).writeImagePng(L#("painted.png"), img)})))}
   }
 """, dataLinks(data, data)));
     var png= ImageIO.read(data.resolve("painted.png").toFile());
     assertEquals(List.of(4, 3, 0xFF0000FF, 0xFFFF0000, 0xFFFF0000, 0xFF0000FF, 0xFF0000FF), List.of(png.getWidth(), png.getHeight(), png.getRGB(0, 0), png.getRGB(1, 1), png.getRGB(2, 2), png.getRGB(3, 1), png.getRGB(1, 0)));
   }
-  @Test void aDataProjectThatChangedOnDiskIsANonDeterministicError(@TempDir Path tmp){
+  @Test void aResourceDeletedAfterItIsOpenedIsADeterministicError(@TempDir Path tmp){
     var data= dataProject(tmp);
     utils.Err.strCmp("""
 ok
-[###]The resource "col.Notes/readme" could not be read: NoSuchFileException[###]""", dataRun(tmp, """
+The resource "col.Notes/readme" could not be read: NoSuchFileException
+""", dataRun(tmp, """
 Gone: Main{s -> base.Block#
   .let n= {s.dataEdit(Notes).read(L#("readme"))}
-  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataEdit(Notes).delete(L#("readme"))})))}
-  .return{Debug#(n.readStrUtf8 Recover)}
+  .do{Debug#(Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).delete(L#("readme"))})))}
+  .return{Debug#(St#(base.Try#(n.iso.close, {m -> m.readStrUtf8 Recover})))}
   }
 """, dataLinks(data, data)));
-    utils.Err.strCmp("[###]The path \"\" of \"col.Pub\" could not be read: NoSuchFileException[###]", dataRun(tmp, """
-Gone: Main{s -> Debug#(s.dataRead(Pub).paths({}).str{::})}
+  }
+  @Test void aRootFolderThatCannotBeReachedIsANonDeterministicError(@TempDir Path tmp){
+    var data= dataProject(tmp);
+    utils.Err.strCmp("""
+The root folder of the data project mounted on "col.Pub" cannot be reached.
+[###]The root folder of the data project mounted on "col.Pub" cannot be reached.[###]""", dataRun(tmp, """
+Gone: Main{s -> base.Block#
+  .do{Debug#(Ls#(s.try#(s.iso.close, {t -> t.dataRead(Pub).paths({})})))}
+  .return{Debug#(Ls#(base.Try#(s.iso.close, {t -> t.dataRead(Pub).paths({})})))}
+  }
 """, dataLinks(tmp.resolve("gone"), data)));
+  }
+  @Test void aFolderHoldingANameThatIsNotValidIsANonDeterministicError(@TempDir Path tmp){
+    var data= dataProject(tmp);
+    Fs.writeUtf8(data.resolve("notes").resolve("Bad.txt"), "bad");
+    utils.Err.strCmp("""
+The folder at the path "notes" of "col.Pub" holds "Bad.txt", which is not a valid resource or folder name: the data project changed while this program runs.
+[###]The folder at the path "notes" of "col.Pub" holds "Bad.txt"[###]""", dataRun(tmp, """
+Bad: Main{s -> base.Block#
+  .do{Debug#(Ls#(s.try#(s.iso.close, {t -> t.dataRead(Pub).paths(L#("notes"))})))}
+  .return{Debug#(Ls#(base.Try#(s.iso.close, {t -> t.dataRead(Pub).paths(L#("notes"))})))}
+  }
+""", dataLinks(data, data)));
   }
   @Test void aProgramWithNoMountsHasNoDataProject(@TempDir Path tmp){
     utils.Err.strCmp("""
@@ -1161,7 +1184,7 @@ NoMounts: Main{s -> base.Block#
 The message "Show" is not sent: this program was not started by the Fearless manager.
 The message "Register" is not sent: this program was not started by the Fearless manager.
 """, dataRun(tmp, """
-Caught: { #(a: mut base.Action[base.Void]): base.Str -> a.run{.ok _ -> "ok"; .info i -> (i.getMap.get "msg").getMsg} }
+Caught: { #(a: mut base.Action[base.Void]): base.Str -> a.run{.ok _ -> "ok"; .info i -> i.msg.match{.some m -> m; .empty -> (i.getMap.get "msg").getMsg}} }
 NoManager: Main{s -> base.Block#
   .do{Debug#(Caught#(s.try#(s.iso.close, {t -> t.manager.show})))}
   .return{Debug#(Caught#(s.try#(s.iso.close, {t -> t.manager.register("%s".u.%s)})))}
@@ -1203,8 +1226,8 @@ ok
 The manager refuses to forget nope.
 The path "relative" of the message "Register" is not an absolute path of this system.
 """, dataRun(tmp, """
-Caught: { #(a: mut base.Action[base.Void]): base.Str -> a.run{.ok _ -> "ok"; .info i -> (i.getMap.get "msg").getMsg} }
-Out: { #(a: mut base.Action[base.UStr]): base.Str -> a.run{.ok u -> u.tryGetStr.run{.ok o -> o; .info i -> i.getMsg}; .info i -> (i.getMap.get "msg").getMsg} }
+Caught: { #(a: mut base.Action[base.Void]): base.Str -> a.run{.ok _ -> "ok"; .info i -> i.msg.match{.some m -> m; .empty -> (i.getMap.get "msg").getMsg}} }
+Out: { #(a: mut base.Action[base.UStr]): base.Str -> a.run{.ok u -> u.tryGetStr.run{.ok o -> o; .info i -> i.getMsg}; .info i -> i.msg.match{.some m -> m; .empty -> (i.getMap.get "msg").getMsg}} }
 Send: Main{s -> base.Block#
   .do{Debug#(Caught#(s.try#(s.iso.close, {t -> t.manager.register("%1$s".u.%2$s)})))}
   .do{Debug#(Caught#(s.try#(s.iso.close, {t -> t.manager.show})))}
@@ -1217,8 +1240,8 @@ Send: Main{s -> base.Block#
   .do{Debug#(Caught#(s.try#(s.iso.close, {t -> t.manager.attenuate("hello", "hello.A", L#("base.NoManagerQuit", "hello.NoGui"))})))}
   .do{Debug#(Caught#(s.try#(s.iso.close, {t -> t.manager.attenuate("hello", "hello.B", {})})))}
   .do{Debug#(Caught#(s.try#(s.iso.close, {t -> t.manager.openWithOrShortcut("%1$s".u.%2$s, "hello", "hello.A")})))}
-  .do{Debug#(Caught#(s.try#(s.iso.close, {t -> t.manager.forget "nope"})))}
-  .return{Debug#(Caught#(s.try#(s.iso.close, {t -> t.manager.register("relative".u.%2$s)})))}
+  .do{Debug#(Caught#(base.Try#(s.iso.close, {t -> t.manager.forget "nope"})))}
+  .return{Debug#(Caught#(base.Try#(s.iso.close, {t -> t.manager.register("relative".u.%2$s)})))}
   }
 """.formatted(path, pathEncoding()), List.of("-DfearlessManager.launcher="+launcher)));
     utils.Err.strCmp("""
