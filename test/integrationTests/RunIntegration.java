@@ -2447,7 +2447,7 @@ iii
 use base.Main as Main;
 NeverRecovers: base.BadStrUnitRecover { reason, byteOffset, byteLength, rejectedValue -> "should not happen" }
 NeverRecoversU: base.BadUStrUnitRecover { reason, byteOffset, byteLength, rejectedValue -> "should not happen".u }
-Hello:Main{s->base.Debug#("""+call.replace("$URL", url)+")}\n";
+Hello:Main{s->base.Debug#(base.Try#(s.iso.close, {t ->"""+" "+call.replace("$URL", url).replace("s.download", "t.download")+"}).run{.ok x -> x.str; .info i -> \"caught: \"+(i.msg.orValue \"\")})}\n";
   }
   @Test void downloadStrUtf8Succeeds(@TempDir Path tmp) throws Exception{
     var server= startServer(ex -> reply(ex, 200, "hello download".getBytes(UTF_8)));
@@ -2479,7 +2479,7 @@ Hello:Main{s->base.Debug#("""+call.replace("$URL", url)+")}\n";
     FsDsl.materialize(root, downloadProject("ftp://127.0.0.1/x",
       "s.download.downloadStrUtf8(\"$URL\", 1000, NeverRecovers)"));
     var out= coordinator(root).main(root, stLib);
-    utils.Err.strCmp("[###]Invalid URL descriptor[###]", out);
+    utils.Err.strCmp("[###]caught: Invalid URL descriptor[###]", out);
     utils.Err.strCmp("[###]unsupported scheme[###]", out);
   }
   @Test void downloadRejectsMalformedUrl(@TempDir Path tmp) throws Exception{
@@ -2488,7 +2488,7 @@ Hello:Main{s->base.Debug#("""+call.replace("$URL", url)+")}\n";
     FsDsl.materialize(root, downloadProject("not a url",
       "s.download.downloadStrUtf8(\"$URL\", 1000, NeverRecovers)"));
     var out= coordinator(root).main(root, stLib);
-    utils.Err.strCmp("[###]Invalid URL descriptor[###]", out);
+    utils.Err.strCmp("[###]caught: Invalid URL descriptor[###]", out);
   }
   @Test void downloadFailsWhenContentLengthExceedsMaxBytes(@TempDir Path tmp) throws Exception{
     var server= startServer(ex -> reply(ex, 200, "0123456789".getBytes(UTF_8)));
@@ -2498,7 +2498,7 @@ Hello:Main{s->base.Debug#("""+call.replace("$URL", url)+")}\n";
       FsDsl.materialize(root, downloadProject(url(server, "/big"),
         "s.download.downloadBytes(\"$URL\", 4).size"));
       var out= coordinator(root).main(root, stLib);
-      utils.Err.strCmp("[###]Download exceeds maxBytes[###]", out);
+      utils.Err.strCmp("[###]caught: Download exceeds maxBytes[###]", out);
       utils.Err.strCmp("[###]contentLength[###]", out);
     }
     finally{ server.stop(0); }
@@ -2511,7 +2511,7 @@ Hello:Main{s->base.Debug#("""+call.replace("$URL", url)+")}\n";
       FsDsl.materialize(root, downloadProject(url(server, "/chunked"),
         "s.download.downloadBytes(\"$URL\", 4).size"));
       var out= coordinator(root).main(root, stLib);
-      utils.Err.strCmp("[###]Download exceeds maxBytes[###]", out);
+      utils.Err.strCmp("[###]caught: Download exceeds maxBytes[###]", out);
       utils.Err.strCmp("[###]bytesRead[###]", out);
     }
     finally{ server.stop(0); }
@@ -2543,7 +2543,7 @@ Hello:Main{s->base.Debug#("""+call.replace("$URL", url)+")}\n";
       FsDsl.materialize(root, downloadProject(url(server, "/loop"),
         "s.download.downloadStrUtf8(\"$URL\", 1000, NeverRecovers)"));
       var out= coordinator(root).main(root, stLib);
-      utils.Err.strCmp("[###]too many redirects[###]", out);
+      utils.Err.strCmp("[###]caught: Download failed.[###]too many redirects[###]", out);
     }
     finally{ server.stop(0); }
   }
@@ -2555,7 +2555,7 @@ Hello:Main{s->base.Debug#("""+call.replace("$URL", url)+")}\n";
       FsDsl.materialize(root, downloadProject(url(server, "/go"),
         "s.download.downloadStrUtf8(\"$URL\", 1000, NeverRecovers)"));
       var out= coordinator(root).main(root, stLib);
-      utils.Err.strCmp("[###]Invalid URL descriptor[###]", out);
+      utils.Err.strCmp("[###]caught: Invalid URL descriptor[###]", out);
       utils.Err.strCmp("[###]unsupported scheme[###]", out);
       utils.Err.strCmp("[###]file:///etc/passwd[###]", out);
     }
@@ -2569,7 +2569,7 @@ Hello:Main{s->base.Debug#("""+call.replace("$URL", url)+")}\n";
       FsDsl.materialize(root, downloadProject(url(server, "/missing"),
         "s.download.downloadStrUtf8(\"$URL\", 1000, NeverRecovers)"));
       var out= coordinator(root).main(root, stLib);
-      utils.Err.strCmp("[###]HTTP status: 404[###]", out);
+      utils.Err.strCmp("[###]caught: Download failed.[###]HTTP status: 404[###]", out);
     }
     finally{ server.stop(0); }
   }
