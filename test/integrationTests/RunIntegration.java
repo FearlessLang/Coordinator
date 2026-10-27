@@ -11,11 +11,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import java.awt.image.BufferedImage;
+import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.UncheckedIOException;
 import java.math.BigInteger;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.ServerSocket;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -2708,6 +2712,74 @@ Hello:Main{s->base.Debug#(
         "s.download.downloadImage(\"$URL\", 100_000, 1_000_000).width"));
       var out= coordinator(root).main(root, stLib);
       utils.Err.strCmp("[###]3[###]", out);
+    }
+    finally{ server.stop(0); }
+  }
+  static void answerOnce(ServerSocket server, String response){
+    try (var s= server.accept()){
+      var in= new BufferedReader(new InputStreamReader(s.getInputStream(), UTF_8));
+      while (!in.readLine().isEmpty()){}
+      s.getOutputStream().write(response.getBytes(UTF_8));
+    }
+    catch (IOException e){ throw new UncheckedIOException(e); }
+  }
+  @Test void downloadRedirectToMalformedLocationIsDeterministic(@TempDir Path tmp) throws Exception{
+    var server= startServer(ex -> redirect(ex, "/a b"));
+    try{
+      var root= tmp.resolve("root");
+      UserError.root = root;
+      FsDsl.materialize(root, downloadProject(url(server, "/go"),
+        "s.download.downloadStrUtf8(\"$URL\", 1000, NeverRecovers)"));
+      var out= coordinator(root).main(root, stLib);
+      utils.Err.strCmp("[###]caught: [###]/a b[###]", out);
+    }
+    finally{ server.stop(0); }
+  }
+  @Test void downloadRejectsOutOfRangePort(@TempDir Path tmp) throws Exception{
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, downloadProject("http://127.0.0.1:99999/x",
+      "s.download.downloadStrUtf8(\"$URL\", 1000, NeverRecovers)"));
+    var out= coordinator(root).main(root, stLib);
+    utils.Err.strCmp("[###]caught: Invalid URL descriptor.[###]99999[###]", out);
+  }
+  @Test void downloadFailsOnMalformedContentLength(@TempDir Path tmp) throws Exception{
+    try (var server= new ServerSocket(0, 1, InetAddress.getLoopbackAddress())){
+      Thread.startVirtualThread(() -> answerOnce(server, "HTTP/1.1 200 OK\r\nContent-Length: abc\r\nConnection: close\r\n\r\nhello"));
+      var root= tmp.resolve("root");
+      UserError.root = root;
+      FsDsl.materialize(root, downloadProject("http://127.0.0.1:"+server.getLocalPort()+"/len",
+        "s.download.downloadBytes(\"$URL\", 1000).size"));
+      var out= coordinator(root).main(root, stLib);
+      utils.Err.strCmp("[###]caught: Download failed.[###]", out);
+    }
+  }
+  @Test void downloadFailureAfterARedirectNamesTheUrlThatAnswered(@TempDir Path tmp) throws Exception{
+    var server= startServer(ex -> {
+      switch (ex.getRequestURI().getPath()){
+        case "/start" -> redirect(ex, "/missing");
+        default -> reply(ex, 404, new byte[0]);
+      }
+    });
+    try{
+      var root= tmp.resolve("root");
+      UserError.root = root;
+      FsDsl.materialize(root, downloadProject(url(server, "/start"),
+        "s.download.downloadStrUtf8(\"$URL\", 1000, NeverRecovers)"));
+      var out= coordinator(root).main(root, stLib);
+      utils.Err.strCmp("[###]caught: Download failed.\nurl: "+url(server, "/missing")+"\nHTTP status: 404[###]", out);
+    }
+    finally{ server.stop(0); }
+  }
+  @Test void downloadErrorTextHoldsOnlyStrCharacters(@TempDir Path tmp) throws Exception{
+    var server= startServer(ex -> redirect(ex, "ftp://127.0.0.1/caf"+new String(Character.toChars(0xE9))));
+    try{
+      var root= tmp.resolve("root");
+      UserError.root = root;
+      FsDsl.materialize(root, downloadProject(url(server, "/go"),
+        "s.download.downloadStrUtf8(\"$URL\", 1000, NeverRecovers)"));
+      var out= coordinator(root).main(root, stLib);
+      utils.Err.strCmp("[###]caught: Invalid URL descriptor.[###]ftp://127.0.0.1/caf%C3%A9[###]", out);
     }
     finally{ server.stop(0); }
   }
