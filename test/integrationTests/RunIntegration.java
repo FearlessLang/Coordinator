@@ -160,6 +160,44 @@ imm Assert._fail(_) error line: [###]
 imm MyTests# error line: 5 in file _hello/_rank_app.fear
 """, out);
   }
+  static Path unitTestsProject(Path tmp, String source){
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, "_p/_rank_app.fear\niii\n"+source);
+    return root;
+  }
+  @Test void aFailureTextHoldingTheCdataEndIsEscapedInTheReport(@TempDir Path tmp){
+    var root= unitTestsProject(tmp, """
+use base.UnitTests as UnitTests;
+MyTests: UnitTests {::
+  .check{"]]>".assertEq "x"}
+  }
+""");
+    main(root, List.of());
+    utils.Err.strCmp("[###]<actual>]]&gt;</actual>\nAssertion failure.\nExpected: x\nActual: ]]&gt;\n[###]", JUnitReport.suite("p", root));
+  }
+  @Test void anEmptyActualStrIsAnEmptyActualElementInTheReport(@TempDir Path tmp){
+    var root= unitTestsProject(tmp, """
+use base.UnitTests as UnitTests;
+MyTests: UnitTests {::
+  .check{"".assertEq "x"}
+  }
+""");
+    main(root, List.of());
+    utils.Err.strCmp("[###]<expected>x</expected>\n<actual></actual>\n[###]", JUnitReport.suite("p", root));
+  }
+  @Test void checkNonDetErrAcceptsAFunctionReturningAMutObject(@TempDir Path tmp){
+    var root= unitTestsProject(tmp, """
+use base.UnitTests as UnitTests;
+use base.Assert as Assert;
+use base.EList as EList;
+use base.Nat as Nat;
+MyTests: UnitTests {::
+  .checkNonDetErr({::}, {Assert.msg[mut EList[Nat]] "x"})
+  }
+""");
+    utils.Err.strCmp("", main(root, List.of()));
+  }
   @Test void mapAToPkc(){ utils.Err.strCmp("CTEXT\n", run("map_a_to_pkc"));}
   // What counts as a main of a package: every type implementing base.Main, declared at
   // the top level or inside a method: base.Main implements base.CaptureFree, so a main
