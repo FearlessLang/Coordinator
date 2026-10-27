@@ -166,6 +166,24 @@ imm MyTests# error line: 5 in file _hello/_rank_app.fear
     FsDsl.materialize(root, "_p/_rank_app.fear\niii\n"+source);
     return root;
   }
+  @Test void aTestDeclaredInsideASuiteIsReportedByItsName(@TempDir Path tmp){
+    var root= unitTestsProject(tmp, """
+use base.UnitTests as UnitTests;
+use base.Test as Test;
+MyTests: UnitTests {::
+  .test TestCars
+  }
+TestCars: Test {::
+  .test TestCarsCanMove: Test {::
+    .check{2.assertEq 3}
+    }
+  }
+""");
+    utils.Err.strCmp("""
+Test failure TestCarsCanMove at line: 8 in file: _p/_rank_app.fear
+[###]
+""", main(root, List.of()));
+  }
   @Test void aFailureTextHoldingTheCdataEndIsEscapedInTheReport(@TempDir Path tmp){
     var root= unitTestsProject(tmp, """
 use base.UnitTests as UnitTests;
@@ -197,6 +215,19 @@ MyTests: UnitTests {::
   }
 """);
     utils.Err.strCmp("", main(root, List.of()));
+  }
+  @Test void anErrorWhileRegisteringTheChecksIsAFailureInTheReport(@TempDir Path tmp){
+    var root= unitTestsProject(tmp, """
+use base.UnitTests as UnitTests;
+use base.Nat as Nat;
+use base.Error as Error;
+MyTests: UnitTests {::
+  .check{1.assertEq 1}
+  .let[Nat]({Error.msg "let fails"}, {x, t -> t.check{x.assertEq 1}})
+  }
+""");
+    main(root, List.of());
+    utils.Err.strCmp("[###]failures=\"1\"[###]let fails[###]", JUnitReport.suite("p", root));
   }
   @Test void mapAToPkc(){ utils.Err.strCmp("CTEXT\n", run("map_a_to_pkc"));}
   // What counts as a main of a package: every type implementing base.Main, declared at
