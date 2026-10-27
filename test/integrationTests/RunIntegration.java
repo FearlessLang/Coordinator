@@ -922,6 +922,34 @@ First: Main{s -> base.Block#
     Fs.copyTree(freshIntegrationRoot("testAssets"), root);
     unitTestsOk("testAssetsNotUtf8", root);
   }
+  String cutTextRun(Path tmp, String read, byte[] bytes) throws IOException{
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_col/_rank_app.fear
+iii
+use base.Main as Main;
+use base.Debug as Debug;
+Name: base.F[base.BadTextReason,base.Str]{ ::.match{
+  .malformedEncoding -> "malformedEncoding";
+  .truncatedEncoding -> "truncatedEncoding";
+  .notScalar -> "notScalar";
+  .notInStr -> "notInStr";
+  }}
+Show: base.BadStrUnitRecover { reason, byteOffset, byteLength, rejectedValue ->
+  "["+(Name#reason)+":"+byteOffset+":"+byteLength+":"+rejectedValue+"]"
+  }
+Cut: Main{s -> Debug#(s.inputCursor#.match{.some n -> n.READ Show; .empty -> "none"})}
+""".replace("READ", read));
+    var file= Fs.write(tmp.resolve("cut.bin"), bytes);
+    return main(root, List.of("-DfearlessInput.file="+PathClassLoader.argOf(file)));
+  }
+  @Test void aUtf8SequenceCutByTheEndOfTheBytesIsTruncatedEncoding(@TempDir Path tmp) throws IOException{
+    utils.Err.strCmp("a[truncatedEncoding:1:2:226]\n", cutTextRun(tmp, "readStrUtf8", new byte[]{'a', (byte)0xE2, (byte)0x82}));
+  }
+  @Test void aUtf16SurrogatePairCutByTheEndOfTheBytesIsTruncatedEncoding(@TempDir Path tmp) throws IOException{
+    utils.Err.strCmp("a[truncatedEncoding:2:2:55357]\n", cutTextRun(tmp, "readStrUtf16Le", new byte[]{'a', 0, 0x3D, (byte)0xD8}));
+  }
   @Test void withNoOpenedFileTheInputFilesStartEmpty(@TempDir Path tmp) throws InterruptedException{
     utils.Err.strCmp("False\nnone\nFalse\n", main(inputProject(tmp), List.of()));
   }
