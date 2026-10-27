@@ -3,6 +3,7 @@ module Coordinator{
   requires transitive FearlessFrontend;
   requires transitive java.desktop;
   requires java.management;
+  requires java.net.http;
   exports mainCoordinator;
   exports coordinator;
   exports docBuilder;
