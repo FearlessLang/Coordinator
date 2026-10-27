@@ -2268,6 +2268,21 @@ imm Fail#(_) error line: 18 in file _rec/_rank_app.fear
 imm GluedTrace.main(_) error line: 27 in file _rec/_rank_app.fear
 """, runRecursionMain("rec.GluedTrace"));
   }
+  @Test void aSelfNameEndingWithAPrimeCompiles(@TempDir Path tmp) throws InterruptedException{
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_p/_rank_app.fear
+iii
+use base.Main as Main;
+use base.Nat as Nat;
+use base.Debug as Debug;
+B2:{ mut .get: Nat; read .n: Nat }
+Mk:{ .m(k: Nat): mut B2 -> mut B2{'me'mut .get -> me'.n + k; read .n -> 5 } }
+App:Main{s->Debug#(Mk.m(1).get)}
+""");
+    utils.Err.strCmp("6\n", coordinator(root).main(root, stLib));
+  }
   @Test void aStackTraceNamesTheFearlessTypesMethodsAndLines(){
     utils.Err.strCmp("""
 AAAAh
