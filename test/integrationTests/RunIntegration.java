@@ -1296,6 +1296,27 @@ Gone: Main{s -> base.Block#
   }
 """, dataLinks(data, data)));
   }
+  @Test void anOpenedResourceIsReadAtItsPathAlsoWhenAZipOfThePathBecomesAFolder(@TempDir Path tmp){
+    var data= dataProject(tmp);
+    utils.Err.strCmp("""
+inside
+ok
+ok
+ok
+ok
+again
+""", dataRun(tmp, """
+Moved: Main{s -> base.Block#
+  .let n= {s.dataEdit(Notes).read(L#("pics", "one.txt"))}
+  .do{Debug#(St#(base.Try#(n.iso.close, {m -> m.readStrUtf8 Recover})))}
+  .do{Debug#(Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).delete(L#("pics", "one.txt"))})))}
+  .do{Debug#(Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).delete(L#("pics", "deep", "two.txt"))})))}
+  .do{Debug#(Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).delete(L#("pics", "inner", "three.txt"))})))}
+  .do{Debug#(Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).writeStrUtf8(L#("pics", "one.txt"), "again")})))}
+  .return{Debug#(St#(base.Try#(n.iso.close, {m -> m.readStrUtf8 Recover})))}
+  }
+""", dataLinks(data, data)));
+  }
   @Test void aRootFolderThatCannotBeReachedIsANonDeterministicError(@TempDir Path tmp){
     var data= dataProject(tmp);
     utils.Err.strCmp("""
