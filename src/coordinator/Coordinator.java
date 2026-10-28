@@ -131,7 +131,7 @@ public interface Coordinator{
     var l= Helper.layerOf(this, o, project, out, stLib);
     out.forgetAllBut(l.pkgNames());
     l.compile(o, out);
-    l.pkgs().keySet().forEach(p -> out.relocate(p, o, stLib));
+    l.pkgNames().stream().filter(p -> !p.equals("base")).forEach(p -> out.relocate(p, o, stLib));
     return List.copyOf(l.pkgs().keySet());//by design: only the highest rank number's packages have their Main run
   }
   private MainsInfo mainsNow(Path project, SourceOracle stLib){
