@@ -16,7 +16,7 @@ public final class LogFiles{
   private static final DateTimeFormatter stampFmt= DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss_SSS'Z'").withZone(ZoneOffset.UTC);
   private static final DateTimeFormatter shown= DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(ZoneId.systemDefault());
   public record Entry(Path path, Instant when) implements Comparable<Entry>{
-    @Override public String toString(){ return path.getFileName()+"   "+shown.format(when); }
+    @Override public String toString(){ return path.getParent().getFileName()+"/"+path.getFileName()+"   "+shown.format(when); }
     @Override public int compareTo(Entry o){ return o.when.compareTo(when); }
   }
   public static List<Entry> list(Path folder){

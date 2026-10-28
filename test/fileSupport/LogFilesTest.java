@@ -1,6 +1,7 @@
 package fileSupport;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Path;
@@ -43,5 +44,12 @@ final class LogFilesTest{
     Fs.writeUtf8(file, "hello\n");
     var entry= LogFiles.list(project).getFirst();
     assertTrue(ChronoUnit.SECONDS.between(entry.when(), Instant.now()) < 60);
+  }
+  @Test void theLogsOfTwoPackagesWithTheSameFileNameAreListedWithDifferentTexts(@TempDir Path project){
+    Fs.writeUtf8(logsDir(project).resolve("_base").resolve("log$20260903_000000_000Z.log"), "base\n");
+    Fs.writeUtf8(logsDir(project).resolve("_foo").resolve("log$20260903_000000_000Z.log"), "foo\n");
+    var found= LogFiles.list(project);
+    assertEquals(2, found.size());
+    assertNotEquals(found.getFirst().toString(), found.getLast().toString());
   }
 }
