@@ -10,6 +10,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
+import java.awt.color.ColorSpace;
+import java.awt.color.ICC_Profile;
 import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
@@ -1251,6 +1253,35 @@ Thin: Main{s -> base.Block#
 """, dataLinks(data, data)));
     var reds= reds(ImageIO.read(data.resolve("thin.png").toFile()), 8);
     assertTrue(reds.stream().allMatch(r -> Math.abs(r - 32) <= 4), () -> "Each pixel covers 128 columns, 16 of them white, so its red is near 32, not "+reds);
+  }
+  static byte[] jpegWith(int w, int h, int rgb, int marker, byte[] segment) throws IOException{
+    var img= new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
+    for (int y= 0; y < h; y += 1){ for (int x= 0; x < w; x += 1){ img.setRGB(x, y, rgb); } }
+    var jpeg= new ByteArrayOutputStream();
+    ImageIO.write(img, "jpg", jpeg);
+    var bs= jpeg.toByteArray();
+    var res= new ByteArrayOutputStream();
+    res.write(bs, 0, 2);
+    res.writeBytes(new byte[]{(byte)0xFF, (byte)marker, (byte)((segment.length + 2)>>8), (byte)(segment.length + 2)});
+    res.writeBytes(segment);
+    res.write(bs, 2, bs.length - 2);
+    return res.toByteArray();
+  }
+  @Test void aJpegWithAColorProfileIsReadInSrgb(@TempDir Path tmp) throws IOException{
+    var data= dataProject(tmp);
+    var profile= new ByteArrayOutputStream();
+    profile.writeBytes("ICC_PROFILE".getBytes(UTF_8));
+    profile.writeBytes(new byte[]{0, 1, 1});
+    profile.writeBytes(ICC_Profile.getInstance(ColorSpace.CS_LINEAR_RGB).getData());
+    Fs.write(data.resolve("linear.jpg"), jpegWith(2, 2, 0xFF808080, 0xE2, profile.toByteArray()));
+    utils.Err.strCmp("ok\n", dataRun(tmp, """
+Linear: Main{s -> base.Block#
+  .let img= {s.dataRead(Pub).read(L#("linear.jpg")).readImage(1000)}
+  .return{Debug#(Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).writeImagePng(L#("srgb.png"), img)})))}
+  }
+""", dataLinks(data, data)));
+    var reds= reds(ImageIO.read(data.resolve("srgb.png").toFile()), 0);
+    assertTrue(reds.stream().allMatch(r -> Math.abs(r - 188) <= 6), () -> "A linear gray of 128 is the sRGB gray 188, not "+reds);
   }
   @Test void aResourceDeletedAfterItIsOpenedIsADeterministicError(@TempDir Path tmp){
     var data= dataProject(tmp);
