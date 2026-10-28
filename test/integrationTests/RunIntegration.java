@@ -902,6 +902,89 @@ onceF
 5
 """, coordinator(root).main(root, stLib));
   }
+  @Test void aStackOverflowInACachedBodyIsNotKeptByTheCache(@TempDir Path tmp) throws InterruptedException{
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_col/_rank_app.fear
+iii
+use base.Main as Main;
+use base.Block as Block;
+use base.Debug as Debug;
+use base.Nat as Nat;
+use base.Cache as Cache;
+use base.CacheF as CacheF;
+Deep:{ #(n: Nat): Nat -> Cache#(n.norm, DeepF) }
+DeepF:CacheF[Nat,Nat]{ n -> n.get == 0 ? {.then -> 0; .else -> Deep#(n.get - 1) + 1} }
+Hello:Main{s->Block#
+  .do{ Debug#(s.try#{Deep#(1000000)}.run{.ok x -> "ok "+(x.str); .info _ -> "overflow"}) }
+  .do{ Debug#(s.try#{(0 =~~= 10000).flow.fold({0}, {acc, i -> Deep#(i * 100)})}.run{.ok x -> "ok "+(x.str); .info _ -> "overflow"}) }
+  .done
+  }
+""");
+    utils.Err.strCmp("""
+overflow
+ok 1000000
+""", coordinator(root).main(root, stLib));
+  }
+  @Test void aFlushReachesAZeroArgumentMethodReturningACachedResult(@TempDir Path tmp) throws InterruptedException{
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_col/_rank_app.fear
+iii
+use base.Main as Main;
+use base.Block as Block;
+use base.Debug as Debug;
+use base.Nat as Nat;
+use base.Cache as Cache;
+use base.CacheF as CacheF;
+Answer:{ #: Nat -> Cache#(AnswerF) }
+AnswerF:CacheF[Nat]{ Block#(Debug#("computing"), 42) }
+Hello:Main{s->Block#
+  .do{ Debug#(Answer#) }
+  .do{ Cache.flush(AnswerF) }
+  .do{ Debug#(Answer#) }
+  .done
+  }
+""");
+    utils.Err.strCmp("""
+computing
+42
+computing
+42
+""", coordinator(root).main(root, stLib));
+  }
+  @Test void aNormMadeByAMemoIsTheNormOfItsValue(@TempDir Path tmp) throws InterruptedException{
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_col/_rank_app.fear
+iii
+use base.Main as Main;
+use base.Block as Block;
+use base.Debug as Debug;
+use base.Nat as Nat;
+use base.Norm as Norm;
+use base.Cache as Cache;
+use base.CacheF as CacheF;
+use base.CacheMemo as CacheMemo;
+Seven:{ #: Norm[Nat] -> Cache.ofMemo(SevenF) }
+SevenF:CacheMemo[Nat]{ 7 }
+Twice:{ #(n: Norm[Nat]): Nat -> Cache#(n, TwiceF) }
+TwiceF:CacheF[Nat,Nat]{ n -> Block#(Debug#("twice"), n.get * 2) }
+Hello:Main{s->Block#
+  .do{ Debug#(Twice#(7.norm)) }
+  .do{ Debug#(Twice#(Seven#)) }
+  .done
+  }
+""");
+    utils.Err.strCmp("""
+twice
+14
+14
+""", coordinator(root).main(root, stLib));
+  }
   @Test void anAssetWhoseNameStartsWithUnderscoreAutoLoadsAsAPrivateType(@TempDir Path tmp) throws InterruptedException{
     var root= tmp.resolve("root");
     UserError.root = root;
