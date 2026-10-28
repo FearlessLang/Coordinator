@@ -23,7 +23,6 @@ import realSourceOracle.SourceOracleWithAutoload;
 import tools.Fs;
 import utils.Join;
 import utils.Pos;
-import utils.Range;
 
 public final class Backend{
   final Path out;
@@ -50,7 +49,7 @@ public final class Backend{
       .a("public interface "+iface+extendsClause(l)+"{\n");
     for (var m : l.ms()){ emitTopMethod(sb, l, m, abstractOnly); }
     var hasInstance= !abstractOnly && hasInstance(l);
-    if (hasInstance && implementsType(l, "base.InMemoryLog", 1)){
+    if (!abstractOnly && implementsType(l, "base.InMemoryLog", 1)){
       sb.a("  java.util.ArrayList<Object> _logStore= new java.util.ArrayList<>();\n");
       sb.a("  default java.util.ArrayList<Object> _log(){ return _logStore; }\n");
     }
@@ -62,7 +61,8 @@ public final class Backend{
       sb.a("  Object _reprCacheGet(Object k, java.util.function.Supplier<Object> f, long time);\n");
       sb.a("  void _reprCacheFlush();\n");
     }
-    if (hasInstance){ sb.a(nameMethod(l, "default")+"  "+iface+" instance= new _Instance();\n  final class _Instance implements "+iface+"{"+onceMethods(l, iface)+"}\n"+cacheField(l)); }
+    if (!abstractOnly){ sb.a(nameMethod(l, "default")); }
+    if (hasInstance){ sb.a("  "+iface+" instance= new _Instance();\n  final class _Instance implements "+iface+"{"+onceMethods(l, iface)+"}\n"+cacheField(l)); }
     Fs.writeUtf8(out.resolve(iface+".java"), sb.a("}").toString());
     if (hasInstance && MainsInfo.isMain(l)){ mains.put(l.name().s(), iface); preloaded.put(l.name().s(), preloaded(l)); }
     fixers.add(sb);
@@ -77,11 +77,11 @@ public final class Backend{
   }
   private static boolean implementsType(Literal l, String name, int arity){ return LiteralDeclarations.has(l.cs(), new TName(name, arity, Pos.unknown)); }
   private static String cacheField(Literal l){
-    for (int shape : Range.of(0, 3)){
-      var t= "_base.Cache"+shape;
-      if (implementsType(l, "base.CacheF", shape+1) || implementsType(l, "base.CacheMemo", shape+1)){ return "  "+t+" _cache= new "+t+"(1, instance);\n  default "+t+" _cache"+shape+"(){ return _cache; }\n"; }
-    }
-    return "";
+    return Join.of(IntStream.range(0, 3).filter(shape -> implementsType(l, "base.CacheF", shape+1) || implementsType(l, "base.CacheMemo", shape+1)).mapToObj(Backend::cacheField), "", "", "", "");
+  }
+  private static String cacheField(int shape){
+    var t= "_base.Cache"+shape;
+    return "  "+t+" _cache"+shape+"= new "+t+"(1, instance);\n  default "+t+" _cache"+shape+"(){ return _cache"+shape+"; }\n";
   }
   private String onceMethods(Literal l, String iface){
     if (implementsType(l, "base.CacheHandler", 0)){ return ""; }

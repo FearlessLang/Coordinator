@@ -2431,6 +2431,70 @@ App:Main{s->Debug#(Mk.mk(1).z)}
 """);
     utils.Err.strCmp("1\n", coordinator(root).main(root, stLib));
   }
+  @Test void anAbstractTypeInheritsTheNameOfTwoNamedSupertypes(@TempDir Path tmp) throws InterruptedException{
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_p/_rank_app.fear
+iii
+use base.Main as Main;
+use base.Nat as Nat;
+use base.Debug as Debug;
+A:base.Named{}
+B:base.Named{}
+C:A,B{ .x: Nat }
+D:C{ .x -> 3 }
+App:Main{s->Debug#(D.name)}
+""");
+    utils.Err.strCmp("p.D\n", coordinator(root).main(root, stLib));
+  }
+  @Test void anAbstractTypeInheritsTheLogOfTwoInMemoryLogSupertypes(@TempDir Path tmp) throws InterruptedException{
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_p/_rank_app.fear
+iii
+use base.Main as Main;
+use base.Nat as Nat;
+use base.Debug as Debug;
+A:base.InMemoryLog[Nat]{"a"}
+B:base.InMemoryLog[Nat]{"b"}
+C:A,B{ .name -> "c"; .x: Nat }
+D:C{ .x -> 3 }
+App:Main{s->Debug#(D.x)}
+""");
+    utils.Err.strCmp("3\n", coordinator(root).main(root, stLib));
+  }
+  @Test void aTypeImplementingTwoCacheShapesCachesBoth(@TempDir Path tmp) throws InterruptedException{
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_col/_rank_app.fear
+iii
+use base.Main as Main;
+use base.Block as Block;
+use base.Debug as Debug;
+use base.Nat as Nat;
+use base.Cache as Cache;
+use base.CacheF as CacheF;
+Both:CacheF[Nat],CacheF[Nat,Nat]{ # -> Block#(Debug#("both0"), 1); #(a) -> Block#(Debug#("both1"), a.get + 1) }
+Hello:Main{s->Block#
+  .do{ Debug#(Cache#(Both)) }
+  .do{ Debug#(Cache#(Both)) }
+  .do{ Debug#(Cache#(5.norm, Both)) }
+  .do{ Debug#(Cache#(5.norm, Both)) }
+  .done
+  }
+""");
+    utils.Err.strCmp("""
+both0
+1
+1
+both1
+6
+6
+""", coordinator(root).main(root, stLib));
+  }
   @Test void aSelfNameEndingWithAPrimeCompiles(@TempDir Path tmp) throws InterruptedException{
     var root= tmp.resolve("root");
     UserError.root = root;
