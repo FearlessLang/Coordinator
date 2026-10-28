@@ -902,6 +902,36 @@ onceF
 5
 """, coordinator(root).main(root, stLib));
   }
+  @Test void aFailureInACachedBodyFailsEveryCallInTheSameWay(@TempDir Path tmp) throws InterruptedException{
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_col/_rank_app.fear
+iii
+use base.Main as Main;
+use base.Block as Block;
+use base.Debug as Debug;
+use base.Nat as Nat;
+use base.Error as Error;
+use base.Str as Str;
+use base.System as System;
+use base.Cache as Cache;
+use base.CacheF as CacheF;
+Boom:{ #(n: Nat): Nat -> Cache#(n.norm, BoomF) }
+BoomF:CacheF[Nat,Nat]{ n -> Error.msg "boom" }
+Fail:{ #(s: mut System): Str -> s.try#{Boom#(1)}.run{.ok x -> x.str; .info i -> i.str} }
+Hello:Main{s->Block#
+  .do{ Debug#(Fail#(s)) }
+  .do{ Debug#("---") }
+  .do{ Debug#(Fail#(s)) }
+  .done
+  }
+""");
+    var out= coordinator(root).main(root, stLib);
+    var first= out.substring(0, out.indexOf("\n---\n"));
+    utils.Err.strCmp("[###]boom[###]", first);
+    assertEquals(first+"\n---\n"+first+"\n", out);
+  }
   @Test void aStackOverflowInACachedBodyIsNotKeptByTheCache(@TempDir Path tmp) throws InterruptedException{
     var root= tmp.resolve("root");
     UserError.root = root;
