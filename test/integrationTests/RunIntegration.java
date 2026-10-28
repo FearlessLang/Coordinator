@@ -2185,6 +2185,26 @@ not read by the compiler
 }
 """, manifests(root));
   }
+  @Test void theSelfNameOfAnAnonymousLiteralInADocNamesTheLiteral(@TempDir Path tmp) throws InterruptedException{
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_p/_rank_app.fear
+iii
+use base.Main as Main;
+use base.Nat as Nat;
+Bar:{ .bar: Nat; .twice: Nat }
+Foo:{ .make: Bar -> {'self
+  .bar -> 1;
+  ///Twice `self.bar`.
+  .twice -> self.bar + (self.bar)
+  } }
+App:Main{s->base.Debug#(`app`)}
+""");
+    utils.Err.strCmp("app\n", main(root, List.of()));
+    var html= Fs.readUtf8(Coordinator.genJava(root.resolve(Coordinator.outDir)).resolve("p.html"));
+    utils.Err.strCmp("[###]<p>Twice <code><a href=\"#method-p_2e__5f_AFoo-0-imm-_2e_bar-0\">self.bar</a></code>.</p>[###]", html);
+  }
   @Test void aDeletedPackageJarIsBuiltAgain(@TempDir Path tmp) throws Exception{
     var root= tmp.resolve("root");
     UserError.root = root;

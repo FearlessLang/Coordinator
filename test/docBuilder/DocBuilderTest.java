@@ -937,25 +937,4 @@ Holder
     }
     return res;
   }
-  private static Literal anonymousAt(Pos at, List<M> ms){
-    var src= new Src(new Src.SrcObj(){
-      @Override public Pos pos(){ return at; }
-      @Override public TSpan span(){ return TSpan.fromPos(at, 1); }
-    });
-    return new Literal(RC.imm, new TName("pkg._AFoo", 0, at), List.of(), List.of(), "this", ms, src, true);
-  }
-  private static String anonymousLiteralDocs(Path tmp, String doc){
-    var anonName= new TName("pkg._AFoo", 0, Pos.unknown);
-    var anon= anonymousAt(Pos.of(file, 2, 12), List.of(namedMethodAt(".bar", anonName, Pos.of(file, 4, 5))));
-    var oracle= SourceOracle.debugBuilder().putURI(file, "Foo:{\n  .make -> {\n    /// "+doc+"\n    .bar -> 1\n    }\n  }\n").build();
-    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(anon), Optional.empty());
-    builder.visitLiteral(anon);
-    builder.packageLocation("pkg", tmp.resolve("pkg.html"), Optional.empty());
-    builder.complete(Optional.empty());
-    return Fs.readUtf8(tmp.resolve("pkg.html"));
-  }
-  @Test void aMethodOfThisInTheDocOfAnAnonymousLiteralIsAReference(@TempDir Path tmp){
-    var html= anonymousLiteralDocs(tmp, "same as `this.bar`");
-    utils.Err.strCmp("[###]<a href=\"#method-pkg_2e__5f_AFoo-0-imm-_2e_bar-0\">this.bar</a>[###]", html);
-  }
 }
