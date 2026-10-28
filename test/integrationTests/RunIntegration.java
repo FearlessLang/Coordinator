@@ -2771,6 +2771,28 @@ Hello:Main{s->base.Debug#(
     }
     finally{ server.stop(0); }
   }
+  @Test void downloadFailureTextNamesNoJavaClass(@TempDir Path tmp) throws Exception{
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, downloadProject("http://nosuchhost.invalid/x",
+      "s.download.downloadStrUtf8(\"$URL\", 1000, NeverRecovers)"));
+    var out= coordinator(root).main(root, stLib);
+    utils.Err.strCmp("[###]caught: Download failed.[###]", out);
+    assertFalse(out.contains("java."), out);
+  }
+  @Test void downloadImageFailureNamesTheUrl(@TempDir Path tmp) throws Exception{
+    var server= startServer(ex -> reply(ex, 200, "not an image".getBytes(UTF_8)));
+    try{
+      var root= tmp.resolve("root");
+      UserError.root = root;
+      var u= url(server, "/img.png");
+      FsDsl.materialize(root, downloadProject(u,
+        "s.download.downloadImage(\"$URL\", 100_000, 1_000_000).width"));
+      var out= coordinator(root).main(root, stLib);
+      utils.Err.strCmp("[###]caught: [###]url: "+u+"[###]", out);
+    }
+    finally{ server.stop(0); }
+  }
   @Test void downloadErrorTextHoldsOnlyStrCharacters(@TempDir Path tmp) throws Exception{
     var server= startServer(ex -> redirect(ex, "ftp://127.0.0.1/caf"+new String(Character.toChars(0xE9))));
     try{
