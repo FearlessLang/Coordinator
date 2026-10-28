@@ -2185,6 +2185,20 @@ not read by the compiler
 }
 """, manifests(root));
   }
+  @Test void aDeletedPackageJarIsBuiltAgain(@TempDir Path tmp) throws Exception{
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_p/_rank_app999.fear
+iii
+use base.Main as Main;
+A:Main{s->base.Debug#(`hi`)}
+""");
+    utils.Err.strCmp("hi\n", main(root, List.of()));
+    Fs.delete(Coordinator.genJava(root.resolve(Coordinator.outDir)).resolve("p.jar"));
+    assertEquals(Map.of("p", false), Coordinator.pkgsBuilt(root, baseCache));
+    utils.Err.strCmp("hi\n", main(root, List.of()));
+  }
   @Test void inheritedClaimsAreListedOnce(@TempDir Path tmp) throws Exception{
     var root= claimsProject(tmp, """
 Opener:Main, OpenWith[IconsFoo,"foo"], Shortcut[IconsFoo]{}
