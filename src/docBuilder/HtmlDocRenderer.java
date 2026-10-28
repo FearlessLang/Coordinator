@@ -23,6 +23,7 @@ import offensiveUtils.Require;
 import tools.Fs;
 import utils.Bug;
 import utils.Join;
+import utils.OneOr;
 import utils.Range;
 
 final class HtmlDocRenderer{
@@ -456,7 +457,7 @@ code{
   }
   String candidateHref(Candidate c){
     if (c.localMethod().isPresent()){ return "#"+methodId(c.owner(), c.localMethod().get().main()); }
-    return linkTo(c.owner());
+    return OneOr.opt("type "+c.owner(), types.stream().filter(t -> t.main().name().equals(c.owner()))).map(t -> "#"+typeId(t)).orElseGet(() -> linkTo(c.owner()));
   }
   <V> void renderVariants(StringBuilder sb, String title, List<V> variants, Function<V,String> show){
     if (variants.size() <= 1){ return; }
