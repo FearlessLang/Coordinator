@@ -2268,6 +2268,29 @@ Lib:base.Main{s->base.Debug#(`lib`)}
     Fs.rmTree(root.resolve("_col"));
     assertEquals(Map.of("lib.Lib", "_lib/_rank_core.fear"), files(coordinator(root).mains(root, stLib).orElseThrow()));
   }
+  @Test void aPackageGetsTheSameDocsWhetherThePackageBelowItWasCompiledInTheSameBuildOrNot(@TempDir Path tmp) throws Exception{
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_lib/_rank_core.fear
+iii
+use base.Nat as Nat;
+Zorker:{.zork: Nat}
+Make:{.make: Zorker -> {5}}
+jjj
+_app/_rank_app.fear
+iii
+use base.Main as Main;
+///Calls `.zork`.
+App:Main{s->base.Debug#(`app`)}
+""");
+    utils.Err.strCmp("app\n", main(root, List.of()));
+    var html= Coordinator.genJava(root.resolve(Coordinator.outDir)).resolve("app.html");
+    var clean= Fs.readUtf8(html);
+    editAndTouch(root.resolve("_app", "_rank_app.fear"), "Calls", "Calls");
+    utils.Err.strCmp("app\n", main(root, List.of()));
+    assertEquals(clean, Fs.readUtf8(html));
+  }
   @Test void aDeletedPackageJarIsBuiltAgain(@TempDir Path tmp) throws Exception{
     var root= tmp.resolve("root");
     UserError.root = root;

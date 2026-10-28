@@ -8,11 +8,14 @@ import java.nio.file.attribute.FileTime;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import apiJson.ApiJson;
 import core.E.Literal;
 import core.OtherPackages;
 import core.RC;
@@ -462,5 +465,99 @@ final class RecompilationCacheTest{
     c.main(project, c.sourceOracle(stdLib));
     assertEquals(2, c.calls("a"));
     assertEquals(1, c.calls("b"));
+  }
+  @Test void aSourceWhoseMtimeMovesBackMustBeCompiledAgain(@TempDir Path tmp){
+    var start= System.currentTimeMillis();
+    OutputOracle out= () -> tmp;
+    var stub= new ScriptedCoordinator(tmp);
+    stub.fixedOutput("a", List.of(literal("A1", RC.imm)));
+    var pkgs= new LinkedHashMap<String,List<Ref>>();
+    pkgs.put("a", refs("a", start - margin));
+    var layer= new MiddleLayer(stub, fixedBase(start - margin), pkgs);
+    layer.compile(emptySrc, out);
+    assertEquals(1, stub.calls("a"));
+    pkgs.put("a", refs("a", start - 2*margin));
+    layer.compile(emptySrc, out);
+    assertEquals(2, stub.calls("a"));
+  }
+  private static Literal anonymous(String name){
+    return new Literal(RC.imm, new TName(name, 0, Pos.unknown), List.of(), List.of(), "this", List.of(), Src.synthetic, true);
+  }
+  @Test void anAnonymousLiteralAddedToALowerPackageMustNotRecompileThePackageAbove(@TempDir Path tmp){
+    var start= System.currentTimeMillis();
+    OutputOracle out= () -> tmp;
+    var stub= new ScriptedCoordinator(tmp);
+    stub.fixedOutput("a", List.of(literal("A1", RC.imm)));
+    stub.fixedOutput("c", List.of(literal("C1", RC.imm)));
+    var pkgsA= new LinkedHashMap<String,List<Ref>>();
+    pkgsA.put("a", refs("a", start - margin));
+    var pkgsC= new LinkedHashMap<String,List<Ref>>();
+    pkgsC.put("c", refs("c", start - margin));
+    var top= new MiddleLayer(stub, new MiddleLayer(stub, fixedBase(start - margin), pkgsA), pkgsC);
+    top.compile(emptySrc, out);
+    var afterBuild1= System.currentTimeMillis();
+    pkgsA.put("a", refs("a", afterBuild1 + touchGap));
+    stub.fixedOutput("a", List.of(literal("A1", RC.imm), anonymous("_AA1")));
+    top.compile(emptySrc, out);
+    assertEquals(2, stub.calls("a"));
+    assertEquals(1, stub.calls("c"));
+  }
+  private static Map<String,Boolean> anonymity(OtherPackages other){
+    return other.dom().stream().collect(Collectors.toMap(TName::s, n -> other.__of(n).infName()));
+  }
+  @Test void aLowerPackageLooksTheSameToThePackageAboveWhetherItWasCompiledInThisBuildOrReadBackFromItsApi(@TempDir Path tmp){
+    var start= System.currentTimeMillis();
+    OutputOracle out= () -> tmp;
+    var stub= new ScriptedCoordinator(tmp);
+    stub.fixedOutput("a", List.of(literal("A1", RC.imm), anonymous("_AA1")));
+    stub.fixedOutput("c", List.of(literal("C1", RC.imm)));
+    var pkgsA= new LinkedHashMap<String,List<Ref>>();
+    pkgsA.put("a", refs("a", start - margin));
+    var pkgsC= new LinkedHashMap<String,List<Ref>>();
+    pkgsC.put("c", refs("c", start - margin));
+    var top= new MiddleLayer(stub, new MiddleLayer(stub, fixedBase(start - margin), pkgsA), pkgsC);
+    top.compile(emptySrc, out);
+    var compiled= anonymity(stub.lastOtherSeen.get("c"));
+    var afterBuild1= System.currentTimeMillis();
+    pkgsC.put("c", refs("c", afterBuild1 + touchGap));
+    top.compile(emptySrc, out);
+    assertEquals(1, stub.calls("a"));
+    assertEquals(2, stub.calls("c"));
+    assertEquals(compiled, anonymity(stub.lastOtherSeen.get("c")));
+  }
+  private static final class InstalledCoordinator implements Coordinator{
+    private final Path project;
+    private final Path baseCache;
+    final LinkedHashMap<String,Integer> frontendCalls;
+    InstalledCoordinator(Path project, Path baseCache, LinkedHashMap<String,Integer> frontendCalls){ this.project= project; this.baseCache= baseCache; this.frontendCalls= frontendCalls; }
+    @Override public Optional<Path> baseCachePath(){ return Optional.of(baseCache); }
+    @Override public String runAllMains(String pkgName, OutputOracle out){ return ""; }
+    @Override public List<Literal> frontend(String pkgName, List<Ref> files, SourceOracle oracle, OtherPackages other, Map<String,String> vres, CapabilityEnvironment capabilities){
+      frontendCalls.merge(pkgName, 1, Integer::sum);
+      return List.of();
+    }
+    @Override public void backend(String pkgName, List<Literal> core, SourceOracle oracle, OtherPackages other, CapabilityEnvironment capabilities){ Fs.writeUtf8(Coordinator.genJava(project.resolve(Coordinator.outDir)).resolve(pkgName+".jar"), ""); }
+  }
+  private static Path installedBase(Path dir, RC rc, long mtime){
+    var json= dir.resolve("base.json");
+    Fs.writeUtf8(json, ApiJson.toJson(List.of(literal("base.Foo", rc))));
+    touch(json, mtime);
+    return dir;
+  }
+  @Test void aProjectOpenedWithAnotherFearlessInstallationMustBeCompiledAgainstItsBase(@TempDir Path tmp) throws InterruptedException{
+    var start= System.currentTimeMillis();
+    var project= tmp.resolve("project");
+    var stdLib= tmp.resolve("stdLib");
+    Fs.writeUtf8(project.resolve("_a/_rank_core.fear"), "");
+    Fs.writeUtf8(stdLib.resolve("x.fear"), "");
+    var newer= installedBase(tmp.resolve("newer"), RC.imm, start - margin);
+    var older= installedBase(tmp.resolve("older"), RC.mut, start - 2*margin);
+    var calls= new LinkedHashMap<String,Integer>();
+    var c1= new InstalledCoordinator(project, newer, calls);
+    c1.main(project, c1.sourceOracle(stdLib));
+    assertEquals(Map.of("a", 1), calls);
+    var c2= new InstalledCoordinator(project, older, calls);
+    c2.main(project, c2.sourceOracle(stdLib));
+    assertEquals(Map.of("a", 2), calls);
   }
 }
