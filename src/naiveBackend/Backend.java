@@ -50,10 +50,6 @@ public final class Backend{
       .a("public interface "+iface+extendsClause(l)+"{\n");
     for (var m : l.ms()){ emitTopMethod(sb, l, m, abstractOnly); }
     var hasInstance= !abstractOnly && hasInstance(l);
-    if (!abstractOnly && implementsType(l, "base.InMemoryLog", 1)){
-      sb.a("  java.util.ArrayList<Object> _logStore= new java.util.ArrayList<>();\n");
-      sb.a("  default java.util.ArrayList<Object> _log(){ return _logStore; }\n");
-    }
     if (hasInstance && implementsType(l, "base.FileLog", 0)){
       assert l.name().arity()==0;
       sb.a("  _base.AppLog _appLog= _base.AppLog.open(java.nio.file.Path.of(\".out\",\"logs\",\"_"+tools.pkgName()+"\",\""+Fs.fileNameOfType(l.name().simpleName()).orElseThrow()+".log\"), false);\n  default _base.AppLog _log(){ return _appLog; }\n");

@@ -546,8 +546,8 @@ _GCase$1k$0.java only imm
 _p/_rank_app.fear
 iii
 use base.FileLog as FileLog;
-AppLog: FileLog{"a"}
-Applog: FileLog{"b"}
+AppLog: FileLog{}
+Applog: FileLog{}
 """);
     var genJava= tmp.resolve("genJava");
     var base= coordinator(root);
@@ -2457,9 +2457,9 @@ iii
 use base.Main as Main;
 use base.Nat as Nat;
 use base.Debug as Debug;
-A:base.InMemoryLog[Nat]{"a"}
-B:base.InMemoryLog[Nat]{"b"}
-C:A,B{ .name -> "c"; .x: Nat }
+A:base.InMemoryLog[Nat]{}
+B:base.InMemoryLog[Nat]{}
+C:A,B{ .x: Nat }
 D:C{ .x -> 3 }
 App:Main{s->Debug#(D.x)}
 """);
