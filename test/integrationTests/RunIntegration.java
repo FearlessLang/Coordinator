@@ -1268,6 +1268,18 @@ Thin: Main{s -> base.Block#
     res.write(bs, 2, bs.length - 2);
     return res.toByteArray();
   }
+  @Test void anImageDrawnAtLessThanHalfItsSizeAveragesThePixels(@TempDir Path tmp) throws IOException{
+    var data= dataProject(tmp);
+    utils.Err.strCmp("ok\n", dataRun(tmp, columns+"""
+Small: Main{s -> base.Block#
+  .let big= {base.Images#(base.WidthNat#512, base.HeightNat#512, base.Color.rgb(0, 0, 0)).paint{g -> Columns#(g.color(base.Color.rgb(255, 255, 255)), 0, 2, 512, 512)}}
+  .let img= {base.Images#(base.WidthNat#60, base.HeightNat#60, base.Color.rgb(0, 0, 0)).paint{g -> g.image(big, base.WidthNat#60, base.HeightNat#60)}}
+  .return{Debug#(Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).writeImagePng(L#("small.png"), img)})))}
+  }
+""", dataLinks(data, data)));
+    var reds= reds(ImageIO.read(data.resolve("small.png").toFile()), 30);
+    assertTrue(reds.stream().allMatch(r -> Math.abs(r - 128) <= 12), () -> "Each pixel covers more than 8 columns, half of them white, so its red is near 128, not "+reds);
+  }
   @Test void aJpegIsReadTurnedByItsExifOrientation(@TempDir Path tmp) throws IOException{
     var data= dataProject(tmp);
     byte[] turnedClockwise= {'E', 'x', 'i', 'f', 0, 0, 'M', 'M', 0, 42, 0, 0, 0, 8, 0, 1, 0x01, 0x12, 0, 3, 0, 0, 0, 1, 0, 6, 0, 0, 0, 0, 0, 0};
