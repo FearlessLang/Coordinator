@@ -144,7 +144,7 @@ imm Hello6.main(_) error line: 14 in file _hello/_rank_app.fear
     System.setProperty(JavacTool.appDirKey, app.toString());
     System.setProperty(JavacTool.launcherKey, JavacTool.consoleKey);
     var dest= tmp.resolve("dest");
-    var m= new ProgrammaticMain(new StringBuilder(), new StringBuilder(), "_hi/_rank_app111.fear", "Hi:base.Main{s->base.Debug#(\"hi\")}\n", ResolveResource.stLibPath, ResolveResource.stLibRTPath, dest);
+    var m= new ProgrammaticMain(new StringBuilder(), new StringBuilder(), Map.of("_hi/_rank_app111.fear", "Hi:base.Main{s->base.Debug#(\"hi\")}\n"), ResolveResource.stLibPath, ResolveResource.stLibRTPath, dest);
     try{ m.runFearless(); }
     finally{ System.clearProperty(JavacTool.launcherKey); }
     assertEquals("", m.err().toString());

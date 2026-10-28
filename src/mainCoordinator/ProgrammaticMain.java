@@ -5,6 +5,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import java.io.PrintStream;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import coordinator.CapabilityEnvironment;
@@ -17,7 +18,7 @@ import tools.SourceOracle;
 import tools.Utf8Sink;
 import userMessages.UserError;
 
-public record ProgrammaticMain(StringBuilder out, StringBuilder err, String fName, String code, Path stdLib, Path stdRt, Path dest){
+public record ProgrammaticMain(StringBuilder out, StringBuilder err, Map<String,String> files, Path stdLib, Path stdRt, Path dest){
   public void runFearless(){
     var oldOut= System.out;
     var oldErr= System.err;
@@ -32,7 +33,9 @@ public record ProgrammaticMain(StringBuilder out, StringBuilder err, String fNam
   private void _runFearless() throws InterruptedException{
     System.setOut(new PrintStream(new Utf8Sink(out::append), true, UTF_8));
     System.setErr(new PrintStream(new Utf8Sink(err::append), true, UTF_8));
-    var oracle= SourceOracle.debugBuilder().put(fName, code).build();
+    var b= SourceOracle.debugBuilder();
+    files.forEach(b::put);
+    var oracle= b.build();
     var c= new Coordinator(){
       @Override public SourceOracle sourceOracle(Path path){ return oracle; }
       @Override public Path stdLibBase(){ return stdLib; }
