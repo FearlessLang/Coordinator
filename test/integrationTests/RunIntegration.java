@@ -2256,6 +2256,18 @@ App:Main{s->base.Debug#(`app`)}
     var html= Fs.readUtf8(Coordinator.genJava(root.resolve(Coordinator.outDir)).resolve("p.html"));
     utils.Err.strCmp("[###]<p>Twice <code><a href=\"#method-p_2e__5f_AFoo-0-imm-_2e_bar-0\">self.bar</a></code>.</p>[###]", html);
   }
+  @Test void aRemovedPackageLosesItsMainsBeforeTheNextCompile(@TempDir Path tmp) throws Exception{
+    var root= claimsProject(tmp, """
+Foo:Main{s->base.Debug#(`foo`)}
+jjj
+_lib/_rank_core.fear
+iii
+Lib:base.Main{s->base.Debug#(`lib`)}
+""");
+    coordinator(root).compile(root, stLib);
+    Fs.rmTree(root.resolve("_col"));
+    assertEquals(Map.of("lib.Lib", "_lib/_rank_core.fear"), files(coordinator(root).mains(root, stLib).orElseThrow()));
+  }
   @Test void aDeletedPackageJarIsBuiltAgain(@TempDir Path tmp) throws Exception{
     var root= tmp.resolve("root");
     UserError.root = root;
