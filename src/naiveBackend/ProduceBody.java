@@ -81,8 +81,7 @@ public void _reprCacheFlush(){ var m= _reprCache; if (m != null){ m.clear(); } }
     }
     sb.a(b.nameMethod(lit, "public"));
     for (var m : lit.ms()){
-      if (!m.sig().origin().equals(lit.name())){ continue; }
-      assert m.e().isPresent();
+      if (!m.sig().origin().equals(lit.name()) || m.sig().abs()){ continue; }
       var jName= b.mangledMethodName(m.sig().rc(), m.sig().m());
       sb.a("\n    public Object "+jName+b.paramsSig(m)+"{\n");
       new ProduceBody(sb, b, lit.thisName(), m).emitBody();
