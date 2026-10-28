@@ -73,7 +73,7 @@ public Object _reprCacheGet(Object k, java.util.function.Supplier<Object> f, lon
   if (m == null){ synchronized(this){ if (_reprCache == null){ _reprCache= new java.util.concurrent.ConcurrentHashMap<>(); } m= _reprCache; } }
   var fresh= new Entry();
   var e= m.putIfAbsent(k,fresh);
-  if (e == null){ return fresh.computeNow(f); }
+  if (e == null){ return fresh.computeNow(f, () -> _reprCache.remove(k, fresh)); }
   return e.joinWait(time,f);
 }
 public void _reprCacheFlush(){ var m= _reprCache; if (m != null){ m.clear(); } }
