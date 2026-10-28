@@ -2338,6 +2338,22 @@ imm Fail#(_) error line: 18 in file _rec/_rank_app.fear
 imm GluedTrace.main(_) error line: 27 in file _rec/_rank_app.fear
 """, runRecursionMain("rec.GluedTrace"));
   }
+  @Test void aLiteralInheritsTheSameAbstractMutMethodFromTwoSupertypes(@TempDir Path tmp) throws InterruptedException{
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_p/_rank_app.fear
+iii
+use base.Main as Main;
+use base.Nat as Nat;
+use base.Debug as Debug;
+A:{ mut .m: Nat; .z: Nat }
+B:{ mut .m: Nat }
+Mk:{ .mk(k: Nat): A -> Bar:A,B{ .z -> k } }
+App:Main{s->Debug#(Mk.mk(1).z)}
+""");
+    utils.Err.strCmp("1\n", coordinator(root).main(root, stLib));
+  }
   @Test void aSelfNameEndingWithAPrimeCompiles(@TempDir Path tmp) throws InterruptedException{
     var root= tmp.resolve("root");
     UserError.root = root;

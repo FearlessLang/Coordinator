@@ -109,7 +109,7 @@ public final class Backend{
     var jName= mangledMethodName(m.sig().rc(), m.sig().m());
     sb.a("  default Object "+jName+paramsSig(m)+"{\n");
     if (abstractOnly || m.sig().abs()){
-      sb.a("    throw new AssertionError(\"Uncallable method: "+ifaceNameFor(l)+"."+jName+"\"+this.getClass().getName());\n  }\n");
+      sb.a("    throw new AssertionError(\"Uncallable method: "+ifaceNameFor(l)+"."+jName+" on \"+this.getClass().getName());\n  }\n");
       return;
     }
     tools.checks().checkTopMethod(m, decTypeName(l.name()), jName, hasInstance(l));
