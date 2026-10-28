@@ -12,6 +12,9 @@ import static org.junit.jupiter.api.Assertions.fail;
 
 import java.awt.color.ColorSpace;
 import java.awt.color.ICC_Profile;
+import java.util.zip.ZipFile;
+import java.lang.classfile.ClassFile;
+import java.lang.classfile.Attributes;
 import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
@@ -2502,6 +2505,22 @@ App:Main{s->Debug#(Mk.mk(1).z)}
 """);
     utils.Err.strCmp("1\n", coordinator(root).main(root, stLib));
   }
+  @Test void aConcreteMethodImplementsTheAbstractMethodOfAnotherSupertype(@TempDir Path tmp) throws InterruptedException{
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_p/_rank_app.fear
+iii
+use base.Main as Main;
+use base.Nat as Nat;
+use base.Debug as Debug;
+A:{ .m: Nat -> 1 }
+B:{ .m: Nat }
+C:A,B{}
+App:Main{s->Debug#(C.m)}
+""");
+    utils.Err.strCmp("1\n", coordinator(root).main(root, stLib));
+  }
   @Test void anAbstractTypeInheritsTheNameOfTwoNamedSupertypes(@TempDir Path tmp) throws InterruptedException{
     var root= tmp.resolve("root");
     UserError.root = root;
@@ -2594,6 +2613,34 @@ Mk:{ .m(k: Nat): mut B2 -> mut B2{'me'mut .get -> me'.n + k; read .n -> 5 } }
 App:Main{s->Debug#(Mk.m(1).get)}
 """);
     utils.Err.strCmp("6\n", coordinator(root).main(root, stLib));
+  }
+  @Test void aStackTraceNamesTypesAndMethodsEndingWithPrimes(@TempDir Path tmp) throws InterruptedException{
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_p/_rank_app.fear
+iii
+use base.Main as Main;
+use base.Error as Error;
+use base.Void as Void;
+App:Main{s->Box'.go'}
+Box':{.go':Void->Bar.bar'}
+Bar:{.bar':Void->Error.msg"AAAAh"}
+""");
+    utils.Err.strCmp("""
+AAAAh
+imm Bar.bar' error line: 6 in file _p/_rank_app.fear
+imm Box'.go' error line: 5 in file _p/_rank_app.fear
+imm App.main(_) error line: 4 in file _p/_rank_app.fear
+""", coordinator(root).main(root, stLib));
+  }
+  @Test void aClassCompiledFromAHandWrittenRtFileKeepsItsOwnSourceFile() throws IOException{
+    byte[] bytes;
+    try (var jar= new ZipFile(baseCache.resolve("base.jar").toFile())){
+      bytes= jar.getInputStream(jar.getEntry("_base/Lists$1c$0.class")).readAllBytes();
+    }
+    var sourceFile= ClassFile.of().parse(bytes).findAttribute(Attributes.sourceFile()).orElseThrow().sourceFile().stringValue();
+    assertEquals("Lists$1c$0.java", sourceFile);
   }
   @Test void aStackTraceNamesTheFearlessTypesMethodsAndLines(){
     utils.Err.strCmp("""
