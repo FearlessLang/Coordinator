@@ -22,6 +22,7 @@ import offensiveUtils.Require;
 import realSourceOracle.SourceOracleWithAutoload;
 import tools.Fs;
 import utils.Join;
+import utils.Range;
 import utils.Pos;
 
 public final class Backend{
@@ -77,11 +78,11 @@ public final class Backend{
   }
   private static boolean implementsType(Literal l, String name, int arity){ return LiteralDeclarations.has(l.cs(), new TName(name, arity, Pos.unknown)); }
   private static String cacheField(Literal l){
-    return Join.of(IntStream.range(0, 3).filter(shape -> implementsType(l, "base.CacheF", shape+1) || implementsType(l, "base.CacheMemo", shape+1)).mapToObj(Backend::cacheField), "", "", "", "");
-  }
-  private static String cacheField(int shape){
-    var t= "_base.Cache"+shape;
-    return "  "+t+" _cache"+shape+"= new "+t+"(1, instance);\n  default "+t+" _cache"+shape+"(){ return _cache"+shape+"; }\n";
+    for (int shape : Range.of(0, 3)){
+      var t= "_base.Cache"+shape;
+      if (implementsType(l, "base.CacheF", shape+1) || implementsType(l, "base.CacheMemo", shape+1)){ return "  "+t+" _cache= new "+t+"(1, instance);\n  default "+t+" _cache"+shape+"(){ return _cache; }\n"; }
+    }
+    return "";
   }
   private String onceMethods(Literal l, String iface){
     if (implementsType(l, "base.CacheHandler", 0)){ return ""; }

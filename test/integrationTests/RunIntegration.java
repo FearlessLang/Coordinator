@@ -2465,7 +2465,20 @@ App:Main{s->Debug#(D.x)}
 """);
     utils.Err.strCmp("3\n", coordinator(root).main(root, stLib));
   }
-  @Test void aTypeImplementingTwoCacheShapesCachesBoth(@TempDir Path tmp) throws InterruptedException{
+  @Test void aTypeCannotImplementTwoCaches(@TempDir Path tmp){
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_col/_rank_app.fear
+iii
+use base.Nat as Nat;
+use base.CacheF as CacheF;
+Both:CacheF[Nat],CacheF[Nat,Nat]{ # -> 1; #(a) -> a.get + 1 }
+""");
+    var ex= assertThrows(UserError.class, () -> coordinator(root).compile(root, stLib));
+    utils.Err.strCmp("[###]Ambiguous implementation for method \"._uniqueCache\" with 0 parameters.[###]", ex.getMessage());
+  }
+  @Test void aSubtypeOfACacheHasACacheOfItsOwn(@TempDir Path tmp) throws InterruptedException{
     var root= tmp.resolve("root");
     UserError.root = root;
     FsDsl.materialize(root, """
@@ -2477,22 +2490,23 @@ use base.Debug as Debug;
 use base.Nat as Nat;
 use base.Cache as Cache;
 use base.CacheF as CacheF;
-Both:CacheF[Nat],CacheF[Nat,Nat]{ # -> Block#(Debug#("both0"), 1); #(a) -> Block#(Debug#("both1"), a.get + 1) }
+A:CacheF[Nat]{ # -> Block#(Debug#("a"), 1) }
+B:A,CacheF[Nat]{ # -> Block#(Debug#("b"), 2) }
 Hello:Main{s->Block#
-  .do{ Debug#(Cache#(Both)) }
-  .do{ Debug#(Cache#(Both)) }
-  .do{ Debug#(Cache#(5.norm, Both)) }
-  .do{ Debug#(Cache#(5.norm, Both)) }
+  .do{ Debug#(Cache#(A)) }
+  .do{ Debug#(Cache#(B)) }
+  .do{ Debug#(Cache#(A)) }
+  .do{ Debug#(Cache#(B)) }
   .done
   }
 """);
     utils.Err.strCmp("""
-both0
+a
 1
+b
+2
 1
-both1
-6
-6
+2
 """, coordinator(root).main(root, stLib));
   }
   @Test void aSelfNameEndingWithAPrimeCompiles(@TempDir Path tmp) throws InterruptedException{
