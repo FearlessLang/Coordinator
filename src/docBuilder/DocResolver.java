@@ -95,7 +95,7 @@ record DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other){
     return literalOf(owner).stream().flatMap(lit -> foreignCandidates(owner, declaredAndInherited(lit), selector, arity)).toList();
   }
   private Optional<TypeDoc> localTypeDoc(TName n){
-    return OneOr.opt("type "+n, types.stream().filter(t -> !t.main().infName() && t.main().name().equals(n)));
+    return OneOr.opt("type "+n, types.stream().filter(t -> t.main().name().equals(n)));
   }
   private List<M> declaredAndInherited(Literal owner){
     var res= new ArrayList<>(owner.ms());
