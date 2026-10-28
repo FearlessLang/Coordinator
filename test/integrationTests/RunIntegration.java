@@ -2552,6 +2552,25 @@ imm Foo.foo error line: 5 in file _hello/_rank_app.fear
 imm Hello.main(_) error line: 4 in file _hello/_rank_app.fear
 """, coordinator(root).main(root, stLib));
   }
+  @Test void anUncaughtStackOverflowShowsFearlessFramesAndNoJavaFrames(@TempDir Path tmp) throws InterruptedException{
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_p/_rank_app.fear
+iii
+use base.Main as Main;
+use base.Nat as Nat;
+use base.Debug as Debug;
+Rec:{#(n: Nat): Nat -> (n == 0).if{.then -> 0; .else -> n + (this#(n - 1))}}
+App:Main{s -> Debug#(Rec#1_000_000)}
+""");
+    var out= coordinator(root).main(root, stLib);
+    utils.Err.strCmp("""
+[###]StackOverflowError[###]
+imm Rec#(_) error line: 4 in file _p/_rank_app.fear
+[###]""", out);
+    assertEquals(List.of(), out.lines().filter(l -> l.startsWith("\tat ")).limit(3).toList());
+  }
   @Test void aMainEndingWithAnErrorExitsWith1AndTheOtherMainsStillRun(@TempDir Path tmp) throws InterruptedException{
     var root= tmp.resolve("root");
     UserError.root = root;
