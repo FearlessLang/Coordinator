@@ -2122,6 +2122,37 @@ not read by the compiler
 }
 """, manifests(root));
   }
+  @Test void aMovedIconIsFollowedInTheManifestOfAPackageBelowTheTopRank(@TempDir Path tmp) throws Exception{
+    var root= claimsProject(tmp, """
+Foo:Main{s->base.Debug#(`foo`)}
+jjj
+_mid/_rank_driver.fear
+iii
+Mid:base.Main, base.OpenWith[lib.IconsLib]{s->base.Debug#(`mid`)}
+jjj
+_lib/_rank_core.fear
+iii
+Lib:{}
+jjj
+_lib/icons/lib.png
+iii
+not read by the compiler
+""");
+    coordinator(root).compile(root, stLib);
+    Fs.move(root.resolve("_lib", "icons", "lib.png"), root.resolve("_lib", "icons", "lib.gif"));
+    coordinator(root).compile(root, stLib);
+    utils.Err.strCmp("""
+[###]--- mid_manifest.info
+{
+  "mains": {
+    "mid.Mid": ["_mid/_rank_driver.fear", [], [["lib.IconsLib", "_lib/icons/lib.gif", "", "", ""]], [["base.IconsFearless", "icons/fearless.png", "", "", ""], ["lib.IconsLib", "_lib/icons/lib.gif", "", "", ""]]]
+  },
+  "attenuators": [],
+  "dataRead": [],
+  "dataEdit": []
+}
+""", manifests(root));
+  }
   @Test void inheritedClaimsAreListedOnce(@TempDir Path tmp) throws Exception{
     var root= claimsProject(tmp, """
 Opener:Main, OpenWith[IconsFoo,"foo"], Shortcut[IconsFoo]{}
