@@ -42,6 +42,8 @@ final class RecompilationCacheTest{
     };
   }
   private static final class ScriptedCoordinator implements Coordinator{
+    final Path root;
+    ScriptedCoordinator(Path root){ this.root= root; }
     final LinkedHashMap<String,Function<OtherPackages,List<Literal>>> scripts= new LinkedHashMap<>();
     final LinkedHashMap<String,Integer> frontendCalls= new LinkedHashMap<>();
     final LinkedHashMap<String,OtherPackages> lastOtherSeen= new LinkedHashMap<>();
@@ -51,7 +53,7 @@ final class RecompilationCacheTest{
       lastOtherSeen.put(pkgName, other);
       return scripts.get(pkgName).apply(other);
     }
-    @Override public void backend(String pkgName, List<Literal> core, SourceOracle oracle, OtherPackages other, CapabilityEnvironment capabilities){}
+    @Override public void backend(String pkgName, List<Literal> core, SourceOracle oracle, OtherPackages other, CapabilityEnvironment capabilities){ Fs.writeUtf8(Coordinator.genJava(root).resolve(pkgName+".jar"), ""); }
     int calls(String pkg){ return frontendCalls.getOrDefault(pkg, 0); }
   }
   private static final long margin= 30_000;
@@ -59,7 +61,7 @@ final class RecompilationCacheTest{
   @Test void fullyCachedRebuildRecomputesNothingAndTouchesNoFiles(@TempDir Path tmp){
     var start= System.currentTimeMillis();
     OutputOracle out= () -> tmp;
-    var stub= new ScriptedCoordinator();
+    var stub= new ScriptedCoordinator(tmp);
     stub.fixedOutput("a", List.of(literal("A1", RC.imm)));
     stub.fixedOutput("b", List.of(literal("B1", RC.imm)));
     var pkgs= new LinkedHashMap<String,List<Ref>>();
@@ -80,7 +82,7 @@ final class RecompilationCacheTest{
   @Test void sourceTouchedWithUnchangedApiRecomputesButDoesNotRewriteAndLeavesSiblingAlone(@TempDir Path tmp){
     var start= System.currentTimeMillis();
     OutputOracle out= () -> tmp;
-    var stub= new ScriptedCoordinator();
+    var stub= new ScriptedCoordinator(tmp);
     stub.fixedOutput("a", List.of(literal("A1", RC.imm), literal("_Hidden", RC.imm)));
     stub.fixedOutput("b", List.of(literal("B1", RC.imm)));
     var pkgs= new LinkedHashMap<String,List<Ref>>();
@@ -101,7 +103,7 @@ final class RecompilationCacheTest{
   @Test void apiChangeRewritesAndCascadesToDependentLayerWithUpdatedData(@TempDir Path tmp){
     var start= System.currentTimeMillis();
     OutputOracle out= () -> tmp;
-    var stub= new ScriptedCoordinator();
+    var stub= new ScriptedCoordinator(tmp);
     var aName= new TName("A1", 0, Pos.unknown);
     stub.fixedOutput("a", List.of(literal("A1", RC.imm)));
     stub.fixedOutput("b", List.of(literal("B1", RC.imm)));
@@ -133,7 +135,7 @@ final class RecompilationCacheTest{
   @Test void apiPreservingEditMustNotCascadeToTheDependentLayer(@TempDir Path tmp){
     var start= System.currentTimeMillis();
     OutputOracle out= () -> tmp;
-    var stub= new ScriptedCoordinator();
+    var stub= new ScriptedCoordinator(tmp);
     stub.fixedOutput("a", List.of(literal("A1", RC.imm)));
     stub.fixedOutput("c", List.of(literal("C1", RC.imm)));
     var pkgs1= new LinkedHashMap<String,List<Ref>>();
@@ -154,7 +156,7 @@ final class RecompilationCacheTest{
   @Test void rebuildAfterAnApiPreservingEditMustNotRecompileAgain(@TempDir Path tmp){
     var start= System.currentTimeMillis();
     OutputOracle out= () -> tmp;
-    var stub= new ScriptedCoordinator();
+    var stub= new ScriptedCoordinator(tmp);
     stub.fixedOutput("a", List.of(literal("A1", RC.imm)));
     var pkgs= new LinkedHashMap<String,List<Ref>>();
     pkgs.put("a", refs("a", start-margin));
@@ -171,7 +173,7 @@ final class RecompilationCacheTest{
   @Test void layerStampMustTrackTheFreshestSiblingNotJustTheLastOneMerged(@TempDir Path tmp){
     var start= System.currentTimeMillis();
     OutputOracle out= () -> tmp;
-    var stub= new ScriptedCoordinator();
+    var stub= new ScriptedCoordinator(tmp);
     stub.fixedOutput("a", List.of(literal("A1", RC.imm)));
     stub.fixedOutput("b", List.of(literal("B1", RC.imm)));
     var pkgs= new LinkedHashMap<String,List<Ref>>();
@@ -199,7 +201,7 @@ final class RecompilationCacheTest{
   @Test void deletingASourceFileMustRecompileThePackage(@TempDir Path tmp){
     var start= System.currentTimeMillis();
     OutputOracle out= () -> tmp;
-    var stub= new ScriptedCoordinator();
+    var stub= new ScriptedCoordinator(tmp);
     stub.fixedOutput("a", List.of(literal("A1", RC.imm)));
     var pkgs= new LinkedHashMap<String,List<Ref>>();
     pkgs.put("a", twoRefs(start-margin));
@@ -215,7 +217,7 @@ final class RecompilationCacheTest{
   @Test void addingASourceFileWithAnOldMtimeMustRecompileThePackage(@TempDir Path tmp){
     var start= System.currentTimeMillis();
     OutputOracle out= () -> tmp;
-    var stub= new ScriptedCoordinator();
+    var stub= new ScriptedCoordinator(tmp);
     stub.fixedOutput("a", List.of(literal("A1", RC.imm)));
     var pkgs= new LinkedHashMap<String,List<Ref>>();
     pkgs.put("a", refs("a", start-margin));
@@ -229,7 +231,7 @@ final class RecompilationCacheTest{
   @Test void deletingALowerPackageMustRecompileThePackageBuiltAgainstIt(@TempDir Path tmp){
     var start= System.currentTimeMillis();
     OutputOracle out= () -> tmp;
-    var stub= new ScriptedCoordinator();
+    var stub= new ScriptedCoordinator(tmp);
     stub.fixedOutput("a", List.of(literal("A1", RC.imm)));
     stub.fixedOutput("b", List.of(literal("B1", RC.imm)));
     var pkgsA= new LinkedHashMap<String,List<Ref>>();
@@ -246,7 +248,7 @@ final class RecompilationCacheTest{
   @Test void aLowerPackageMovingIntoTheSameRankMustRecompileThePackageBuiltAgainstIt(@TempDir Path tmp){
     var start= System.currentTimeMillis();
     OutputOracle out= () -> tmp;
-    var stub= new ScriptedCoordinator();
+    var stub= new ScriptedCoordinator(tmp);
     stub.fixedOutput("a", List.of(literal("A1", RC.imm)));
     stub.fixedOutput("b", List.of(literal("B1", RC.imm)));
     var pkgsA= new LinkedHashMap<String,List<Ref>>();
@@ -274,7 +276,7 @@ final class RecompilationCacheTest{
   @Test void aSourceSavedAfterThePackageWasReadMustBeCompiledAgainByTheNextBuild(@TempDir Path tmp){
     var start= System.currentTimeMillis();
     OutputOracle out= () -> tmp;
-    var stub= new ScriptedCoordinator();
+    var stub= new ScriptedCoordinator(tmp);
     var edited= new EditableRef(SourceOracle.root+"_a/a.fear", start-margin);
     stub.scripts.put("a", _ -> {
       edited.lastModified = start-margin/2;
@@ -293,8 +295,8 @@ final class RecompilationCacheTest{
   private static final TName aName= new TName("A1", 0, Pos.unknown);
   private static final TName bName= new TName("B1", 0, Pos.unknown);
   private record Stack(ScriptedCoordinator stub, LinkedHashMap<String,List<Ref>> a, Layer top){}
-  private static Stack stack(long start){
-    var stub= new ScriptedCoordinator();
+  private static Stack stack(Path tmp, long start){
+    var stub= new ScriptedCoordinator(tmp);
     var pkgsA= new LinkedHashMap<String,List<Ref>>();
     pkgsA.put("a", refs("a", start-margin));
     var pkgsB= new LinkedHashMap<String,List<Ref>>();
@@ -308,7 +310,7 @@ final class RecompilationCacheTest{
   @Test void apiChangeInTheBottomLayerCascadesThroughEveryLayerAbove(@TempDir Path tmp){
     var start= System.currentTimeMillis();
     OutputOracle out= () -> tmp;
-    var s= stack(start);
+    var s= stack(tmp, start);
     s.stub().fixedOutput("a", List.of(literal("A1", RC.imm)));
     s.stub().scripts.put("b", other -> List.of(literal("B1", other.__of(aName).rc())));
     s.stub().scripts.put("c", other -> List.of(literal("C1", other.__of(bName).rc())));
@@ -328,7 +330,7 @@ final class RecompilationCacheTest{
   @Test void apiPreservingEditInTheBottomLayerMustNotReachAnyLayerAbove(@TempDir Path tmp){
     var start= System.currentTimeMillis();
     OutputOracle out= () -> tmp;
-    var s= stack(start);
+    var s= stack(tmp, start);
     s.stub().fixedOutput("a", List.of(literal("A1", RC.imm)));
     s.stub().fixedOutput("b", List.of(literal("B1", RC.imm)));
     s.stub().fixedOutput("c", List.of(literal("C1", RC.imm)));
@@ -345,7 +347,7 @@ final class RecompilationCacheTest{
   @Test void aBottomLayerApiChangeReachesTheTopEvenWhenTheMiddleApiIsUnchanged(@TempDir Path tmp){
     var start= System.currentTimeMillis();
     OutputOracle out= () -> tmp;
-    var s= stack(start);
+    var s= stack(tmp, start);
     s.stub().fixedOutput("a", List.of(literal("A1", RC.imm)));
     s.stub().fixedOutput("b", List.of(literal("B1", RC.imm)));
     s.stub().fixedOutput("c", List.of(literal("C1", RC.imm)));
@@ -364,7 +366,7 @@ final class RecompilationCacheTest{
   @Test void aChangeInTheMiddleLayerMustNotReachTheLayerBelowIt(@TempDir Path tmp){
     var start= System.currentTimeMillis();
     OutputOracle out= () -> tmp;
-    var stub= new ScriptedCoordinator();
+    var stub= new ScriptedCoordinator(tmp);
     stub.fixedOutput("a", List.of(literal("A1", RC.imm)));
     stub.fixedOutput("b", List.of(literal("B1", RC.imm)));
     stub.scripts.put("c", other -> List.of(literal("C1", other.__of(bName).rc())));
@@ -392,7 +394,7 @@ final class RecompilationCacheTest{
   @Test void aFullyCachedRebuildOfAThreeLayerStackRecomputesNothing(@TempDir Path tmp){
     var start= System.currentTimeMillis();
     OutputOracle out= () -> tmp;
-    var s= stack(start);
+    var s= stack(tmp, start);
     s.stub().fixedOutput("a", List.of(literal("A1", RC.imm)));
     s.stub().fixedOutput("b", List.of(literal("B1", RC.imm)));
     s.stub().fixedOutput("c", List.of(literal("C1", RC.imm)));
@@ -408,15 +410,16 @@ final class RecompilationCacheTest{
   }
   private static final class RecordingCoordinator implements Coordinator{
     private final Path mods;
+    private final Path project;
     final LinkedHashMap<String,Integer> frontendCalls= new LinkedHashMap<>();
-    RecordingCoordinator(Path stdLib, Path mods){ this.mods= mods; }
+    RecordingCoordinator(Path project, Path mods){ this.project= project; this.mods= mods; }
     @Override public Path modsPath(){ return mods; }
     @Override public String runAllMains(String pkgName, OutputOracle out){ return ""; }
     @Override public List<Literal> frontend(String pkgName, List<Ref> files, SourceOracle oracle, OtherPackages other, Map<String,String> vres, CapabilityEnvironment capabilities){
       frontendCalls.merge(pkgName, 1, Integer::sum);
       return List.of();
     }
-    @Override public void backend(String pkgName, List<Literal> core, SourceOracle oracle, OtherPackages other, CapabilityEnvironment capabilities){}
+    @Override public void backend(String pkgName, List<Literal> core, SourceOracle oracle, OtherPackages other, CapabilityEnvironment capabilities){ Fs.writeUtf8(Coordinator.genJava(project.resolve(Coordinator.outDir)).resolve(pkgName+".jar"), ""); }
     int calls(String pkg){ return frontendCalls.getOrDefault(pkg, 0); }
   }
   private static void touch(Path p, long millis){ Fs.ofV(() -> Fs.setLastModifiedTime(p, FileTime.fromMillis(millis))); }
@@ -429,7 +432,7 @@ final class RecompilationCacheTest{
     Fs.writeUtf8(project.resolve("_b/_rank_core.fear"), "");
     Fs.writeUtf8(stdLib.resolve("x.fear"), "");
     Fs.writeUtf8(mods.resolve("dummy.jar"), "");
-    var c= new RecordingCoordinator(stdLib, mods);
+    var c= new RecordingCoordinator(project, mods);
     c.main(project, c.sourceOracle(stdLib));
     assertEquals(1, c.calls("a"));
     assertEquals(1, c.calls("b"));
@@ -451,7 +454,7 @@ final class RecompilationCacheTest{
     Fs.writeUtf8(project.resolve("_b/_rank_core.fear"), "");
     Fs.writeUtf8(stdLib.resolve("x.fear"), "");
     Fs.writeUtf8(mods.resolve("dummy.jar"), "");
-    var c= new RecordingCoordinator(stdLib, mods);
+    var c= new RecordingCoordinator(project, mods);
     c.main(project, c.sourceOracle(stdLib));
     assertEquals(1, c.calls("a"));
     assertEquals(1, c.calls("b"));

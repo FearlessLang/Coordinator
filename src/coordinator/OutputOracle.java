@@ -30,7 +30,7 @@ public interface OutputOracle{
   default long mapStamp(){ return Fs.lastModified(mapPath()); }
   default long pkgApiStamp(String pkg){ return Fs.lastModified(pkgApiPath(pkg)); }
   default boolean stillBuilt(String pkg, List<Ref> files, List<String> below, long minMillis){
-    return Fs.lastModified(builtPath(pkg))>=minMillis && OutputHelper.read(builtPath(pkg)).orElseThrow().equals(OutputHelper.built(files, below)) && Fs.exists(mainsPath(pkg));
+    return Fs.lastModified(builtPath(pkg))>=minMillis && OutputHelper.read(builtPath(pkg)).orElseThrow().equals(OutputHelper.built(files, below)) && Fs.exists(mainsPath(pkg)) && Fs.exists(pkgApiPath(pkg)) && Fs.exists(Coordinator.genJava(rootDir()).resolve(pkg+".jar"));
   }
   default void forgetAllBut(List<String> pkgs){
     if (!Fs.isDirectory(rootDir())){ return; }
