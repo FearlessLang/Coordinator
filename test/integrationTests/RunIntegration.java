@@ -32,6 +32,7 @@ import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.IntBinaryOperator;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -1254,9 +1255,9 @@ Thin: Main{s -> base.Block#
     var reds= reds(ImageIO.read(data.resolve("thin.png").toFile()), 8);
     assertTrue(reds.stream().allMatch(r -> Math.abs(r - 32) <= 4), () -> "Each pixel covers 128 columns, 16 of them white, so its red is near 32, not "+reds);
   }
-  static byte[] jpegWith(int w, int h, int rgb, int marker, byte[] segment) throws IOException{
+  static byte[] jpegWith(int w, int h, IntBinaryOperator rgb, int marker, byte[] segment) throws IOException{
     var img= new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
-    for (int y= 0; y < h; y += 1){ for (int x= 0; x < w; x += 1){ img.setRGB(x, y, rgb); } }
+    for (int y= 0; y < h; y += 1){ for (int x= 0; x < w; x += 1){ img.setRGB(x, y, rgb.applyAsInt(x, y)); } }
     var jpeg= new ByteArrayOutputStream();
     ImageIO.write(img, "jpg", jpeg);
     var bs= jpeg.toByteArray();
@@ -1267,13 +1268,27 @@ Thin: Main{s -> base.Block#
     res.write(bs, 2, bs.length - 2);
     return res.toByteArray();
   }
+  @Test void aJpegIsReadTurnedByItsExifOrientation(@TempDir Path tmp) throws IOException{
+    var data= dataProject(tmp);
+    byte[] turnedClockwise= {'E', 'x', 'i', 'f', 0, 0, 'M', 'M', 0, 42, 0, 0, 0, 8, 0, 1, 0x01, 0x12, 0, 3, 0, 0, 0, 1, 0, 6, 0, 0, 0, 0, 0, 0};
+    Fs.write(data.resolve("turned.jpg"), jpegWith(32, 16, (x, _) -> x < 16 ? 0xFFFF0000 : 0xFF0000FF, 0xE1, turnedClockwise));
+    utils.Err.strCmp("ok\n", dataRun(tmp, """
+Turned: Main{s -> base.Block#
+  .let img= {s.dataRead(Pub).read(L#("turned.jpg")).readImage(1000)}
+  .return{Debug#(Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).writeImagePng(L#("upright.png"), img)})))}
+  }
+""", dataLinks(data, data)));
+    var png= ImageIO.read(data.resolve("upright.png").toFile());
+    var column= Join.of(IntStream.range(0, png.getHeight()).mapToObj(y -> (png.getRGB(8, y)>>16 & 255) > 128 ? "R" : "B"), "", "", "");
+    utils.Err.strCmp("16 x 32 "+"R".repeat(16)+"B".repeat(16), png.getWidth()+" x "+png.getHeight()+" "+column);
+  }
   @Test void aJpegWithAColorProfileIsReadInSrgb(@TempDir Path tmp) throws IOException{
     var data= dataProject(tmp);
     var profile= new ByteArrayOutputStream();
     profile.writeBytes("ICC_PROFILE".getBytes(UTF_8));
     profile.writeBytes(new byte[]{0, 1, 1});
     profile.writeBytes(ICC_Profile.getInstance(ColorSpace.CS_LINEAR_RGB).getData());
-    Fs.write(data.resolve("linear.jpg"), jpegWith(2, 2, 0xFF808080, 0xE2, profile.toByteArray()));
+    Fs.write(data.resolve("linear.jpg"), jpegWith(2, 2, (_, _) -> 0xFF808080, 0xE2, profile.toByteArray()));
     utils.Err.strCmp("ok\n", dataRun(tmp, """
 Linear: Main{s -> base.Block#
   .let img= {s.dataRead(Pub).read(L#("linear.jpg")).readImage(1000)}
