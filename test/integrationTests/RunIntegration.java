@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import javax.imageio.ImageIO;
@@ -1219,6 +1220,37 @@ Painted: Main{s -> base.Block#
 """, dataLinks(data, data)));
     var png= ImageIO.read(data.resolve("painted.png").toFile());
     assertEquals(List.of(4, 3, 0xFF0000FF, 0xFFFF0000, 0xFFFF0000, 0xFF0000FF, 0xFF0000FF), List.of(png.getWidth(), png.getHeight(), png.getRGB(0, 0), png.getRGB(1, 1), png.getRGB(2, 2), png.getRGB(3, 1), png.getRGB(1, 0)));
+  }
+  static final String columns= """
+Columns: { #(g: mut base.Graphics, x: base.Nat, step: base.Nat, end: base.Nat, h: base.Nat): mut base.Graphics -> (x >= end) ? {
+  .then -> g;
+  .else -> Columns#(g.position(base.XInt#(x.getInt), base.YInt#(+0)).rect(base.WidthNat#1, base.HeightNat#h), x + step, step, end, h);
+  } }
+""";
+  static String row(BufferedImage png, int y){ return Join.of(IntStream.range(0, png.getWidth()).mapToObj(x -> "%08x".formatted(png.getRGB(x, y))).toList(), "", " ", ""); }
+  static List<Integer> reds(BufferedImage png, int y){ return IntStream.range(0, png.getWidth()).mapToObj(x -> png.getRGB(x, y)>>16 & 255).toList(); }
+  @Test void anImageScaledToItsOwnSizeKeepsItsPixels(@TempDir Path tmp) throws IOException{
+    var data= dataProject(tmp);
+    utils.Err.strCmp("ok\n", dataRun(tmp, """
+Same: Main{s -> base.Block#
+  .let img= {base.Images#(base.WidthNat#5, base.HeightNat#1, base.Color.rgb(0, 0, 0)).paint{g -> g
+    .color(base.Color.rgb(255, 255, 255)).position(base.XInt#(+1), base.YInt#(+0)).rect(base.WidthNat#1, base.HeightNat#1)
+    .color(base.Color.rgb(255, 0, 0)).position(base.XInt#(+3), base.YInt#(+0)).rect(base.WidthNat#1, base.HeightNat#1)}}
+  .return{Debug#(Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).writeImagePng(L#("same.png"), img.scale(img.width, img.height))})))}
+  }
+""", dataLinks(data, data)));
+    utils.Err.strCmp("ff000000 ffffffff ff000000 ffff0000 ff000000", row(ImageIO.read(data.resolve("same.png").toFile()), 0));
+  }
+  @Test void anImageShrunkOnOneSideAveragesThePixelsOfThatSide(@TempDir Path tmp) throws IOException{
+    var data= dataProject(tmp);
+    utils.Err.strCmp("ok\n", dataRun(tmp, columns+"""
+Thin: Main{s -> base.Block#
+  .let img= {base.Images#(base.WidthNat#1024, base.HeightNat#16, base.Color.rgb(0, 0, 0)).paint{g -> Columns#(g.color(base.Color.rgb(255, 255, 255)), 0, 8, 1024, 16)}}
+  .return{Debug#(Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).writeImagePng(L#("thin.png"), img.scale(base.WidthNat#8, base.HeightNat#16))})))}
+  }
+""", dataLinks(data, data)));
+    var reds= reds(ImageIO.read(data.resolve("thin.png").toFile()), 8);
+    assertTrue(reds.stream().allMatch(r -> Math.abs(r - 32) <= 4), () -> "Each pixel covers 128 columns, 16 of them white, so its red is near 32, not "+reds);
   }
   @Test void aResourceDeletedAfterItIsOpenedIsADeterministicError(@TempDir Path tmp){
     var data= dataProject(tmp);
