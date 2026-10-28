@@ -138,7 +138,9 @@ public interface Coordinator{
     var c= new NoCompile(baseCachePath());
     var o= sourceOracle(project);
     var out= new NoCommit(Helper.out(project).rootDir());
-    Helper.layerOf(c, o, project, out, stLib).compile(o, out);
+    var l= Helper.layerOf(c, o, project, out, stLib);
+    out.forgetAllBut(l.pkgNames());
+    l.compile(o, out);
     var res= MainsInfo.read(project).orElseThrow();
     return baseCachePath().map(b -> MainsInfo.merge(Stream.of(res, MainsInfo.parse(b.resolve("base"+MainsInfo.suffix))))).orElse(res);
   }
