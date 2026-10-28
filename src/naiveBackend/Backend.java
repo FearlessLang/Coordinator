@@ -86,7 +86,7 @@ public final class Backend{
   }
   private static boolean isOnce(M m){ return m.sig().rc() == RC.imm && m.xs().isEmpty() && m.sig().ret().explicitRC().equals(Optional.of(RC.imm)); }
   private static String once(String iface, String jName){
-    return "    volatile Object "+jName+";\n    public Object "+jName+"(){ if ("+jName+" == null){ "+jName+" = "+iface+".super."+jName+"(); } return "+jName+"; }\n";
+    return "    final _base.Cache0 "+jName+"= new _base.Cache0(1, () -> "+iface+".super."+jName+"());\n    public Object "+jName+"(){ return "+jName+".get(); }\n";
   }
   private boolean hasInstance(Literal l){
     assert !l.thisName().isEmpty() || LiteralDeclarations.has(l.cs(), LiteralDeclarations.captureFree);
