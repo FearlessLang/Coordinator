@@ -546,8 +546,8 @@ _GCase$1k$0.java only imm
 _p/_rank_app.fear
 iii
 use base.FileLog as FileLog;
-AppLog: FileLog{"a"}
-Applog: FileLog{"b"}
+AppLog: FileLog{}
+Applog: FileLog{}
 """);
     var genJava= tmp.resolve("genJava");
     var base= coordinator(root);
@@ -2430,6 +2430,84 @@ Mk:{ .mk(k: Nat): A -> Bar:A,B{ .z -> k } }
 App:Main{s->Debug#(Mk.mk(1).z)}
 """);
     utils.Err.strCmp("1\n", coordinator(root).main(root, stLib));
+  }
+  @Test void anAbstractTypeInheritsTheNameOfTwoNamedSupertypes(@TempDir Path tmp) throws InterruptedException{
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_p/_rank_app.fear
+iii
+use base.Main as Main;
+use base.Nat as Nat;
+use base.Debug as Debug;
+A:base.Named{}
+B:base.Named{}
+C:A,B{ .x: Nat }
+D:C{ .x -> 3 }
+App:Main{s->Debug#(D.name)}
+""");
+    utils.Err.strCmp("p.D\n", coordinator(root).main(root, stLib));
+  }
+  @Test void anAbstractTypeInheritsTheLogOfTwoInMemoryLogSupertypes(@TempDir Path tmp) throws InterruptedException{
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_p/_rank_app.fear
+iii
+use base.Main as Main;
+use base.Nat as Nat;
+use base.Debug as Debug;
+A:base.InMemoryLog[Nat]{}
+B:base.InMemoryLog[Nat]{}
+C:A,B{ .x: Nat }
+D:C{ .x -> 3 }
+App:Main{s->Debug#(D.x)}
+""");
+    utils.Err.strCmp("3\n", coordinator(root).main(root, stLib));
+  }
+  @Test void aTypeCannotImplementTwoCaches(@TempDir Path tmp){
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_col/_rank_app.fear
+iii
+use base.Nat as Nat;
+use base.CacheF as CacheF;
+Both:CacheF[Nat],CacheF[Nat,Nat]{ # -> 1; #(a) -> a.get + 1 }
+""");
+    var ex= assertThrows(UserError.class, () -> coordinator(root).compile(root, stLib));
+    utils.Err.strCmp("[###]Ambiguous implementation for method \"._uniqueCache\" with 0 parameters.[###]", ex.getMessage());
+  }
+  @Test void aSubtypeOfACacheHasACacheOfItsOwn(@TempDir Path tmp) throws InterruptedException{
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_col/_rank_app.fear
+iii
+use base.Main as Main;
+use base.Block as Block;
+use base.Debug as Debug;
+use base.Nat as Nat;
+use base.Cache as Cache;
+use base.CacheF as CacheF;
+A:CacheF[Nat]{ # -> Block#(Debug#("a"), 1) }
+B:A,CacheF[Nat]{ # -> Block#(Debug#("b"), 2) }
+Hello:Main{s->Block#
+  .do{ Debug#(Cache#(A)) }
+  .do{ Debug#(Cache#(B)) }
+  .do{ Debug#(Cache#(A)) }
+  .do{ Debug#(Cache#(B)) }
+  .done
+  }
+""");
+    utils.Err.strCmp("""
+a
+1
+b
+2
+1
+2
+""", coordinator(root).main(root, stLib));
   }
   @Test void aSelfNameEndingWithAPrimeCompiles(@TempDir Path tmp) throws InterruptedException{
     var root= tmp.resolve("root");

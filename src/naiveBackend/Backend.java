@@ -22,8 +22,8 @@ import offensiveUtils.Require;
 import realSourceOracle.SourceOracleWithAutoload;
 import tools.Fs;
 import utils.Join;
-import utils.Pos;
 import utils.Range;
+import utils.Pos;
 
 public final class Backend{
   final Path out;
@@ -50,10 +50,6 @@ public final class Backend{
       .a("public interface "+iface+extendsClause(l)+"{\n");
     for (var m : l.ms()){ emitTopMethod(sb, l, m, abstractOnly); }
     var hasInstance= !abstractOnly && hasInstance(l);
-    if (hasInstance && implementsType(l, "base.InMemoryLog", 1)){
-      sb.a("  java.util.ArrayList<Object> _logStore= new java.util.ArrayList<>();\n");
-      sb.a("  default java.util.ArrayList<Object> _log(){ return _logStore; }\n");
-    }
     if (hasInstance && implementsType(l, "base.FileLog", 0)){
       assert l.name().arity()==0;
       sb.a("  _base.AppLog _appLog= _base.AppLog.open(java.nio.file.Path.of(\".out\",\"logs\",\"_"+tools.pkgName()+"\",\""+Fs.fileNameOfType(l.name().simpleName()).orElseThrow()+".log\"), false);\n  default _base.AppLog _log(){ return _appLog; }\n");
@@ -62,7 +58,8 @@ public final class Backend{
       sb.a("  Object _reprCacheGet(Object k, java.util.function.Supplier<Object> f, long time);\n");
       sb.a("  void _reprCacheFlush();\n");
     }
-    if (hasInstance){ sb.a(nameMethod(l, "default")+"  "+iface+" instance= new _Instance();\n  final class _Instance implements "+iface+"{"+onceMethods(l, iface)+"}\n"+cacheField(l)); }
+    if (!abstractOnly){ sb.a(nameMethod(l, "default")); }
+    if (hasInstance){ sb.a("  "+iface+" instance= new _Instance();\n  final class _Instance implements "+iface+"{"+onceMethods(l, iface)+"}\n"+cacheField(l)); }
     Fs.writeUtf8(out.resolve(iface+".java"), sb.a("}").toString());
     if (hasInstance && MainsInfo.isMain(l)){ mains.put(l.name().s(), iface); preloaded.put(l.name().s(), preloaded(l)); }
     fixers.add(sb);
