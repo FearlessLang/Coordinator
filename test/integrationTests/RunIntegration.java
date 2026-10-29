@@ -1104,7 +1104,7 @@ Cut: Main{s -> Debug#(s.inputCursor#.match{.some n -> n.READ Show; .empty -> "no
     utils.Err.strCmp("False\nnone\nFalse\n", main(inputProject(tmp), List.of()));
   }
   @Test void anInputFileThatCanNotBeReadIsADeterministicError(@TempDir Path tmp){
-    utils.Err.strCmp("The input file \"gone.txt\" could not be read: NoSuchFileException\n", dataRun(tmp, """
+    utils.Err.strCmp("File with absolute path "+tmp.resolve("gone.txt").toAbsolutePath()+" can not be read as bytes\n", dataRun(tmp, """
 Gone: Main{s -> Debug#(St#(base.Try#(s.iso.close, {t -> t.inputCursor#.match{.some n -> n.readStrUtf8 Recover; .empty -> "none"}})))}
 """, List.of("-DfearlessInput.file="+PathClassLoader.argOf(tmp.resolve("gone.txt")))));
   }
@@ -1406,7 +1406,7 @@ Linear: Main{s -> base.Block#
     var data= dataProject(tmp);
     utils.Err.strCmp("""
 ok
-The resource "col.Notes/readme" could not be read: NoSuchFileException
+Resource with path col.Notes/readme can not be read as bytes
 """, dataRun(tmp, """
 Gone: Main{s -> base.Block#
   .let n= {s.dataEdit(Notes).read(L#("readme"))}
@@ -1447,6 +1447,93 @@ NoMounts: Main{s -> base.Block#
   .do{Debug#(Ls#(s.try#(s.iso.close, {t -> t.dataRead(Pub).paths({})})))}
   .return{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataEdit(Notes).writeStrUtf8(L#("a.txt"), "no")})))}
   }
+""", List.of()));
+  }
+  @Test void aDownloadThatCannotConnectSaysSoWithNoJavaName(@TempDir Path tmp) throws IOException{
+    int port; try (var free= new ServerSocket(0)){ port= free.getLocalPort(); }
+    var url= "http://127.0.0.1:"+port+"/x";
+    utils.Err.strCmp("""
+Download failed.
+url: URL
+the connection to the host could not be opened
+""".replace("URL", url), dataRun(tmp, """
+Refused: Main{s -> Debug#(St#(s.try#(s.iso.close, {t -> t.download.downloadStrUtf8("URL", 1000, Recover)})))}
+""".replace("URL", url), List.of()));
+  }
+  @Test void anInvalidUrlSaysSoWithNoJavaText(@TempDir Path tmp){
+    utils.Err.strCmp("""
+Invalid URL descriptor.
+not a valid URI according to RFC 2396 and RFC 2732
+url: http://a b/
+""", dataRun(tmp, """
+Invalid: Main{s -> Debug#(St#(s.try#(s.iso.close, {t -> t.download.downloadStrUtf8("http://a b/", 1000, Recover)})))}
+""", List.of()));
+  }
+  @Test void aStackOverflowCaughtBySysTryHasNoJavaName(@TempDir Path tmp){
+    utils.Err.strCmp("The program ran out of stack space\n", dataRun(tmp, """
+Deep: { #(n: base.Nat): base.Nat -> this#(n + 1) + 1 }
+Overflow: Main{s -> Debug#(St#(s.try#{(Deep#0).str}))}
+""", List.of()));
+  }
+  @Test void aChildProcessEndingWithAJavaErrorGivesItsParentNoJavaName(@TempDir Path tmp){
+    utils.Err.strCmp("[###]The program ran out of stack space\n", dataRun(tmp, """
+Deep: { #(n: base.Nat): base.Nat -> this#(n + 1) + 1 }
+Child: Main{s -> Debug#((Deep#0).str)}
+Parent: Main{s -> Debug#(Wr#(s.try#(s.iso.close, {t -> t.process.run(Child, {})})))}
+""", List.of()));
+  }
+  @Test void anEListChangedByItsOwnRemoveIfSaysSoWithNoJavaName(@TempDir Path tmp){
+    utils.Err.strCmp("EList.removeIf: the function changed the EList while removeIf was running\n", dataRun(tmp, """
+Grow: Main{s -> Debug#(St#(s.try#{base.Block#
+  .let l= {base.ELists#[base.Nat](1, 2)}
+  .return{l.removeIf{e -> base.Block#(l.add e, base.True)}.list.size.str}
+  }))}
+""", List.of()));
+  }
+  @Test void anInconsistentOrderSaysSoWithNoJavaText(@TempDir Path tmp){
+    utils.Err.strCmp("EList.sort: the OrderBy does not give a consistent order to the elements\n", dataRun(tmp, """
+Bad: base.OrderBy[base.Nat]{a, b -> ((a.imm * 7 + (b.imm * 13)).getRem 3) <=> 1}
+Sort: Main{s -> Debug#(St#(s.try#{base.ELists#[base.Nat]ADDS.sort(Bad).list.size.str}))}
+""".replace("ADDS", Join.of(IntStream.range(0, 61).mapToObj(i -> ".add("+i+")").toList(), "", "", "")), List.of()));
+  }
+  @Test void aBiFlowLimitedToMaxNatKeepsAllItsElements(@TempDir Path tmp){
+    utils.Err.strCmp("2\n", dataRun(tmp, """
+Lim: Main{s -> Debug#(St#(s.try#{base.Flows#(1, 2).with(base.Flows#(10, 20)).limit(base.Math.maxNat).getMerge{a, b -> a + b}.list.size.str}))}
+""", List.of()));
+  }
+  @Test void anArrayLargerThanTheJavaLimitIsOutOfMemoryWithNoJavaText(@TempDir Path tmp){
+    utils.Err.strCmp("""
+The program ran out of memory
+The program ran out of memory
+""", dataRun(tmp, """
+Big: Main{s -> base.Block#
+  .do{Debug#(St#(s.try#{base.ELists.withCapacity[base.Nat](2147483646).list.size.str}))}
+  .return{Debug#(St#(s.try#{"a".repeat 2147483647}))}
+  }
+""", List.of()));
+  }
+  @Test void aWrongKeyNameSaysSoWithNoJavaName(@TempDir Path tmp){
+    utils.Err.strCmp("""
+KeyStroke#"NOPE" is not a key name. Key names are listed in the documentation of KeyStroke, for example "A", "7", "SPACE", "ENTER", "ESCAPE", "BACK_SPACE", "LEFT", "F1", "SHIFT".
+""", dataRun(tmp, """
+Key: Main{s -> Debug#(St#(base.Try#{(base.KeyStroke#"NOPE").get}))}
+""", List.of()));
+  }
+  @Test void aForgedAssetOfAPackageThatDoesNotExistHasNoJavaName(@TempDir Path tmp){
+    utils.Err.strCmp("""
+Invalid asset descriptor.
+This file was not recognized by the compiler as auto-imported.
+package: _nosuch
+diskPath: _nosuch/x.dat
+""", dataRun(tmp, """
+Forged: base.TxtFile{
+  .path: base.Str -> "fear:/_nosuch/x.dat";
+  .diskPath: base.Str -> "_nosuch/x.dat";
+  .zipSteps: base.Str -> "";
+  .zipEntry: base.Str -> "";
+  .originalFileName: base.Str -> "x.dat";
+  }
+Read: Main{s -> Debug#(St#(s.try#(s.iso.close, {t -> Forged.readStrUtf8(t.assetRead, Recover)})))}
 """, List.of()));
   }
   static Map<String,String> files(MainsInfo info){ return info.mains().entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().file())); }
