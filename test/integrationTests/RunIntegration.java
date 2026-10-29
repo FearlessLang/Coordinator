@@ -28,6 +28,7 @@ import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
 import java.security.SecureRandom;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
@@ -1613,6 +1614,28 @@ Linear: Main{s -> base.Block#
 """, dataLinks(data, data)));
     var reds= reds(ImageIO.read(data.resolve("srgb.png").toFile()), 0);
     assertTrue(reds.stream().allMatch(r -> Math.abs(r - 188) <= 6), () -> "A linear gray of 128 is the sRGB gray 188, not "+reds);
+  }
+  @Test void anImageThatCannotBeDecodedSaysWhy(@TempDir Path tmp) throws IOException{
+    var data= dataProject(tmp);
+    var img= new BufferedImage(64, 64, BufferedImage.TYPE_INT_RGB);
+    for (int y= 0; y < 64; y += 1){ for (int x= 0; x < 64; x += 1){ img.setRGB(x, y, x * 4 << 16 | y * 4); } }
+    var png= new ByteArrayOutputStream();
+    ImageIO.write(img, "png", png);
+    Fs.write(data.resolve("cut.png"), Arrays.copyOf(png.toByteArray(), png.size() / 2));
+    Fs.write(data.resolve("text.png"), "not an image".getBytes(UTF_8));
+    utils.Err.strCmp("""
+Image asset could not be read.
+path: [###]text.png
+the data is not an image in a format that can be read
+Image asset could not be read.
+path: [###]cut.png
+the image data is damaged, or ends before the image does
+""", dataRun(tmp, """
+Bad: Main{s -> base.Block#
+  .do{Debug#(St#(s.try#(s.iso.close, {t -> base.Block#(t.dataRead(Pub).read(L#("text.png")).readImage(1000000), "read")})))}
+  .return{Debug#(St#(s.try#(s.iso.close, {t -> base.Block#(t.dataRead(Pub).read(L#("cut.png")).readImage(1000000), "read")})))}
+  }
+""", dataLinks(data, data)));
   }
   @Test void aResourceDeletedAfterItIsOpenedIsADeterministicError(@TempDir Path tmp){
     var data= dataProject(tmp);
