@@ -833,6 +833,32 @@ Hello:Main{s->base.Debug#(`hi`)}
 """);
     utils.Err.strCmp("hi\n", coordinator(root).main(root, stLib));
   }
+  @Test void aSingletonZeroArgumentImmMethodKeepsItsFailure(@TempDir Path tmp) throws InterruptedException{
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_col/_rank_app.fear
+iii
+use base.Main as Main;
+use base.Block as Block;
+use base.Debug as Debug;
+use base.Str as Str;
+use base.Error as Error;
+use base.System as System;
+Answer:{ #: Str -> Block#(Debug#("computing"), Error.msg "boom") }
+Ask:{ #(s: mut System): Str -> s.try#{Answer#}.run{.ok x -> x; .info i -> (i.getMap.get "msg").getMsg} }
+Hello:Main{s->Block#
+  .do{ Debug#(Ask#(s)) }
+  .do{ Debug#(Ask#(s)) }
+  .done
+  }
+""");
+    utils.Err.strCmp("""
+computing
+boom
+boom
+""", coordinator(root).main(root, stLib));
+  }
   @Test void aSingletonRunsAZeroArgumentImmMethodOnlyOneTime(@TempDir Path tmp) throws InterruptedException{
     var root= tmp.resolve("root");
     UserError.root = root;
