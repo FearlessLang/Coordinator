@@ -946,7 +946,10 @@ use base.Debug as Debug;
 use base.Enum as Enum;
 use base.Enums as Enums;
 use base.Lists as Lists;
+use base.Norm as Norm;
+use base.Cache as Cache;
 Suit: Enum[Suit]{ read .close->this; .close->::;
+  .norm: Norm[Suit] -> Cache.normCaptureFree(this,{::});
   Suits: Enums[Suit]{Block#(Debug#("listing suits"), Lists#(
     Hearts: Suit{},
     Spades: Suit{}
@@ -964,6 +967,7 @@ Hello:Main{s->Block#
   .do{ Debug#(Suits.list.size) }
   .do{ Debug#(Suits.list.size) }
   .do{ Debug#(Silver.index) }
+  .do{ Debug#(Spades.norm.get.index) }
   .done
   }
 """);
@@ -974,6 +978,7 @@ listing suits
 2
 2
 listing coins
+1
 1
 """, coordinator(root).main(root, stLib));
   }
