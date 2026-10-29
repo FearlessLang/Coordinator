@@ -902,6 +902,81 @@ onceF
 5
 """, coordinator(root).main(root, stLib));
   }
+  @Test void aCaptureFreeObjectIsACacheKey(@TempDir Path tmp) throws InterruptedException{
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_col/_rank_app.fear
+iii
+use base.Main as Main;
+use base.Block as Block;
+use base.Debug as Debug;
+use base.Str as Str;
+use base.Cache as Cache;
+use base.CacheF as CacheF;
+use base.CaptureFree as CaptureFree;
+Letter:CaptureFree{ .n: Str }
+A:Letter{ .n -> "a" }
+B:Letter{ .n -> "b" }
+Show:CacheF[Letter,Str]{ x -> Block#(Debug#("computing "+(x.get.n)), x.get.n) }
+Hello:Main{s->Block#
+  .do{ Debug#(Cache#(Cache.normCaptureFree[Letter](A,{::}), Show)) }
+  .do{ Debug#(Cache#(Cache.normCaptureFree[Letter](A,{::}), Show)) }
+  .do{ Debug#(Cache#(Cache.normCaptureFree[Letter](B,{::}), Show)) }
+  .done
+  }
+""");
+    utils.Err.strCmp("""
+computing a
+a
+a
+computing b
+b
+""", coordinator(root).main(root, stLib));
+  }
+  @Test void anEnumerationFamilyListsItsValuesOneTime(@TempDir Path tmp) throws InterruptedException{
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_col/_rank_app.fear
+iii
+use base.Main as Main;
+use base.Block as Block;
+use base.Debug as Debug;
+use base.Enum as Enum;
+use base.Enums as Enums;
+use base.Lists as Lists;
+Suit: Enum[Suit]{ read .close->this; .close->::;
+  Suits: Enums[Suit]{Block#(Debug#("listing suits"), Lists#(
+    Hearts: Suit{},
+    Spades: Suit{}
+    ))};
+  }
+Coin: Enum[Coin]{ read .close->this; .close->::;
+  Coins: Enums[Coin]{Block#(Debug#("listing coins"), Lists#(
+    Gold: Coin{},
+    Silver: Coin{}
+    ))};
+  }
+Hello:Main{s->Block#
+  .do{ Debug#(Hearts.index) }
+  .do{ Debug#(Spades.index) }
+  .do{ Debug#(Suits.list.size) }
+  .do{ Debug#(Suits.list.size) }
+  .do{ Debug#(Silver.index) }
+  .done
+  }
+""");
+    utils.Err.strCmp("""
+listing suits
+0
+1
+2
+2
+listing coins
+1
+""", coordinator(root).main(root, stLib));
+  }
   @Test void anAssetWhoseNameStartsWithUnderscoreAutoLoadsAsAPrivateType(@TempDir Path tmp) throws InterruptedException{
     var root= tmp.resolve("root");
     UserError.root = root;

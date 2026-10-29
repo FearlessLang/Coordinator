@@ -59,7 +59,7 @@ public final class Backend{
       sb.a("  void _reprCacheFlush();\n");
     }
     if (!abstractOnly){ sb.a(nameMethod(l, "default")); }
-    if (hasInstance){ sb.a("  "+iface+" instance= new _Instance();\n  final class _Instance implements "+iface+"{"+onceMethods(l, iface)+"}\n"+cacheField(l)); }
+    if (hasInstance){ sb.a("  "+iface+" instance= new _Instance();\n  final class _Instance implements "+iface+selfNorm(l)+onceMethods(l, iface)+"}\n"+cacheField(l)); }
     Fs.writeUtf8(out.resolve(iface+".java"), sb.a("}").toString());
     if (hasInstance && MainsInfo.isMain(l)){ mains.put(l.name().s(), iface); preloaded.put(l.name().s(), preloaded(l)); }
     fixers.add(sb);
@@ -79,6 +79,11 @@ public final class Backend{
       if (implementsType(l, "base.CacheF", shape+1) || implementsType(l, "base.CacheMemo", shape+1)){ return "  "+t+" _cache= new "+t+"(1, instance);\n  default "+t+" _cache"+shape+"(){ return _cache; }\n"; }
     }
     return "";
+  }
+  private static String selfNorm(Literal l){
+    if (!LiteralDeclarations.has(l.cs(), LiteralDeclarations.captureFree)){ return "{"; }
+    assert l.ms().stream().noneMatch(m -> m.sig().m().equals(new MName(".get", 0)) || m.sig().m().equals(new MName(".as", 1))) : l.name();
+    return ", _base.Norm$o$1{ public Object imm$get$0(){ return this; }";
   }
   private String onceMethods(Literal l, String iface){
     if (implementsType(l, "base.CacheHandler", 0)){ return ""; }
