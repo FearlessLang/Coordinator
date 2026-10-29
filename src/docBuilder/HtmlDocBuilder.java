@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -77,7 +78,7 @@ public final class HtmlDocBuilder{
       else{ t.imported(m, inheritedMethods(l, m)); }
     }
   }
-  public Optional<Ref> complete(Optional<URI> testsUri){
+  public Optional<Ref> complete(Optional<URI> testsUri, Function<TName,String> pkgNames){
     assert Require.nonNull(pkgName, htmlPath);
     var resolver= new DocResolver(pkgName, types, other);
     var spans= new HashMap<DocOcc,Map<Integer,DocLink>>();
@@ -89,9 +90,9 @@ public final class HtmlDocBuilder{
     var renderer= new HtmlDocRenderer(pkgName, DocNames.uses(pkgName, currentByName.values()), types, other, spans, baseDocLocation);
     Fs.writeUtf8(htmlPath, renderer.render());
     Fs.writeUtf8(htmlPath.resolveSibling(pkgName+".txt"), renderer.renderText());
-    return testsRoot.flatMap(r -> testsUri.flatMap(u -> writeTest(renderer, new PathEntry(r, Path.of(u.getPath().substring(1))))));
+    return testsRoot.flatMap(r -> testsUri.flatMap(u -> writeTest(renderer, new PathEntry(r, Path.of(u.getPath().substring(1))), pkgNames)));
   }
-  Optional<Ref> writeTest(HtmlDocRenderer renderer, PathEntry tests){
+  Optional<Ref> writeTest(HtmlDocRenderer renderer, PathEntry tests, Function<TName,String> pkgNames){
     var path= tests.root().resolve(tests.local());
     var old= Fs.exists(path) ? Fs.readUtf8(path) : generatedMark;
     if (!generated(old)){ return Optional.empty(); }
@@ -100,7 +101,7 @@ public final class HtmlDocBuilder{
     if (names.perType().isEmpty() || declared.containsKey(names.top())){ remove(path); return Optional.empty(); }
     names.perType().stream().filter(declared::containsKey).findFirst()
       .ifPresent(n -> { throw Report.generatedTestNameReserved(reservedNameProblem(declared.get(n)), names.top()); });
-    var test= renderer.renderTest();
+    var test= renderer.renderTest(pkgNames);
     if (!old.equals(test)){ Fs.writeUtf8(path, test); }
     return Optional.of(tests);
   }

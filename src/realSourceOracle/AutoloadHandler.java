@@ -2,9 +2,11 @@ package realSourceOracle;
 
 import java.nio.file.Path;
 import java.util.List;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
+import core.LiteralDeclarations;
 import core.TName;
 import tools.Fs;
 import tools.SourceOracle;
@@ -12,14 +14,15 @@ import userMessages.Report;
 import utils.Bug;
 import utils.Join;
 
-public record AutoloadHandler(Predicate<String> matches, String baseType){
-  String generate(SourceOracleWithAutoload.Triple t, String path, String type){
-    return type+": "+baseType+"{\n"
-      +"  .path: base.Str -> \""+path+"\";\n"
-      +"  .diskPath: base.Str -> \""+t.diskPath()+"\";\n"
-      +"  .zipSteps: base.Str -> \""+t.zipSteps()+"\";\n"
-      +"  .zipEntry: base.Str -> \""+t.zipEntry()+"\";\n"
-      +"  .originalFileName: base.Str -> \""+components(path).getLast()+"\";\n"
+public record AutoloadHandler(Predicate<String> matches, TName baseType){
+  String generate(SourceOracleWithAutoload.Triple t, String path, String type, Function<TName,String> names){
+    var str= names.apply(LiteralDeclarations.baseStr);
+    return type+": "+names.apply(baseType)+"{\n"
+      +"  .path: "+str+" -> \""+path+"\";\n"
+      +"  .diskPath: "+str+" -> \""+t.diskPath()+"\";\n"
+      +"  .zipSteps: "+str+" -> \""+t.zipSteps()+"\";\n"
+      +"  .zipEntry: "+str+" -> \""+t.zipEntry()+"\";\n"
+      +"  .originalFileName: "+str+" -> \""+components(path).getLast()+"\";\n"
       +"}\n";
   }
   static SourceOracleWithAutoload.Triple triple(SourceOracle.Ref ref){ return switch (ref){

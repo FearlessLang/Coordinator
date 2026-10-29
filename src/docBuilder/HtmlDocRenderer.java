@@ -23,6 +23,7 @@ import offensiveUtils.Require;
 import tools.Fs;
 import utils.Bug;
 import utils.Join;
+import utils.Pos;
 import utils.OneOr;
 import utils.Range;
 
@@ -91,16 +92,17 @@ final class HtmlDocRenderer{
     var noPrimes= s.replaceAll("'+$", "");
     return "_"+noPrimes+"_Examples"+(n.arity()==0 ? "" : "_"+n.arity())+s.substring(noPrimes.length());
   }
-  String renderTest(){
+  String renderTest(Function<TName,String> pkgNames){
     var shown= testableTypes();
     var names= testNames();
+    var test= pkgNames.apply(new TName("base.Test", 0, Pos.unknown));
     var sb= new StringBuilder(4_000).append(HtmlDocBuilder.generatedMark).append(pkgName).append("; any edit is overwritten\n\n");
     for (int i : Range.of(shown)){
-      sb.append(names.perType().get(i)).append(": base.Test {::\n");
-      docGroups(shown.get(i)).forEach(d -> sb.append(Join.of(testLines(d), "  .test base.Test{::\n", "\n", "\n  }\n", "")));
+      sb.append(names.perType().get(i)).append(": ").append(test).append(" {::\n");
+      docGroups(shown.get(i)).forEach(d -> sb.append(Join.of(testLines(d), "  .test "+test+"{::\n", "\n", "\n  }\n", "")));
       sb.append("  }\n\n");
     }
-    sb.append(names.top()).append(": base.UnitTests {::\n");
+    sb.append(names.top()).append(": ").append(pkgNames.apply(new TName("base.UnitTests", 0, Pos.unknown))).append(" {::\n");
     names.perType().forEach(n -> sb.append("  .test ").append(n).append('\n'));
     sb.append("  }\n");
     return sb.toString();

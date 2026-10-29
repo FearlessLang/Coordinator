@@ -356,7 +356,7 @@ AllAutoTests_p: base.UnitTests {::
   }
   @Test void aFileWithoutTheMarkAtTheGeneratedLocationIsAnOrdinarySourceFile(@TempDir Path tmp) throws IOException{
     var root= docExamplesProject(tmp);
-    var mine= "Mine:base.Main{s->base.Debug#(`mine`)}\n";
+    var mine= "Mine:Main{s->Debug#(`mine`)}\n";
     Fs.writeUtf8(generatedTests(root), mine);
     utils.Err.strCmp("hi\nmine\n", main(root, List.of()));
     assertEquals(mine, Fs.readUtf8(generatedTests(root)));
@@ -2804,6 +2804,281 @@ While inspecting package header
 "use" directive refers to package "z", which has the same rank as package "a".
 Package "a" has rank "core999" ("_rank_core.fear") and package "z" has rank "core999" ("_rank_core999.fear").
 A package can only use packages of a lower rank.
+Error 7 WellFormedness
+""", ex.getMessage());
+  }
+  static void versions(Path root){
+    FsDsl.materialize(root, """
+_webserver_v12/_rank_core100.fear
+iii
+use base.Str as Str;
+Server:{ .version: Str -> "v12" }
+jjj
+_webserver_v13/_rank_core200.fear
+iii
+use base.Str as Str;
+Server:{ .version: Str -> "v13" }
+jjj
+_shop/_rank_app100.fear
+iii
+use base.Str as Str;
+map webserver as webserver_v12 in shop;
+Shop:{ .server: Str -> webserver.Server.version }
+jjj
+_blog/_rank_app200.fear
+iii
+use base.Str as Str;
+map webserver as webserver_v13 in blog;
+use webserver.Server as Server;
+Blog:{ .server: Str -> Server.version }
+jjj
+_app/_rank_app999.fear
+iii
+use base.Main as Main;
+Hello:Main{s->base.Debug#("shop "+(shop.Shop.server)+", blog "+(blog.Blog.server))}
+""");
+  }
+  @Test void twoPackagesUseTwoVersionsOfTheSamePackageThroughTheSameVirtualName(@TempDir Path tmp) throws InterruptedException{
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    versions(root);
+    utils.Err.strCmp("shop v12, blog v13\n", coordinator(root).main(root, stLib));
+  }
+  @Test void aHigherRankPackageChoosesTheVersionUsedByALowerRankPackage(@TempDir Path tmp) throws InterruptedException{
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_foo_v4/_rank_core100.fear
+iii
+use base.Str as Str;
+Foo:{ .version: Str -> "v4" }
+jjj
+_foo_v5/_rank_core200.fear
+iii
+use base.Str as Str;
+Foo:{ .version: Str -> "v5" }
+jjj
+_lib/_rank_driver.fear
+iii
+use base.Str as Str;
+map foo as foo_v4 in lib;
+Lib:{ .foo: Str -> foo.Foo.version }
+jjj
+_app/_rank_app.fear
+iii
+use base.Main as Main;
+map foo as foo_v5 in lib;
+Hello:Main{s->base.Debug#("lib uses "+(lib.Lib.foo))}
+""");
+    utils.Err.strCmp("lib uses v5\n", coordinator(root).main(root, stLib));
+  }
+  @Test void withoutAnOverrideALowerRankPackageKeepsItsOwnVersion(@TempDir Path tmp) throws InterruptedException{
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_foo_v4/_rank_core100.fear
+iii
+use base.Str as Str;
+Foo:{ .version: Str -> "v4" }
+jjj
+_foo_v5/_rank_core200.fear
+iii
+use base.Str as Str;
+Foo:{ .version: Str -> "v5" }
+jjj
+_lib/_rank_driver.fear
+iii
+use base.Str as Str;
+map foo as foo_v4 in lib;
+Lib:{ .foo: Str -> foo.Foo.version }
+jjj
+_app/_rank_app.fear
+iii
+use base.Main as Main;
+map foo as foo_v5 in app;
+Hello:Main{s->base.Debug#("lib uses "+(lib.Lib.foo)+", app uses "+(foo.Foo.version))}
+""");
+    utils.Err.strCmp("lib uses v4, app uses v5\n", coordinator(root).main(root, stLib));
+  }
+  @Test void aVersionedPackageIsNotReachableByItsRealNameThroughAVirtualName(@TempDir Path tmp) throws InterruptedException{
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_webserver_v12/_rank_core100.fear
+iii
+use base.Str as Str;
+Server:{ .version: Str -> "v12" }
+jjj
+_app/_rank_app.fear
+iii
+use base.Main as Main;
+map webserver as webserver_v12 in app;
+Hello:Main{s->base.Debug#(webserver_v12.Server.version)}
+""");
+    var ex= assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib));
+    utils.Err.strCmp("""
+In file: fear:/_app/_rank_app.fear
+
+003| Hello:Main{s->base.Debug#(webserver_v12.Server.version)}
+   |                           ^^^^^^^^^^^^^^^^^^^^^
+
+While inspecting a type name
+Type "webserver_v12.Server" is written "webserver.Server" in package "app", because of "map webserver as webserver_v12 in app".
+In a package, each name refers to a single package or type, and each package or type has a single name.
+Error 7 WellFormedness
+""", ex.getMessage());
+  }
+  @Test void virtualizationMapOfAnExistingPackage(@TempDir Path tmp) throws InterruptedException{
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_a/_rank_core100.fear
+iii
+use base.Str as Str;
+A:{ .text: Str -> "a" }
+jjj
+_c/_rank_core200.fear
+iii
+use base.Str as Str;
+A:{ .text: Str -> "c" }
+jjj
+_b/_rank_app.fear
+iii
+use base.Main as Main;
+map a as c in b;
+map c as a in b;
+Hello:Main{s->base.Debug#(a.A.text)}
+""");
+    var ex= assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib));
+    utils.Err.strCmp("""
+For package "b", the virtual package name "a" is mapped to "c",
+but "a" is the name of an existing package:
+ - fear:/_b/_rank_app.fear
+   "map  a  as  c  in  b;"
+A map gives a name to a package that does not exist; it can not hide an existing package.
+Error 7 WellFormedness
+""", ex.getMessage());
+  }
+  @Test void virtualizationTwoVirtualNamesForTheSameRealPackage(@TempDir Path tmp) throws InterruptedException{
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_c/_rank_core.fear
+iii
+use base.Str as Str;
+A:{ .text: Str -> "c" }
+jjj
+_b/_rank_app.fear
+iii
+use base.Main as Main;
+map a as c in b;
+map d as c in b;
+Hello:Main{s->base.Debug#(a.A.text)}
+""");
+    var ex= assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib));
+    utils.Err.strCmp("""
+For package "b", the real package "c" is mapped from different virtual package names:
+ - fear:/_b/_rank_app.fear
+   "map  a  as  c  in  b;"
+ - fear:/_b/_rank_app.fear
+   "map  d  as  c  in  b;"
+In a package, each name refers to a single package or type, and each package or type has a single name.
+Error 7 WellFormedness
+""", ex.getMessage());
+  }
+  @Test void virtualizationMapToTheTargetItself(@TempDir Path tmp) throws InterruptedException{
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_b/_rank_app.fear
+iii
+use base.Main as Main;
+map me as b in b;
+Hello:Main{s->base.Debug#(`b`)}
+""");
+    var ex= assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib));
+    utils.Err.strCmp("""
+For package "b", the virtual package name "me" is mapped to "b" itself:
+ - fear:/_b/_rank_app.fear
+   "map  me  as  b  in  b;"
+The types of package "b" are written by their simple names.
+Error 7 WellFormedness
+""", ex.getMessage());
+  }
+  @Test void virtualizationMapInAPackageThatDoesNotExist(@TempDir Path tmp) throws InterruptedException{
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_pka/_rank_app999.fear
+iii
+use base.Main as Main;
+map a as pkc in pkbb;
+Hello:Main{s->base.Debug#(pkb.B.text)}
+jjj
+_pkb/_rank_app200.fear
+iii
+use base.Str as Str;
+B:{.text:Str->a.C.text;}
+jjj
+_pkc/_rank_app100.fear
+iii
+use base.Str as Str;
+C:{.text:Str->"c";}
+""");
+    var ex= assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib));
+    utils.Err.strCmp("""
+For package "pkbb", the virtual package name "a" is mapped to "pkc",
+but package "pkbb" does not exist:
+ - fear:/_pka/_rank_app999.fear
+   "map  a  as  pkc  in  pkbb;"
+Did you mean "pkb" ?
+Existing packages: "pka", "pkb", "pkc".
+Error 7 WellFormedness
+""", ex.getMessage());
+  }
+  @Test void virtualizationMapInBase(@TempDir Path tmp) throws InterruptedException{
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_pka/_rank_app999.fear
+iii
+use base.Main as Main;
+map a as pka in base;
+Hello:Main{s->base.Debug#(`hi`)}
+""");
+    var ex= assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib));
+    utils.Err.strCmp("""
+For package "base", the virtual package name "a" is mapped to "pka",
+but the names written in package "base" can not be mapped:
+ - fear:/_pka/_rank_app999.fear
+   "map  a  as  pka  in  base;"
+Error 7 WellFormedness
+""", ex.getMessage());
+  }
+  @Test void virtualizationMapToAHigherRankPackage(@TempDir Path tmp) throws InterruptedException{
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_pka/_rank_app999.fear
+iii
+use base.Main as Main;
+map a as pka in pkb;
+Hello:Main{s->base.Debug#(pkb.B.text)}
+T:{.text:base.Str->"t";}
+jjj
+_pkb/_rank_app200.fear
+iii
+use base.Str as Str;
+B:{.text:Str->a.T.text;}
+""");
+    var ex= assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib));
+    utils.Err.strCmp("""
+For package "pkb", the virtual package name "a" is mapped to "pka",
+but package "pka" has a higher rank than package "pkb":
+ - fear:/_pka/_rank_app999.fear
+   "map  a  as  pka  in  pkb;"
+Package "pkb" has rank "app200" ("_rank_app200.fear") and package "pka" has rank "app999" ("_rank_app999.fear").
+A package can only refer to packages of a lower rank.
 Error 7 WellFormedness
 """, ex.getMessage());
   }
