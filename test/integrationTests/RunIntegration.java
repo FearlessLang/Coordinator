@@ -902,6 +902,34 @@ onceF
 5
 """, coordinator(root).main(root, stLib));
   }
+  @Test void aFlushReachesAZeroArgumentMethodReturningACachedResult(@TempDir Path tmp) throws InterruptedException{
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_col/_rank_app.fear
+iii
+use base.Main as Main;
+use base.Block as Block;
+use base.Debug as Debug;
+use base.Nat as Nat;
+use base.Cache as Cache;
+use base.CacheF as CacheF;
+Answer:{ #: Nat -> Cache#(AnswerF) }
+AnswerF:CacheF[Nat]{ Block#(Debug#("computing"), 42) }
+Hello:Main{s->Block#
+  .do{ Debug#(Answer#) }
+  .do{ Cache.flush(AnswerF) }
+  .do{ Debug#(Answer#) }
+  .done
+  }
+""");
+    utils.Err.strCmp("""
+computing
+42
+computing
+42
+""", coordinator(root).main(root, stLib));
+  }
   @Test void anAssetWhoseNameStartsWithUnderscoreAutoLoadsAsAPrivateType(@TempDir Path tmp) throws InterruptedException{
     var root= tmp.resolve("root");
     UserError.root = root;
