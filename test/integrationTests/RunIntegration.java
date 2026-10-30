@@ -3615,6 +3615,118 @@ Lib:{ .foo(f: Foo): Str -> f.legacy }
 jjj
 """+fooApp("")));
   }
+  static final String fooV7= """
+_foo_v7/_rank_core700.fear
+iii
+use base.Str as Str;
+Foo:{ .version: Str -> "v7"; .legacy: Str -> "legacy" }
+Legacy:{}
+jjj
+""";
+  static final String fooNote= "Source code inside folders named \"_lib\" uses package name \"foo\" to refer to the code inside folders named \"_foo_v5\", because of \"map foo as _foo_v5 in _lib\", written in fear:/_app/_rank_app.fear.";
+  @Test void aMethodErrorInALibraryWithItsOwnPinAndAnOverrideCitesTheApplication(@TempDir Path tmp){
+    utils.Err.strCmp("""
+In file: fear:/_lib/_rank_driver.fear
+
+004| Lib:{ .foo: Str -> Foo.legacy }
+[###]
+While inspecting ".foo" line 4
+This call to method ".legacy" cannot typecheck.
+Method ".legacy" is not declared on type "Foo".
+
+Available methods on type "Foo":
+-       .version:Str
+
+Name "Foo" stands for "foo.Foo" because of "use foo.Foo as Foo".
+"""+fooNote+"""
+
+
+Compressed relevant code with inferred types: (compression indicated by `-`)
+[###]
+Error 8 TypeError
+""", mapsError(tmp, foos+fooV7+"""
+_lib/_rank_driver.fear
+iii
+use base.Str as Str;
+map foo as _foo_v7 in _lib;
+use foo.Foo as Foo;
+Lib:{ .foo: Str -> Foo.legacy }
+jjj
+"""+fooApp("map foo as _foo_v5 in _lib instead of _foo_v7;\n")));
+  }
+  @Test void anUndeclaredTypeInALibraryWithItsOwnPinAndAnOverrideCitesTheApplication(@TempDir Path tmp){
+    utils.Err.strCmp("""
+In file: fear:/_lib/_rank_driver.fear
+
+004| Lib:{ .foo: Str -> Foo.version; .old(l: foo.Legacy): Str -> "old" }
+[###]
+While inspecting a type name
+Type "Legacy" is not declared in package "foo".
+In scope: "Foo".
+[###]
+Name "Foo" stands for "foo.Foo" because of "use foo.Foo as Foo".
+"""+fooNote+"""
+
+Error 7 WellFormedness
+""", mapsError(tmp, foos+fooV7+"""
+_lib/_rank_driver.fear
+iii
+use base.Str as Str;
+map foo as _foo_v7 in _lib;
+use foo.Foo as Foo;
+Lib:{ .foo: Str -> Foo.version; .old(l: foo.Legacy): Str -> "old" }
+jjj
+"""+fooApp("map foo as _foo_v5 in _lib instead of _foo_v7;\n")));
+  }
+  static String httpProject(String appMaps){ return Stream.of("1", "2").map(v -> """
+_http_vV/_rank_coreV00.fear
+iii
+use base.Str as Str;
+Request:{ .path: Str }
+Response:{ .body: Str }
+Handler:{ #(r: Request): Response }
+Server:{ .serve(h: Handler, path: Str): Str -> "[httpV] "+(h#(Request{ .path -> path }).body) }
+jjj
+""".replace("V", v)).collect(Collectors.joining())+"""
+_blog/_rank_framework100.fear
+iii
+use base.Str as Str;
+map http as _http_v1 in _blog;
+use http.Handler as Handler;
+use http.Response as Response;
+Blog:{ .home: Str -> http.Server.serve(Handler{ r -> Response{ .body -> "blog at "+(r.path) } }, "/blog") }
+jjj
+_shop/_rank_framework200.fear
+iii
+use base.Str as Str;
+map http as _http_v2 in _shop;
+use http.Server as Web;
+Shop:{
+  .home: Str -> Web.serve(http.Handler{ r -> http.Response{ .body -> "shop at "+(r.path) } }, "/shop");
+  .handle(r: http.Request): Str -> "shop handles "+(r.path);
+  }
+jjj
+_app/_rank_app.fear
+iii
+use base.Main as Main;
+map web as _http_v2 in _app;
+"""+appMaps+"""
+Hello:Main{s->base.Debug#((blog.Blog.home)+", "+(shop.Shop.home)+", "+(shop.Shop.handle(web.Request{ .path -> "/cart" })))}
+"""; }
+  @Test void twoFrameworksOnTwoVersionsOfAWebLibraryRunTogether(@TempDir Path tmp) throws InterruptedException{
+    utils.Err.strCmp("[http1] blog at /blog, [http2] shop at /shop, shop handles /cart\n", mapsRun(tmp, httpProject("")));
+  }
+  @Test void anApplicationUpgradesTheWebLibraryOfOneFramework(@TempDir Path tmp) throws InterruptedException{
+    utils.Err.strCmp("[http2] blog at /blog, [http2] shop at /shop, shop handles /cart\n", mapsRun(tmp, httpProject("map http as _http_v2 in _blog instead of _http_v1;\n")));
+  }
+  @Test void anApplicationPassingARequestOfTheOtherVersionNamesBothMaps(@TempDir Path tmp){
+    var msg= mapsError(tmp, httpProject("").replace("map web as _http_v2 in _app;", "map web as _http_v1 in _app;"));
+    utils.Err.strCmp("""
+In file: fear:/_app/_rank_app.fear
+[###]
+Source code inside folders named "_app" uses package name "web" to refer to the code inside folders named "_http_v1", because of "map web as _http_v1 in _app", written in fear:/_app/_rank_app.fear.
+[###]""", msg);
+  }
   @Test void aZippedVersionIsReachedThroughAMap(@TempDir Path tmp) throws InterruptedException{
     utils.Err.strCmp("lib uses v9\n", mapsRun(tmp, """
 _foo_v9.zip/_rank_core100.fear
