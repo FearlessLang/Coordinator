@@ -2907,6 +2907,47 @@ Hello:Main{s->base.Debug#("lib uses "+(lib.Lib.foo))}
 """);
     utils.Err.strCmp("lib uses v5\n", coordinator(root).main(root, stLib));
   }
+  @Test void aDocReferenceUsesThePackageNameOfTheMap(@TempDir Path tmp) throws InterruptedException{
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_c/_rank_core.fear
+iii
+use base.Str as Str;
+A:{ .name: Str -> "c" }
+jjj
+_app/_rank_app.fear
+iii
+use base.Main as Main;
+map a as _c in _app;
+///Shows the name of `a.A`.
+Show:{ .of(x: a.A): base.Str -> x.name }
+App:Main{s->base.Debug#(Show.of(a.A))}
+""");
+    utils.Err.strCmp("c\n", coordinator(root).main(root, stLib));
+  }
+  @Test void aDocReferenceByTheFolderNameOfAMapIsBroken(@TempDir Path tmp) throws InterruptedException{
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_c/_rank_core.fear
+iii
+use base.Str as Str;
+A:{ .name: Str -> "c" }
+jjj
+_app/_rank_app.fear
+iii
+use base.Main as Main;
+map a as _c in _app;
+///Shows the name of `c.A`.
+Show:{ .of(x: a.A): base.Str -> x.name }
+App:Main{s->base.Debug#(Show.of(a.A))}
+""");
+    var ex= assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib));
+    utils.Err.strCmp("""
+[###]Broken reference in a doc comment.[###]
+""", ex.getMessage());
+  }
   @Test void anOverrideWithoutInsteadOfIsAnError(@TempDir Path tmp) throws InterruptedException{
     var root= tmp.resolve("root");
     UserError.root = root;

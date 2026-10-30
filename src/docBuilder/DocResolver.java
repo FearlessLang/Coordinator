@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.stream.Stream;
@@ -54,7 +55,11 @@ record DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other){
       var local= matching(types.stream().map(TypeDoc::main).filter(l -> !l.infName()).map(Literal::name), ref);
       if (!local.isEmpty() || pkg.isPresent()){ return local; }
     }
-    return matching(foreign().filter(n -> pkg.isEmpty() || n.pkgName().equals(pkg.get())), ref);
+    return matching(foreign().filter(n -> pkg.isEmpty() || written(n.pkgName()).equals(pkg.get())), ref);
+  }
+  private String written(String pkg){
+    return OneOr.opt("two names for "+pkg, other.virtualizationMap().getOrDefault(pkgName, Map.of()).entrySet().stream()
+      .filter(e -> e.getValue().split(" ")[0].equals(pkg)).map(Map.Entry::getKey)).orElse(pkg);
   }
   private Stream<TName> foreign(){
     return other.dom().stream().filter(n -> !other.__of(n).infName()).sorted(Comparator.comparing(TName::s).thenComparing(TName::arity));
