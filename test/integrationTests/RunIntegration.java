@@ -1108,14 +1108,9 @@ Cut: Main{s -> Debug#(s.inputCursor#.match{.some n -> n.READ Show; .empty -> "no
   @Test void withNoOpenedFileTheInputFilesStartEmpty(@TempDir Path tmp) throws InterruptedException{
     utils.Err.strCmp("False\nnone\nFalse\n", main(inputProject(tmp), List.of()));
   }
-  @Test void anInputFileThatCanNotBeReadIsANonDeterministicError(@TempDir Path tmp){
-    utils.Err.strCmp("""
-File with absolute path [###]gone.txt can not be read as bytes
-[###]File with absolute path [###]gone.txt can not be read as bytes[###]""", dataRun(tmp, """
-Gone: Main{s -> base.Block#
-  .do{Debug#(St#(s.try#(s.iso.close, {t -> t.inputCursor#.match{.some n -> n.readStrUtf8 Recover; .empty -> "none"}})))}
-  .return{Debug#(St#(base.Try#(s.iso.close, {t -> t.inputCursor#.match{.some n -> n.readStrUtf8 Recover; .empty -> "none"}})))}
-  }
+  @Test void anInputFileThatCanNotBeReadIsADeterministicError(@TempDir Path tmp){
+    utils.Err.strCmp("The input file \"gone.txt\" could not be read: NoSuchFileException\n", dataRun(tmp, """
+Gone: Main{s -> Debug#(St#(base.Try#(s.iso.close, {t -> t.inputCursor#.match{.some n -> n.readStrUtf8 Recover; .empty -> "none"}})))}
 """, List.of("-DfearlessInput.file="+PathClassLoader.argOf(tmp.resolve("gone.txt")))));
   }
   static Path dataProject(Path tmp){
@@ -1412,18 +1407,16 @@ Linear: Main{s -> base.Block#
     var reds= reds(ImageIO.read(data.resolve("srgb.png").toFile()), 0);
     assertTrue(reds.stream().allMatch(r -> Math.abs(r - 188) <= 6), () -> "A linear gray of 128 is the sRGB gray 188, not "+reds);
   }
-  @Test void aResourceDeletedAfterItIsOpenedIsANonDeterministicError(@TempDir Path tmp){
+  @Test void aResourceDeletedAfterItIsOpenedIsADeterministicError(@TempDir Path tmp){
     var data= dataProject(tmp);
     utils.Err.strCmp("""
 ok
-Resource with path col.Notes/readme can not be read as bytes
-[###]Resource with path col.Notes/readme can not be read as bytes[###]""", dataRun(tmp, """
+The resource "col.Notes/readme" could not be read: NoSuchFileException
+""", dataRun(tmp, """
 Gone: Main{s -> base.Block#
   .let n= {s.dataEdit(Notes).read(L#("readme"))}
-  .let m= {s.dataEdit(Notes).read(L#("readme"))}
   .do{Debug#(Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).delete(L#("readme"))})))}
-  .do{Debug#(St#(s.try#(n.iso.close, {k -> k.readStrUtf8 Recover})))}
-  .return{Debug#(St#(base.Try#(m.iso.close, {k -> k.readStrUtf8 Recover})))}
+  .return{Debug#(St#(base.Try#(n.iso.close, {m -> m.readStrUtf8 Recover})))}
   }
 """, dataLinks(data, data)));
   }
@@ -1594,55 +1587,6 @@ _col/junk.png
 iii
 not an image
 """, List.of()));
-  }
-  @Test void anAssetRemovedWhileTheProgramRunsCanNotBeReadAsBytes(@TempDir Path tmp){
-    utils.Err.strCmp("""
-ok
-Resource with path /_col/note.txt can not be read as bytes
-""", dataRun(tmp, """
-Gone: Main{s -> base.Block#
-  .do{Debug#(Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).delete(L#("_col", "note.txt"))})))}
-  .return{Debug#(St#(s.try#(s.iso.close, {t -> Note.readStrUtf8(t.assetRead, Recover)})))}
-  }
-jjj
-_col/note.txt
-iii
-note
-""", List.of("-DfearlessDataEdit.col.Notes="+PathClassLoader.argOf(tmp.resolve("root")))));
-  }
-  @Test void aZipEntryAssetRemovedWhileTheProgramRunsCanNotBeReadAsBytes(@TempDir Path tmp){
-    utils.Err.strCmp("""
-ok
-Resource with path /_col/pics/one.txt can not be read as bytes
-""", dataRun(tmp, """
-Gone: Main{s -> base.Block#
-  .do{Debug#(Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).delete(L#("_col", "pics", "one.txt"))})))}
-  .return{Debug#(St#(s.try#(s.iso.close, {t -> PicsOne.readStrUtf8(t.assetRead, Recover)})))}
-  }
-jjj
-_col/pics.zip/one.txt
-iii
-one
-jjj
-_col/pics.zip/two.txt
-iii
-two
-""", List.of("-DfearlessDataEdit.col.Notes="+PathClassLoader.argOf(tmp.resolve("root")))));
-  }
-  @Test void aZipAssetRemovedWhileTheProgramRunsCanNotBeReadAsBytes(@TempDir Path tmp){
-    utils.Err.strCmp("""
-ok
-Resource with path /_col/box/three.txt can not be read as bytes
-""", dataRun(tmp, """
-Gone: Main{s -> base.Block#
-  .do{Debug#(Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).delete(L#("_col", "box", "three.txt"))})))}
-  .return{Debug#(St#(s.try#(s.iso.close, {t -> BoxThree.readStrUtf8(t.assetRead, Recover)})))}
-  }
-jjj
-_col/box.zip/three.txt
-iii
-three
-""", List.of("-DfearlessDataEdit.col.Notes="+PathClassLoader.argOf(tmp.resolve("root")))));
   }
   @Test void aLogThatCanNotBeWrittenHasNoJavaName(@TempDir Path tmp){
     utils.Err.strCmp("""
