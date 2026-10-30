@@ -1624,11 +1624,12 @@ Linear: Main{s -> base.Block#
     Fs.write(data.resolve("cut.png"), Arrays.copyOf(png.toByteArray(), png.size() / 2));
     Fs.write(data.resolve("text.png"), "not an image".getBytes(UTF_8));
     var in= Fs.write(tmp.resolve("in.png"), "not an image".getBytes(UTF_8));
-    var standards= " can not be decoded as an image according to standards PNG (ISO/IEC 15948:2004), JPEG (ISO/IEC 10918-1:1994), WebP (RFC 9649), GIF (GIF89a), BMP (Windows bitmap up to BITMAPV5HEADER), ICO (Windows icon) and WBMP (WAP-237, type 0)\n";
-    utils.Err.strCmp("Resource with path col.Pub/text.png"+standards
-      +"Resource with path col.Pub/cut.png"+standards
-      +"Resource with path /_col/junk.png"+standards
-      +"File with absolute path "+in.toAbsolutePath()+standards, dataRun(tmp, """
+    utils.Err.strCmp("""
+Resource with path col.Pub/text.png can not be decoded as an image according to standards PNG (ISO/IEC 15948:2004), JPEG (ISO/IEC 10918-1:1994), WebP (RFC 9649), GIF (GIF89a), BMP (Windows bitmap up to BITMAPV5HEADER), ICO (Windows icon) and WBMP (WAP-237, type 0)
+Resource with path col.Pub/cut.png can not be decoded as an image according to standards PNG (ISO/IEC 15948:2004), JPEG (ISO/IEC 10918-1:1994), WebP (RFC 9649), GIF (GIF89a), BMP (Windows bitmap up to BITMAPV5HEADER), ICO (Windows icon) and WBMP (WAP-237, type 0)
+Resource with path /_col/junk.png can not be decoded as an image according to standards PNG (ISO/IEC 15948:2004), JPEG (ISO/IEC 10918-1:1994), WebP (RFC 9649), GIF (GIF89a), BMP (Windows bitmap up to BITMAPV5HEADER), ICO (Windows icon) and WBMP (WAP-237, type 0)
+File with absolute path TMP/in.png can not be decoded as an image according to standards PNG (ISO/IEC 15948:2004), JPEG (ISO/IEC 10918-1:1994), WebP (RFC 9649), GIF (GIF89a), BMP (Windows bitmap up to BITMAPV5HEADER), ICO (Windows icon) and WBMP (WAP-237, type 0)
+""".replace("TMP/in.png", in.toAbsolutePath().toString()), dataRun(tmp, """
 Images: Main{s -> base.Block#
   .do{Debug#(St#(base.Try#(s.iso.close, {t -> base.Block#(t.dataRead(Pub).read(L#("text.png")).readImage(1000000), "read")})))}
   .do{Debug#(St#(base.Try#(s.iso.close, {t -> base.Block#(t.dataRead(Pub).read(L#("cut.png")).readImage(1000000), "read")})))}
