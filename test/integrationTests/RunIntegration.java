@@ -1615,7 +1615,7 @@ Linear: Main{s -> base.Block#
     var reds= reds(ImageIO.read(data.resolve("srgb.png").toFile()), 0);
     assertTrue(reds.stream().allMatch(r -> Math.abs(r - 188) <= 6), () -> "A linear gray of 128 is the sRGB gray 188, not "+reds);
   }
-  @Test void anImageThatCannotBeDecodedSaysWhy(@TempDir Path tmp) throws IOException{
+  @Test void anImageThatCanNotBeDecodedNamesTheStandards(@TempDir Path tmp) throws IOException{
     var data= dataProject(tmp);
     var img= new BufferedImage(64, 64, BufferedImage.TYPE_INT_RGB);
     for (int y= 0; y < 64; y += 1){ for (int x= 0; x < 64; x += 1){ img.setRGB(x, y, x * 4 << 16 | y * 4); } }
@@ -1623,19 +1623,23 @@ Linear: Main{s -> base.Block#
     ImageIO.write(img, "png", png);
     Fs.write(data.resolve("cut.png"), Arrays.copyOf(png.toByteArray(), png.size() / 2));
     Fs.write(data.resolve("text.png"), "not an image".getBytes(UTF_8));
-    utils.Err.strCmp("""
-Image asset could not be read.
-path: [###]text.png
-the data is not an image in a format that can be read
-Image asset could not be read.
-path: [###]cut.png
-the image data is damaged, or ends before the image does
-""", dataRun(tmp, """
-Bad: Main{s -> base.Block#
-  .do{Debug#(St#(s.try#(s.iso.close, {t -> base.Block#(t.dataRead(Pub).read(L#("text.png")).readImage(1000000), "read")})))}
-  .return{Debug#(St#(s.try#(s.iso.close, {t -> base.Block#(t.dataRead(Pub).read(L#("cut.png")).readImage(1000000), "read")})))}
+    var in= Fs.write(tmp.resolve("in.png"), "not an image".getBytes(UTF_8));
+    var standards= " can not be decoded as an image according to standards PNG (ISO/IEC 15948:2004), JPEG (ISO/IEC 10918-1:1994), WebP (RFC 9649), GIF (GIF89a), BMP (Windows bitmap up to BITMAPV5HEADER), ICO (Windows icon) and WBMP (WAP-237, type 0)\n";
+    utils.Err.strCmp("Resource with path col.Pub/text.png"+standards
+      +"Resource with path col.Pub/cut.png"+standards
+      +"Resource with path /_col/junk.png"+standards
+      +"File with absolute path "+in.toAbsolutePath()+standards, dataRun(tmp, """
+Images: Main{s -> base.Block#
+  .do{Debug#(St#(base.Try#(s.iso.close, {t -> base.Block#(t.dataRead(Pub).read(L#("text.png")).readImage(1000000), "read")})))}
+  .do{Debug#(St#(base.Try#(s.iso.close, {t -> base.Block#(t.dataRead(Pub).read(L#("cut.png")).readImage(1000000), "read")})))}
+  .do{Debug#(St#(base.Try#(s.iso.close, {t -> base.Block#(Junk.readImage(t.assetRead, 1000000), "read")})))}
+  .return{Debug#(St#(base.Try#(s.iso.close, {t -> t.inputCursor#.match{.some n -> base.Block#(n.readImage(1000000), "read"); .empty -> "none"}})))}
   }
-""", dataLinks(data, data)));
+jjj
+_col/junk.png
+iii
+not an image
+""", Push.of(dataLinks(data, data), "-DfearlessInput.file="+PathClassLoader.argOf(in))));
   }
   @Test void aResourceDeletedAfterItIsOpenedIsADeterministicError(@TempDir Path tmp){
     var data= dataProject(tmp);
