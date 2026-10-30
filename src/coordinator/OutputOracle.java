@@ -45,8 +45,8 @@ public interface OutputOracle{
   default OtherPackages addCachedPkgApi(OtherPackages other, String pkg){
     return other.mergeWith(OutputHelper.cachedPkgApi(pkgApiPath(pkg)), Math.max(other.stamp(), pkgApiStamp(pkg)));
   }//READS the pkg info and adds to other; Does not update the disk. Just reads info
-  default OtherPackages startCachedPkgApi(String pkg, Map<String,Map<String,String>> map, long stamp){
-    return OtherPackages.start(map, OutputHelper.cachedPkgApi(pkgApiPath(pkg)), stamp);
+  default OtherPackages startCachedPkgApi(String pkg, Map<String,Map<String,String>> map, Map<String,Ref> ranks, long stamp){
+    return OtherPackages.start(map, ranks, OutputHelper.cachedPkgApi(pkgApiPath(pkg)), stamp);
   }
   default long commitPkgApi(String pkg, List<Literal> core, long minExclusiveMillis){
     var res= OutputHelper.pkgApiFromJson(pkgApiPath(pkg));

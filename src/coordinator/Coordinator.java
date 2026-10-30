@@ -199,7 +199,8 @@ final class Helper{
     var map= pkgMap(o, project);
     var allRanks= map.values().stream().map(Helper::okPkgContent).toList();
     var res= rankMap(o, allRanks);
-    Layer l= new BaseLayer(coordinator, res, out.commitMap(res, allRanks.stream().mapToLong(Ref::lastModified).max().getAsLong()), stLib);
+    var ranks= allRanks.stream().collect(Collectors.toUnmodifiableMap(Helper::pkgName, r -> r));
+    Layer l= new BaseLayer(coordinator, res, ranks, out.commitMap(res, allRanks.stream().mapToLong(Ref::lastModified).max().getAsLong()), stLib);
     var byRank= new TreeMap<Integer,LinkedHashMap<String,List<Ref>>>();
     for (var r : allRanks.stream().sorted(Comparator.comparing(Ref::fearPath)).toList()){
       byRank.computeIfAbsent(rankNumber(r), _ -> new LinkedHashMap<>()).put(pkgName(r), map.get(pkgName(r)));

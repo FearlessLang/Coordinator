@@ -44,24 +44,24 @@ record MiddleLayer(Coordinator coordinator, Layer next, LinkedHashMap<String,Lis
     return nextOther;
   }
 }
-record BaseLayer(Coordinator coordinator, Map<String,Map<String,String>> map, long baseStamp, SourceOracle stLib) implements Layer{
+record BaseLayer(Coordinator coordinator, Map<String,Map<String,String>> map, Map<String,Ref> ranks, long baseStamp, SourceOracle stLib) implements Layer{
   @Override public OtherPackages compile(SourceOracle _ignoreSrc, OutputOracle out){
     var pkgName= "base";
     var cacheDir= coordinator.baseCachePath();
     if (cacheDir.isPresent()){ return deployedBaseApi(cacheDir.get(), pkgName); }
     var other= OtherPackages.empty();
     var maxIn= stLib.allFiles().stream().mapToLong(Ref::lastModified).max().getAsLong();
-    if (out.stillBuilt(pkgName, stLib.allFiles(), List.of(), maxIn)){ return out.startCachedPkgApi(pkgName, map, Math.max(baseStamp, out.pkgApiStamp(pkgName))); }
+    if (out.stillBuilt(pkgName, stLib.allFiles(), List.of(), maxIn)){ return out.startCachedPkgApi(pkgName, map, ranks, Math.max(baseStamp, out.pkgApiStamp(pkgName))); }
     var rich= SourceOracleWithAutoload.ofBase(stLib);
     var capabilities= new CapabilityEnvironment(rich.autoloadedAssets());
     var core= coordinator.frontend(pkgName, rich.sources(stLib.allFiles()), rich.oracle(), other, Map.of(), capabilities);
     coordinator.backend(pkgName, core, rich.oracle(), other, capabilities);
     var newStamp= out.commit(pkgName, core, new MainsInfo(Map.of(), MainsInfo.attenuators(core), List.of(), List.of()), stLib.allFiles(), List.of(), maxIn);
-    return OtherPackages.start(map, AllLs.of(core).values(), Math.max(baseStamp, newStamp));
+    return OtherPackages.start(map, ranks, AllLs.of(core).values(), Math.max(baseStamp, newStamp));
   }
   private OtherPackages deployedBaseApi(Path cacheDir, String pkgName){
     var json= cacheDir.resolve(pkgName+".json");
     var api= OutputHelper.pkgApiFromJson(json).orElseThrow(() -> Violation.cacheMissingBaseApiFile(json));
-    return OtherPackages.start(map, api, Math.max(baseStamp, Fs.lastModified(json)));
+    return OtherPackages.start(map, ranks, api, Math.max(baseStamp, Fs.lastModified(json)));
   }
 }
