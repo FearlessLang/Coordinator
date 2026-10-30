@@ -93,7 +93,7 @@ public final class Backend{
   }
 
   String extendsClause(Literal lit){ return Join.of(
-    Stream.concat(lit.cs().stream().map(c -> typeName(c.name())).distinct(), lit.onlyImmCapture().inner ? Stream.of("_base.OnlyImmCapture") : Stream.of()),
+    Stream.of(lit.cs().stream().map(c -> typeName(c.name())).distinct(), lit.onlyImmCapture().inner ? Stream.of("_base.OnlyImmCapture") : Stream.<String>of(), lit.infName() ? Stream.of("_base.InferredName") : Stream.<String>of()).flatMap(s -> s),
     " extends ", ", ", "", ""
   );}
   String paramsSig(M m){ return Join.of(

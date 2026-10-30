@@ -165,7 +165,7 @@ Assertion failure.
 Expected: 3
 Actual: 1
 imm Assert._fail(_) error line: [###]
-imm MyTests# error line: 5 in file _hello/_rank_app.fear
+imm MyTests.tests(_) error line: 5 in file _hello/_rank_app.fear
 """, out);
   }
   static Path unitTestsProject(Path tmp, String source){
@@ -870,6 +870,138 @@ Hello:Main{s->base.Debug#(`hi`)}
 """);
     utils.Err.strCmp("hi\n", coordinator(root).main(root, stLib));
   }
+  @Test void aStackTraceNamesTypesAndMethodsEndingWithPrimes(@TempDir Path tmp) throws InterruptedException{
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_p/_rank_app.fear
+iii
+use base.Main as Main;
+use base.Error as Error;
+use base.Void as Void;
+App:Main{s->Box'.go'}
+Box':{.go':Void->Bar.bar'}
+Bar:{.bar':Void->Error.msg"AAAAh"}
+""");
+    utils.Err.strCmp("""
+AAAAh
+imm Bar.bar' error line: 6 in file _p/_rank_app.fear
+imm Box'.go' error line: 5 in file _p/_rank_app.fear
+imm App.main(_) error line: 4 in file _p/_rank_app.fear
+""", coordinator(root).main(root, stLib));
+  }
+  @Test void aStackTraceNamesTheFramesOfALiteralAfterTheMethodItIsWrittenIn(@TempDir Path tmp) throws InterruptedException{
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_p/_rank_app.fear
+iii
+use base.Main as Main;
+use base.Error as Error;
+use base.Void as Void;
+use base.Nat as Nat;
+use base.MF as MF;
+use base.Lists as Lists;
+use base.Block as Block;
+use base.CaptureFree as CaptureFree;
+use base.Cache as Cache;
+Foo:{ .go: Void -> Error.msg "boom"; .goN(n: Nat): Void -> Error.msg (n.str); .nat: Nat -> Error.msg "boomNat" }
+Run:{ #(f: mut MF[Void]): Void -> f# }
+A:{ .z: Void }
+Mk:{ .mk: A -> Bar:A{ .z -> Foo.go } }
+Top:MF[Void]{ # -> Foo.go }
+CF:CaptureFree{ .go: Void -> Foo.go }
+_Priv:{ .go: Void -> Foo.go }
+Cap:{ #(n: Nat): Void -> Run#{ Foo.goN n } }
+G[X]:{ .go(x: X): Void -> Foo.go }
+A01TryRethrow:Main{s -> s.try#{Foo.go}!}
+A02InferredLambda:Main{s -> Run#{Foo.go}}
+A03NamedLambda:Main{s -> Run#(Go:MF[Void]{ # -> Foo.go })}
+A04NamedLiteralInMethod:Main{s -> Mk.mk.z}
+A05TopLevelNamed:Main{s -> Run#(Top)}
+A06CaptureFree:Main{s -> CF.go}
+A07Private:Main{s -> _Priv.go}
+A08Capturing:Main{s -> Cap#5}
+A09Nested:Main{s -> Run#{ Run#{ Foo.go } }}
+A10Flow:Main{s -> Block#(Lists#(1,2).flow.map{x -> Foo.nat}.list, Void)}
+A11Generic:Main{s -> G[Nat].go(1)}
+A12Block:Main{s -> Block#
+  .do{ base.Debug#("one") }
+  .do{ Foo.go }
+  .do{ base.Debug#("three") }
+  .done
+  }
+A13CacheFunction:Main{s -> Block#(Cache#({Foo.nat}), Void)}
+""");
+    utils.Err.strCmp("""
+boom
+imm Foo.go error line: 10 in file _p/_rank_app.fear
+imm A01TryRethrow.main(_) error line: 19 in file _p/_rank_app.fear
+imm A01TryRethrow.main(_) error line: 19 in file _p/_rank_app.fear
+boom
+imm Foo.go error line: 10 in file _p/_rank_app.fear
+imm A02InferredLambda.main(_) error line: 20 in file _p/_rank_app.fear
+imm Run#(_) error line: 11 in file _p/_rank_app.fear
+imm A02InferredLambda.main(_) error line: 20 in file _p/_rank_app.fear
+boom
+imm Foo.go error line: 10 in file _p/_rank_app.fear
+imm A03NamedLambda.main(_) error line: 21 in file _p/_rank_app.fear
+imm Run#(_) error line: 11 in file _p/_rank_app.fear
+imm A03NamedLambda.main(_) error line: 21 in file _p/_rank_app.fear
+boom
+imm Foo.go error line: 10 in file _p/_rank_app.fear
+imm Mk.mk error line: 13 in file _p/_rank_app.fear
+imm A04NamedLiteralInMethod.main(_) error line: 22 in file _p/_rank_app.fear
+boom
+imm Foo.go error line: 10 in file _p/_rank_app.fear
+mut Top# error line: 14 in file _p/_rank_app.fear
+imm Run#(_) error line: 11 in file _p/_rank_app.fear
+imm A05TopLevelNamed.main(_) error line: 23 in file _p/_rank_app.fear
+boom
+imm Foo.go error line: 10 in file _p/_rank_app.fear
+imm CF.go error line: 15 in file _p/_rank_app.fear
+imm A06CaptureFree.main(_) error line: 24 in file _p/_rank_app.fear
+boom
+imm Foo.go error line: 10 in file _p/_rank_app.fear
+imm _Priv.go error line: 16 in file _p/_rank_app.fear
+imm A07Private.main(_) error line: 25 in file _p/_rank_app.fear
+5
+imm Foo.goN(_) error line: 10 in file _p/_rank_app.fear
+imm Cap#(_) error line: 17 in file _p/_rank_app.fear
+imm Run#(_) error line: 11 in file _p/_rank_app.fear
+imm Cap#(_) error line: 17 in file _p/_rank_app.fear
+imm A08Capturing.main(_) error line: 26 in file _p/_rank_app.fear
+boom
+imm Foo.go error line: 10 in file _p/_rank_app.fear
+imm A09Nested.main(_) error line: 27 in file _p/_rank_app.fear
+imm Run#(_) error line: 11 in file _p/_rank_app.fear
+imm A09Nested.main(_) error line: 27 in file _p/_rank_app.fear
+imm Run#(_) error line: 11 in file _p/_rank_app.fear
+imm A09Nested.main(_) error line: 27 in file _p/_rank_app.fear
+boomNat
+imm Foo.nat error line: 10 in file _p/_rank_app.fear
+imm A10Flow.main(_) error line: 28 in file _p/_rank_app.fear
+mut Flow[_].map(_) error line: 70 in file datatypes/collections/flows/flow.fear
+mut Flow[_].flatMapMut(_) error line: 69 in file datatypes/collections/flows/flow.fear
+mut Flow[_].eList error line: 101 in file datatypes/collections/flows/flow.fear
+mut Flow[_].list error line: 102 in file datatypes/collections/flows/flow.fear
+imm A10Flow.main(_) error line: 28 in file _p/_rank_app.fear
+boom
+imm Foo.go error line: 10 in file _p/_rank_app.fear
+imm G[_].go(_) error line: 18 in file _p/_rank_app.fear
+imm A11Generic.main(_) error line: 29 in file _p/_rank_app.fear
+one
+boom
+imm Foo.go error line: 10 in file _p/_rank_app.fear
+imm A12Block.main(_) error line: 32 in file _p/_rank_app.fear
+mut Block[_].do(_) error line: 20 in file blocks.fear
+imm A12Block.main(_) error line: 32 in file _p/_rank_app.fear
+boomNat
+imm Foo.nat error line: 10 in file _p/_rank_app.fear
+imm Cache#(_) error line: 47 in file caching.fear
+imm A13CacheFunction.main(_) error line: 36 in file _p/_rank_app.fear
+""", coordinator(root).main(root, stLib));
+  }
   @Test void anUncaughtErrorShowsAnInfoThatIsNotAMsg(@TempDir Path tmp) throws InterruptedException{
     var root= tmp.resolve("root");
     UserError.root = root;
@@ -906,7 +1038,7 @@ App:Main{s -> s.try#{Foo.go}!}
     utils.Err.strCmp("""
 boom
 imm Foo.go error line: 4 in file _p/_rank_app.fear
-read App# error line: 5 in file _p/_rank_app.fear
+imm App.main(_) error line: 5 in file _p/_rank_app.fear
 imm App.main(_) error line: 5 in file _p/_rank_app.fear
 """, coordinator(root).main(root, stLib));
   }
@@ -925,7 +1057,7 @@ use base.System as System;
 use base.Cache as Cache;
 use base.CacheF as CacheF;
 Answer:CacheF[Str]{ Block#(Debug#("computing"), Error.msg "boom") }
-Ask:{ #(s: mut System): Str -> s.try#{Cache#(Answer)}.run{.ok x -> x; .info i -> (i.getMap.get "msg").getMsg} }
+Ask:{ #(s: mut System): Str -> s.try#{Cache#(Answer)}.run{.ok x -> x; .info i -> (i.getMap.get "info").getMsg} }
 Hello:Main{s->Block#
   .do{ Debug#(Ask#(s)) }
   .do{ Debug#(Ask#(s)) }
@@ -1264,11 +1396,11 @@ use base.Main as Main;
 use base.Debug as Debug;
 use base.Lists as L;
 Recover: base.BadStrUnitRecover { reason, byteOffset, byteLength, rejectedValue -> "?" }
-Ls: { #(a: mut base.Action[base.List[base.Str]]): base.Str -> a.run{.ok xs -> xs.str{::}; .info i -> i.msg.match{.some m -> m; .empty -> (i.getMap.get "msg").getMsg}} }
-Rd: { #(a: mut base.Action[mut base.CapInputCursorNode]): base.Str -> a.run{.ok n -> n.label+": "+(n.readStrUtf8 Recover); .info i -> i.msg.match{.some m -> m; .empty -> (i.getMap.get "msg").getMsg}} }
-Wr: { #(a: mut base.Action[base.Void]): base.Str -> a.run{.ok _ -> "ok"; .info i -> i.msg.match{.some m -> m; .empty -> (i.getMap.get "msg").getMsg}} }
-Sz: { #(a: mut base.Action[mut base.CapInputCursorNode]): base.Str -> a.run{.ok n -> n.readBytes.size.str; .info i -> i.msg.match{.some m -> m; .empty -> (i.getMap.get "msg").getMsg}} }
-St: { #(a: mut base.Action[base.Str]): base.Str -> a.run{.ok x -> x; .info i -> i.msg.match{.some m -> m; .empty -> (i.getMap.get "msg").getMsg}} }
+Ls: { #(a: mut base.Action[base.List[base.Str]]): base.Str -> a.run{.ok xs -> xs.str{::}; .info i -> i.msg.match{.some m -> m; .empty -> (i.getMap.get "info").getMsg}} }
+Rd: { #(a: mut base.Action[mut base.CapInputCursorNode]): base.Str -> a.run{.ok n -> n.label+": "+(n.readStrUtf8 Recover); .info i -> i.msg.match{.some m -> m; .empty -> (i.getMap.get "info").getMsg}} }
+Wr: { #(a: mut base.Action[base.Void]): base.Str -> a.run{.ok _ -> "ok"; .info i -> i.msg.match{.some m -> m; .empty -> (i.getMap.get "info").getMsg}} }
+Sz: { #(a: mut base.Action[mut base.CapInputCursorNode]): base.Str -> a.run{.ok n -> n.readBytes.size.str; .info i -> i.msg.match{.some m -> m; .empty -> (i.getMap.get "info").getMsg}} }
+St: { #(a: mut base.Action[base.Str]): base.Str -> a.run{.ok x -> x; .info i -> i.msg.match{.some m -> m; .empty -> (i.getMap.get "info").getMsg}} }
 Q: base.UnencodableRecover{ scalar, index -> L#(63.getByte) }
 Pub: base.DataRead{}
 Notes: base.DataEdit{}
@@ -1565,7 +1697,7 @@ NoMounts: Main{s -> base.Block#
 The message "Show" is not sent: this program was not started by the Fearless manager.
 The message "Register" is not sent: this program was not started by the Fearless manager.
 """, dataRun(tmp, """
-Caught: { #(a: mut base.Action[base.Void]): base.Str -> a.run{.ok _ -> "ok"; .info i -> i.msg.match{.some m -> m; .empty -> (i.getMap.get "msg").getMsg}} }
+Caught: { #(a: mut base.Action[base.Void]): base.Str -> a.run{.ok _ -> "ok"; .info i -> i.msg.match{.some m -> m; .empty -> (i.getMap.get "info").getMsg}} }
 NoManager: Main{s -> base.Block#
   .do{Debug#(Caught#(s.try#(s.iso.close, {t -> t.manager.show})))}
   .return{Debug#(Caught#(s.try#(s.iso.close, {t -> t.manager.register("%s".u.%s)})))}
@@ -1607,8 +1739,8 @@ ok
 The manager refuses to forget nope.
 The path "relative" of the message "Register" is not an absolute path of this system.
 """, dataRun(tmp, """
-Caught: { #(a: mut base.Action[base.Void]): base.Str -> a.run{.ok _ -> "ok"; .info i -> i.msg.match{.some m -> m; .empty -> (i.getMap.get "msg").getMsg}} }
-Out: { #(a: mut base.Action[base.UStr]): base.Str -> a.run{.ok u -> u.tryGetStr.run{.ok o -> o; .info i -> i.getMsg}; .info i -> i.msg.match{.some m -> m; .empty -> (i.getMap.get "msg").getMsg}} }
+Caught: { #(a: mut base.Action[base.Void]): base.Str -> a.run{.ok _ -> "ok"; .info i -> i.msg.match{.some m -> m; .empty -> (i.getMap.get "info").getMsg}} }
+Out: { #(a: mut base.Action[base.UStr]): base.Str -> a.run{.ok u -> u.tryGetStr.run{.ok o -> o; .info i -> i.getMsg}; .info i -> i.msg.match{.some m -> m; .empty -> (i.getMap.get "info").getMsg}} }
 Send: Main{s -> base.Block#
   .do{Debug#(Caught#(s.try#(s.iso.close, {t -> t.manager.register("%1$s".u.%2$s)})))}
   .do{Debug#(Caught#(s.try#(s.iso.close, {t -> t.manager.show})))}
@@ -2696,31 +2828,31 @@ Hello:Main{s->base.Debug#("from z")}
   @Test void anErrorAcrossThreadsShowsOneContinuousStackTrace() throws InterruptedException{
     utils.Err.strCmp("""
 deep boom
-mut Fail.then error line: 18 in file _rec/_rank_app.fear
+imm Fail#(_) error line: 18 in file _rec/_rank_app.fear
 imm True.if(_) error line: 56 in file datatypes/bools.fear
 imm Fail#(_) error line: 18 in file _rec/_rank_app.fear
-mut Fail# error line: 18 in file _rec/_rank_app.fear
+imm Fail#(_) error line: 18 in file _rec/_rank_app.fear
 imm _RunRecursion#(_,_) error line: 24 in file run_recursion.fear
 imm RunRecursion#(_) error line: 15 in file run_recursion.fear
-mut Fail.else error line: 18 in file _rec/_rank_app.fear
+imm Fail#(_) error line: 18 in file _rec/_rank_app.fear
 imm False.if(_) error line: 67 in file datatypes/bools.fear
 imm Fail#(_) error line: 18 in file _rec/_rank_app.fear
-mut Fail# error line: 18 in file _rec/_rank_app.fear
+imm Fail#(_) error line: 18 in file _rec/_rank_app.fear
 imm _RunRecursion#(_,_) error line: 24 in file run_recursion.fear
 imm RunRecursion#(_) error line: 15 in file run_recursion.fear
-mut Fail.else error line: 18 in file _rec/_rank_app.fear
+imm Fail#(_) error line: 18 in file _rec/_rank_app.fear
 imm False.if(_) error line: 67 in file datatypes/bools.fear
 imm Fail#(_) error line: 18 in file _rec/_rank_app.fear
-mut Fail# error line: 18 in file _rec/_rank_app.fear
+imm Fail#(_) error line: 18 in file _rec/_rank_app.fear
 imm _RunRecursion#(_,_) error line: 24 in file run_recursion.fear
 imm RunRecursion#(_) error line: 15 in file run_recursion.fear
-mut Fail.else error line: 18 in file _rec/_rank_app.fear
+imm Fail#(_) error line: 18 in file _rec/_rank_app.fear
 imm False.if(_) error line: 67 in file datatypes/bools.fear
 imm Fail#(_) error line: 18 in file _rec/_rank_app.fear
-mut Fail# error line: 18 in file _rec/_rank_app.fear
+imm Fail#(_) error line: 18 in file _rec/_rank_app.fear
 imm _RunRecursion#(_,_) error line: 24 in file run_recursion.fear
 imm RunRecursion#(_) error line: 15 in file run_recursion.fear
-mut Fail.else error line: 18 in file _rec/_rank_app.fear
+imm Fail#(_) error line: 18 in file _rec/_rank_app.fear
 imm False.if(_) error line: 67 in file datatypes/bools.fear
 imm Fail#(_) error line: 18 in file _rec/_rank_app.fear
 imm GluedTrace.main(_) error line: 27 in file _rec/_rank_app.fear
