@@ -1349,12 +1349,15 @@ Cut: Main{s -> Debug#(s.inputCursor#.match{.some n -> n.READ Show; .empty -> "no
   }
   @Test void anInputFileThatCanNotBeReadIsANonDeterministicError(@TempDir Path tmp){
     utils.Err.strCmp("""
-File with absolute path [###]gone.txt can not be read as bytes
-[###]File with absolute path [###]gone.txt can not be read as bytes[###]""", dataRun(tmp, """
-Gone: Main{s -> base.Block#
-  .do{Debug#(St#(s.try#(s.iso.close, {t -> t.inputCursor#.match{.some n -> n.readStrUtf8 Recover; .empty -> "none"}})))}
-  .return{Debug#(St#(base.Try#(s.iso.close, {t -> t.inputCursor#.match{.some n -> n.readStrUtf8 Recover; .empty -> "none"}})))}
-  }
+File with absolute path [###]gone.txt
+can not be read as bytes
+mut Gone.some(_) error line: 14 in file _col/_rank_app.fear
+mut Opts.match(_) error line: [###]
+read Gone#(_) error line: 14 in file _col/_rank_app.fear
+imm St#(_) error line: 9 in file _col/_rank_app.fear
+imm Gone.main(_) error line: 14 in file _col/_rank_app.fear
+""", dataRun(tmp, """
+Gone: Main{s -> Debug#(St#(base.Try#(s.iso.close, {t -> t.inputCursor#.match{.some n -> n.readStrUtf8 Recover; .empty -> "none"}})))}
 """, List.of("-DfearlessInput.file="+PathClassLoader.argOf(tmp.resolve("gone.txt")))));
   }
   static Path dataProject(Path tmp){
@@ -1626,7 +1629,8 @@ Linear: Main{s -> base.Block#
     var data= dataProject(tmp);
     Fs.write(data.resolve("text.png"), "not an image".getBytes(UTF_8));
     utils.Err.strCmp("""
-Resource with path col.Pub/text.png can not be decoded as an image according to standards PNG (ISO/IEC 15948:2004), JPEG (ISO/IEC 10918-1:1994), WebP (RFC 9649), GIF (GIF89a), BMP (Windows bitmap up to BITMAPV5HEADER), ICO (Windows icon) and WBMP (WAP-237, type 0)
+Resource with path col.Pub/text.png
+can not be decoded as an image according to standards PNG (ISO/IEC 15948:2004), JPEG (ISO/IEC 10918-1:1994), WebP (RFC 9649), GIF (GIF89a), BMP (Windows bitmap up to BITMAPV5HEADER), ICO (Windows icon) and WBMP (WAP-237, type 0)
 """, dataRun(tmp, """
 Text: Main{s -> Debug#(St#(base.Try#(s.iso.close, {t -> base.Block#(t.dataRead(Pub).read(L#("text.png")).readImage(1000000), "read")})))}
 """, dataLinks(data, data)));
@@ -1639,14 +1643,16 @@ Text: Main{s -> Debug#(St#(base.Try#(s.iso.close, {t -> base.Block#(t.dataRead(P
     ImageIO.write(img, "png", png);
     Fs.write(data.resolve("cut.png"), Arrays.copyOf(png.toByteArray(), png.size() / 2));
     utils.Err.strCmp("""
-Resource with path col.Pub/cut.png can not be decoded as an image according to standards PNG (ISO/IEC 15948:2004), JPEG (ISO/IEC 10918-1:1994), WebP (RFC 9649), GIF (GIF89a), BMP (Windows bitmap up to BITMAPV5HEADER), ICO (Windows icon) and WBMP (WAP-237, type 0)
+Resource with path col.Pub/cut.png
+can not be decoded as an image according to standards PNG (ISO/IEC 15948:2004), JPEG (ISO/IEC 10918-1:1994), WebP (RFC 9649), GIF (GIF89a), BMP (Windows bitmap up to BITMAPV5HEADER), ICO (Windows icon) and WBMP (WAP-237, type 0)
 """, dataRun(tmp, """
 Cut: Main{s -> Debug#(St#(base.Try#(s.iso.close, {t -> base.Block#(t.dataRead(Pub).read(L#("cut.png")).readImage(1000000), "read")})))}
 """, dataLinks(data, data)));
   }
   @Test void anAssetThatIsNotAnImageCanNotBeDecoded(@TempDir Path tmp){
     utils.Err.strCmp("""
-Resource with path /_col/junk.png can not be decoded as an image according to standards PNG (ISO/IEC 15948:2004), JPEG (ISO/IEC 10918-1:1994), WebP (RFC 9649), GIF (GIF89a), BMP (Windows bitmap up to BITMAPV5HEADER), ICO (Windows icon) and WBMP (WAP-237, type 0)
+Resource with path /_col/junk.png
+can not be decoded as an image according to standards PNG (ISO/IEC 15948:2004), JPEG (ISO/IEC 10918-1:1994), WebP (RFC 9649), GIF (GIF89a), BMP (Windows bitmap up to BITMAPV5HEADER), ICO (Windows icon) and WBMP (WAP-237, type 0)
 """, dataRun(tmp, """
 Asset: Main{s -> Debug#(St#(base.Try#(s.iso.close, {t -> base.Block#(Junk.readImage(t.assetRead, 1000000), "read")})))}
 jjj
@@ -1658,7 +1664,8 @@ not an image
   @Test void anOpenedFileThatIsNotAnImageCanNotBeDecoded(@TempDir Path tmp) throws IOException{
     var in= Fs.write(tmp.resolve("in.png"), "not an image".getBytes(UTF_8));
     utils.Err.strCmp("""
-File with absolute path [###]in.png can not be decoded as an image according to standards PNG (ISO/IEC 15948:2004), JPEG (ISO/IEC 10918-1:1994), WebP (RFC 9649), GIF (GIF89a), BMP (Windows bitmap up to BITMAPV5HEADER), ICO (Windows icon) and WBMP (WAP-237, type 0)
+File with absolute path [###]in.png
+can not be decoded as an image according to standards PNG (ISO/IEC 15948:2004), JPEG (ISO/IEC 10918-1:1994), WebP (RFC 9649), GIF (GIF89a), BMP (Windows bitmap up to BITMAPV5HEADER), ICO (Windows icon) and WBMP (WAP-237, type 0)
 """, dataRun(tmp, """
 Opened: Main{s -> Debug#(St#(base.Try#(s.iso.close, {t -> t.inputCursor#.match{.some n -> base.Block#(n.readImage(1000000), "read"); .empty -> "none"}})))}
 """, List.of("-DfearlessInput.file="+PathClassLoader.argOf(in))));
@@ -1667,7 +1674,8 @@ Opened: Main{s -> Debug#(St#(base.Try#(s.iso.close, {t -> t.inputCursor#.match{.
     var server= startServer(ex -> reply(ex, 200, "not an image".getBytes(UTF_8)));
     try{
       utils.Err.strCmp("""
-Resource with url http://127.0.0.1:[###]/x.png can not be decoded as an image according to standards PNG (ISO/IEC 15948:2004), JPEG (ISO/IEC 10918-1:1994), WebP (RFC 9649), GIF (GIF89a), BMP (Windows bitmap up to BITMAPV5HEADER), ICO (Windows icon) and WBMP (WAP-237, type 0)
+Resource with url http://127.0.0.1:[###]/x.png
+can not be decoded as an image according to standards PNG (ISO/IEC 15948:2004), JPEG (ISO/IEC 10918-1:1994), WebP (RFC 9649), GIF (GIF89a), BMP (Windows bitmap up to BITMAPV5HEADER), ICO (Windows icon) and WBMP (WAP-237, type 0)
 """, dataRun(tmp, """
 Download: Main{s -> Debug#(St#(base.Try#(s.iso.close, {t -> base.Block#(t.download.downloadImage("URL", 1000, 1000000), "read")})))}
 """.replace("URL", url(server, "/x.png")), List.of()));
@@ -1687,7 +1695,8 @@ Download: Main{s -> Debug#(St#(base.Try#(s.iso.close, {t -> base.Block#(t.downlo
     var data= dataProject(tmp);
     Fs.write(data.resolve("wide.png"), pngHeader(32768, 1));
     utils.Err.strCmp("""
-Resource with path col.Pub/wide.png is an image of 32768 x 1, which is too large.
+Resource with path col.Pub/wide.png
+is an image of 32768 x 1, which is too large.
 Height must be strictly less than 32768.
 Width must be strictly less than 32768.
 Height * Width must be strictly less than 268435457.
@@ -1699,7 +1708,8 @@ Wide: Main{s -> Debug#(St#(base.Try#(s.iso.close, {t -> base.Block#(t.dataRead(P
     var data= dataProject(tmp);
     Fs.write(data.resolve("big.png"), pngHeader(20000, 20000));
     utils.Err.strCmp("""
-Resource with path col.Pub/big.png is an image of 20000 x 20000, which is too large.
+Resource with path col.Pub/big.png
+is an image of 20000 x 20000, which is too large.
 Height must be strictly less than 32768.
 Width must be strictly less than 32768.
 Height * Width must be strictly less than 268435457.
@@ -1713,26 +1723,34 @@ Big: Main{s -> Debug#(St#(base.Try#(s.iso.close, {t -> base.Block#(t.dataRead(Pu
     ImageIO.write(new BufferedImage(2, 3, BufferedImage.TYPE_INT_ARGB), "png", bout);
     Fs.write(data.resolve("small.png"), bout.toByteArray());
     utils.Err.strCmp("""
-Resource with path col.Pub/small.png is an image of 2 x 3 = 6 pixels, more than maxPixels 5
+Resource with path col.Pub/small.png
+is an image of 2 x 3 = 6 pixels, more than maxPixels 5
 """, dataRun(tmp, """
 Small: Main{s -> Debug#(St#(base.Try#(s.iso.close, {t -> base.Block#(t.dataRead(Pub).read(L#("small.png")).readImage(5), "read")})))}
 """, dataLinks(data, data)));
   }
   @Test void anAssetWithMorePixelsThanItsMaxPixelsCanNotBeRead(@TempDir Path tmp){
     utils.Err.strCmp("""
-Resource with path /_base/icons/conflict.png is an image of 256 x 256 = 65536 pixels, more than maxPixels 1
+Resource with path /_base/icons/conflict.png
+is an image of 256 x 256 = 65536 pixels, more than maxPixels 1
 """, dataRun(tmp, """
 Icon: Main{s -> Debug#(St#(base.Try#(s.iso.close, {t -> base.Block#(base.IconsConflict.readImage(t.assetRead, 1), "read")})))}
 """, List.of()));
   }
   @Test void anAssetRemovedWhileTheProgramRunsCanNotBeReadAsBytes(@TempDir Path tmp){
     utils.Err.strCmp("""
-ok
-Resource with path /_col/note.txt can not be read as bytes
+Resource with path /_col/note.txt
+can not be read as bytes
+imm TxtFile.readStrUtf8(_,_) error line: [###]
+read Gone#(_) error line: 16 in file _col/_rank_app.fear
+imm St#(_) error line: 9 in file _col/_rank_app.fear
+mut Gone# error line: 16 in file _col/_rank_app.fear
+mut Block[_].return(_) error line: [###]
+imm Gone.main(_) error line: 16 in file _col/_rank_app.fear
 """, dataRun(tmp, """
 Gone: Main{s -> base.Block#
-  .do{Debug#(Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).delete(L#("_col", "note.txt"))})))}
-  .return{Debug#(St#(s.try#(s.iso.close, {t -> Note.readStrUtf8(t.assetRead, Recover)})))}
+  .do{s.dataEdit(Notes).delete(L#("_col", "note.txt"))}
+  .return{Debug#(St#(base.Try#(s.iso.close, {t -> Note.readStrUtf8(t.assetRead, Recover)})))}
   }
 jjj
 _col/note.txt
@@ -1742,12 +1760,18 @@ note
   }
   @Test void aZipEntryAssetRemovedWhileTheProgramRunsCanNotBeReadAsBytes(@TempDir Path tmp){
     utils.Err.strCmp("""
-ok
-Resource with path /_col/pics/one.txt can not be read as bytes
+Resource with path /_col/pics/one.txt
+can not be read as bytes
+imm TxtFile.readStrUtf8(_,_) error line: [###]
+read Gone#(_) error line: 16 in file _col/_rank_app.fear
+imm St#(_) error line: 9 in file _col/_rank_app.fear
+mut Gone# error line: 16 in file _col/_rank_app.fear
+mut Block[_].return(_) error line: [###]
+imm Gone.main(_) error line: 16 in file _col/_rank_app.fear
 """, dataRun(tmp, """
 Gone: Main{s -> base.Block#
-  .do{Debug#(Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).delete(L#("_col", "pics", "one.txt"))})))}
-  .return{Debug#(St#(s.try#(s.iso.close, {t -> PicsOne.readStrUtf8(t.assetRead, Recover)})))}
+  .do{s.dataEdit(Notes).delete(L#("_col", "pics", "one.txt"))}
+  .return{Debug#(St#(base.Try#(s.iso.close, {t -> PicsOne.readStrUtf8(t.assetRead, Recover)})))}
   }
 jjj
 _col/pics.zip/one.txt
@@ -1761,12 +1785,18 @@ two
   }
   @Test void aZipAssetRemovedWhileTheProgramRunsCanNotBeReadAsBytes(@TempDir Path tmp){
     utils.Err.strCmp("""
-ok
-Resource with path /_col/box/three.txt can not be read as bytes
+Resource with path /_col/box/three.txt
+can not be read as bytes
+imm TxtFile.readStrUtf8(_,_) error line: [###]
+read Gone#(_) error line: 16 in file _col/_rank_app.fear
+imm St#(_) error line: 9 in file _col/_rank_app.fear
+mut Gone# error line: 16 in file _col/_rank_app.fear
+mut Block[_].return(_) error line: [###]
+imm Gone.main(_) error line: 16 in file _col/_rank_app.fear
 """, dataRun(tmp, """
 Gone: Main{s -> base.Block#
-  .do{Debug#(Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).delete(L#("_col", "box", "three.txt"))})))}
-  .return{Debug#(St#(s.try#(s.iso.close, {t -> BoxThree.readStrUtf8(t.assetRead, Recover)})))}
+  .do{s.dataEdit(Notes).delete(L#("_col", "box", "three.txt"))}
+  .return{Debug#(St#(base.Try#(s.iso.close, {t -> BoxThree.readStrUtf8(t.assetRead, Recover)})))}
   }
 jjj
 _col/box.zip/three.txt
@@ -1774,18 +1804,23 @@ iii
 three
 """, List.of("-DfearlessDataEdit.col.Notes="+PathClassLoader.argOf(tmp.resolve("root")))));
   }
-  @Test void aResourceDeletedAfterItIsOpenedIsANonDeterministicError(@TempDir Path tmp){
+  @Test void aResourceDeletedAfterItIsOpenedIsANonDeterministicError(@TempDir Path tmp) throws IOException{
     var data= dataProject(tmp);
     utils.Err.strCmp("""
-ok
-Resource with path col.Notes/readme can not be read as bytes
-[###]Resource with path col.Notes/readme can not be read as bytes[###]""", dataRun(tmp, """
+Resource with path col.Notes/readme
+can not be read as bytes
+read Gone#(_) error line: 17 in file _col/_rank_app.fear
+imm St#(_) error line: 9 in file _col/_rank_app.fear
+mut Gone# error line: 17 in file _col/_rank_app.fear
+mut Block[_].return(_) error line: [###]
+mut Gone#(_,_) error line: 17 in file _col/_rank_app.fear
+mut Block[_].let(_,_) error line: [###]
+imm Gone.main(_) error line: 15 in file _col/_rank_app.fear
+""", dataRun(tmp, """
 Gone: Main{s -> base.Block#
   .let n= {s.dataEdit(Notes).read(L#("readme"))}
-  .let m= {s.dataEdit(Notes).read(L#("readme"))}
-  .do{Debug#(Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).delete(L#("readme"))})))}
-  .do{Debug#(St#(s.try#(n.iso.close, {k -> k.readStrUtf8 Recover})))}
-  .return{Debug#(St#(base.Try#(m.iso.close, {k -> k.readStrUtf8 Recover})))}
+  .do{s.dataEdit(Notes).delete(L#("readme"))}
+  .return{Debug#(St#(base.Try#(n.iso.close, {k -> k.readStrUtf8 Recover})))}
   }
 """, dataLinks(data, data)));
   }
@@ -1795,15 +1830,20 @@ Gone: Main{s -> base.Block#
     ImageIO.write(new BufferedImage(2, 3, BufferedImage.TYPE_INT_ARGB), "png", bout);
     Fs.write(data.resolve("pic.png"), bout.toByteArray());
     utils.Err.strCmp("""
-ok
-Resource with path col.Notes/pic.png can not be read as bytes
-[###]Resource with path col.Notes/pic.png can not be read as bytes[###]""", dataRun(tmp, """
+Resource with path col.Notes/pic.png
+can not be read as bytes
+read Gone#(_) error line: 17 in file _col/_rank_app.fear
+imm St#(_) error line: 9 in file _col/_rank_app.fear
+mut Gone# error line: 17 in file _col/_rank_app.fear
+mut Block[_].return(_) error line: [###]
+mut Gone#(_,_) error line: 17 in file _col/_rank_app.fear
+mut Block[_].let(_,_) error line: [###]
+imm Gone.main(_) error line: 15 in file _col/_rank_app.fear
+""", dataRun(tmp, """
 Gone: Main{s -> base.Block#
   .let n= {s.dataEdit(Notes).read(L#("pic.png"))}
-  .let m= {s.dataEdit(Notes).read(L#("pic.png"))}
-  .do{Debug#(Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).delete(L#("pic.png"))})))}
-  .do{Debug#(St#(s.try#(n.iso.close, {k -> base.Block#(k.readImage(1000), "read")})))}
-  .return{Debug#(St#(base.Try#(m.iso.close, {k -> base.Block#(k.readImage(1000), "read")})))}
+  .do{s.dataEdit(Notes).delete(L#("pic.png"))}
+  .return{Debug#(St#(base.Try#(n.iso.close, {k -> base.Block#(k.readImage(1000), "read")})))}
   }
 """, dataLinks(data, data)));
   }
