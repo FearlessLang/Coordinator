@@ -2924,6 +2924,8 @@ In file: fear:/_app/_rank_app.fear
 
 While inspecting a type name
 Package "webserver_v12" does not exist.
+Did you mean "webserver" ?
+Visible packages: "app", "base", "webserver".
 Package "webserver_v12" does exist as a real source location.
 In package "app", package name "webserver" is used to refer to real source location "webserver_v12" because of "map webserver as webserver_v12 in app".
 Error 7 WellFormedness
@@ -2960,7 +2962,7 @@ A map gives a name to a package that does not exist; it can not hide an existing
 Error 7 WellFormedness
 """, ex.getMessage());
   }
-  @Test void virtualizationTwoVirtualNamesForTheSameRealPackage(@TempDir Path tmp) throws InterruptedException{
+  @Test void virtualizationThreeVirtualNamesForTheSameRealPackage(@TempDir Path tmp) throws InterruptedException{
     var root= tmp.resolve("root");
     UserError.root = root;
     FsDsl.materialize(root, """
@@ -2974,6 +2976,7 @@ iii
 use base.Main as Main;
 map a as c in b;
 map d as c in b;
+map e as c in b;
 Hello:Main{s->base.Debug#(a.A.text)}
 """);
     var ex= assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib));
@@ -2983,6 +2986,8 @@ For package "b", the real package "c" is mapped from different virtual package n
    "map  a  as  c  in  b;"
  - fear:/_b/_rank_app.fear
    "map  d  as  c  in  b;"
+ - fear:/_b/_rank_app.fear
+   "map  e  as  c  in  b;"
 In package "b", only one package name can be used to refer to real source location "c".
 Error 7 WellFormedness
 """, ex.getMessage());
