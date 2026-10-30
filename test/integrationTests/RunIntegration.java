@@ -3724,6 +3724,153 @@ In file: fear:/_app/_rank_app.fear
 Source code inside folders named "_app" uses package name "web" to refer to the code inside folders named "_http_v1", because of "map web as _http_v1 in _app", written in fear:/_app/_rank_app.fear.
 [###]""", msg);
   }
+  static String jsonLogProject(String appMaps){ return Stream.of("1(:)", "2[:]", "3-:-").map(v -> """
+_json_vV/_rank_coreV00.fear
+iii
+use base.Str as Str;
+Json:{ .render(s: Str): Str -> "jVO"+s+"C" }
+jjj
+_log_vV/_rank_coreV50.fear
+iii
+use base.Str as Str;
+Log:{ .line(s: Str): Str -> "[logV] "+s }
+jjj
+""".replace("V", v.substring(0, 1)).replace("O", v.substring(1, 2)).replace("C", v.substring(3, 4))).collect(Collectors.joining())+"""
+_api/_rank_driver.fear
+iii
+use base.Str as Str;
+map json as _json_v1 in _api;
+map log as _log_v2 in _api;
+Api:{ .get: Str -> log.Log.line(json.Json.render("api")) }
+jjj
+_store/_rank_worker.fear
+iii
+use base.Str as Str;
+map json as _json_v2 in _store;
+map oldjson as _json_v1 in _store;
+map log as _log_v1 in _store;
+Store:{ .save: Str -> (log.Log.line(json.Json.render("store")))+" "+(oldjson.Json.render("legacy"))+" "+(api.Api.get) }
+jjj
+_web/_rank_framework.fear
+iii
+use base.Str as Str;
+map json as _json_v3 in _web;
+map logger as _log_v3 in _web;
+use logger.Log as Log;
+Web:{ .page: Str -> Log.line((json.Json.render("web"))+" "+(store.Store.save)) }
+jjj
+_app/_rank_app.fear
+iii
+use base.Main as Main;
+map j as _json_v2 in _app;
+"""+appMaps+"""
+Hello:Main{s->base.Debug#((web.Web.page)+" | "+(j.Json.render("app")))}
+"""; }
+  @Test void twoLibrariesInThreeVersionsEachThroughThreeLayers(@TempDir Path tmp) throws InterruptedException{
+    utils.Err.strCmp("[log3] j3-web- [log1] j2[store] j1(legacy) [log2] j1(api) | j2[app]\n", mapsRun(tmp, jsonLogProject("")));
+  }
+  @Test void theApplicationUpgradesOneLibraryInOneLayerAndTheOtherLibraryInAnotherLayer(@TempDir Path tmp) throws InterruptedException{
+    utils.Err.strCmp("[log3] j3-web- [log1] j3-store- j1(legacy) [log3] j1(api) | j2[app]\n", mapsRun(tmp, jsonLogProject("""
+map log as _log_v3 in _api instead of _log_v2;
+map json as _json_v3 in _store instead of _json_v2;
+""")));
+  }
+  @Test void theApplicationSwapsTheTwoNamesALayerGivesToTwoVersions(@TempDir Path tmp) throws InterruptedException{
+    utils.Err.strCmp("[log3] j3-web- [log1] j1(store) j2[legacy] [log2] j1(api) | j2[app]\n", mapsRun(tmp, jsonLogProject("""
+map json as _json_v1 in _store instead of _json_v2;
+map oldjson as _json_v2 in _store instead of _json_v1;
+""")));
+  }
+  static String httpTwoNames(String shopExtra, String blogExtra){ return Stream.of("1", "2").map(v -> """
+_http_vV/_rank_coreV00.fear
+iii
+use base.Str as Str;
+Request:{ .path: Str }
+Response:{ .body: Str }
+Handler:{ #(r: Request): Response }
+Server:{ .serve(h: Handler, path: Str): Str -> "[httpV] "+(h#(Request{ .path -> path }).body) }
+jjj
+""".replace("V", v)).collect(Collectors.joining())+"""
+_shop/_rank_framework100.fear
+iii
+use base.Str as Str;
+map web as _http_v2 in _shop;
+Shop:{
+  .home: Str -> web.Server.serve(web.Handler{ r -> web.Response{ .body -> "shop at "+(r.path) } }, "/shop");
+"""+shopExtra+"""
+  }
+jjj
+_blog/_rank_framework200.fear
+iii
+use base.Str as Str;
+map http as _http_v2 in _blog;
+Blog:{
+  .home: Str -> http.Server.serve(http.Handler{ r -> http.Response{ .body -> "blog at "+(r.path) } }, "/blog");
+"""+blogExtra+"""
+  }
+jjj
+_app/_rank_app.fear
+iii
+use base.Main as Main;
+Hello:Main{s->base.Debug#((blog.Blog.home)+", "+(shop.Shop.home))}
+"""; }
+  static final String shopWebNote= "Source code inside folders named \"_shop\" uses package name \"web\" to refer to the code inside folders named \"_http_v2\", because of \"map web as _http_v2 in _shop\", written in fear:/_shop/_rank_framework100.fear.";
+  static final String blogHttpNote= "Source code inside folders named \"_blog\" uses package name \"http\" to refer to the code inside folders named \"_http_v2\", because of \"map http as _http_v2 in _blog\", written in fear:/_blog/_rank_framework200.fear.";
+  @Test void twoPackagesReachTheSameVersionThroughDifferentNames(@TempDir Path tmp) throws InterruptedException{
+    utils.Err.strCmp("[http2] blog at /blog, [http2] shop at /shop\n", mapsRun(tmp, httpTwoNames("", "")));
+  }
+  @Test void aTypeErrorInsideTheShopUsesTheNameOfTheShop(@TempDir Path tmp){
+    utils.Err.strCmp("""
+In file: fear:/_shop/_rank_framework100.fear
+
+005|   .bad(r: web.Request): web.Response -> r;
+[###]"web.Request"[###]"web.Response"[###]
+"""+shopWebNote+"""
+[###]Error 8 TypeError
+""", mapsError(tmp, httpTwoNames("  .bad(r: web.Request): web.Response -> r;\n", "")));
+  }
+  @Test void aTypeErrorInsideTheBlogUsesTheNameOfTheBlog(@TempDir Path tmp){
+    utils.Err.strCmp("""
+In file: fear:/_blog/_rank_framework200.fear
+
+005|   .bad(r: http.Request): http.Response -> r;
+[###]"http.Request"[###]"http.Response"[###]
+"""+blogHttpNote+"""
+[###]Error 8 TypeError
+""", mapsError(tmp, httpTwoNames("", "  .bad(r: http.Request): http.Response -> r;\n")));
+  }
+  @Test void aHiddenVersionInsideTheShopSuggestsTheNameOfTheShop(@TempDir Path tmp){
+    utils.Err.strCmp("""
+In file: fear:/_shop/_rank_framework100.fear
+
+005|   .old(r: http_v2.Request): Str -> r.path;
+   |           ^^^^^^^^^^^^^^^^
+
+While inspecting a type name
+Source code inside folders named "_shop" can not use package name "http_v2".
+Did you mean "web" ?
+Visible package names: "base", "http_v1", "web".
+"""+shopWebNote+"""
+
+Error 7 WellFormedness
+""", mapsError(tmp, httpTwoNames("  .old(r: http_v2.Request): Str -> r.path;\n", "")));
+  }
+  @Test void aHiddenVersionInsideTheBlogSuggestsTheNameOfTheBlog(@TempDir Path tmp){
+    utils.Err.strCmp("""
+In file: fear:/_blog/_rank_framework200.fear
+
+005|   .old(r: http_v2.Request): Str -> r.path;
+   |           ^^^^^^^^^^^^^^^^
+
+While inspecting a type name
+Source code inside folders named "_blog" can not use package name "http_v2".
+Did you mean "http" ?
+Visible package names: "base", "http", "http_v1", "shop".
+"""+blogHttpNote+"""
+
+Error 7 WellFormedness
+""", mapsError(tmp, httpTwoNames("", "  .old(r: http_v2.Request): Str -> r.path;\n")));
+  }
   @Test void aZippedVersionIsReachedThroughAMap(@TempDir Path tmp) throws InterruptedException{
     utils.Err.strCmp("lib uses v9\n", mapsRun(tmp, """
 _foo_v9.zip/_rank_core100.fear
@@ -3895,6 +4042,7 @@ In file: fear:/_app/_rank_app.fear
 
 While inspecting package header
 Source code inside folders named "_app" can not use package name "base".
+Did you mean "bb" ?
 Visible package names: "bb".
 Source code inside folders named "_app" uses package name "bb" to refer to the code inside folders named "_base", because of "map bb as _base in _app", written in fear:/_app/_rank_app.fear.
 Error 7 WellFormedness
