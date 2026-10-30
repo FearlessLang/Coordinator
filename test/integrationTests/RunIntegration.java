@@ -2770,9 +2770,9 @@ In file: fear:/_a/_rank_core345.fear
    |     ^^^^^^^^^^
 
 While inspecting package header
-"use" directive refers to package "z", which has a higher rank than package "a".
-Package "a" has rank "core345" ("_rank_core345.fear") and package "z" has rank "app999" ("_rank_app.fear").
-A package can only use packages of a lower rank.
+"use" directive refers to the code inside folders named "_z", which has a higher rank than the code inside folders named "_a".
+Folders named "_a" have rank "core345" ("_rank_core345.fear") and folders named "_z" have rank "app999" ("_rank_app.fear").
+Source code can only refer to code of a lower rank.
 Error 7 WellFormedness
 """, ex.getMessage());
   }
@@ -2799,9 +2799,9 @@ In file: fear:/_a/_rank_core.fear
    |     ^^^^^^^^^^
 
 While inspecting package header
-"use" directive refers to package "z", which has the same rank as package "a".
-Package "a" has rank "core999" ("_rank_core.fear") and package "z" has rank "core999" ("_rank_core999.fear").
-A package can only use packages of a lower rank.
+"use" directive refers to the code inside folders named "_z", which has the same rank as the code inside folders named "_a".
+Folders named "_a" have rank "core999" ("_rank_core.fear") and folders named "_z" have rank "core999" ("_rank_core999.fear").
+Source code can only refer to code of a lower rank.
 Error 7 WellFormedness
 """, ex.getMessage());
   }
@@ -3466,6 +3466,154 @@ use foo.Foo as Foo;
 Lib:{ .foo: Str -> Foo.version }
 jjj
 """+fooApp("map foo as _foo_v5 in _lib;\n")));
+  }
+  static String insteadOfError(String written, String overridden, String expected){ return """
+The "instead of" list of a map must name exactly the folders chosen by the maps of lower rank that the map overrides:
+- "%s;"; written in fear:/_app/_rank_app.fear
+The map overrides these maps of lower rank:
+- "%s;"; written in fear:/_lib/_rank_driver.fear
+Expected: "%s;".
+Error 7 WellFormedness
+""".formatted(written, overridden, expected); }
+  @Test void anApplicationFollowsALibraryThroughSeveralReleasesOfItsPin(@TempDir Path tmp) throws IOException, InterruptedException{
+    var root= tmp.resolve("root");
+    var lib= root.resolve("_lib", "_rank_driver.fear");
+    var app= root.resolve("_app", "_rank_app.fear");
+    utils.Err.strCmp("lib uses v3\n", mapsRun(tmp, foos+"""
+_lib/_rank_driver.fear
+iii
+use base.Str as Str;
+use foo.Foo as Foo;
+Lib:{ .foo: Str -> Foo.version }
+jjj
+"""+fooApp("map foo as _foo_v3 in _lib;\n")));
+    editAndTouch(lib, "use foo.Foo as Foo;\n", "map foo as _foo_v4 in _lib;\nuse foo.Foo as Foo;\n");
+    utils.Err.strCmp(insteadOfError("map foo as _foo_v3 in _lib", "map foo as _foo_v4 in _lib", "map foo as _foo_v3 in _lib instead of _foo_v4"),
+      assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib)).getMessage());
+    editAndTouch(app, "map foo as _foo_v3 in _lib;", "map foo as _foo_v5 in _lib instead of _foo_v4;");
+    utils.Err.strCmp("lib uses v5\n", coordinator(root).main(root, stLib));
+    editAndTouch(lib, "_foo_v4", "_foo_v6");
+    utils.Err.strCmp(insteadOfError("map foo as _foo_v5 in _lib instead of _foo_v4", "map foo as _foo_v6 in _lib", "map foo as _foo_v5 in _lib instead of _foo_v6"),
+      assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib)).getMessage());
+    editAndTouch(app, "instead of _foo_v4", "instead of _foo_v6");
+    utils.Err.strCmp("lib uses v5\n", coordinator(root).main(root, stLib));
+    editAndTouch(app, "map foo as _foo_v5 in _lib instead of _foo_v6;\n", "");
+    utils.Err.strCmp("lib uses v6\n", coordinator(root).main(root, stLib));
+  }
+  static String describeLib(String libMaps){ return "_lib/_rank_driver.fear\niii\nuse base.Str as Str;\n"+libMaps+"use foo.Foo as Foo;\nLib:{ .describe(f: Foo): Str -> f.version }\njjj\n"; }
+  static final String describeApp= "_app/_rank_app.fear\niii\nuse base.Main as Main;\nmap foo as _foo_v5 in _app;\nmap foo as _foo_v5 in _lib instead of _foo_v4;\nHello:Main{s->base.Debug#(lib.Lib.describe(foo.Foo))}\n";
+  @Test void aNewPinOfTheLibraryBreaksTheApplicationUntilItsInsteadOfFollows(@TempDir Path tmp) throws IOException, InterruptedException{
+    var root= tmp.resolve("root");
+    utils.Err.strCmp("v5\n", mapsRun(tmp, foos+describeLib("map foo as _foo_v4 in _lib;\n")+describeApp));
+    editAndTouch(root.resolve("_lib", "_rank_driver.fear"), "_foo_v4", "_foo_v3");
+    utils.Err.strCmp(insteadOfError("map foo as _foo_v5 in _lib instead of _foo_v4", "map foo as _foo_v3 in _lib", "map foo as _foo_v5 in _lib instead of _foo_v3"),
+      assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib)).getMessage());
+    editAndTouch(root.resolve("_app", "_rank_app.fear"), "instead of _foo_v4", "instead of _foo_v3");
+    utils.Err.strCmp("v5\n", coordinator(root).main(root, stLib));
+  }
+  @Test void droppingTheOverrideMakesTheLibraryRejectTheFooOfTheApplication(@TempDir Path tmp) throws IOException, InterruptedException{
+    var root= tmp.resolve("root");
+    utils.Err.strCmp("v5\n", mapsRun(tmp, foos+describeLib("map foo as _foo_v4 in _lib;\n")+describeApp));
+    editAndTouch(root.resolve("_app", "_rank_app.fear"), "map foo as _foo_v5 in _lib instead of _foo_v4;\n", "");
+    var msg= assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib)).getMessage();
+    utils.Err.strCmp("""
+In file: fear:/_app/_rank_app.fear
+[###]
+Source code inside folders named "_app" uses package name "foo" to refer to the code inside folders named "_foo_v5", because of "map foo as _foo_v5 in _app", written in fear:/_app/_rank_app.fear.
+[###]""", msg);
+  }
+  @Test void useOfAnOwnTypeInARankFile(@TempDir Path tmp){
+    utils.Err.strCmp("""
+In file: fear:/_app/_rank_app.fear
+
+002| use app.Helper as H;
+   |     ^^^^^^^^^^
+
+While inspecting package header
+"use" directive refers to type "Helper" declared inside folders named "_app".
+A "use" directive can only refer to types declared in other folders.
+Source code inside folders named "_app" uses the simple names of its own types.
+Error 7 WellFormedness
+""", mapsError(tmp, """
+_app/_rank_app.fear
+iii
+use base.Main as Main;
+use app.Helper as H;
+Helper:{}
+Hello:Main{s->base.Debug#(`hi`)}
+"""));
+  }
+  @Test void useOfAHigherRankPackageThroughAMapName(@TempDir Path tmp){
+    utils.Err.strCmp("""
+In file: fear:/_lib/_rank_driver.fear
+
+002| use app.Hello as H;
+   |     ^^^^^^^^^
+
+While inspecting package header
+"use" directive refers to the code inside folders named "_app", which has a higher rank than the code inside folders named "_lib".
+Folders named "_lib" have rank "driver999" ("_rank_driver.fear") and folders named "_app" have rank "app999" ("_rank_app.fear").
+Source code can only refer to code of a lower rank.
+Error 7 WellFormedness
+""", mapsError(tmp, foos+"""
+_lib/_rank_driver.fear
+iii
+map foo as _foo_v4 in _lib;
+use app.Hello as H;
+Lib:{}
+jjj
+"""+fooApp("")));
+  }
+  @Test void aMapToAMissingVersionListsTheExistingFolders(@TempDir Path tmp){
+    utils.Err.strCmp("""
+The map refers to the code inside folders named "_foo_v7", but no folder is named "_foo_v7":
+- "map foo as _foo_v7 in _lib instead of _foo_v4;"; written in fear:/_app/_rank_app.fear
+Existing folders: "_app", "_base", "_foo_v3", "_foo_v4", "_foo_v5", "_foo_v6", "_lib".
+Error 7 WellFormedness
+""", mapsError(tmp, foos
+      +fooLib("map foo as _foo_v4 in _lib;\n")
+      +fooApp("map foo as _foo_v7 in _lib instead of _foo_v4;\n")));
+  }
+  @Test void aMapInAMissingFolderNamesTheExistingFolders(@TempDir Path tmp){
+    utils.Err.strCmp("""
+The map applies to source code inside folders named "_libb", but no folder is named "_libb":
+- "map foo as _foo_v5 in _libb;"; written in fear:/_app/_rank_app.fear
+Did you mean "_lib" ?
+Existing folders: "_app", "_foo_v3", "_foo_v4", "_foo_v5", "_foo_v6", "_lib".
+Error 7 WellFormedness
+""", mapsError(tmp, foos
+      +fooLib("map foo as _foo_v4 in _lib;\n")
+      +fooApp("map foo as _foo_v5 in _libb;\n")));
+  }
+  @Test void anErrorInsideAMethodBodyOfAPinnedLibraryNamesThePinAndTheAlias(@TempDir Path tmp){
+    utils.Err.strCmp("""
+In file: fear:/_lib/_rank_driver.fear
+
+004| Lib:{ .foo(f: Foo): Str -> f.legacy }
+   |       ---------------------~^^^^^^^
+
+While inspecting ".foo(_)" line 4
+This call to method ".legacy" cannot typecheck.
+Method ".legacy" is not declared on type "Foo".
+
+Available methods on type "Foo":
+-       .version:Str
+
+Name "Foo" stands for "foo.Foo" because of "use foo.Foo as Foo".
+Source code inside folders named "_lib" uses package name "foo" to refer to the code inside folders named "_foo_v4", because of "map foo as _foo_v4 in _lib", written in fear:/_lib/_rank_driver.fear.
+
+Compressed relevant code with inferred types: (compression indicated by `-`)
+f.legacy
+Error 8 TypeError
+""", mapsError(tmp, foos+"""
+_lib/_rank_driver.fear
+iii
+use base.Str as Str;
+map foo as _foo_v4 in _lib;
+use foo.Foo as Foo;
+Lib:{ .foo(f: Foo): Str -> f.legacy }
+jjj
+"""+fooApp("")));
   }
   @Test void aZippedVersionIsReachedThroughAMap(@TempDir Path tmp) throws InterruptedException{
     utils.Err.strCmp("lib uses v9\n", mapsRun(tmp, """
