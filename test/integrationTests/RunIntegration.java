@@ -207,6 +207,43 @@ MyTests: UnitTests {::
     utils.Err.strCmp("", main(root, List.of()));
   }
   @Test void mapAToPkc(){ utils.Err.strCmp("CTEXT\n", run("map_a_to_pkc"));}
+  @Test void mapBilling(){
+    utils.Err.strCmp("""
+log2: # billing
+log2: # monthly report
+log2: == invoice 42 ==
+""", run("map_billing"));
+  }
+  @Test void mapBillingReportsEachChangeOfThePinItOverrides(@TempDir Path tmp) throws IOException, InterruptedException{
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    Fs.copyTree(freshIntegrationRoot("map_billing"), root);
+    var app= root.resolve("_billing", "_rank_app.fear");
+    editAndTouch(app, " instead of _log_v1", "");
+    utils.Err.strCmp("""
+The "instead of" list of a map must name exactly the folders chosen by the maps of lower rank that the map overrides:
+- "map log as _log_v2 in _invoice;"; written in fear:/_billing/_rank_app.fear
+These maps of lower rank choose other folders:
+- "map log as _log_v1 in _invoice;"; written in fear:/_invoice/_rank_worker200.fear
+Expected: "map log as _log_v2 in _invoice instead of _log_v1;".
+Error 7 WellFormedness
+""", assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib)).getMessage());
+    editAndTouch(app, "in _invoice;", "in _invoice instead of _log_v1;");
+    editAndTouch(root.resolve("_invoice", "_rank_worker200.fear"), "_log_v1", "_log_v2");
+    utils.Err.strCmp("""
+The "instead of" list of a map must name exactly the folders chosen by the maps of lower rank that the map overrides:
+- "map log as _log_v2 in _invoice instead of _log_v1;"; written in fear:/_billing/_rank_app.fear
+No map of lower rank chooses another folder.
+Expected: "map log as _log_v2 in _invoice;".
+Error 7 WellFormedness
+""", assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib)).getMessage());
+    editAndTouch(app, " instead of _log_v1", "");
+    utils.Err.strCmp("""
+log2: # billing
+log2: # monthly report
+log2: == invoice 42 ==
+""", coordinator(root).main(root, stLib));
+  }
   // What counts as a main of a package: every type implementing base.Main, declared at
   // the top level or inside a method: base.Main implements base.CaptureFree, so a main
   // captures nothing and the backend gives it an instance.
@@ -356,7 +393,7 @@ AllAutoTests_p: base.UnitTests {::
   }
   @Test void aFileWithoutTheMarkAtTheGeneratedLocationIsAnOrdinarySourceFile(@TempDir Path tmp) throws IOException{
     var root= docExamplesProject(tmp);
-    var mine= "Mine:base.Main{s->base.Debug#(`mine`)}\n";
+    var mine= "Mine:Main{s->Debug#(`mine`)}\n";
     Fs.writeUtf8(generatedTests(root), mine);
     utils.Err.strCmp("hi\nmine\n", main(root, List.of()));
     assertEquals(mine, Fs.readUtf8(generatedTests(root)));
@@ -798,8 +835,8 @@ In file: fear:/_col/_rank_app.fear
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 While inspecting type declaration "Hello[_]"
-Type declaration "Hello[_]" implements "base.Main" and has generic parameters.
-A type implementing "base.Main" must have zero generic parameters.
+Type declaration "Hello[_]" implements "Main" and has generic parameters.
+A type implementing "Main" must have zero generic parameters.
 Error 7 WellFormedness""", ex.getMessage());
   }
   @Test void aSourceFileThatIsNotUtf8IsAUserError(@TempDir Path tmp) throws IOException{
@@ -1647,8 +1684,8 @@ In file: fear:/_col/_rank_app.fear
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 While inspecting type declaration "Assoc"
-Type declaration "Assoc" implements "base.OpenWith[_,_]".
-Only a main can implement "base.OpenWith[_,_]": type declaration "Assoc" must also implement "base.Main", directly or through one of its supertypes.
+Type declaration "Assoc" implements "OpenWith[_,_]".
+Only a main can implement "OpenWith[_,_]": type declaration "Assoc" must also implement "Main", directly or through one of its supertypes.
 Error 7 WellFormedness"""); }
   @Test void aClaimOnANamedObjectLiteralWithoutMainIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 Test:{ #: I -> I: Shortcut[IconsFoo]{} }
@@ -1659,8 +1696,8 @@ In file: fear:/_col/_rank_app.fear
    |                ^^^^^^^^^^^^^^^^^^^^^^^
 
 While inspecting object literal "I"
-Object literal "I" implements "base.Shortcut[_]".
-Only a main can implement "base.Shortcut[_]": object literal "I" must also implement "base.Main", directly or through one of its supertypes.
+Object literal "I" implements "Shortcut[_]".
+Only a main can implement "Shortcut[_]": object literal "I" must also implement "Main", directly or through one of its supertypes.
 Error 7 WellFormedness"""); }
   @Test void aClaimOnAnAnonymousObjectLiteralWithoutMainIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 Test:{ #: Shortcut[IconsFoo] -> { .foo: base.Void -> base.Void } }
@@ -1670,9 +1707,9 @@ In file: fear:/_col/_rank_app.fear
 004| Test:{ #: Shortcut[IconsFoo] -> { .foo: base.Void -> base.Void } }
    |                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-While inspecting object literal instance of "base.Shortcut[_]"
-Object literal instance of "base.Shortcut[_]" implements "base.Shortcut[_]".
-Only a main can implement "base.Shortcut[_]": object literal instance of "base.Shortcut[_]" must also implement "base.Main", directly or through one of its supertypes.
+While inspecting object literal instance of "Shortcut[_]"
+Object literal instance of "Shortcut[_]" implements "Shortcut[_]".
+Only a main can implement "Shortcut[_]": object literal instance of "Shortcut[_]" must also implement "Main", directly or through one of its supertypes.
 Error 7 WellFormedness"""); }
   @Test void aClaimWithoutMainBlamesTheDeclarationAddingIt(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 B:A{}
@@ -1685,8 +1722,8 @@ In file: fear:/_col/_rank_app.fear
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 While inspecting type declaration "A"
-Type declaration "A" implements "base.OpenWith[_,_]".
-Only a main can implement "base.OpenWith[_,_]": type declaration "A" must also implement "base.Main", directly or through one of its supertypes.
+Type declaration "A" implements "OpenWith[_,_]".
+Only a main can implement "OpenWith[_,_]": type declaration "A" must also implement "Main", directly or through one of its supertypes.
 Error 7 WellFormedness"""); }
   @Test void aClaimWithoutMainInALowerRankPackageIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 Foo:Main{s->base.Debug#(`foo`)}
@@ -1713,7 +1750,7 @@ In file: fear:/_col/_rank_app.fear
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 While inspecting type declaration "A[_]"
-Type declaration "A[_]" implements `base.OpenWith[X,"q"]`.
+Type declaration "A[_]" implements `OpenWith[X,"q"]`.
 "X" is not a valid icon.
 Only concrete types with zero generic arguments are valid icons.
 Error 7 WellFormedness"""); }
@@ -1727,7 +1764,7 @@ In file: fear:/_col/_rank_app.fear
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 While inspecting type declaration "A"
-Type declaration "A" implements "base.Shortcut[Box[IconsFoo]]".
+Type declaration "A" implements "Shortcut[Box[IconsFoo]]".
 "Box[IconsFoo]" is not a valid icon.
 Only concrete types with zero generic arguments are valid icons.
 Error 7 WellFormedness"""); }
@@ -1740,9 +1777,9 @@ In file: fear:/_col/_rank_app.fear
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 While inspecting type declaration "A[_]"
-Type declaration "A[_]" implements "base.OpenWith[IconsFoo,X]".
+Type declaration "A[_]" implements "OpenWith[IconsFoo,X]".
 The extension "X" is not a string literal type.
-An extension is written as a string literal type, like `"ffile347"`, `"xml"` or `"txt"`; or implement "base.OpenWith[_]" to let the Fearless manager choose one.
+An extension is written as a string literal type, like `"ffile347"`, `"xml"` or `"txt"`; or implement "OpenWith[_]" to let the Fearless manager choose one.
 Error 7 WellFormedness"""); }
   @Test void aClaimWithATypeNameExtensionIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 A:Main,OpenWith[IconsFoo,IconsFoo]{}
@@ -1753,9 +1790,9 @@ In file: fear:/_col/_rank_app.fear
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 While inspecting type declaration "A"
-Type declaration "A" implements "base.OpenWith[IconsFoo,IconsFoo]".
+Type declaration "A" implements "OpenWith[IconsFoo,IconsFoo]".
 The extension "IconsFoo" is not a string literal type.
-An extension is written as a string literal type, like `"ffile347"`, `"xml"` or `"txt"`; or implement "base.OpenWith[_]" to let the Fearless manager choose one.
+An extension is written as a string literal type, like `"ffile347"`, `"xml"` or `"txt"`; or implement "OpenWith[_]" to let the Fearless manager choose one.
 Error 7 WellFormedness"""); }
   @Test void aClaimWithANumberExtensionIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 A:Main,Shortcut[IconsFoo,42]{}
@@ -1766,9 +1803,9 @@ In file: fear:/_col/_rank_app.fear
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 While inspecting type declaration "A"
-Type declaration "A" implements "base.Shortcut[IconsFoo,42]".
+Type declaration "A" implements "Shortcut[IconsFoo,42]".
 The extension "42" is not a string literal type.
-An extension is written as a string literal type, like `"fapp042"`; or implement "base.Shortcut[_]" to let the Fearless manager choose one.
+An extension is written as a string literal type, like `"fapp042"`; or implement "Shortcut[_]" to let the Fearless manager choose one.
 Error 7 WellFormedness"""); }
   @Test void anUppercaseExtensionIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 A:Main,OpenWith[IconsFoo,"Txt"]{}
@@ -1779,9 +1816,9 @@ In file: fear:/_col/_rank_app.fear
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 While inspecting type declaration "A"
-Type declaration "A" implements `base.OpenWith[IconsFoo,"Txt"]`.
+Type declaration "A" implements `OpenWith[IconsFoo,"Txt"]`.
 "Txt" is not a valid extension.
-An extension is 1 to 16 characters, each a lowercase letter "a"-"z" or a digit "0"-"9", with no dot; or implement "base.OpenWith[_]" to let the Fearless manager choose one.
+An extension is 1 to 16 characters, each a lowercase letter "a"-"z" or a digit "0"-"9", with no dot; or implement "OpenWith[_]" to let the Fearless manager choose one.
 Error 7 WellFormedness"""); }
   @Test void aMultiDotExtensionIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 A:Main,OpenWith[IconsFoo,"tar.gz"]{}
@@ -1792,9 +1829,9 @@ In file: fear:/_col/_rank_app.fear
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 While inspecting type declaration "A"
-Type declaration "A" implements `base.OpenWith[IconsFoo,"tar.gz"]`.
+Type declaration "A" implements `OpenWith[IconsFoo,"tar.gz"]`.
 "tar.gz" is not a valid extension.
-An extension is 1 to 16 characters, each a lowercase letter "a"-"z" or a digit "0"-"9", with no dot; or implement "base.OpenWith[_]" to let the Fearless manager choose one.
+An extension is 1 to 16 characters, each a lowercase letter "a"-"z" or a digit "0"-"9", with no dot; or implement "OpenWith[_]" to let the Fearless manager choose one.
 Error 7 WellFormedness"""); }
   @Test void aLeadingDotExtensionIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 A:Main,OpenWith[IconsFoo,".txt"]{}
@@ -1805,9 +1842,9 @@ In file: fear:/_col/_rank_app.fear
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 While inspecting type declaration "A"
-Type declaration "A" implements `base.OpenWith[IconsFoo,".txt"]`.
+Type declaration "A" implements `OpenWith[IconsFoo,".txt"]`.
 ".txt" is not a valid extension.
-An extension is 1 to 16 characters, each a lowercase letter "a"-"z" or a digit "0"-"9", with no dot; or implement "base.OpenWith[_]" to let the Fearless manager choose one.
+An extension is 1 to 16 characters, each a lowercase letter "a"-"z" or a digit "0"-"9", with no dot; or implement "OpenWith[_]" to let the Fearless manager choose one.
 Error 7 WellFormedness"""); }
   @Test void anEmptyExtensionIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 A:Main,OpenWith[IconsFoo,""]{}
@@ -1818,9 +1855,9 @@ In file: fear:/_col/_rank_app.fear
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 While inspecting type declaration "A"
-Type declaration "A" implements `base.OpenWith[IconsFoo,""]`.
+Type declaration "A" implements `OpenWith[IconsFoo,""]`.
 "" is not a valid extension.
-An extension is 1 to 16 characters, each a lowercase letter "a"-"z" or a digit "0"-"9", with no dot; or implement "base.OpenWith[_]" to let the Fearless manager choose one.
+An extension is 1 to 16 characters, each a lowercase letter "a"-"z" or a digit "0"-"9", with no dot; or implement "OpenWith[_]" to let the Fearless manager choose one.
 Error 7 WellFormedness"""); }
   @Test void aTooLongExtensionIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 A:Main,OpenWith[IconsFoo,"abcdefghij0123456"]{}
@@ -1831,9 +1868,9 @@ In file: fear:/_col/_rank_app.fear
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 While inspecting type declaration "A"
-Type declaration "A" implements `base.OpenWith[IconsFoo,"abcd-3456"]`.
+Type declaration "A" implements `OpenWith[IconsFoo,"abcd-3456"]`.
 "abcdefghij0123456" is not a valid extension.
-An extension is 1 to 16 characters, each a lowercase letter "a"-"z" or a digit "0"-"9", with no dot; or implement "base.OpenWith[_]" to let the Fearless manager choose one.
+An extension is 1 to 16 characters, each a lowercase letter "a"-"z" or a digit "0"-"9", with no dot; or implement "OpenWith[_]" to let the Fearless manager choose one.
 Error 7 WellFormedness"""); }
   @Test void theFearlessExtensionIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 A:Main,OpenWith[IconsFoo,`fearless`]{}
@@ -1844,9 +1881,9 @@ In file: fear:/_col/_rank_app.fear
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 While inspecting type declaration "A"
-Type declaration "A" implements "base.OpenWith[IconsFoo,`fearless`]".
+Type declaration "A" implements "OpenWith[IconsFoo,`fearless`]".
 "fearless" is not a valid extension.
-The extension "fearless" is reserved; or implement "base.OpenWith[_]" to let the Fearless manager choose one.
+The extension "fearless" is reserved; or implement "OpenWith[_]" to let the Fearless manager choose one.
 Error 7 WellFormedness"""); }
   @Test void anExtensionClaimedTwiceIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 A:Main,Shortcut[IconsFoo,"fapp042"],Shortcut[base.IconsConflict,"fapp042"]{}
@@ -1858,8 +1895,8 @@ In file: fear:/_col/_rank_app.fear
 
 While inspecting type declaration "A"
 Type declaration "A" claims the extension "fapp042" more than once:
-both `base.Shortcut[IconsFoo,"fapp042"]` and `base.Shortcut[base.IconsConflict,"fapp042"]` claim it.
-A main can claim each extension at most once, across all its "base.OpenWith[_,_]" and "base.Shortcut[_,_]", since one extension has one icon.
+both `Shortcut[IconsFoo,"fapp042"]` and `Shortcut[base.IconsConflict,"fapp042"]` claim it.
+A main can claim each extension at most once, across all its "OpenWith[_,_]" and "Shortcut[_,_]", since one extension has one icon.
 Error 7 WellFormedness"""); }
   @Test void anExtensionClaimedTwiceWithDifferentDelimitersIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 A:Main,OpenWith[IconsFoo,"txt"],OpenWith[IconsFoo,`txt`]{}
@@ -1871,8 +1908,8 @@ In file: fear:/_col/_rank_app.fear
 
 While inspecting type declaration "A"
 Type declaration "A" claims the extension "txt" more than once:
-both `base.OpenWith[IconsFoo,"txt"]` and "base.OpenWith[IconsFoo,`txt`]" claim it.
-A main can claim each extension at most once, across all its "base.OpenWith[_,_]" and "base.Shortcut[_,_]", since one extension has one icon.
+both `OpenWith[IconsFoo,"txt"]` and "OpenWith[IconsFoo,`txt`]" claim it.
+A main can claim each extension at most once, across all its "OpenWith[_,_]" and "Shortcut[_,_]", since one extension has one icon.
 Error 7 WellFormedness"""); }
   @Test void aShortcutOfAnotherExtensionIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 A:Main,Shortcut[IconsFoo,"bar"]{}
@@ -1883,9 +1920,9 @@ In file: fear:/_col/_rank_app.fear
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 While inspecting type declaration "A"
-Type declaration "A" implements `base.Shortcut[IconsFoo,"bar"]`.
+Type declaration "A" implements `Shortcut[IconsFoo,"bar"]`.
 "bar" is not a shortcut extension: a shortcut file only starts its main, so it must not look like a document of another program or a file of the project.
-A shortcut extension is "fapp" followed by three digits, like "fapp042"; or implement "base.Shortcut[_]" to let the Fearless manager choose one.
+A shortcut extension is "fapp" followed by three digits, like "fapp042"; or implement "Shortcut[_]" to let the Fearless manager choose one.
 Error 7 WellFormedness"""); }
   @Test void aShortcutOfAFfileExtensionIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 A:Main,Shortcut[IconsFoo,"ffile042"]{}
@@ -1896,9 +1933,9 @@ In file: fear:/_col/_rank_app.fear
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 While inspecting type declaration "A"
-Type declaration "A" implements `base.Shortcut[IconsFoo,"ffile042"]`.
+Type declaration "A" implements `Shortcut[IconsFoo,"ffile042"]`.
 "ffile042" is not a shortcut extension: a shortcut file only starts its main, so it must not look like a document of another program or a file of the project.
-A shortcut extension is "fapp" followed by three digits, like "fapp042"; or implement "base.Shortcut[_]" to let the Fearless manager choose one.
+A shortcut extension is "fapp" followed by three digits, like "fapp042"; or implement "Shortcut[_]" to let the Fearless manager choose one.
 Error 7 WellFormedness"""); }
   @Test void aShortcutOfAFourDigitFappExtensionIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 A:Main,Shortcut[IconsFoo,"fapp0420"]{}
@@ -1909,9 +1946,9 @@ In file: fear:/_col/_rank_app.fear
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 While inspecting type declaration "A"
-Type declaration "A" implements `base.Shortcut[IconsFoo,"fapp0420"]`.
+Type declaration "A" implements `Shortcut[IconsFoo,"fapp0420"]`.
 "fapp0420" is not a shortcut extension: a shortcut file only starts its main, so it must not look like a document of another program or a file of the project.
-A shortcut extension is "fapp" followed by three digits, like "fapp042"; or implement "base.Shortcut[_]" to let the Fearless manager choose one.
+A shortcut extension is "fapp" followed by three digits, like "fapp042"; or implement "Shortcut[_]" to let the Fearless manager choose one.
 Error 7 WellFormedness"""); }
   @Test void anOpenWithNeverClaimsAFappExtension(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 A:Main,OpenWith[IconsFoo,"fapp042"]{}
@@ -1922,9 +1959,9 @@ In file: fear:/_col/_rank_app.fear
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 While inspecting type declaration "A"
-Type declaration "A" implements `base.OpenWith[IconsFoo,"fapp042"]`.
+Type declaration "A" implements `OpenWith[IconsFoo,"fapp042"]`.
 "fapp042" is a shortcut extension: "fapp" followed by three digits names the shortcut files of the Fearless manager.
-Use an extension of the form "ffile" followed by three digits, like "ffile042", or a system extension, like "htm"; or implement "base.OpenWith[_]" to let the Fearless manager choose one.
+Use an extension of the form "ffile" followed by three digits, like "ffile042", or a system extension, like "htm"; or implement "OpenWith[_]" to let the Fearless manager choose one.
 Error 7 WellFormedness"""); }
   @Test void aClaimWhoseIconIsNotAnImageFileIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 A:Main,OpenWith[base.Str,"q"]{}
@@ -2065,8 +2102,8 @@ In file: fear:/_col/_rank_app.fear
 
 While inspecting type declaration "Clash"
 Type declaration "Clash" claims the extension "fear" more than once:
-both `base.OpenWith[IconsFoo,"fear"]` and `base.OpenWith[base.IconsConflict,"fear"]` claim it.
-A main can claim each extension at most once, across all its "base.OpenWith[_,_]" and "base.Shortcut[_,_]", since one extension has one icon.
+both `OpenWith[IconsFoo,"fear"]` and `OpenWith[base.IconsConflict,"fear"]` claim it.
+A main can claim each extension at most once, across all its "OpenWith[_,_]" and "Shortcut[_,_]", since one extension has one icon.
 Error 7 WellFormedness""", ex.getMessage());
   }
   static String manifests(Path root){ return MainsInfo.files(root).stream().map(p -> "--- "+p.getFileName()+"\n"+Fs.readUtf8(p)).reduce("", String::concat); }
@@ -2294,11 +2331,11 @@ jjj
 _pka/_rank_app999.fear
 iii
 use base.Main as Main;
-map a as pkc in pkb;
+map a as _pkc in _pkb;
 A:Main{s->base.Debug#(pkb.B.text)}
 """);
     utils.Err.strCmp("c\n", main(root, List.of()));
-    editAndTouch(root.resolve("_pka", "_rank_app999.fear"), "map a as pkc", "map a as pkd");
+    editAndTouch(root.resolve("_pka", "_rank_app999.fear"), "map a as _pkc", "map a as _pkd");
     assertEquals(Map.of("pka", false, "pkb", false, "pkc", false, "pkd", false), Coordinator.pkgsBuilt(root, baseCache));
     utils.Err.strCmp("d\n", main(root, List.of()));
   }
@@ -2866,14 +2903,14 @@ b
     assertEquals(1, Coordinator.startMain(root, ResolveResource.stLibPath, "rec.NaiveSum", Optional.empty(), Map.of(), Map.of(), List.of(), List.of(), coordinator(root).sharedClasspath(), out::append).await(), out::toString);
     utils.Err.strCmp("[###]java.lang.StackOverflowError[###]", out.toString());
   }
-  @Test void virtualizationMapMentionsAPackageThatDoesNotExist(@TempDir Path tmp) throws InterruptedException{
+  @Test void aMapMentionsAPackageThatDoesNotExist(@TempDir Path tmp) throws InterruptedException{
     var root= tmp.resolve("root");
     UserError.root = root;
     FsDsl.materialize(root, """
 _pka/_rank_app999.fear
 iii
 use base.Main as Main;
-map a as nonexistentpkg in pkb;
+map a as _nonexistentpkg in _pkb;
 Hello:Main{s->base.Debug#(pkb.B.text)}
 jjj
 _pkb/_rank_app200.fear
@@ -2883,11 +2920,9 @@ B:{.text:Str->a.C.text;}
 """);
     var ex= assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib));
     utils.Err.strCmp("""
-For package "pkb", the virtual package name "a" is mapped to "nonexistentpkg",
-but package "nonexistentpkg" does not exist:
- - fear:/_pka/_rank_app999.fear
-   "map  a  as  nonexistentpkg  in  pkb;"
-Existing packages: "base", "pka", "pkb".
+The map refers to the code inside folders named "_nonexistentpkg", but no folder is named "_nonexistentpkg":
+- "map a as _nonexistentpkg in _pkb;"; written in fear:/_pka/_rank_app999.fear
+Existing folders: "_base", "_pka", "_pkb".
 Error 7 WellFormedness
 """, ex.getMessage());
   }
@@ -2914,9 +2949,9 @@ In file: fear:/_a/_rank_core345.fear
    |     ^^^^^^^^^^
 
 While inspecting package header
-"use" directive refers to package "z", which has a higher rank than package "a".
-Package "a" has rank "core345" ("_rank_core345.fear") and package "z" has rank "app999" ("_rank_app.fear").
-A package can only use packages of a lower rank.
+"use" directive refers to the code inside folders named "_z", which has a higher rank than the code inside folders named "_a".
+Folders named "_a" have rank "core345" ("_rank_core345.fear") and folders named "_z" have rank "app999" ("_rank_app.fear").
+Source code can only refer to code of a lower rank.
 Error 7 WellFormedness
 """, ex.getMessage());
   }
@@ -2943,11 +2978,1566 @@ In file: fear:/_a/_rank_core.fear
    |     ^^^^^^^^^^
 
 While inspecting package header
-"use" directive refers to package "z", which has the same rank as package "a".
-Package "a" has rank "core999" ("_rank_core.fear") and package "z" has rank "core999" ("_rank_core999.fear").
-A package can only use packages of a lower rank.
+"use" directive refers to the code inside folders named "_z", which has the same rank as the code inside folders named "_a".
+Folders named "_a" have rank "core999" ("_rank_core.fear") and folders named "_z" have rank "core999" ("_rank_core999.fear").
+Source code can only refer to code of a lower rank.
 Error 7 WellFormedness
 """, ex.getMessage());
+  }
+  static void versions(Path root){
+    FsDsl.materialize(root, """
+_webserver_v12/_rank_core100.fear
+iii
+use base.Str as Str;
+Server:{ .version: Str -> "v12" }
+jjj
+_webserver_v13/_rank_core200.fear
+iii
+use base.Str as Str;
+Server:{ .version: Str -> "v13" }
+jjj
+_shop/_rank_app100.fear
+iii
+use base.Str as Str;
+map webserver as _webserver_v12 in _shop;
+Shop:{ .server: Str -> webserver.Server.version }
+jjj
+_blog/_rank_app200.fear
+iii
+use base.Str as Str;
+map webserver as _webserver_v13 in _blog;
+use webserver.Server as Server;
+Blog:{ .server: Str -> Server.version }
+jjj
+_app/_rank_app999.fear
+iii
+use base.Main as Main;
+Hello:Main{s->base.Debug#("shop "+(shop.Shop.server)+", blog "+(blog.Blog.server))}
+""");
+  }
+  @Test void twoPackagesUseTwoVersionsOfTheSamePackageThroughTheSamePackageName(@TempDir Path tmp) throws InterruptedException{
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    versions(root);
+    utils.Err.strCmp("shop v12, blog v13\n", coordinator(root).main(root, stLib));
+  }
+  @Test void aHigherRankPackageChoosesTheVersionUsedByALowerRankPackage(@TempDir Path tmp) throws InterruptedException{
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_foo_v4/_rank_core100.fear
+iii
+use base.Str as Str;
+Foo:{ .version: Str -> "v4" }
+jjj
+_foo_v5/_rank_core200.fear
+iii
+use base.Str as Str;
+Foo:{ .version: Str -> "v5" }
+jjj
+_lib/_rank_driver.fear
+iii
+use base.Str as Str;
+map foo as _foo_v4 in _lib;
+Lib:{ .foo: Str -> foo.Foo.version }
+jjj
+_app/_rank_app.fear
+iii
+use base.Main as Main;
+map foo as _foo_v5 in _lib instead of _foo_v4;
+Hello:Main{s->base.Debug#("lib uses "+(lib.Lib.foo))}
+""");
+    utils.Err.strCmp("lib uses v5\n", coordinator(root).main(root, stLib));
+  }
+  @Test void aDocReferenceUsesThePackageNameOfTheMap(@TempDir Path tmp) throws InterruptedException{
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_c/_rank_core.fear
+iii
+use base.Str as Str;
+A:{ .name: Str -> "c" }
+jjj
+_app/_rank_app.fear
+iii
+use base.Main as Main;
+map a as _c in _app;
+///Shows the name of `a.A`.
+Show:{ .of(x: a.A): base.Str -> x.name }
+App:Main{s->base.Debug#(Show.of(a.A))}
+""");
+    utils.Err.strCmp("c\n", coordinator(root).main(root, stLib));
+  }
+  @Test void aDocReferenceByTheFolderNameOfAMapIsBroken(@TempDir Path tmp) throws InterruptedException{
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_c/_rank_core.fear
+iii
+use base.Str as Str;
+A:{ .name: Str -> "c" }
+jjj
+_app/_rank_app.fear
+iii
+use base.Main as Main;
+map a as _c in _app;
+///Shows the name of `c.A`.
+Show:{ .of(x: a.A): base.Str -> x.name }
+App:Main{s->base.Debug#(Show.of(a.A))}
+""");
+    var ex= assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib));
+    utils.Err.strCmp("""
+[###]Broken reference in a doc comment.[###]
+""", ex.getMessage());
+  }
+  @Test void anOverrideWithoutInsteadOfIsAnError(@TempDir Path tmp) throws InterruptedException{
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_foo_v4/_rank_core100.fear
+iii
+use base.Str as Str;
+Foo:{ .version: Str -> "v4" }
+jjj
+_foo_v5/_rank_core200.fear
+iii
+use base.Str as Str;
+Foo:{ .version: Str -> "v5" }
+jjj
+_lib/_rank_driver.fear
+iii
+use base.Str as Str;
+map foo as _foo_v4 in _lib;
+Lib:{ .foo: Str -> foo.Foo.version }
+jjj
+_app/_rank_app.fear
+iii
+use base.Main as Main;
+map foo as _foo_v5 in _lib;
+Hello:Main{s->base.Debug#("lib uses "+(lib.Lib.foo))}
+""");
+    var ex= assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib));
+    utils.Err.strCmp("""
+The "instead of" list of a map must name exactly the folders chosen by the maps of lower rank that the map overrides:
+- "map foo as _foo_v5 in _lib;"; written in fear:/_app/_rank_app.fear
+These maps of lower rank choose other folders:
+- "map foo as _foo_v4 in _lib;"; written in fear:/_lib/_rank_driver.fear
+Expected: "map foo as _foo_v5 in _lib instead of _foo_v4;".
+Error 7 WellFormedness
+""", ex.getMessage());
+  }
+  @Test void anInsteadOfWithNothingOverriddenIsAnError(@TempDir Path tmp) throws InterruptedException{
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_foo_v5/_rank_core200.fear
+iii
+use base.Str as Str;
+Foo:{ .version: Str -> "v5" }
+jjj
+_lib/_rank_driver.fear
+iii
+use base.Str as Str;
+Lib:{ .foo: Str -> foo.Foo.version }
+jjj
+_app/_rank_app.fear
+iii
+use base.Main as Main;
+map foo as _foo_v5 in _lib instead of _foo_v4;
+Hello:Main{s->base.Debug#("lib uses "+(lib.Lib.foo))}
+""");
+    var ex= assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib));
+    utils.Err.strCmp("""
+The "instead of" list of a map must name exactly the folders chosen by the maps of lower rank that the map overrides:
+- "map foo as _foo_v5 in _lib instead of _foo_v4;"; written in fear:/_app/_rank_app.fear
+No map of lower rank chooses another folder.
+Expected: "map foo as _foo_v5 in _lib;".
+Error 7 WellFormedness
+""", ex.getMessage());
+  }
+  @Test void anOverrideListsOnlyTheFoldersItRejects(@TempDir Path tmp) throws InterruptedException{
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_foo_v4/_rank_core100.fear
+iii
+use base.Str as Str;
+Foo:{ .version: Str -> "v4" }
+jjj
+_foo_v5/_rank_core200.fear
+iii
+use base.Str as Str;
+Foo:{ .version: Str -> "v5" }
+jjj
+_lib/_rank_driver.fear
+iii
+use base.Str as Str;
+map foo as _foo_v4 in _lib;
+Lib:{ .foo: Str -> foo.Foo.version }
+jjj
+_libuser1/_rank_worker100.fear
+iii
+map foo as _foo_v5 in _lib instead of _foo_v4;
+User1:{}
+jjj
+_libuser2/_rank_worker200.fear
+iii
+map foo as _foo_v4 in _lib;
+User2:{}
+jjj
+_app/_rank_app.fear
+iii
+use base.Main as Main;
+map foo as _foo_v5 in _lib instead of _foo_v4;
+Hello:Main{s->base.Debug#("lib uses "+(lib.Lib.foo))}
+""");
+    utils.Err.strCmp("lib uses v5\n", coordinator(root).main(root, stLib));
+  }
+  @Test void withoutAnOverrideALowerRankPackageKeepsItsOwnVersion(@TempDir Path tmp) throws InterruptedException{
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_foo_v4/_rank_core100.fear
+iii
+use base.Str as Str;
+Foo:{ .version: Str -> "v4" }
+jjj
+_foo_v5/_rank_core200.fear
+iii
+use base.Str as Str;
+Foo:{ .version: Str -> "v5" }
+jjj
+_lib/_rank_driver.fear
+iii
+use base.Str as Str;
+map foo as _foo_v4 in _lib;
+Lib:{ .foo: Str -> foo.Foo.version }
+jjj
+_app/_rank_app.fear
+iii
+use base.Main as Main;
+map foo as _foo_v5 in _app;
+Hello:Main{s->base.Debug#("lib uses "+(lib.Lib.foo)+", app uses "+(foo.Foo.version))}
+""");
+    utils.Err.strCmp("lib uses v4, app uses v5\n", coordinator(root).main(root, stLib));
+  }
+  @Test void aVersionFolderNameIsNotAPackageNameWhenAMapNamesIt(@TempDir Path tmp) throws InterruptedException{
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_webserver_v12/_rank_core100.fear
+iii
+use base.Str as Str;
+Server:{ .version: Str -> "v12" }
+jjj
+_app/_rank_app.fear
+iii
+use base.Main as Main;
+map webserver as _webserver_v12 in _app;
+Hello:Main{s->base.Debug#(webserver_v12.Server.version)}
+""");
+    var ex= assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib));
+    utils.Err.strCmp("""
+In file: fear:/_app/_rank_app.fear
+
+003| Hello:Main{s->base.Debug#(webserver_v12.Server.version)}
+   |                           ^^^^^^^^^^^^^^^^^^^^^
+
+While inspecting a type name
+Source code inside folders named "_app" can not use package name "webserver_v12".
+Did you mean "webserver" ?
+Visible package names: "base", "webserver".
+Source code inside folders named "_app" uses package name "webserver" to refer to the code inside folders named "_webserver_v12", because of "map webserver as _webserver_v12 in _app", written in fear:/_app/_rank_app.fear.
+Error 7 WellFormedness
+""", ex.getMessage());
+  }
+  @Test void aMapOfAnExistingPackage(@TempDir Path tmp) throws InterruptedException{
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_a/_rank_core100.fear
+iii
+use base.Str as Str;
+A:{ .text: Str -> "a" }
+jjj
+_c/_rank_core200.fear
+iii
+use base.Str as Str;
+A:{ .text: Str -> "c" }
+jjj
+_b/_rank_app.fear
+iii
+use base.Main as Main;
+map a as _c in _b;
+map c as _a in _b;
+Hello:Main{s->base.Debug#(a.A.text)}
+""");
+    var ex= assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib));
+    utils.Err.strCmp("""
+A map can not give package name "a", because folders named "_a" exist:
+- "map a as _c in _b;"; written in fear:/_b/_rank_app.fear
+With no map, package name "a" refers to the code inside folders named "_a".
+Error 7 WellFormedness
+""", ex.getMessage());
+  }
+  @Test void threePackageNamesForOneFolderAreAnError(@TempDir Path tmp) throws InterruptedException{
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_c/_rank_core.fear
+iii
+use base.Str as Str;
+A:{ .text: Str -> "c" }
+jjj
+_b/_rank_app.fear
+iii
+use base.Main as Main;
+map a as _c in _b;
+map d as _c in _b;
+map e as _c in _b;
+Hello:Main{s->base.Debug#(a.A.text)}
+""");
+    var ex= assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib));
+    utils.Err.strCmp("""
+Source code inside folders named "_b" can use only one package name to refer to the code inside folders named "_c":
+- "map a as _c in _b;"; written in fear:/_b/_rank_app.fear
+- "map d as _c in _b;"; written in fear:/_b/_rank_app.fear
+- "map e as _c in _b;"; written in fear:/_b/_rank_app.fear
+Error 7 WellFormedness
+""", ex.getMessage());
+  }
+  @Test void aMapToTheTargetItself(@TempDir Path tmp) throws InterruptedException{
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_b/_rank_app.fear
+iii
+use base.Main as Main;
+map me as _b in _b;
+Hello:Main{s->base.Debug#(`b`)}
+""");
+    var ex= assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib));
+    utils.Err.strCmp("""
+A map can not refer to the code inside folders named "_b" for source code inside folders named "_b":
+- "map me as _b in _b;"; written in fear:/_b/_rank_app.fear
+Source code inside folders named "_b" uses the simple names of its own types.
+Error 7 WellFormedness
+""", ex.getMessage());
+  }
+  @Test void aMapInAPackageThatDoesNotExist(@TempDir Path tmp) throws InterruptedException{
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_pka/_rank_app999.fear
+iii
+use base.Main as Main;
+map a as _pkc in _pkbb;
+Hello:Main{s->base.Debug#(pkb.B.text)}
+jjj
+_pkb/_rank_app200.fear
+iii
+use base.Str as Str;
+B:{.text:Str->a.C.text;}
+jjj
+_pkc/_rank_app100.fear
+iii
+use base.Str as Str;
+C:{.text:Str->"c";}
+""");
+    var ex= assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib));
+    utils.Err.strCmp("""
+The map applies to source code inside folders named "_pkbb", but no folder is named "_pkbb":
+- "map a as _pkc in _pkbb;"; written in fear:/_pka/_rank_app999.fear
+Did you mean "_pkb" ?
+Existing folders: "_pka", "_pkb", "_pkc".
+Error 7 WellFormedness
+""", ex.getMessage());
+  }
+  @Test void aMapInBase(@TempDir Path tmp) throws InterruptedException{
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_pka/_rank_app999.fear
+iii
+use base.Main as Main;
+map a as _pka in _base;
+Hello:Main{s->base.Debug#(`hi`)}
+""");
+    var ex= assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib));
+    utils.Err.strCmp("""
+A map can not apply to source code inside folders named "_base":
+- "map a as _pka in _base;"; written in fear:/_pka/_rank_app999.fear
+Error 7 WellFormedness
+""", ex.getMessage());
+  }
+  @Test void aMapToAHigherRankPackage(@TempDir Path tmp) throws InterruptedException{
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_pka/_rank_app999.fear
+iii
+use base.Main as Main;
+map a as _pka in _pkb;
+Hello:Main{s->base.Debug#(pkb.B.text)}
+T:{.text:base.Str->"t";}
+jjj
+_pkb/_rank_app200.fear
+iii
+use base.Str as Str;
+B:{.text:Str->a.T.text;}
+""");
+    var ex= assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib));
+    utils.Err.strCmp("""
+The map refers to the code inside folders named "_pka", which has a higher rank than the code inside folders named "_pkb":
+- "map a as _pka in _pkb;"; written in fear:/_pka/_rank_app999.fear
+Folders named "_pkb" have rank "app200" ("_rank_app200.fear") and folders named "_pka" have rank "app999" ("_rank_app999.fear").
+Source code can only refer to code of a lower rank.
+Error 7 WellFormedness
+""", ex.getMessage());
+  }
+  static final String foos= Stream.of("3", "4", "5", "6").map(v -> """
+_foo_vV/_rank_coreV00.fear
+iii
+use base.Str as Str;
+Foo:{ .version: Str -> "vV" }
+jjj
+""".replace("V", v)).collect(Collectors.joining());
+  static String fooLib(String maps){ return "_lib/_rank_driver.fear\niii\nuse base.Str as Str;\n"+maps+"Lib:{ .foo: Str -> foo.Foo.version }\njjj\n"; }
+  static String fooUser(String folder, String rank, String maps){ return "_"+folder+"/_rank_"+rank+".fear\niii\n"+maps+"User"+folder+":{}\njjj\n"; }
+  static String fooApp(String maps){ return "_app/_rank_app.fear\niii\nuse base.Main as Main;\n"+maps+"Hello:Main{s->base.Debug#(\"lib uses \"+(lib.Lib.foo))}\n"; }
+  String mapsRun(Path tmp, String project) throws InterruptedException{
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, project);
+    return coordinator(root).main(root, stLib);
+  }
+  String mapsError(Path tmp, String project){
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, project);
+    return assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib)).getMessage();
+  }
+  @Test void aMapAgreeingWithALowerRankMapNeedsNoInsteadOf(@TempDir Path tmp) throws InterruptedException{
+    utils.Err.strCmp("lib uses v4\n", mapsRun(tmp, foos
+      +fooLib("map foo as _foo_v4 in _lib;\n")
+      +fooApp("map foo as _foo_v4 in _lib;\n")));
+  }
+  @Test void aMapListingItsOwnFolderInInsteadOfIsAnError(@TempDir Path tmp){
+    utils.Err.strCmp("""
+The "instead of" list of a map must name exactly the folders chosen by the maps of lower rank that the map overrides:
+- "map foo as _foo_v4 in _lib instead of _foo_v4;"; written in fear:/_app/_rank_app.fear
+No map of lower rank chooses another folder.
+Expected: "map foo as _foo_v4 in _lib;".
+Error 7 WellFormedness
+""", mapsError(tmp, foos
+      +fooLib("map foo as _foo_v4 in _lib;\n")
+      +fooApp("map foo as _foo_v4 in _lib instead of _foo_v4;\n")));
+  }
+  @Test void anInsteadOfListingAFolderTwiceIsAnError(@TempDir Path tmp){
+    utils.Err.strCmp("""
+The "instead of" list of a map must name exactly the folders chosen by the maps of lower rank that the map overrides:
+- "map foo as _foo_v5 in _lib instead of _foo_v4, _foo_v4;"; written in fear:/_app/_rank_app.fear
+These maps of lower rank choose other folders:
+- "map foo as _foo_v4 in _lib;"; written in fear:/_lib/_rank_driver.fear
+Expected: "map foo as _foo_v5 in _lib instead of _foo_v4;".
+Error 7 WellFormedness
+""", mapsError(tmp, foos
+      +fooLib("map foo as _foo_v4 in _lib;\n")
+      +fooApp("map foo as _foo_v5 in _lib instead of _foo_v4, _foo_v4;\n")));
+  }
+  @Test void anInsteadOfListingAFolderNoMapChoseIsAnError(@TempDir Path tmp){
+    utils.Err.strCmp("""
+The "instead of" list of a map must name exactly the folders chosen by the maps of lower rank that the map overrides:
+- "map foo as _foo_v5 in _lib instead of _foo_v4, _foo_v3;"; written in fear:/_app/_rank_app.fear
+These maps of lower rank choose other folders:
+- "map foo as _foo_v4 in _lib;"; written in fear:/_lib/_rank_driver.fear
+Expected: "map foo as _foo_v5 in _lib instead of _foo_v4;".
+Error 7 WellFormedness
+""", mapsError(tmp, foos
+      +fooLib("map foo as _foo_v4 in _lib;\n")
+      +fooApp("map foo as _foo_v5 in _lib instead of _foo_v4, _foo_v3;\n")));
+  }
+  @Test void aLibraryChangingItsPinBreaksTheOverrideOfTheApplication(@TempDir Path tmp) throws IOException, InterruptedException{
+    var root= tmp.resolve("root");
+    utils.Err.strCmp("lib uses v5\n", mapsRun(tmp, foos
+      +fooLib("map foo as _foo_v4 in _lib;\n")
+      +fooApp("map foo as _foo_v5 in _lib instead of _foo_v4;\n")));
+    editAndTouch(root.resolve("_lib", "_rank_driver.fear"), "_foo_v4", "_foo_v3");
+    var ex= assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib));
+    utils.Err.strCmp("""
+The "instead of" list of a map must name exactly the folders chosen by the maps of lower rank that the map overrides:
+- "map foo as _foo_v5 in _lib instead of _foo_v4;"; written in fear:/_app/_rank_app.fear
+These maps of lower rank choose other folders:
+- "map foo as _foo_v3 in _lib;"; written in fear:/_lib/_rank_driver.fear
+Expected: "map foo as _foo_v5 in _lib instead of _foo_v3;".
+Error 7 WellFormedness
+""", ex.getMessage());
+  }
+  @Test void removingAnOverrideGivesTheLibraryItsPinBack(@TempDir Path tmp) throws IOException, InterruptedException{
+    var root= tmp.resolve("root");
+    utils.Err.strCmp("lib uses v5\n", mapsRun(tmp, foos
+      +fooLib("map foo as _foo_v4 in _lib;\n")
+      +fooApp("map foo as _foo_v5 in _lib instead of _foo_v4;\n")));
+    editAndTouch(root.resolve("_app", "_rank_app.fear"), "map foo as _foo_v5 in _lib instead of _foo_v4;\n", "");
+    utils.Err.strCmp("lib uses v4\n", coordinator(root).main(root, stLib));
+  }
+  @Test void twoMapsOfTheSameRankChoosingDifferentFoldersConflict(@TempDir Path tmp){
+    utils.Err.strCmp("""
+Maps of the same rank give package name "foo" different folders, for source code inside folders named "_lib":
+- "map foo as _foo_v5 in _lib instead of _foo_v4;"; written in fear:/_w1/_rank_worker.fear
+- "map foo as _foo_v6 in _lib instead of _foo_v4;"; written in fear:/_w2/_rank_worker.fear
+
+How maps work:
+- A rank file can have lines like "map name as _folder in _target;".
+- With no map, package name "x" refers to the code inside folders named "_x".
+- A map in a rank file of higher rank overrides the maps of lower rank, and lists their folders with "instead of".
+
+How to fix it:
+- Decide which folder package name "foo" refers to, for source code inside folders named "_lib".
+- Add one map in a rank file of higher rank (typically the rank file of your application), with "instead of" listing every folder chosen by the maps of lower rank.
+Error 7 WellFormedness
+""", mapsError(tmp, foos
+      +fooLib("map foo as _foo_v4 in _lib;\n")
+      +fooUser("w1", "worker", "map foo as _foo_v5 in _lib instead of _foo_v4;\n")
+      +fooUser("w2", "worker", "map foo as _foo_v6 in _lib instead of _foo_v4;\n")
+      +fooApp("")));
+  }
+  @Test void twoMapsOfTheSameRankChoosingTheSameFolderAgree(@TempDir Path tmp) throws InterruptedException{
+    utils.Err.strCmp("lib uses v5\n", mapsRun(tmp, foos
+      +fooLib("map foo as _foo_v4 in _lib;\n")
+      +fooUser("w1", "worker", "map foo as _foo_v5 in _lib instead of _foo_v4;\n")
+      +fooUser("w2", "worker", "map foo as _foo_v5 in _lib instead of _foo_v4;\n")
+      +fooApp("")));
+  }
+  @Test void twoMapsOfTheSameRankAgreeingOnTheFolderAreBothChecked(@TempDir Path tmp){
+    utils.Err.strCmp("""
+The "instead of" list of a map must name exactly the folders chosen by the maps of lower rank that the map overrides:
+- "map foo as _foo_v5 in _lib;"; written in fear:/_w2/_rank_worker.fear
+These maps of lower rank choose other folders:
+- "map foo as _foo_v4 in _lib;"; written in fear:/_lib/_rank_driver.fear
+Expected: "map foo as _foo_v5 in _lib instead of _foo_v4;".
+Error 7 WellFormedness
+""", mapsError(tmp, foos
+      +fooLib("map foo as _foo_v4 in _lib;\n")
+      +fooUser("w1", "worker", "map foo as _foo_v5 in _lib instead of _foo_v4;\n")
+      +fooUser("w2", "worker", "map foo as _foo_v5 in _lib;\n")
+      +fooApp("")));
+  }
+  @Test void aHigherRankMapResolvesAConflictOfTheSameRank(@TempDir Path tmp) throws InterruptedException{
+    utils.Err.strCmp("lib uses v6\n", mapsRun(tmp, foos
+      +fooLib("map foo as _foo_v4 in _lib;\n")
+      +fooUser("w1", "worker", "map foo as _foo_v5 in _lib instead of _foo_v4;\n")
+      +fooUser("w2", "worker", "map foo as _foo_v6 in _lib instead of _foo_v4;\n")
+      +fooApp("map foo as _foo_v6 in _lib instead of _foo_v4, _foo_v5;\n")));
+  }
+  @Test void aMapToAFolderOfTheSameRankIsAnError(@TempDir Path tmp){
+    utils.Err.strCmp("""
+The map refers to the code inside folders named "_foo", which has the same rank as the code inside folders named "_lib":
+- "map ff as _foo in _lib;"; written in fear:/_app/_rank_app.fear
+Folders named "_lib" have rank "driver999" ("_rank_driver.fear") and folders named "_foo" have rank "driver999" ("_rank_driver999.fear").
+Source code can only refer to code of a lower rank.
+Error 7 WellFormedness
+""", mapsError(tmp, """
+_foo/_rank_driver999.fear
+iii
+Foo:{}
+jjj
+"""+fooLib("")+fooApp("map ff as _foo in _lib;\n")));
+  }
+  @Test void aMapCanNotGiveThePackageNameBase(@TempDir Path tmp){
+    utils.Err.strCmp("""
+A map can not give package name "base", because folders named "_base" exist:
+- "map base as _foo_v4 in _lib;"; written in fear:/_lib/_rank_driver.fear
+With no map, package name "base" refers to the code inside folders named "_base".
+Error 7 WellFormedness
+""", mapsError(tmp, foos+fooLib("map base as _foo_v4 in _lib;\nmap foo as _foo_v4 in _lib;\n")+fooApp("")));
+  }
+  @Test void anOverrideMakingTwoPackageNamesReferToOneFolderIsAnError(@TempDir Path tmp){
+    utils.Err.strCmp("""
+Source code inside folders named "_lib" can use only one package name to refer to the code inside folders named "_foo_v5":
+- "map foo as _foo_v5 in _lib instead of _foo_v4;"; written in fear:/_app/_rank_app.fear
+- "map newfoo as _foo_v5 in _lib;"; written in fear:/_lib/_rank_driver.fear
+Error 7 WellFormedness
+""", mapsError(tmp, foos
+      +fooLib("map foo as _foo_v4 in _lib;\nmap newfoo as _foo_v5 in _lib;\n")
+      +fooApp("map foo as _foo_v5 in _lib instead of _foo_v4;\n")));
+  }
+  @Test void anApplicationOverridesOneLibraryAndLeavesAnotherOnItsPin(@TempDir Path tmp) throws InterruptedException{
+    utils.Err.strCmp("lib1 uses v5, lib2 uses v4\n", mapsRun(tmp, foos+"""
+_lib1/_rank_driver.fear
+iii
+use base.Str as Str;
+map foo as _foo_v4 in _lib1;
+Lib:{ .foo: Str -> foo.Foo.version }
+jjj
+_lib2/_rank_driver.fear
+iii
+use base.Str as Str;
+map foo as _foo_v4 in _lib2;
+Lib:{ .foo: Str -> foo.Foo.version }
+jjj
+_app/_rank_app.fear
+iii
+use base.Main as Main;
+map foo as _foo_v5 in _lib1 instead of _foo_v4;
+Hello:Main{s->base.Debug#("lib1 uses "+(lib1.Lib.foo)+", lib2 uses "+(lib2.Lib.foo))}
+"""));
+  }
+  static String describeProject(String appMaps){ return foos+"""
+_lib/_rank_driver.fear
+iii
+use base.Str as Str;
+map foo as _foo_v4 in _lib;
+Lib:{ .describe(f: foo.Foo): Str -> f.version }
+jjj
+_app/_rank_app.fear
+iii
+use base.Main as Main;
+"""+appMaps+"""
+Hello:Main{s->base.Debug#(lib.Lib.describe(foo.Foo))}
+"""; }
+  @Test void aLibraryReceivesAFooCreatedByTheApplicationAfterAnOverride(@TempDir Path tmp) throws InterruptedException{
+    utils.Err.strCmp("v5\n", mapsRun(tmp, describeProject("map foo as _foo_v5 in _app;\nmap foo as _foo_v5 in _lib instead of _foo_v4;\n")));
+  }
+  @Test void aLibraryOnItsOwnPinRejectsAFooOfAnotherVersion(@TempDir Path tmp){
+    var msg= mapsError(tmp, describeProject("map foo as _foo_v5 in _app;\n"));
+    utils.Err.strCmp("""
+In file: fear:/_app/_rank_app.fear
+[###]foo_v4.Foo[###]
+Source code inside folders named "_app" uses package name "foo" to refer to the code inside folders named "_foo_v5", because of "map foo as _foo_v5 in _app", written in fear:/_app/_rank_app.fear.
+[###]""", msg);
+  }
+  @Test void anOverrideBreakingTheLibraryNamesTheRankFileThatChoseTheVersion(@TempDir Path tmp){
+    var msg= mapsError(tmp, foos+"""
+_foo_v7/_rank_core700.fear
+iii
+use base.Str as Str;
+Foo:{ .version: Str -> "v7"; .legacy: Str -> "legacy" }
+jjj
+_lib/_rank_driver.fear
+iii
+use base.Str as Str;
+map foo as _foo_v7 in _lib;
+Lib:{ .foo: Str -> foo.Foo.legacy }
+jjj
+"""+fooApp("map foo as _foo_v5 in _lib instead of _foo_v7;\n"));
+    utils.Err.strCmp("""
+In file: fear:/_lib/_rank_driver.fear
+[###]
+Source code inside folders named "_lib" uses package name "foo" to refer to the code inside folders named "_foo_v5", because of "map foo as _foo_v5 in _lib", written in fear:/_app/_rank_app.fear.
+[###]""", msg);
+  }
+  @Test void onlyTheWinningMapIsCheckedForInsteadOf(@TempDir Path tmp) throws InterruptedException{
+    utils.Err.strCmp("lib uses v6\n", mapsRun(tmp, foos
+      +fooLib("map foo as _foo_v4 in _lib;\n")
+      +fooUser("mid", "worker", "map foo as _foo_v5 in _lib;\n")
+      +fooApp("map foo as _foo_v6 in _lib instead of _foo_v4, _foo_v5;\n")));
+  }
+  @Test void aMapCanNotGiveTheNameOfAnotherVersionFolder(@TempDir Path tmp){
+    utils.Err.strCmp("""
+A map can not give package name "foo_v4", because folders named "_foo_v4" exist:
+- "map foo_v4 as _foo_v5 in _lib;"; written in fear:/_app/_rank_app.fear
+With no map, package name "foo_v4" refers to the code inside folders named "_foo_v4".
+Error 7 WellFormedness
+""", mapsError(tmp, foos
+      +fooLib("map foo as _foo_v4 in _lib;\n")
+      +fooApp("map foo_v4 as _foo_v5 in _lib;\n")));
+  }
+  @Test void aZippedLibraryIsOverriddenByTheApplication(@TempDir Path tmp) throws InterruptedException{
+    utils.Err.strCmp("lib uses v5\n", mapsRun(tmp, foos
+      +fooLib("map foo as _foo_v4 in _lib;\n").replace("_lib/_rank_driver.fear", "_lib.zip/_rank_driver.fear")
+      +fooApp("map foo as _foo_v5 in _lib instead of _foo_v4;\n")));
+  }
+  @Test void aLibraryLeavesTheVersionToTheApplication(@TempDir Path tmp) throws InterruptedException{
+    utils.Err.strCmp("lib uses v5\n", mapsRun(tmp, foos+"""
+_lib/_rank_driver.fear
+iii
+use base.Str as Str;
+use foo.Foo as Foo;
+Lib:{ .foo: Str -> Foo.version }
+jjj
+"""+fooApp("map foo as _foo_v5 in _lib;\n")));
+  }
+  static String insteadOfError(String written, String overridden, String expected){ return """
+The "instead of" list of a map must name exactly the folders chosen by the maps of lower rank that the map overrides:
+- "%s;"; written in fear:/_app/_rank_app.fear
+These maps of lower rank choose other folders:
+- "%s;"; written in fear:/_lib/_rank_driver.fear
+Expected: "%s;".
+Error 7 WellFormedness
+""".formatted(written, overridden, expected); }
+  @Test void anApplicationFollowsALibraryThroughSeveralReleasesOfItsPin(@TempDir Path tmp) throws IOException, InterruptedException{
+    var root= tmp.resolve("root");
+    var lib= root.resolve("_lib", "_rank_driver.fear");
+    var app= root.resolve("_app", "_rank_app.fear");
+    utils.Err.strCmp("lib uses v3\n", mapsRun(tmp, foos+"""
+_lib/_rank_driver.fear
+iii
+use base.Str as Str;
+use foo.Foo as Foo;
+Lib:{ .foo: Str -> Foo.version }
+jjj
+"""+fooApp("map foo as _foo_v3 in _lib;\n")));
+    editAndTouch(lib, "use foo.Foo as Foo;\n", "map foo as _foo_v4 in _lib;\nuse foo.Foo as Foo;\n");
+    utils.Err.strCmp(insteadOfError("map foo as _foo_v3 in _lib", "map foo as _foo_v4 in _lib", "map foo as _foo_v3 in _lib instead of _foo_v4"),
+      assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib)).getMessage());
+    editAndTouch(app, "map foo as _foo_v3 in _lib;", "map foo as _foo_v5 in _lib instead of _foo_v4;");
+    utils.Err.strCmp("lib uses v5\n", coordinator(root).main(root, stLib));
+    editAndTouch(lib, "_foo_v4", "_foo_v6");
+    utils.Err.strCmp(insteadOfError("map foo as _foo_v5 in _lib instead of _foo_v4", "map foo as _foo_v6 in _lib", "map foo as _foo_v5 in _lib instead of _foo_v6"),
+      assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib)).getMessage());
+    editAndTouch(app, "instead of _foo_v4", "instead of _foo_v6");
+    utils.Err.strCmp("lib uses v5\n", coordinator(root).main(root, stLib));
+    editAndTouch(app, "map foo as _foo_v5 in _lib instead of _foo_v6;\n", "");
+    utils.Err.strCmp("lib uses v6\n", coordinator(root).main(root, stLib));
+  }
+  static String describeLib(String libMaps){ return "_lib/_rank_driver.fear\niii\nuse base.Str as Str;\n"+libMaps+"use foo.Foo as Foo;\nLib:{ .describe(f: Foo): Str -> f.version }\njjj\n"; }
+  static final String describeApp= "_app/_rank_app.fear\niii\nuse base.Main as Main;\nmap foo as _foo_v5 in _app;\nmap foo as _foo_v5 in _lib instead of _foo_v4;\nHello:Main{s->base.Debug#(lib.Lib.describe(foo.Foo))}\n";
+  @Test void aNewPinOfTheLibraryBreaksTheApplicationUntilItsInsteadOfFollows(@TempDir Path tmp) throws IOException, InterruptedException{
+    var root= tmp.resolve("root");
+    utils.Err.strCmp("v5\n", mapsRun(tmp, foos+describeLib("map foo as _foo_v4 in _lib;\n")+describeApp));
+    editAndTouch(root.resolve("_lib", "_rank_driver.fear"), "_foo_v4", "_foo_v3");
+    utils.Err.strCmp(insteadOfError("map foo as _foo_v5 in _lib instead of _foo_v4", "map foo as _foo_v3 in _lib", "map foo as _foo_v5 in _lib instead of _foo_v3"),
+      assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib)).getMessage());
+    editAndTouch(root.resolve("_app", "_rank_app.fear"), "instead of _foo_v4", "instead of _foo_v3");
+    utils.Err.strCmp("v5\n", coordinator(root).main(root, stLib));
+  }
+  @Test void droppingTheOverrideMakesTheLibraryRejectTheFooOfTheApplication(@TempDir Path tmp) throws IOException, InterruptedException{
+    var root= tmp.resolve("root");
+    utils.Err.strCmp("v5\n", mapsRun(tmp, foos+describeLib("map foo as _foo_v4 in _lib;\n")+describeApp));
+    editAndTouch(root.resolve("_app", "_rank_app.fear"), "map foo as _foo_v5 in _lib instead of _foo_v4;\n", "");
+    var msg= assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib)).getMessage();
+    utils.Err.strCmp("""
+In file: fear:/_app/_rank_app.fear
+[###]
+Source code inside folders named "_app" uses package name "foo" to refer to the code inside folders named "_foo_v5", because of "map foo as _foo_v5 in _app", written in fear:/_app/_rank_app.fear.
+[###]""", msg);
+  }
+  @Test void useOfAnOwnTypeInARankFile(@TempDir Path tmp){
+    utils.Err.strCmp("""
+In file: fear:/_app/_rank_app.fear
+
+002| use app.Helper as H;
+   |     ^^^^^^^^^^
+
+While inspecting package header
+"use" directive refers to type "Helper" declared inside folders named "_app".
+A "use" directive can only refer to types declared in other folders.
+Source code inside folders named "_app" uses the simple names of its own types.
+Error 7 WellFormedness
+""", mapsError(tmp, """
+_app/_rank_app.fear
+iii
+use base.Main as Main;
+use app.Helper as H;
+Helper:{}
+Hello:Main{s->base.Debug#(`hi`)}
+"""));
+  }
+  @Test void useOfAHigherRankPackageThroughAMapName(@TempDir Path tmp){
+    utils.Err.strCmp("""
+In file: fear:/_lib/_rank_driver.fear
+
+002| use app.Hello as H;
+   |     ^^^^^^^^^
+
+While inspecting package header
+"use" directive refers to the code inside folders named "_app", which has a higher rank than the code inside folders named "_lib".
+Folders named "_lib" have rank "driver999" ("_rank_driver.fear") and folders named "_app" have rank "app999" ("_rank_app.fear").
+Source code can only refer to code of a lower rank.
+Error 7 WellFormedness
+""", mapsError(tmp, foos+"""
+_lib/_rank_driver.fear
+iii
+map foo as _foo_v4 in _lib;
+use app.Hello as H;
+Lib:{}
+jjj
+"""+fooApp("")));
+  }
+  @Test void aMapToAMissingVersionListsTheExistingFolders(@TempDir Path tmp){
+    utils.Err.strCmp("""
+The map refers to the code inside folders named "_foo_v7", but no folder is named "_foo_v7":
+- "map foo as _foo_v7 in _lib instead of _foo_v4;"; written in fear:/_app/_rank_app.fear
+Existing folders: "_app", "_base", "_foo_v3", "_foo_v4", "_foo_v5", "_foo_v6", "_lib".
+Error 7 WellFormedness
+""", mapsError(tmp, foos
+      +fooLib("map foo as _foo_v4 in _lib;\n")
+      +fooApp("map foo as _foo_v7 in _lib instead of _foo_v4;\n")));
+  }
+  @Test void aMapInAMissingFolderNamesTheExistingFolders(@TempDir Path tmp){
+    utils.Err.strCmp("""
+The map applies to source code inside folders named "_libb", but no folder is named "_libb":
+- "map foo as _foo_v5 in _libb;"; written in fear:/_app/_rank_app.fear
+Did you mean "_lib" ?
+Existing folders: "_app", "_foo_v3", "_foo_v4", "_foo_v5", "_foo_v6", "_lib".
+Error 7 WellFormedness
+""", mapsError(tmp, foos
+      +fooLib("map foo as _foo_v4 in _lib;\n")
+      +fooApp("map foo as _foo_v5 in _libb;\n")));
+  }
+  @Test void anErrorInsideAMethodBodyOfAPinnedLibraryNamesThePinAndTheAlias(@TempDir Path tmp){
+    utils.Err.strCmp("""
+In file: fear:/_lib/_rank_driver.fear
+
+004| Lib:{ .foo(f: Foo): Str -> f.legacy }
+   |       ---------------------~^^^^^^^
+
+While inspecting ".foo(_)" line 4
+This call to method ".legacy" cannot typecheck.
+Method ".legacy" is not declared on type "Foo".
+
+Available methods on type "Foo":
+-       .version:Str
+
+Name "Foo" stands for "foo.Foo" because of "use foo.Foo as Foo".
+Source code inside folders named "_lib" uses package name "foo" to refer to the code inside folders named "_foo_v4", because of "map foo as _foo_v4 in _lib", written in fear:/_lib/_rank_driver.fear.
+
+Compressed relevant code with inferred types: (compression indicated by `-`)
+f.legacy
+Error 8 TypeError
+""", mapsError(tmp, foos+"""
+_lib/_rank_driver.fear
+iii
+use base.Str as Str;
+map foo as _foo_v4 in _lib;
+use foo.Foo as Foo;
+Lib:{ .foo(f: Foo): Str -> f.legacy }
+jjj
+"""+fooApp("")));
+  }
+  static final String fooV7= """
+_foo_v7/_rank_core700.fear
+iii
+use base.Str as Str;
+Foo:{ .version: Str -> "v7"; .legacy: Str -> "legacy" }
+Legacy:{}
+jjj
+""";
+  static final String fooNote= "Source code inside folders named \"_lib\" uses package name \"foo\" to refer to the code inside folders named \"_foo_v5\", because of \"map foo as _foo_v5 in _lib\", written in fear:/_app/_rank_app.fear.";
+  @Test void aMethodErrorInALibraryWithItsOwnPinAndAnOverrideCitesTheApplication(@TempDir Path tmp){
+    utils.Err.strCmp("""
+In file: fear:/_lib/_rank_driver.fear
+
+004| Lib:{ .foo: Str -> Foo.legacy }
+[###]
+While inspecting ".foo" line 4
+This call to method ".legacy" cannot typecheck.
+Method ".legacy" is not declared on type "Foo".
+
+Available methods on type "Foo":
+-       .version:Str
+
+Name "Foo" stands for "foo.Foo" because of "use foo.Foo as Foo".
+"""+fooNote+"""
+
+
+Compressed relevant code with inferred types: (compression indicated by `-`)
+[###]
+Error 8 TypeError
+""", mapsError(tmp, foos+fooV7+"""
+_lib/_rank_driver.fear
+iii
+use base.Str as Str;
+map foo as _foo_v7 in _lib;
+use foo.Foo as Foo;
+Lib:{ .foo: Str -> Foo.legacy }
+jjj
+"""+fooApp("map foo as _foo_v5 in _lib instead of _foo_v7;\n")));
+  }
+  @Test void anUndeclaredTypeInALibraryWithItsOwnPinAndAnOverrideCitesTheApplication(@TempDir Path tmp){
+    utils.Err.strCmp("""
+In file: fear:/_lib/_rank_driver.fear
+
+004| Lib:{ .foo: Str -> Foo.version; .old(l: foo.Legacy): Str -> "old" }
+[###]
+While inspecting a type name
+Type "Legacy" is not declared in package "foo".
+In scope: "Foo".
+[###]
+Name "Foo" stands for "foo.Foo" because of "use foo.Foo as Foo".
+"""+fooNote+"""
+
+Error 7 WellFormedness
+""", mapsError(tmp, foos+fooV7+"""
+_lib/_rank_driver.fear
+iii
+use base.Str as Str;
+map foo as _foo_v7 in _lib;
+use foo.Foo as Foo;
+Lib:{ .foo: Str -> Foo.version; .old(l: foo.Legacy): Str -> "old" }
+jjj
+"""+fooApp("map foo as _foo_v5 in _lib instead of _foo_v7;\n")));
+  }
+  static String httpProject(String appMaps){ return Stream.of("1", "2").map(v -> """
+_http_vV/_rank_coreV00.fear
+iii
+use base.Str as Str;
+Request:{ .path: Str }
+Response:{ .body: Str }
+Handler:{ #(r: Request): Response }
+Server:{ .serve(h: Handler, path: Str): Str -> "[httpV] "+(h#(Request{ .path -> path }).body) }
+jjj
+""".replace("V", v)).collect(Collectors.joining())+"""
+_blog/_rank_framework100.fear
+iii
+use base.Str as Str;
+map http as _http_v1 in _blog;
+use http.Handler as Handler;
+use http.Response as Response;
+Blog:{ .home: Str -> http.Server.serve(Handler{ r -> Response{ .body -> "blog at "+(r.path) } }, "/blog") }
+jjj
+_shop/_rank_framework200.fear
+iii
+use base.Str as Str;
+map http as _http_v2 in _shop;
+use http.Server as Web;
+Shop:{
+  .home: Str -> Web.serve(http.Handler{ r -> http.Response{ .body -> "shop at "+(r.path) } }, "/shop");
+  .handle(r: http.Request): Str -> "shop handles "+(r.path);
+  }
+jjj
+_app/_rank_app.fear
+iii
+use base.Main as Main;
+map web as _http_v2 in _app;
+"""+appMaps+"""
+Hello:Main{s->base.Debug#((blog.Blog.home)+", "+(shop.Shop.home)+", "+(shop.Shop.handle(web.Request{ .path -> "/cart" })))}
+"""; }
+  @Test void twoFrameworksOnTwoVersionsOfAWebLibraryRunTogether(@TempDir Path tmp) throws InterruptedException{
+    utils.Err.strCmp("[http1] blog at /blog, [http2] shop at /shop, shop handles /cart\n", mapsRun(tmp, httpProject("")));
+  }
+  @Test void anApplicationUpgradesTheWebLibraryOfOneFramework(@TempDir Path tmp) throws InterruptedException{
+    utils.Err.strCmp("[http2] blog at /blog, [http2] shop at /shop, shop handles /cart\n", mapsRun(tmp, httpProject("map http as _http_v2 in _blog instead of _http_v1;\n")));
+  }
+  @Test void anApplicationPassingARequestOfTheOtherVersionNamesBothMaps(@TempDir Path tmp){
+    var msg= mapsError(tmp, httpProject("").replace("map web as _http_v2 in _app;", "map web as _http_v1 in _app;"));
+    utils.Err.strCmp("""
+In file: fear:/_app/_rank_app.fear
+[###]
+Source code inside folders named "_app" uses package name "web" to refer to the code inside folders named "_http_v1", because of "map web as _http_v1 in _app", written in fear:/_app/_rank_app.fear.
+[###]""", msg);
+  }
+  static String jsonLogProject(String appMaps){ return Stream.of("1(:)", "2[:]", "3-:-").map(v -> """
+_json_vV/_rank_coreV00.fear
+iii
+use base.Str as Str;
+Json:{ .render(s: Str): Str -> "jVO"+s+"C" }
+jjj
+_log_vV/_rank_coreV50.fear
+iii
+use base.Str as Str;
+Log:{ .line(s: Str): Str -> "[logV] "+s }
+jjj
+""".replace("V", v.substring(0, 1)).replace("O", v.substring(1, 2)).replace("C", v.substring(3, 4))).collect(Collectors.joining())+"""
+_api/_rank_driver.fear
+iii
+use base.Str as Str;
+map json as _json_v1 in _api;
+map log as _log_v2 in _api;
+Api:{ .get: Str -> log.Log.line(json.Json.render("api")) }
+jjj
+_store/_rank_worker.fear
+iii
+use base.Str as Str;
+map json as _json_v2 in _store;
+map oldjson as _json_v1 in _store;
+map log as _log_v1 in _store;
+Store:{ .save: Str -> (log.Log.line(json.Json.render("store")))+" "+(oldjson.Json.render("legacy"))+" "+(api.Api.get) }
+jjj
+_web/_rank_framework.fear
+iii
+use base.Str as Str;
+map json as _json_v3 in _web;
+map logger as _log_v3 in _web;
+use logger.Log as Log;
+Web:{ .page: Str -> Log.line((json.Json.render("web"))+" "+(store.Store.save)) }
+jjj
+_app/_rank_app.fear
+iii
+use base.Main as Main;
+map j as _json_v2 in _app;
+"""+appMaps+"""
+Hello:Main{s->base.Debug#((web.Web.page)+" | "+(j.Json.render("app")))}
+"""; }
+  @Test void twoLibrariesInThreeVersionsEachThroughThreeLayers(@TempDir Path tmp) throws InterruptedException{
+    utils.Err.strCmp("[log3] j3-web- [log1] j2[store] j1(legacy) [log2] j1(api) | j2[app]\n", mapsRun(tmp, jsonLogProject("")));
+  }
+  @Test void theApplicationUpgradesOneLibraryInOneLayerAndTheOtherLibraryInAnotherLayer(@TempDir Path tmp) throws InterruptedException{
+    utils.Err.strCmp("[log3] j3-web- [log1] j3-store- j1(legacy) [log3] j1(api) | j2[app]\n", mapsRun(tmp, jsonLogProject("""
+map log as _log_v3 in _api instead of _log_v2;
+map json as _json_v3 in _store instead of _json_v2;
+""")));
+  }
+  @Test void theApplicationSwapsTheTwoNamesALayerGivesToTwoVersions(@TempDir Path tmp) throws InterruptedException{
+    utils.Err.strCmp("[log3] j3-web- [log1] j1(store) j2[legacy] [log2] j1(api) | j2[app]\n", mapsRun(tmp, jsonLogProject("""
+map json as _json_v1 in _store instead of _json_v2;
+map oldjson as _json_v2 in _store instead of _json_v1;
+""")));
+  }
+  static String httpTwoNames(String shopExtra, String blogExtra){ return Stream.of("1", "2").map(v -> """
+_http_vV/_rank_coreV00.fear
+iii
+use base.Str as Str;
+Request:{ .path: Str }
+Response:{ .body: Str }
+Handler:{ #(r: Request): Response }
+Server:{ .serve(h: Handler, path: Str): Str -> "[httpV] "+(h#(Request{ .path -> path }).body) }
+jjj
+""".replace("V", v)).collect(Collectors.joining())+"""
+_shop/_rank_framework100.fear
+iii
+use base.Str as Str;
+map web as _http_v2 in _shop;
+Shop:{
+  .home: Str -> web.Server.serve(web.Handler{ r -> web.Response{ .body -> "shop at "+(r.path) } }, "/shop");
+"""+shopExtra+"""
+  }
+jjj
+_blog/_rank_framework200.fear
+iii
+use base.Str as Str;
+map http as _http_v2 in _blog;
+Blog:{
+  .home: Str -> http.Server.serve(http.Handler{ r -> http.Response{ .body -> "blog at "+(r.path) } }, "/blog");
+"""+blogExtra+"""
+  }
+jjj
+_app/_rank_app.fear
+iii
+use base.Main as Main;
+Hello:Main{s->base.Debug#((blog.Blog.home)+", "+(shop.Shop.home))}
+"""; }
+  static final String shopWebNote= "Source code inside folders named \"_shop\" uses package name \"web\" to refer to the code inside folders named \"_http_v2\", because of \"map web as _http_v2 in _shop\", written in fear:/_shop/_rank_framework100.fear.";
+  static final String blogHttpNote= "Source code inside folders named \"_blog\" uses package name \"http\" to refer to the code inside folders named \"_http_v2\", because of \"map http as _http_v2 in _blog\", written in fear:/_blog/_rank_framework200.fear.";
+  @Test void twoPackagesReachTheSameVersionThroughDifferentNames(@TempDir Path tmp) throws InterruptedException{
+    utils.Err.strCmp("[http2] blog at /blog, [http2] shop at /shop\n", mapsRun(tmp, httpTwoNames("", "")));
+  }
+  @Test void aTypeErrorInsideTheShopUsesTheNameOfTheShop(@TempDir Path tmp){
+    utils.Err.strCmp("""
+In file: fear:/_shop/_rank_framework100.fear
+
+005|   .bad(r: web.Request): web.Response -> r;
+[###]"web.Request"[###]"web.Response"[###]
+"""+shopWebNote+"""
+[###]Error 8 TypeError
+""", mapsError(tmp, httpTwoNames("  .bad(r: web.Request): web.Response -> r;\n", "")));
+  }
+  @Test void aTypeErrorInsideTheBlogUsesTheNameOfTheBlog(@TempDir Path tmp){
+    utils.Err.strCmp("""
+In file: fear:/_blog/_rank_framework200.fear
+
+005|   .bad(r: http.Request): http.Response -> r;
+[###]"http.Request"[###]"http.Response"[###]
+"""+blogHttpNote+"""
+[###]Error 8 TypeError
+""", mapsError(tmp, httpTwoNames("", "  .bad(r: http.Request): http.Response -> r;\n")));
+  }
+  @Test void aHiddenVersionInsideTheShopSuggestsTheNameOfTheShop(@TempDir Path tmp){
+    utils.Err.strCmp("""
+In file: fear:/_shop/_rank_framework100.fear
+
+005|   .old(r: http_v2.Request): Str -> r.path;
+   |           ^^^^^^^^^^^^^^^^
+
+While inspecting a type name
+Source code inside folders named "_shop" can not use package name "http_v2".
+Did you mean "web" ?
+Visible package names: "base", "http_v1", "web".
+"""+shopWebNote+"""
+
+Error 7 WellFormedness
+""", mapsError(tmp, httpTwoNames("  .old(r: http_v2.Request): Str -> r.path;\n", "")));
+  }
+  @Test void aHiddenVersionInsideTheBlogSuggestsTheNameOfTheBlog(@TempDir Path tmp){
+    utils.Err.strCmp("""
+In file: fear:/_blog/_rank_framework200.fear
+
+005|   .old(r: http_v2.Request): Str -> r.path;
+   |           ^^^^^^^^^^^^^^^^
+
+While inspecting a type name
+Source code inside folders named "_blog" can not use package name "http_v2".
+Did you mean "http" ?
+Visible package names: "base", "http", "http_v1", "shop".
+"""+blogHttpNote+"""
+
+Error 7 WellFormedness
+""", mapsError(tmp, httpTwoNames("", "  .old(r: http_v2.Request): Str -> r.path;\n")));
+  }
+  @Test void aZippedVersionIsReachedThroughAMap(@TempDir Path tmp) throws InterruptedException{
+    utils.Err.strCmp("lib uses v9\n", mapsRun(tmp, """
+_foo_v9.zip/_rank_core100.fear
+iii
+use base.Str as Str;
+Foo:{ .version: Str -> "v9" }
+jjj
+"""+fooLib("map foo as _foo_v9 in _lib;\n")+fooApp("")));
+  }
+  @Test void aPackageRenamingBaseReadsItsAutoloadedAsset(@TempDir Path tmp) throws InterruptedException{
+    utils.Err.strCmp("REAL NOTE\n", mapsRun(tmp, """
+_app/_rank_app.fear
+iii
+map bb as _base in _app;
+NeverRecovers: bb.BadStrUnitRecover { reason, byteOffset, byteLength, rejectedValue -> "should not happen" }
+App: bb.Main{s->bb.Debug#(Note.readStrUtf8(s.assetRead, NeverRecovers))}
+jjj
+_app/note.txt
+iii
+REAL NOTE
+"""));
+  }
+  @Test void aPackageWithAliasesForBaseTypesReadsItsAutoloadedAssets(@TempDir Path tmp) throws IOException, InterruptedException{
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_app/_rank_app.fear
+iii
+use base.Main as Main;
+use base.Str as Str;
+use base.TxtFile as TxtFile;
+use base.ImageFile as ImageFile;
+NeverRecovers: base.BadStrUnitRecover { reason, byteOffset, byteLength, rejectedValue -> "should not happen" }
+App: Main{s->base.Debug#(Note.readStrUtf8(s.assetRead, NeverRecovers))}
+Picture: {.f:ImageFile -> IconsLogo; .t:TxtFile -> Note; .s:Str -> IconsLogo.path}
+jjj
+_app/note.txt
+iii
+REAL NOTE
+""");
+    Fs.ensureDir(root.resolve("_app", "icons"));
+    Fs.write(root.resolve("_app", "icons", "logo.png"), onePixelPng());
+    utils.Err.strCmp("REAL NOTE\n", coordinator(root).main(root, stLib));
+  }
+  @Test void aPackageRenamingBaseWithAnImageAssetCompiles(@TempDir Path tmp) throws IOException, InterruptedException{
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_app/_rank_app.fear
+iii
+map bb as _base in _app;
+use bb.Str as Str;
+App: bb.Main{s->bb.Debug#(IconsLogo.originalFileName)}
+""");
+    Fs.ensureDir(root.resolve("_app", "icons"));
+    Fs.write(root.resolve("_app", "icons", "logo.png"), onePixelPng());
+    utils.Err.strCmp("logo.png\n", coordinator(root).main(root, stLib));
+  }
+  @Test void aLowerRankPackageRenamingBaseHasAnAutoloadedAsset(@TempDir Path tmp) throws InterruptedException{
+    utils.Err.strCmp("greeting.txt\n", mapsRun(tmp, """
+_lib/_rank_core.fear
+iii
+map bb as _base in _lib;
+Lib:{ .name: bb.Str -> Greeting.originalFileName }
+jjj
+_lib/greeting.txt
+iii
+hello
+jjj
+_app/_rank_app.fear
+iii
+use base.Main as Main;
+Hello:Main{s->base.Debug#(lib.Lib.name)}
+"""));
+  }
+  @Test void docExamplesInAPackageRenamingBase(@TempDir Path tmp){
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_p/_rank_app.fear
+iii
+map bb as _base in _p;
+Calc:{
+  ///Adds one.
+  //> .check{Calc.inc(1) .assertEq 2}
+  .inc(n: bb.Nat): bb.Nat -> n + 1;
+  }
+App:bb.Main{s->bb.Debug#("hi")}
+""");
+    utils.Err.strCmp("hi\n", main(root, List.of()));
+    utils.Err.strCmp("""
+//Autogenerated from the doc examples of package p; any edit is overwritten
+
+_Calc_Examples: bb.Test {::
+  .test bb.Test{::
+.check{Calc.inc(1) .assertEq 2}
+  }
+  }
+
+AllAutoTests_p: bb.UnitTests {::
+  .test _Calc_Examples
+  }
+""", Fs.readUtf8(generatedTests(root)));
+  }
+  @Test void docExamplesInAPackageWithAliasesForTest(@TempDir Path tmp){
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_p/_rank_app.fear
+iii
+use base.Main as Main;
+use base.Nat as Nat;
+use base.Test as Test;
+use base.UnitTests as UnitTests;
+Calc:{
+  ///Adds one.
+  //> .check{Calc.inc(1) .assertEq 3}
+  .inc(n: Nat): Nat -> n + 1;
+  }
+App:Main{s->base.Debug#("hi")}
+""");
+    utils.Err.strCmp("""
+Test failure _Calc_Examples at line: [###] in file: _p/auto_tests/p_test.fear
+[###]
+hi
+""", main(root, List.of()));
+    utils.Err.strCmp("""
+//Autogenerated from the doc examples of package p; any edit is overwritten
+
+_Calc_Examples: Test {::
+  .test Test{::
+.check{Calc.inc(1) .assertEq 3}
+  }
+  }
+
+AllAutoTests_p: UnitTests {::
+  .test _Calc_Examples
+  }
+""", Fs.readUtf8(generatedTests(root)));
+  }
+  @Test void aDestructuringParameterInAPackageRenamingBase(@TempDir Path tmp) throws InterruptedException{
+    utils.Err.strCmp("xy\n", mapsRun(tmp, """
+_app/_rank_app.fear
+iii
+map bb as _base in _app;
+use bb.Destruct as D;
+P:{ .x:bb.Str -> "x"; .y:bb.Str -> "y" }
+Q:{ .m({.x, .y}:P):bb.Str -> x+y }
+App:bb.Main{s->bb.Debug#(Q.m(P))}
+"""));
+  }
+  @Test void theMainsOfAnUncompiledProjectWithAHeaderErrorAreUnknown(@TempDir Path tmp){
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_app/_rank_app.fear
+iii
+map bb as _base in _app;
+use base.Str as Str;
+App:bb.Main{s->bb.Debug#("hi")}
+""");
+    assertEquals(Optional.empty(), coordinator(root).mains(root, stLib));
+    var ex= assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib));
+    utils.Err.strCmp("""
+In file: fear:/_app/_rank_app.fear
+
+002| use base.Str as Str;
+   |     ^^^^^^^^
+
+While inspecting package header
+Source code inside folders named "_app" can not use package name "base".
+Did you mean "bb" ?
+Visible package names: "bb".
+Source code inside folders named "_app" uses package name "bb" to refer to the code inside folders named "_base", because of "map bb as _base in _app", written in fear:/_app/_rank_app.fear.
+Error 7 WellFormedness
+""", ex.getMessage());
+  }
+  @Test void movingAPinFromTheLibraryToTheApplicationKeepsTheVersionAndTheNoteCitesTheApplication(@TempDir Path tmp) throws IOException, InterruptedException{
+    var root= tmp.resolve("root");
+    utils.Err.strCmp("lib uses v4\n", mapsRun(tmp, foos+fooLib("map foo as _foo_v4 in _lib;\n")+fooApp("")));
+    editAndTouch(root.resolve("_lib", "_rank_driver.fear"), "map foo as _foo_v4 in _lib;\n", "");
+    editAndTouch(root.resolve("_app", "_rank_app.fear"), "use base.Main as Main;\n", "use base.Main as Main;\nmap foo as _foo_v4 in _lib;\n");
+    utils.Err.strCmp("lib uses v4\n", coordinator(root).main(root, stLib));
+    editAndTouch(root.resolve("_lib", "_rank_driver.fear"), "foo.Foo.version", "foo.Foo.legacy");
+    utils.Err.strCmp("""
+In file: fear:/_lib/_rank_driver.fear
+[###]
+Source code inside folders named "_lib" uses package name "foo" to refer to the code inside folders named "_foo_v4", because of "map foo as _foo_v4 in _lib", written in fear:/_app/_rank_app.fear.
+[###]""", assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib)).getMessage());
+  }
+  @Test void movingAnOverrideFromAMiddleLayerToTheApplicationKeepsTheVersionAndTheNoteCitesTheApplication(@TempDir Path tmp) throws IOException, InterruptedException{
+    var root= tmp.resolve("root");
+    utils.Err.strCmp("lib uses v7\n", mapsRun(tmp, foos+fooV7
+      +fooLib("map foo as _foo_v4 in _lib;\n")
+      +fooUser("mid", "worker", "map foo as _foo_v7 in _lib instead of _foo_v4;\n")
+      +fooApp("")));
+    editAndTouch(root.resolve("_mid", "_rank_worker.fear"), "map foo as _foo_v7 in _lib instead of _foo_v4;\n", "");
+    editAndTouch(root.resolve("_app", "_rank_app.fear"), "use base.Main as Main;\n", "use base.Main as Main;\nmap foo as _foo_v7 in _lib instead of _foo_v4;\n");
+    utils.Err.strCmp("lib uses v7\n", coordinator(root).main(root, stLib));
+    editAndTouch(root.resolve("_lib", "_rank_driver.fear"), "foo.Foo.version", "foo.Foo.missing");
+    utils.Err.strCmp("""
+In file: fear:/_lib/_rank_driver.fear
+[###]
+Source code inside folders named "_lib" uses package name "foo" to refer to the code inside folders named "_foo_v7", because of "map foo as _foo_v7 in _lib", written in fear:/_app/_rank_app.fear.
+[###]""", assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib)).getMessage());
+  }
+  @Test void reorderingTheInsteadOfListKeepsTheOutputAndAWrongListIsAnErrorUntilFixed(@TempDir Path tmp) throws IOException, InterruptedException{
+    var root= tmp.resolve("root");
+    var app= root.resolve("_app", "_rank_app.fear");
+    utils.Err.strCmp("lib uses v6\n", mapsRun(tmp, foos
+      +fooLib("map foo as _foo_v4 in _lib;\n")
+      +fooUser("mid", "worker", "map foo as _foo_v5 in _lib instead of _foo_v4;\n")
+      +fooApp("map foo as _foo_v6 in _lib instead of _foo_v4, _foo_v5;\n")));
+    editAndTouch(app, "instead of _foo_v4, _foo_v5", "instead of _foo_v5, _foo_v4");
+    utils.Err.strCmp("lib uses v6\n", coordinator(root).main(root, stLib));
+    editAndTouch(app, "instead of _foo_v5, _foo_v4", "instead of _foo_v5");
+    utils.Err.strCmp("""
+The "instead of" list of a map must name exactly the folders chosen by the maps of lower rank that the map overrides:
+- "map foo as _foo_v6 in _lib instead of _foo_v5;"; written in fear:/_app/_rank_app.fear
+These maps of lower rank choose other folders:
+- "map foo as _foo_v4 in _lib;"; written in fear:/_lib/_rank_driver.fear
+- "map foo as _foo_v5 in _lib instead of _foo_v4;"; written in fear:/_mid/_rank_worker.fear
+Expected: "map foo as _foo_v6 in _lib instead of _foo_v4, _foo_v5;".
+Error 7 WellFormedness
+""", assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib)).getMessage());
+    editAndTouch(app, "instead of _foo_v5", "instead of _foo_v4, _foo_v5");
+    utils.Err.strCmp("lib uses v6\n", coordinator(root).main(root, stLib));
+  }
+  @Test void removingAMapOfTheApplicationMakesItsPackageNameUnknown(@TempDir Path tmp) throws IOException, InterruptedException{
+    var root= tmp.resolve("root");
+    utils.Err.strCmp("v5\n", mapsRun(tmp, foos+"""
+_app/_rank_app.fear
+iii
+use base.Main as Main;
+map f as _foo_v5 in _app;
+Hello:Main{s->base.Debug#(f.Foo.version)}
+"""));
+    editAndTouch(root.resolve("_app", "_rank_app.fear"), "map f as _foo_v5 in _app;\n", "");
+    utils.Err.strCmp("""
+In file: fear:/_app/_rank_app.fear
+[###]
+Source code inside folders named "_app" can not use package name "f".
+[###]""", assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib)).getMessage());
+  }
+  @Test void aNewVersionFolderIsUsedOnceAMapChoosesIt(@TempDir Path tmp) throws IOException, InterruptedException{
+    var root= tmp.resolve("root");
+    utils.Err.strCmp("lib uses v4\n", mapsRun(tmp, foos+fooLib("map foo as _foo_v4 in _lib;\n")+fooApp("")));
+    Fs.ensureDir(root.resolve("_foo_v7"));
+    Fs.writeUtf8(root.resolve("_foo_v7", "_rank_core700.fear"), "use base.Str as Str;\nFoo:{ .version: Str -> \"v7\" }\n");
+    utils.Err.strCmp("lib uses v4\n", coordinator(root).main(root, stLib));
+    editAndTouch(root.resolve("_app", "_rank_app.fear"), "use base.Main as Main;\n", "use base.Main as Main;\nmap foo as _foo_v7 in _lib instead of _foo_v4;\n");
+    utils.Err.strCmp("lib uses v7\n", coordinator(root).main(root, stLib));
+  }
+  @Test void aMapOfTheSameRankAddedOnARebuildConflictsUntilAHigherRankMapDecides(@TempDir Path tmp) throws IOException, InterruptedException{
+    var root= tmp.resolve("root");
+    utils.Err.strCmp("lib uses v5\n", mapsRun(tmp, foos
+      +fooLib("map foo as _foo_v4 in _lib;\n")
+      +fooUser("w1", "worker", "map foo as _foo_v5 in _lib instead of _foo_v4;\n")
+      +fooUser("w2", "worker", "")
+      +fooApp("")));
+    editAndTouch(root.resolve("_w2", "_rank_worker.fear"), "Userw2", "map foo as _foo_v6 in _lib instead of _foo_v4;\nUserw2");
+    utils.Err.strCmp("""
+Maps of the same rank give package name "foo" different folders, for source code inside folders named "_lib":
+- "map foo as _foo_v5 in _lib instead of _foo_v4;"; written in fear:/_w1/_rank_worker.fear
+- "map foo as _foo_v6 in _lib instead of _foo_v4;"; written in fear:/_w2/_rank_worker.fear
+
+How maps work:
+- A rank file can have lines like "map name as _folder in _target;".
+- With no map, package name "x" refers to the code inside folders named "_x".
+- A map in a rank file of higher rank overrides the maps of lower rank, and lists their folders with "instead of".
+
+How to fix it:
+- Decide which folder package name "foo" refers to, for source code inside folders named "_lib".
+- Add one map in a rank file of higher rank (typically the rank file of your application), with "instead of" listing every folder chosen by the maps of lower rank.
+Error 7 WellFormedness
+""", assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib)).getMessage());
+    editAndTouch(root.resolve("_app", "_rank_app.fear"), "use base.Main as Main;\n", "use base.Main as Main;\nmap foo as _foo_v6 in _lib instead of _foo_v4, _foo_v5;\n");
+    utils.Err.strCmp("lib uses v6\n", coordinator(root).main(root, stLib));
+  }
+  @Test void useOfATypeMissingFromThePinnedVersion(@TempDir Path tmp){
+    utils.Err.strCmp("""
+In file: fear:/_lib/_rank_driver.fear
+
+002| use foo.Legacy as Legacy;
+   |     ^^^^^^^^^^
+
+While inspecting package header
+"use" directive refers to type "Legacy", which is not declared in package "foo".
+
+Source code inside folders named "_lib" uses package name "foo" to refer to the code inside folders named "_foo_v4", because of "map foo as _foo_v4 in _lib", written in fear:/_lib/_rank_driver.fear.
+Error 7 WellFormedness
+""", mapsError(tmp, foos+fooV7+"""
+_lib/_rank_driver.fear
+iii
+map foo as _foo_v4 in _lib;
+use foo.Legacy as Legacy;
+Lib:{}
+jjj
+"""+fooApp("")));
+  }
+  @Test void useOfASimpleNameInARankFileWithAMap(@TempDir Path tmp){
+    utils.Err.strCmp("""
+In file: fear:/_lib/_rank_driver.fear
+
+002| use Foo as Foo;
+   |     ^^^
+
+While inspecting package header
+"use" directive refers to "Foo", which is not a full type name.
+A "use" directive refers to a type of another package by its full type name, as in "use base.Str as Str;".
+Error 7 WellFormedness
+""", mapsError(tmp, foos+"""
+_lib/_rank_driver.fear
+iii
+map foo as _foo_v4 in _lib;
+use Foo as Foo;
+Lib:{}
+jjj
+"""+fooApp("")));
+  }
+  @Test void aSimpleNameOfAPinnedVersionSuggestsTheFullTypeName(@TempDir Path tmp){
+    utils.Err.strCmp("""
+In file: fear:/_lib/_rank_driver.fear
+
+003| Lib:{ .foo: Str -> Foo.version }
+   |                    ^^^^
+
+While inspecting a type name
+Type "Foo" is not declared in package "lib" and is not made visible via "use".
+In scope: "Lib", "Str".
+Did you mean "foo.Foo" or "foo_v3.Foo" or "foo_v5.Foo" or "foo_v6.Foo" ?
+Add a "use" or write the full type name.
+
+Source code inside folders named "_lib" uses package name "foo" to refer to the code inside folders named "_foo_v4", because of "map foo as _foo_v4 in _lib", written in fear:/_lib/_rank_driver.fear.
+Error 7 WellFormedness
+""", mapsError(tmp, foos+"""
+_lib/_rank_driver.fear
+iii
+use base.Str as Str;
+map foo as _foo_v4 in _lib;
+Lib:{ .foo: Str -> Foo.version }
+jjj
+"""+fooApp("")));
+  }
+  @Test void aRepeatedMapInARankFileIsAnError(@TempDir Path tmp){
+    utils.Err.strCmp("""
+In file: fear:/_lib/_rank_driver.fear
+
+001| use base.Str as Str;
+002| map foo as _foo_v4 in _lib;
+003| map foo as _foo_v5 in _lib;
+   | ----------------------^^^^
+
+While inspecting header element > file header > full file
+There is already a map of package name "foo" for source code inside folders named "_lib".
+Error 2 UnexpectedToken
+""", mapsError(tmp, foos
+      +fooLib("map foo as _foo_v4 in _lib;\nmap foo as _foo_v5 in _lib;\n")
+      +fooApp("")));
+  }
+  @Test void docExamplesAndAnAssetInAPackageDeclaringItsOwnTestAndStr(@TempDir Path tmp){
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_p/_rank_app.fear
+iii
+use base.Main as Main;
+use base.Nat as Nat;
+Test:{}
+Str:{}
+UnitTests:{}
+Calc:{
+  ///Adds one.
+  //> .check{Calc.inc(1) .assertEq 3}
+  .inc(n: Nat): Nat -> n + 1;
+  }
+App:Main{s->base.Debug#(Note.originalFileName)}
+jjj
+_p/note.txt
+iii
+REAL NOTE
+""");
+    utils.Err.strCmp("""
+Test failure _Calc_Examples at line: [###] in file: _p/auto_tests/p_test.fear
+[###]
+note.txt
+""", main(root, List.of()));
+    utils.Err.strCmp("""
+//Autogenerated from the doc examples of package p; any edit is overwritten
+
+_Calc_Examples: base.Test {::
+  .test base.Test{::
+.check{Calc.inc(1) .assertEq 3}
+  }
+  }
+
+AllAutoTests_p: base.UnitTests {::
+  .test _Calc_Examples
+  }
+""", Fs.readUtf8(generatedTests(root)));
+  }
+  @Test void docExamplesAndAnAssetInAPackageRenamingBaseWithAnAliasForTest(@TempDir Path tmp){
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_p/_rank_app.fear
+iii
+map bb as _base in _p;
+use bb.Test as T;
+Calc:{
+  ///Adds one.
+  //> .check{Calc.inc(1) .assertEq 3}
+  .inc(n: bb.Nat): bb.Nat -> n + 1;
+  }
+App:bb.Main{s->bb.Debug#(Note.originalFileName)}
+jjj
+_p/note.txt
+iii
+REAL NOTE
+""");
+    utils.Err.strCmp("""
+Test failure _Calc_Examples at line: [###] in file: _p/auto_tests/p_test.fear
+[###]
+note.txt
+""", main(root, List.of()));
+    utils.Err.strCmp("""
+//Autogenerated from the doc examples of package p; any edit is overwritten
+
+_Calc_Examples: T {::
+  .test T{::
+.check{Calc.inc(1) .assertEq 3}
+  }
+  }
+
+AllAutoTests_p: bb.UnitTests {::
+  .test _Calc_Examples
+  }
+""", Fs.readUtf8(generatedTests(root)));
+  }
+  @Test void aPackageNamedAsWithDocExamplesReachedThroughAMapNamedIn(@TempDir Path tmp){
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_as/_rank_core.fear
+iii
+use base.Nat as Nat;
+Calc:{
+  ///Adds one.
+  //> .check{Calc.inc(1) .assertEq 3}
+  .inc(n: Nat): Nat -> n + 1;
+  }
+jjj
+_app/_rank_app.fear
+iii
+use base.Main as Main;
+map in as _as in _app;
+App:Main{s->base.Debug#(in.Calc.inc(1).str)}
+""");
+    utils.Err.strCmp("2\n", main(root, List.of()));
+  }
+  @Test void aPackageNamedLikeAJavaKeywordReachedThroughAMap(@TempDir Path tmp) throws InterruptedException{
+    utils.Err.strCmp("new\n", mapsRun(tmp, """
+_new/_rank_core.fear
+iii
+use base.Str as Str;
+Class:{ .name: Str -> "new" }
+jjj
+_app/_rank_app.fear
+iii
+use base.Main as Main;
+map int as _new in _app;
+Hello:Main{s->base.Debug#(int.Class.name)}
+"""));
   }
   @Test void twoTypeNamesDifferingOnlyByCaseMustStillBuildOnASecondRun(@TempDir Path tmp) throws InterruptedException{
     var root= tmp.resolve("root");

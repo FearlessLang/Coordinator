@@ -32,9 +32,10 @@ record MiddleLayer(Coordinator coordinator, Layer next, LinkedHashMap<String,Lis
       var maxSrc= files.stream().mapToLong(Ref::lastModified).max().getAsLong();
       var maxIn= Math.max(maxSrc, other.stamp());//out.mapStamp() must be <= other.stamp() since it comes from next
       if (out.stillBuilt(pkg, files, next.pkgNames(), maxIn)){ nextOther = out.addCachedPkgApi(nextOther, pkg); continue; }
-      var rich= SourceOracleWithAutoload.of(src, "_"+pkg);
+      var vres= other.virtualizationMap().getOrDefault(pkg, Map.of());
+      var rich= SourceOracleWithAutoload.of(src, "_"+pkg, coordinator.names(pkg, files, src, other, vres));
       var capabilities= new CapabilityEnvironment(rich.autoloadedAssets());
-      var core= coordinator.frontend(pkg, rich.sources(files), rich.oracle(), other, other.virtualizationMap().getOrDefault(pkg, Map.of()), capabilities);
+      var core= coordinator.frontend(pkg, rich.sources(files), rich.oracle(), other, vres, capabilities);
       var mains= MainsInfo.of(core, src, stLib());
       coordinator.backend(pkg, core, rich.oracle(), other, capabilities);
       var newStamp= out.commit(pkg, core, mains, files, next.pkgNames(), maxIn); // newStamp will be the old api file mtime if there was no reason to commit.

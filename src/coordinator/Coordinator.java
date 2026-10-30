@@ -15,6 +15,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.TreeMap;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -157,13 +158,17 @@ public interface Coordinator{
   String outDir= ".fearless_out";
   default List<Literal> frontend(String pkgName, List<Ref> files, SourceOracle oracle, OtherPackages other, Map<String,String> vres, CapabilityEnvironment capabilities){
     var tests= new ArrayList<Ref>();
-    try{ return new FrontendLogicMain().of(pkgName, vres, files, other, core -> docs(pkgName, testsUri(pkgName, files), oracle, other, core, capabilities, tests)); }
+    try{ return new FrontendLogicMain().of(pkgName, vres, files, other, core -> docs(pkgName, testsUri(pkgName, files), oracle, other, core, capabilities, tests, names(pkgName, files, oracle, other, vres))); }
     catch (FearlessException e){ throw Report.sourceError(e.render(oracle.withFallback(() -> tests))); }
   }
-  private Optional<Ref> docs(String pkgName, Optional<URI> testsUri, SourceOracle oracle, OtherPackages other, List<Literal> core, CapabilityEnvironment capabilities, ArrayList<Ref> tests){
+  default Function<TName,String> names(String pkgName, List<Ref> files, SourceOracle oracle, OtherPackages other, Map<String,String> vres){
+    try{ return new FrontendLogicMain().names(pkgName, vres, files, other); }
+    catch (FearlessException e){ throw Report.sourceError(e.render(oracle)); }
+  }
+  private Optional<Ref> docs(String pkgName, Optional<URI> testsUri, SourceOracle oracle, OtherPackages other, List<Literal> core, CapabilityEnvironment capabilities, ArrayList<Ref> tests, Function<TName,String> names){
     var docs= backendTools(pkgName, oracle, other, core, capabilities).docs();
     core.forEach(docs::visitAll);
-    var res= docs.complete(testsUri);
+    var res= docs.complete(testsUri, names);
     res.ifPresent(tests::add);
     return res;
   }
@@ -246,6 +251,7 @@ final class Helper{
 @SuppressWarnings("serial") final class WouldCompile extends RuntimeException{}
 record NoCompile(Optional<Path> baseCachePath) implements Coordinator{
   @Override public List<Literal> frontend(String pkgName, List<Ref> files, SourceOracle oracle, OtherPackages other, Map<String,String> vres, CapabilityEnvironment capabilities){ throw new WouldCompile(); }
+  @Override public Function<TName,String> names(String pkgName, List<Ref> files, SourceOracle oracle, OtherPackages other, Map<String,String> vres){ throw new WouldCompile(); }
   @Override public void backend(String pkgName, List<Literal> core, SourceOracle oracle, OtherPackages other, CapabilityEnvironment capabilities){ throw new WouldCompile(); }
 }
 record NoCommit(Path rootDir) implements OutputOracle{

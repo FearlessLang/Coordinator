@@ -53,6 +53,7 @@ final class RecompilationCacheTest{
       lastOtherSeen.put(pkgName, other);
       return scripts.get(pkgName).apply(other);
     }
+    @Override public Function<TName,String> names(String pkgName, List<Ref> files, SourceOracle oracle, OtherPackages other, Map<String,String> vres){ return TName::s; }
     @Override public void backend(String pkgName, List<Literal> core, SourceOracle oracle, OtherPackages other, CapabilityEnvironment capabilities){ Fs.writeUtf8(Coordinator.genJava(root).resolve(pkgName+".jar"), ""); }
     int calls(String pkg){ return frontendCalls.getOrDefault(pkg, 0); }
   }

@@ -45,7 +45,7 @@ final class RealSourceOracleWithZipDslTest{
     UserError.root = root;
     FsDsl.materialize(root, spec);
     var base= new RealSourceOracleWithZip(root);
-    var ex= assertThrows(UserError.class, () -> SourceOracleWithAutoload.of(base, pkgName));
+    var ex= assertThrows(UserError.class, () -> SourceOracleWithAutoload.of(base, pkgName, TName::s));
     utils.Err.strCmp(expected, ex.getMessage());
   }
   //ZipOutputStream refuses to write two entries with the same name (ZipException: duplicate
@@ -1451,7 +1451,7 @@ iii
 world
 """);
     var base= new RealSourceOracleWithZip(root);
-    var res= SourceOracleWithAutoload.of(base, "_assets");
+    var res= SourceOracleWithAutoload.of(base, "_assets", TName::s);
     var generated= res.newRefs().getFirst().loadString();
     utils.Err.strCmp("[###]Foo: base.TxtFile{[###]", generated);
     utils.Err.strCmp("[###]Bar: base.TxtFile{[###]", generated);
@@ -1469,7 +1469,7 @@ iii
 world
 """);
     var base= new RealSourceOracleWithZip(root);
-    var res= SourceOracleWithAutoload.of(base, "_assets");
+    var res= SourceOracleWithAutoload.of(base, "_assets", TName::s);
     var generated= res.newRefs().getFirst().loadString();
     utils.Err.strCmp("[###].originalFileName: base.Str -> \"foo.txt\";[###]", generated);
     utils.Err.strCmp("[###].originalFileName: base.Str -> \"bar.txt\";[###]", generated);
@@ -1493,12 +1493,12 @@ iii
     var base= new RealSourceOracleWithZip(root);
     var res= SourceOracleWithAutoload.ofBase(base);
     utils.Err.strCmp("""
-IconsConflict: base.ImageFile{
-  .path: base.Str -> "fear:/_base/icons/conflict.png";
-  .diskPath: base.Str -> "icons/conflict.png";
-  .zipSteps: base.Str -> "";
-  .zipEntry: base.Str -> "";
-  .originalFileName: base.Str -> "conflict.png";
+IconsConflict: ImageFile{
+  .path: Str -> "fear:/_base/icons/conflict.png";
+  .diskPath: Str -> "icons/conflict.png";
+  .zipSteps: Str -> "";
+  .zipEntry: Str -> "";
+  .originalFileName: Str -> "conflict.png";
 }
 """, res.newRefs().getFirst().loadString());
     assertEquals(List.of("fear:/_rank_base000.fear", "fear:/_base/autoloaded_assets.fear"), res.sources(base.allFiles()).stream().map(Ref::fearPath).toList());
@@ -1541,7 +1541,7 @@ _pkg/notes.txt
 iii
 3
 """);
-    var res= SourceOracleWithAutoload.of(new RealSourceOracleWithZip(root), "_pkg");
+    var res= SourceOracleWithAutoload.of(new RealSourceOracleWithZip(root), "_pkg", TName::s);
     utils.Err.strCmp("""
 IconsFoo Triple[diskPath=_pkg/icons/foo.png, zipSteps=, zipEntry=]
 Notes Triple[diskPath=_pkg/notes.txt, zipSteps=, zipEntry=]
