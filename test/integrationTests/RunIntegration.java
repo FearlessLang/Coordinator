@@ -111,10 +111,10 @@ final class RunIntegration{
     try{ return coordinator(project, jvmArgs).main(project, stLib); }
     catch (InterruptedException e){ return fail(e); }
   }
-  void testOk(String name){ unitTestsOk(name, freshIntegrationRoot(name)); }
-  void unitTestsOk(String name, Path root){
+  void testOk(String name){ unitTestsOk(name, freshIntegrationRoot(name), List.of()); }
+  void unitTestsOk(String name, Path root, List<String> jvmArgs){
     var marker= "EndOfMain"+new BigInteger(128, new SecureRandom()).toString(36);
-    var out= main(root, List.of("-Dfearless.endMarker="+marker));
+    var out= main(root, Push.of(jvmArgs, "-Dfearless.endMarker="+marker));
     writeJUnitReport(name, root);
     var fails= out.lines().filter(l -> l.startsWith("Test failure ")).toList();
     assertTrue(fails.isEmpty(), () -> Join.of(fails, "Fearless unit tests failed in "+name+":\n", "\n", ""));
@@ -1179,7 +1179,7 @@ First: Main{s -> base.Block#
     var odd= Fs.isLinux() ? Path.of(URI.create(tmp.toUri()+"caf%E9")) : tmp.resolve("caf\u00e9");
     var root= odd.resolve("testAssets");
     Fs.copyTree(freshIntegrationRoot("testAssets"), root);
-    unitTestsOk("testAssetsNotUtf8", root);
+    unitTestsOk("testAssetsNotUtf8", root, List.of());
   }
   String cutTextRun(Path tmp, String read, byte[] bytes) throws IOException{
     var root= tmp.resolve("root");
@@ -1279,132 +1279,103 @@ Nope: base.DataEdit{}
   static List<String> dataLinks(Path pub, Path notes){ return List.of("-DfearlessDataRead.col.Pub="+PathClassLoader.argOf(pub), "-DfearlessDataEdit.col.Notes="+PathClassLoader.argOf(notes)); }
   static List<String> fearPaths(Path data){ return new RealSourceOracleWithZip(data).allFiles().stream().map(Ref::fearPath).toList(); }
   static String fearFile(Path data, String fearPath){ return OneOr.of(fearPath, new RealSourceOracleWithZip(data).allFiles().stream().filter(r -> r.fearPath().equals(fearPath))).loadString(); }
-  @Test void aDataProjectIsReadThroughTheRootsOfACapabilityAndAZipIsAFolder(@TempDir Path tmp){
-    var data= dataProject(tmp);
-    utils.Err.strCmp("""
-[notes, pics, readme, todo]
-[deep, inner, one.txt]
-[three.txt]
-The path "readme" of "col.Pub" names a resource, not a folder.
-The path "none" of "col.Pub" names no folder.
-The path ".hidden" of "col.Pub" is not valid: ".hidden" is not a valid folder name. A folder name uses only lowercase letters, digits and underscores, starts with a letter or an underscore, and is not "con", "prn", "aux", "nul", "com1" to "com9" or "lpt1" to "lpt9".
-No data project is mounted on "col.Nope".
-col.Notes/readme: hi
-No dataEdit project is mounted on "col.Nope".
-col.Pub/readme: hi
-2
-col.Pub/pics/deep/two.txt: deeper
-col.Notes/pics/inner/three.txt: nested
+  @Test void testDataProjects(@TempDir Path tmp) throws IOException{
+    var pub= tmp.resolve("pub");
+    FsDsl.materialize(pub, """
+data.fearless
+iii
 
-col.Notes/notes/a.txt: first
-The path "notes/b.txt" of "col.Pub" names no resource.
-The path "todo" of "col.Pub" names a folder, not a resource.
-The path "" of "col.Pub" names the root folder, not a resource.
-The path "data.fearless" of "col.Pub" is not valid: the top of a data project holds no resource with the extension "fearless": that is the place of the marker of the project, which is not part of the data project.
-""", dataRun(tmp, """
-Reads: Main{s -> base.Block#
-  .do{Debug#(Ls#(base.Try#(s.iso.close, {t -> t.dataRead(Pub).paths({})})))}
-  .do{Debug#(Ls#(base.Try#(s.iso.close, {t -> t.dataRead(Pub).paths(L#("pics"))})))}
-  .do{Debug#(Ls#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).paths(L#("pics", "inner"))})))}
-  .do{Debug#(Ls#(base.Try#(s.iso.close, {t -> t.dataRead(Pub).paths(L#("readme"))})))}
-  .do{Debug#(Ls#(base.Try#(s.iso.close, {t -> t.dataRead(Pub).paths(L#("none"))})))}
-  .do{Debug#(Ls#(base.Try#(s.iso.close, {t -> t.dataRead(Pub).paths(L#(".hidden"))})))}
-  .do{Debug#(Ls#(s.try#(s.iso.close, {t -> t.dataRead(Nope).paths({})})))}
-  .do{Debug#(Rd#(base.Try#(s.iso.close, {t -> t.dataRead(Notes).read(L#("readme"))})))}
-  .do{Debug#(Rd#(s.try#(s.iso.close, {t -> t.dataEdit(Nope).read(L#("readme"))})))}
-  .do{Debug#(Rd#(base.Try#(s.iso.close, {t -> t.dataRead(Pub).read(L#("readme"))})))}
-  .do{Debug#(Sz#(base.Try#(s.iso.close, {t -> t.dataRead(Pub).read(L#("readme"))})))}
-  .do{Debug#(Rd#(base.Try#(s.iso.close, {t -> t.dataRead(Pub).read(L#("pics", "deep", "two.txt"))})))}
-  .do{Debug#(Rd#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).read(L#("pics", "inner", "three.txt"))})))}
-  .do{Debug#(Rd#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).read(L#("notes", "a.txt"))})))}
-  .do{Debug#(Rd#(base.Try#(s.iso.close, {t -> t.dataRead(Pub).read(L#("notes", "b.txt"))})))}
-  .do{Debug#(Rd#(base.Try#(s.iso.close, {t -> t.dataRead(Pub).read(L#("todo"))})))}
-  .do{Debug#(Rd#(base.Try#(s.iso.close, {t -> t.dataRead(Pub).read({})})))}
-  .return{Debug#(Rd#(base.Try#(s.iso.close, {t -> t.dataRead(Pub).read(L#("data.fearless"))})))}
-  }
-""", dataLinks(data, data)));
-  }
-  @Test void aWriteKeepsTheDataProjectValidAndRewritesTheZipsItEnters(@TempDir Path tmp){
-    var data= dataProject(tmp);
-    var resourceName= "is not a valid resource name. A resource name is a valid folder name, a dot and an extension of 1 to 16 lowercase letters or digits, other than \"zip\" (a zip is a folder); a few well known names, like \"readme\", have no extension, and a few well known extensions, like \"tar.gz\", have two parts.";
-    utils.Err.strCmp("""
-ok
-ok
-ok
-ok
-ok
-ok
-ok
-ok
-ok
-ok
-No dataEdit project is mounted on "col.Nope".
-The path "Bad.txt" of "col.Notes" is not valid: "Bad.txt" %s
-The path "pics/x.zip" of "col.Notes" is not valid: "x.zip" %s
-The path "other.fearless" of "col.Notes" is not valid: the top of a data project holds no resource with the extension "fearless": that is the place of the marker of the project, which is not part of the data project.
-The path "readme/x.txt" of "col.Notes" is not valid: "readme" is a resource, not a folder.
-The path "readme.md" of "col.Notes" is not written: its folder holds "readme", and a resource without extension cannot share its name with a resource with an extension.
-The path "todo" of "col.Notes" names a folder, not a resource.
-""".formatted(resourceName, resourceName), dataRun(tmp, """
-Writes: Main{s -> base.Block#
-  .do{Debug#(Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).writeStrUtf8(L#("notes", "b.txt"), "second")})))}
-  .do{Debug#(Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).writeStrAscii(L#("fresh", "deeper", "c.txt"), "third")})))}
-  .do{Debug#(Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).writeStrLatin1(L#("pics", "deep", "four.txt"), "zipped")})))}
-  .do{Debug#(Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).writeStrUtf8(L#("pics", "inner", "three.txt"), "renested")})))}
-  .do{Debug#(Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).writeStrUtf8(L#("pics", "new", "five.txt"), "in a new folder of a zip")})))}
-  .do{Debug#(Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).writeUStrUtf16Le(L#("u16.txt"), "caf".u("00E9"))})))}
-  .do{Debug#(Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).writeBytes(L#("raw.bin"), L#(72.getByte, 105.getByte))})))}
-  .do{Debug#(Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).writeStrUtf32Be(L#("u32.txt"), "A")})))}
-  .do{Debug#(Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).writeUStrAscii(L#("ascii.txt"), "caf".u("00E9"), Q)})))}
-  .do{Debug#(Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).writeUStrLatin1(L#("latin1.txt"), "caf".u("00E9 1F600"), Q)})))}
-  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataEdit(Nope).writeStrUtf8(L#("x.txt"), "no")})))}
-  .do{Debug#(Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).writeStrUtf8(L#("Bad.txt"), "no")})))}
-  .do{Debug#(Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).writeStrUtf8(L#("pics", "x.zip"), "no")})))}
-  .do{Debug#(Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).writeStrUtf8(L#("other.fearless"), "no")})))}
-  .do{Debug#(Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).writeStrUtf8(L#("readme", "x.txt"), "no")})))}
-  .do{Debug#(Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).writeStrUtf8(L#("readme.md"), "no")})))}
-  .return{Debug#(Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).writeStrUtf8(L#("todo"), "no")})))}
-  }
-""", dataLinks(data, data)));
-    assertEquals(List.of("fear:/ascii.txt", "fear:/data.fearless", "fear:/fresh/deeper/c.txt", "fear:/latin1.txt", "fear:/notes/a.txt", "fear:/notes/b.txt",
-      "fear:/pics/deep/four.txt", "fear:/pics/deep/two.txt", "fear:/pics/inner/three.txt", "fear:/pics/new/five.txt", "fear:/pics/one.txt",
-      "fear:/raw.bin", "fear:/readme", "fear:/todo/item.txt", "fear:/u16.txt", "fear:/u32.txt"), fearPaths(data));
-    assertEquals(List.of("second", "third", "zipped", "renested", "in a new folder of a zip", "deeper", "Hi", "caf?"),
-      Stream.of("notes/b.txt", "fresh/deeper/c.txt", "pics/deep/four.txt", "pics/inner/three.txt", "pics/new/five.txt", "pics/deep/two.txt", "raw.bin", "ascii.txt").map(p -> fearFile(data, "fear:/"+p)).toList());
-    assertArrayEquals(new byte[]{'c', 0, 'a', 0, 'f', 0, (byte)0xE9, 0}, Fs.of(() -> Fs.readAllBytes(data.resolve("u16.txt"))));
-    assertArrayEquals(new byte[]{0, 0, 0, 'A'}, Fs.of(() -> Fs.readAllBytes(data.resolve("u32.txt"))));
-    assertArrayEquals(new byte[]{'c', 'a', 'f', (byte)0xE9, '?'}, Fs.of(() -> Fs.readAllBytes(data.resolve("latin1.txt"))));
-    assertFalse(Fs.exists(data.resolve("pics")));
-  }
-  @Test void aDeleteRemovesTheFoldersAndTheZipsItLeavesEmpty(@TempDir Path tmp){
-    var data= dataProject(tmp);
-    utils.Err.strCmp("""
-ok
-[deep, one.txt]
-ok
-ok
-ok
-The path "notes/a.txt" of "col.Notes" names no resource.
-The path "data.fearless" of "col.Notes" is not valid: the top of a data project holds no resource with the extension "fearless": that is the place of the marker of the project, which is not part of the data project.
-No dataEdit project is mounted on "col.Nope".
-[readme, todo]
-""", dataRun(tmp, """
-Deletes: Main{s -> base.Block#
-  .do{Debug#(Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).delete(L#("pics", "inner", "three.txt"))})))}
-  .do{Debug#(Ls#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).paths(L#("pics"))})))}
-  .do{Debug#(Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).delete(L#("pics", "deep", "two.txt"))})))}
-  .do{Debug#(Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).delete(L#("pics", "one.txt"))})))}
-  .do{Debug#(Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).delete(L#("notes", "a.txt"))})))}
-  .do{Debug#(Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).delete(L#("notes", "a.txt"))})))}
-  .do{Debug#(Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).delete(L#("data.fearless"))})))}
-  .do{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataEdit(Nope).delete(L#("readme"))})))}
-  .return{Debug#(Ls#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).paths({})})))}
-  }
-""", dataLinks(data, data)));
-    assertEquals(List.of("fear:/data.fearless", "fear:/readme", "fear:/todo/item.txt"), fearPaths(data));
-    assertTrue(Fs.isDirectory(data.resolve(".hidden")));
-    assertFalse(Fs.exists(data.resolve("pics.zip")));
-    assertFalse(Fs.exists(data.resolve("notes")));
+jjj
+readme
+iii
+hi
+jjj
+notes/a.txt
+iii
+first
+jjj
+.hidden/secret.txt
+iii
+secret
+jjj
+pics.zip/one.txt
+iii
+inside
+jjj
+pics.zip/deep/two.txt
+iii
+deeper
+jjj
+pics.zip/inner.zip/three.txt
+iii
+nested
+jjj
+todo/item.txt
+iii
+milk
+""");
+    var notes= tmp.resolve("notes");
+    FsDsl.materialize(notes, """
+data.fearless
+iii
+
+jjj
+readme
+iii
+hi
+jjj
+wz.zip/deep/two.txt
+iii
+deeper
+jjj
+wn.zip/inner.zip/three.txt
+iii
+nested
+jjj
+wf.zip/one.txt
+iii
+one
+jjj
+d1.zip/keep.txt
+iii
+keep
+jjj
+d1.zip/inner.zip/three.txt
+iii
+three
+jjj
+d2.zip/one.txt
+iii
+one
+jjj
+d2.zip/two.txt
+iii
+two
+jjj
+d3.zip/one.txt
+iii
+one
+jjj
+d4/a.txt
+iii
+a
+jjj
+todo/item.txt
+iii
+milk
+""");
+    var broken= tmp.resolve("broken");
+    Fs.writeUtf8(broken.resolve("data.fearless"), "");
+    Fs.writeUtf8(broken.resolve("notes").resolve("Bad.txt"), "bad");
+    unitTestsOk("testDataProjects", freshIntegrationRoot("testDataProjects"), List.of(
+      "-DfearlessDataRead.data.Pub="+PathClassLoader.argOf(pub),
+      "-DfearlessDataEdit.data.Notes="+PathClassLoader.argOf(notes),
+      "-DfearlessDataRead.data.Broken="+PathClassLoader.argOf(broken),
+      "-DfearlessDataRead.data.Gone="+PathClassLoader.argOf(tmp.resolve("gone"))));
+    assertEquals(List.of("fear:/ascii.txt", "fear:/d1/keep.txt", "fear:/d2/two.txt", "fear:/data.fearless", "fear:/fresh/deeper/c.txt", "fear:/latin1.txt",
+      "fear:/raw.bin", "fear:/readme", "fear:/todo/item.txt", "fear:/u16.txt", "fear:/u32.txt", "fear:/w1/b.txt",
+      "fear:/wf/new/five.txt", "fear:/wf/one.txt", "fear:/wn/inner/three.txt", "fear:/wz/deep/four.txt", "fear:/wz/deep/two.txt"), fearPaths(notes));
+    assertEquals(List.of(true, true, true, false, false, false, false, false), Stream.of("wz.zip", "wn.zip", "wf.zip", "wz", "wn", "wf", "d3.zip", "d4").map(n -> Fs.exists(notes.resolve(n))).toList());
   }
   @Test void anImageIsWrittenAsAPng(@TempDir Path tmp) throws IOException{
     var data= dataProject(tmp);
@@ -1523,40 +1494,6 @@ Gone: Main{s -> base.Block#
   .return{Debug#(St#(base.Try#(n.iso.close, {m -> m.readStrUtf8 Recover})))}
   }
 """, dataLinks(data, data)));
-  }
-  @Test void aRootFolderThatCannotBeReachedIsANonDeterministicError(@TempDir Path tmp){
-    var data= dataProject(tmp);
-    utils.Err.strCmp("""
-The root folder of the data project mounted on "col.Pub" cannot be reached.
-[###]The root folder of the data project mounted on "col.Pub" cannot be reached.[###]""", dataRun(tmp, """
-Gone: Main{s -> base.Block#
-  .do{Debug#(Ls#(s.try#(s.iso.close, {t -> t.dataRead(Pub).paths({})})))}
-  .return{Debug#(Ls#(base.Try#(s.iso.close, {t -> t.dataRead(Pub).paths({})})))}
-  }
-""", dataLinks(tmp.resolve("gone"), data)));
-  }
-  @Test void aFolderHoldingANameThatIsNotValidIsANonDeterministicError(@TempDir Path tmp){
-    var data= dataProject(tmp);
-    Fs.writeUtf8(data.resolve("notes").resolve("Bad.txt"), "bad");
-    utils.Err.strCmp("""
-The folder at the path "notes" of "col.Pub" holds "Bad.txt", which is not a valid resource or folder name: the data project changed while this program runs.
-[###]The folder at the path "notes" of "col.Pub" holds "Bad.txt"[###]""", dataRun(tmp, """
-Bad: Main{s -> base.Block#
-  .do{Debug#(Ls#(s.try#(s.iso.close, {t -> t.dataRead(Pub).paths(L#("notes"))})))}
-  .return{Debug#(Ls#(base.Try#(s.iso.close, {t -> t.dataRead(Pub).paths(L#("notes"))})))}
-  }
-""", dataLinks(data, data)));
-  }
-  @Test void aProgramWithNoMountsHasNoDataProject(@TempDir Path tmp){
-    utils.Err.strCmp("""
-No data project is mounted on "col.Pub".
-No dataEdit project is mounted on "col.Notes".
-""", dataRun(tmp, """
-NoMounts: Main{s -> base.Block#
-  .do{Debug#(Ls#(s.try#(s.iso.close, {t -> t.dataRead(Pub).paths({})})))}
-  .return{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataEdit(Notes).writeStrUtf8(L#("a.txt"), "no")})))}
-  }
-""", List.of()));
   }
   static Map<String,String> files(MainsInfo info){ return info.mains().entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().file())); }
   static String pathEncoding(){ return Fs.isWindows() ? "utf16Le" : "utf8"; }
