@@ -158,17 +158,14 @@ Maps of the same rank give package name "a" different folders, for source code i
 - "map a as _pkc in _pkb;"; written in fear:/_pka/_rank_app999.fear
 - "map a as _pkb in _pkb;"; written in fear:/_pkd/_rank_app999.fear
 
-These maps come from rank files with the same rank,
-so there is no higher one to override the other.
-
 How maps work:
-- A rank file can have lines like: map name as _folder in _target;
+- A rank file can have lines like "map name as _folder in _target;".
 - With no map, package name "x" refers to the code inside folders named "_x".
 - A map in a rank file of higher rank overrides the maps of lower rank, and lists their folders with "instead of".
 
 How to fix it:
 - Decide which folder package name "a" refers to, for source code inside folders named "_pkb".
-- Add one map in a rank file of higher rank (typically your top-level application package), with "instead of" listing every folder chosen by the maps of lower rank.
+- Add one map in a rank file of higher rank (typically the rank file of your application), with "instead of" listing every folder chosen by the maps of lower rank.
 Error 7 WellFormedness
 """,
     "_pka/_rank_app999.fear", "map a as _pkc in _pkb;",
