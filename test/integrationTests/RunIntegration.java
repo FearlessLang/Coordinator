@@ -1588,16 +1588,24 @@ iii
 not an image
 """, List.of()));
   }
+  @Test void aDownloadWithAContentLengthThatIsNotANumberSaysSoWithNoJavaText(@TempDir Path tmp) throws IOException{
+    try (var server= new ServerSocket(0, 1, InetAddress.getLoopbackAddress())){
+      Thread.startVirtualThread(() -> answerOnce(server, "HTTP/1.1 200 OK\r\nContent-Length: abc\r\nConnection: close\r\n\r\nhello"));
+      utils.Err.strCmp("""
+Download failed.
+url: http://127.0.0.1:[###]/len
+the Content-Length of the answer is not a number
+""", dataRun(tmp, """
+Len: Main{s -> Debug#(St#(s.try#(s.iso.close, {t -> t.download.downloadStrUtf8("http://127.0.0.1:PORT/len", 1000, Recover)})))}
+""".replace("PORT", ""+server.getLocalPort()), List.of()));
+    }
+  }
   @Test void aLogThatCanNotBeWrittenHasNoJavaName(@TempDir Path tmp){
     utils.Err.strCmp("""
 The log file .out/logs/_col/lg.log can not be written
-The log file .out/logs/_col/lg.log can not be written
 """, dataRun(tmp, """
 Lg: base.FileLog{}
-Logs: Main{s -> base.Block#
-  .do{Debug#(Wr#(s.try#{Lg.log "a"}))}
-  .return{Debug#(Wr#(s.try#{Lg.log "b"}))}
-  }
+Logs: Main{s -> Debug#(Wr#(s.try#{Lg.log "a"}))}
 jjj
 .out
 iii
