@@ -82,8 +82,7 @@ public final class Backend{
   }
   private static String selfNorm(Literal l){
     if (!LiteralDeclarations.has(l.cs(), LiteralDeclarations.captureFree)){ return "{"; }
-    assert l.ms().stream().noneMatch(m -> m.sig().m().equals(new MName(".get", 0)) || m.sig().m().equals(new MName(".as", 1))) : l.name();
-    return ", _base.Norm$o$1{ public Object imm$get$0(){ return this; }";
+    return ", _base.Norm$o$1.Own{ final Object _norm= _base.Norm$o$1.of(this); public Object _norm(){ return _norm; }";
   }
   private String onceMethods(Literal l, String iface){
     if (implementsType(l, "base.CacheHandler", 0)){ return ""; }

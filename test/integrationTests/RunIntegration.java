@@ -915,10 +915,10 @@ use base.Str as Str;
 use base.Cache as Cache;
 use base.CacheF as CacheF;
 use base.CaptureFree as CaptureFree;
-Letter:CaptureFree{ .n: Str }
-A:Letter{ .n -> "a" }
-B:Letter{ .n -> "b" }
-Show:CacheF[Letter,Str]{ x -> Block#(Debug#("computing "+(x.get.n)), x.get.n) }
+Letter:CaptureFree{ .get: Str }
+A:Letter{ .get -> "a" }
+B:Letter{ .get -> "b" }
+Show:CacheF[Letter,Str]{ x -> Block#(Debug#("computing "+(x.get.get)), x.get.get) }
 Hello:Main{s->Block#
   .do{ Debug#(Cache#(Cache.normCaptureFree[Letter](A,{::}), Show)) }
   .do{ Debug#(Cache#(Cache.normCaptureFree[Letter](A,{::}), Show)) }
