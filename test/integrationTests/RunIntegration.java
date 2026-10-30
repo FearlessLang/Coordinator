@@ -833,6 +833,46 @@ Hello:Main{s->base.Debug#(`hi`)}
 """);
     utils.Err.strCmp("hi\n", coordinator(root).main(root, stLib));
   }
+  @Test void anUncaughtErrorShowsAnInfoThatIsNotAMsg(@TempDir Path tmp) throws InterruptedException{
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_p/_rank_app.fear
+iii
+use base.Main as Main;
+use base.Error as Error;
+use base.Infos as Infos;
+L:Main{s -> Error!(Infos.list(Infos.msg "first", Infos.msg "second"))}
+M:Main{s -> Error!(Infos.map("msg", Infos.msg "a", "code", Infos.msg "seven"))}
+""");
+    utils.Err.strCmp("""
+first
+second
+imm L.main(_) error line: 4 in file _p/_rank_app.fear
+a
+code: "seven"
+imm M.main(_) error line: 5 in file _p/_rank_app.fear
+""", coordinator(root).main(root, stLib));
+  }
+  @Test void anUncaughtRethrownErrorShowsTheFramesOfItsFirstThrow(@TempDir Path tmp) throws InterruptedException{
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_p/_rank_app.fear
+iii
+use base.Main as Main;
+use base.Error as Error;
+use base.Void as Void;
+Foo:{.go: Void -> Error.msg "boom"}
+App:Main{s -> s.try#{Foo.go}!}
+""");
+    utils.Err.strCmp("""
+boom
+imm Foo.go error line: 4 in file _p/_rank_app.fear
+read App# error line: 5 in file _p/_rank_app.fear
+imm App.main(_) error line: 5 in file _p/_rank_app.fear
+""", coordinator(root).main(root, stLib));
+  }
   @Test void aCacheWithNoArgumentsKeepsItsFailure(@TempDir Path tmp) throws InterruptedException{
     var root= tmp.resolve("root");
     UserError.root = root;
