@@ -1,5 +1,8 @@
 package integrationTests;
 
+import java.lang.classfile.Attributes;
+import java.lang.classfile.ClassFile;
+import java.util.zip.ZipFile;
 import static java.nio.charset.StandardCharsets.UTF_16LE;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
@@ -1001,6 +1004,14 @@ imm Foo.nat error line: 10 in file _p/_rank_app.fear
 imm Cache#(_) error line: 47 in file caching.fear
 imm A13CacheFunction.main(_) error line: 36 in file _p/_rank_app.fear
 """, coordinator(root).main(root, stLib));
+  }
+  @Test void aClassCompiledFromAHandWrittenRtFileKeepsItsOwnSourceFile() throws IOException{
+    byte[] bytes;
+    try (var jar= new ZipFile(baseCache.resolve("base.jar").toFile())){
+      bytes= jar.getInputStream(jar.getEntry("_base/Lists$1c$0.class")).readAllBytes();
+    }
+    var sourceFile= ClassFile.of().parse(bytes).findAttribute(Attributes.sourceFile()).orElseThrow().sourceFile().stringValue();
+    assertEquals("Lists$1c$0.java", sourceFile);
   }
   @Test void anUncaughtErrorShowsAnInfoThatIsNotAMsg(@TempDir Path tmp) throws InterruptedException{
     var root= tmp.resolve("root");
@@ -2832,25 +2843,21 @@ imm Fail#(_) error line: 18 in file _rec/_rank_app.fear
 imm True.if(_) error line: 56 in file datatypes/bools.fear
 imm Fail#(_) error line: 18 in file _rec/_rank_app.fear
 imm Fail#(_) error line: 18 in file _rec/_rank_app.fear
-imm _RunRecursion#(_,_) error line: 24 in file run_recursion.fear
 imm RunRecursion#(_) error line: 15 in file run_recursion.fear
 imm Fail#(_) error line: 18 in file _rec/_rank_app.fear
 imm False.if(_) error line: 67 in file datatypes/bools.fear
 imm Fail#(_) error line: 18 in file _rec/_rank_app.fear
 imm Fail#(_) error line: 18 in file _rec/_rank_app.fear
-imm _RunRecursion#(_,_) error line: 24 in file run_recursion.fear
 imm RunRecursion#(_) error line: 15 in file run_recursion.fear
 imm Fail#(_) error line: 18 in file _rec/_rank_app.fear
 imm False.if(_) error line: 67 in file datatypes/bools.fear
 imm Fail#(_) error line: 18 in file _rec/_rank_app.fear
 imm Fail#(_) error line: 18 in file _rec/_rank_app.fear
-imm _RunRecursion#(_,_) error line: 24 in file run_recursion.fear
 imm RunRecursion#(_) error line: 15 in file run_recursion.fear
 imm Fail#(_) error line: 18 in file _rec/_rank_app.fear
 imm False.if(_) error line: 67 in file datatypes/bools.fear
 imm Fail#(_) error line: 18 in file _rec/_rank_app.fear
 imm Fail#(_) error line: 18 in file _rec/_rank_app.fear
-imm _RunRecursion#(_,_) error line: 24 in file run_recursion.fear
 imm RunRecursion#(_) error line: 15 in file run_recursion.fear
 imm Fail#(_) error line: 18 in file _rec/_rank_app.fear
 imm False.if(_) error line: 67 in file datatypes/bools.fear

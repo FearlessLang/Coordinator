@@ -30,6 +30,7 @@ public final class MagicConsistency{
     assert isMagicBody(m) || hasInstance || !nat.has(typeName, jName) :
       typeName+"."+jName+" has a real Fearless body and a hand-written rt/ override of the same method";
   }
+  boolean replaced(String typeName){ return natives.isPresent() && natives.get().hasFile(typeName); }
   void checkFileReplacement(Literal l, String typeName){
     if (natives.isEmpty() || !natives.get().hasFile(typeName)){ return; }
     assert l.name().equals(magicName) || !hasRealBody(l) :

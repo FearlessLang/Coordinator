@@ -65,7 +65,7 @@ public final class Backend{
     if (hasInstance){ sb.a("  "+iface+" instance= new _Instance();\n  final class _Instance implements "+iface+selfNorm(l)+"}\n"+cacheField(l)); }
     Fs.writeUtf8(out.resolve(iface+".java"), sb.a("}").toString());
     if (hasInstance && MainsInfo.isMain(l)){ mains.put(l.name().s(), iface); preloaded.put(l.name().s(), preloaded(l)); }
-    fixers.add(sb);
+    if (!tools.checks().replaced(iface)){ fixers.add(sb); }
   }
   private String preloaded(Literal l){ return Join.of(MainsInfo.icons(l.cs()).stream().map(n -> javaStrLit(n.s())+", "+typeName(n)+".instance"), "", ", ", ""); }
   String nameMethod(Literal l, String modifier){
