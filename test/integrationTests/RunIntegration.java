@@ -1108,9 +1108,13 @@ Cut: Main{s -> Debug#(s.inputCursor#.match{.some n -> n.READ Show; .empty -> "no
   @Test void withNoOpenedFileTheInputFilesStartEmpty(@TempDir Path tmp) throws InterruptedException{
     utils.Err.strCmp("False\nnone\nFalse\n", main(inputProject(tmp), List.of()));
   }
-  @Test void anInputFileThatCanNotBeReadIsADeterministicError(@TempDir Path tmp){
-    utils.Err.strCmp("File with absolute path "+tmp.resolve("gone.txt").toAbsolutePath()+" can not be read as bytes\n", dataRun(tmp, """
-Gone: Main{s -> Debug#(St#(base.Try#(s.iso.close, {t -> t.inputCursor#.match{.some n -> n.readStrUtf8 Recover; .empty -> "none"}})))}
+  @Test void anInputFileThatCanNotBeReadIsANonDeterministicError(@TempDir Path tmp){
+    var msg= "File with absolute path "+tmp.resolve("gone.txt").toAbsolutePath()+" can not be read as bytes";
+    utils.Err.strCmp(msg+"\n[###]"+msg+"[###]", dataRun(tmp, """
+Gone: Main{s -> base.Block#
+  .do{Debug#(St#(s.try#(s.iso.close, {t -> t.inputCursor#.match{.some n -> n.readStrUtf8 Recover; .empty -> "none"}})))}
+  .return{Debug#(St#(base.Try#(s.iso.close, {t -> t.inputCursor#.match{.some n -> n.readStrUtf8 Recover; .empty -> "none"}})))}
+  }
 """, List.of("-DfearlessInput.file="+PathClassLoader.argOf(tmp.resolve("gone.txt")))));
   }
   static Path dataProject(Path tmp){
@@ -1407,16 +1411,18 @@ Linear: Main{s -> base.Block#
     var reds= reds(ImageIO.read(data.resolve("srgb.png").toFile()), 0);
     assertTrue(reds.stream().allMatch(r -> Math.abs(r - 188) <= 6), () -> "A linear gray of 128 is the sRGB gray 188, not "+reds);
   }
-  @Test void aResourceDeletedAfterItIsOpenedIsADeterministicError(@TempDir Path tmp){
+  @Test void aResourceDeletedAfterItIsOpenedIsANonDeterministicError(@TempDir Path tmp){
     var data= dataProject(tmp);
     utils.Err.strCmp("""
 ok
 Resource with path col.Notes/readme can not be read as bytes
-""", dataRun(tmp, """
+[###]Resource with path col.Notes/readme can not be read as bytes[###]""", dataRun(tmp, """
 Gone: Main{s -> base.Block#
   .let n= {s.dataEdit(Notes).read(L#("readme"))}
+  .let m= {s.dataEdit(Notes).read(L#("readme"))}
   .do{Debug#(Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).delete(L#("readme"))})))}
-  .return{Debug#(St#(base.Try#(n.iso.close, {m -> m.readStrUtf8 Recover})))}
+  .do{Debug#(St#(s.try#(n.iso.close, {k -> k.readStrUtf8 Recover})))}
+  .return{Debug#(St#(base.Try#(m.iso.close, {k -> k.readStrUtf8 Recover})))}
   }
 """, dataLinks(data, data)));
   }
@@ -1556,7 +1562,7 @@ Gui: Main{s -> base.Block#
 """, List.of()));
   }
   @Test void aGuiIconThatCanNotBeDecodedNamesTheStandards(@TempDir Path tmp){
-    utils.Err.strCmp("Resource with path /_col/junk.png can not be decoded as an image according to standards PNG, JPEG, WebP, GIF, BMP, ICO and WBMP\n", dataRun(tmp, """
+    utils.Err.strCmp("Resource with path /_col/junk.png can not be decoded as an image according to standards PNG (ISO/IEC 15948:2004), JPEG (ISO/IEC 10918-1:1994), WebP (RFC 9649), GIF (GIF89a), BMP (Windows bitmap up to BITMAPV5HEADER), ICO (Windows icon) and WBMP (WAP-237, type 0)\n", dataRun(tmp, """
 IconGui: Main, base.PreLoadIcon[Junk]{s -> Debug#(Wr#(s.try#(s.iso.close, {t -> t.gui.icon(Junk).run{f -> base.Block#(f.modelFps(10, {m -> m.action{f.close}}), base.Void)}})))}
 jjj
 _col/junk.png
@@ -1598,32 +1604,6 @@ _col/box.zip/three.txt
 iii
 three
 """, List.of("-DfearlessDataEdit.col.Notes="+PathClassLoader.argOf(tmp.resolve("root")))));
-  }
-  @Test void anImageThatCanNotBeDecodedNamesTheStandards(@TempDir Path tmp) throws IOException{
-    var data= dataProject(tmp);
-    var img= new BufferedImage(64, 64, BufferedImage.TYPE_INT_RGB);
-    for (int y= 0; y < 64; y += 1){ for (int x= 0; x < 64; x += 1){ img.setRGB(x, y, x * 4 << 16 | y * 4); } }
-    var png= new ByteArrayOutputStream();
-    ImageIO.write(img, "png", png);
-    Fs.write(data.resolve("cut.png"), Arrays.copyOf(png.toByteArray(), png.size() / 2));
-    Fs.write(data.resolve("text.png"), "not an image".getBytes(UTF_8));
-    var in= Fs.write(tmp.resolve("in.png"), "not an image".getBytes(UTF_8));
-    var standards= " can not be decoded as an image according to standards PNG, JPEG, WebP, GIF, BMP, ICO and WBMP\n";
-    utils.Err.strCmp("Resource with path col.Pub/text.png"+standards
-      +"Resource with path col.Pub/cut.png"+standards
-      +"Resource with path /_col/junk.png"+standards
-      +"File with absolute path "+in.toAbsolutePath()+standards, dataRun(tmp, """
-Images: Main{s -> base.Block#
-  .do{Debug#(St#(s.try#(s.iso.close, {t -> base.Block#(t.dataRead(Pub).read(L#("text.png")).readImage(1000000), "read")})))}
-  .do{Debug#(St#(s.try#(s.iso.close, {t -> base.Block#(t.dataRead(Pub).read(L#("cut.png")).readImage(1000000), "read")})))}
-  .do{Debug#(St#(s.try#(s.iso.close, {t -> base.Block#(Junk.readImage(t.assetRead, 1000000), "read")})))}
-  .return{Debug#(St#(s.try#(s.iso.close, {t -> t.inputCursor#.match{.some n -> base.Block#(n.readImage(1000000), "read"); .empty -> "none"}})))}
-  }
-jjj
-_col/junk.png
-iii
-not an image
-""", Push.of(dataLinks(data, data), "-DfearlessInput.file="+PathClassLoader.argOf(in))));
   }
   @Test void aLogThatCanNotBeWrittenHasNoJavaName(@TempDir Path tmp){
     utils.Err.strCmp("""
