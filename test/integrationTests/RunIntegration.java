@@ -23,6 +23,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.URI;
+import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
@@ -37,6 +38,7 @@ import java.util.function.IntBinaryOperator;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
+import java.util.zip.CRC32;
 
 import javax.imageio.ImageIO;
 
@@ -1345,9 +1347,14 @@ Cut: Main{s -> Debug#(s.inputCursor#.match{.some n -> n.READ Show; .empty -> "no
   @Test void withNoOpenedFileTheInputFilesStartEmpty(@TempDir Path tmp) throws InterruptedException{
     utils.Err.strCmp("False\nnone\nFalse\n", main(inputProject(tmp), List.of()));
   }
-  @Test void anInputFileThatCanNotBeReadIsADeterministicError(@TempDir Path tmp){
-    utils.Err.strCmp("The input file \"gone.txt\" could not be read: NoSuchFileException\n", dataRun(tmp, """
-Gone: Main{s -> Debug#(St#(base.Try#(s.iso.close, {t -> t.inputCursor#.match{.some n -> n.readStrUtf8 Recover; .empty -> "none"}})))}
+  @Test void anInputFileThatCanNotBeReadIsANonDeterministicError(@TempDir Path tmp){
+    utils.Err.strCmp("""
+File with absolute path [###]gone.txt can not be read as bytes
+[###]File with absolute path [###]gone.txt can not be read as bytes[###]""", dataRun(tmp, """
+Gone: Main{s -> base.Block#
+  .do{Debug#(St#(s.try#(s.iso.close, {t -> t.inputCursor#.match{.some n -> n.readStrUtf8 Recover; .empty -> "none"}})))}
+  .return{Debug#(St#(base.Try#(s.iso.close, {t -> t.inputCursor#.match{.some n -> n.readStrUtf8 Recover; .empty -> "none"}})))}
+  }
 """, List.of("-DfearlessInput.file="+PathClassLoader.argOf(tmp.resolve("gone.txt")))));
   }
   static Path dataProject(Path tmp){
@@ -1656,16 +1663,141 @@ File with absolute path [###]in.png can not be decoded as an image according to 
 Opened: Main{s -> Debug#(St#(base.Try#(s.iso.close, {t -> t.inputCursor#.match{.some n -> base.Block#(n.readImage(1000000), "read"); .empty -> "none"}})))}
 """, List.of("-DfearlessInput.file="+PathClassLoader.argOf(in))));
   }
-  @Test void aResourceDeletedAfterItIsOpenedIsADeterministicError(@TempDir Path tmp){
+  @Test void aDownloadThatIsNotAnImageCanNotBeDecoded(@TempDir Path tmp) throws IOException{
+    var server= startServer(ex -> reply(ex, 200, "not an image".getBytes(UTF_8)));
+    try{
+      utils.Err.strCmp("""
+Resource with url http://127.0.0.1:[###]/x.png can not be decoded as an image according to standards PNG (ISO/IEC 15948:2004), JPEG (ISO/IEC 10918-1:1994), WebP (RFC 9649), GIF (GIF89a), BMP (Windows bitmap up to BITMAPV5HEADER), ICO (Windows icon) and WBMP (WAP-237, type 0)
+""", dataRun(tmp, """
+Download: Main{s -> Debug#(St#(base.Try#(s.iso.close, {t -> base.Block#(t.download.downloadImage("URL", 1000, 1000000), "read")})))}
+""".replace("URL", url(server, "/x.png")), List.of()));
+    }
+    finally{ server.stop(0); }
+  }
+  static byte[] pngHeader(int w, int h){
+    var res= ByteBuffer.allocate(8+25+12+12).put(new byte[]{(byte)0x89, 'P', 'N', 'G', '\r', '\n', 0x1A, '\n'});
+    for (var c : List.of(ByteBuffer.allocate(17).put("IHDR".getBytes(UTF_8)).putInt(w).putInt(h).put(new byte[]{8, 2, 0, 0, 0}).array(), "IDAT".getBytes(UTF_8), "IEND".getBytes(UTF_8))){
+      var crc= new CRC32();
+      crc.update(c);
+      res.putInt(c.length - 4).put(c).putInt((int)crc.getValue());
+    }
+    return res.array();
+  }
+  @Test void aResourceWiderThanTheLimitCanNotBeRead(@TempDir Path tmp) throws IOException{
+    var data= dataProject(tmp);
+    Fs.write(data.resolve("wide.png"), pngHeader(32768, 1));
+    utils.Err.strCmp("""
+Resource with path col.Pub/wide.png is an image of 32768 x 1, which is too large; each side must be <= 32767 and the pixels <= 268435456
+""", dataRun(tmp, """
+Wide: Main{s -> Debug#(St#(base.Try#(s.iso.close, {t -> base.Block#(t.dataRead(Pub).read(L#("wide.png")).readImage(1000000), "read")})))}
+""", dataLinks(data, data)));
+  }
+  @Test void aResourceWithMorePixelsThanTheLimitCanNotBeRead(@TempDir Path tmp) throws IOException{
+    var data= dataProject(tmp);
+    Fs.write(data.resolve("big.png"), pngHeader(20000, 20000));
+    utils.Err.strCmp("""
+Resource with path col.Pub/big.png is an image of 20000 x 20000, which is too large; each side must be <= 32767 and the pixels <= 268435456
+""", dataRun(tmp, """
+Big: Main{s -> Debug#(St#(base.Try#(s.iso.close, {t -> base.Block#(t.dataRead(Pub).read(L#("big.png")).readImage(1000000), "read")})))}
+""", dataLinks(data, data)));
+  }
+  @Test void aResourceWithMorePixelsThanItsMaxPixelsCanNotBeRead(@TempDir Path tmp) throws IOException{
+    var data= dataProject(tmp);
+    var bout= new ByteArrayOutputStream();
+    ImageIO.write(new BufferedImage(2, 3, BufferedImage.TYPE_INT_ARGB), "png", bout);
+    Fs.write(data.resolve("small.png"), bout.toByteArray());
+    utils.Err.strCmp("""
+Resource with path col.Pub/small.png is an image of 2 x 3 = 6 pixels, more than maxPixels 5
+""", dataRun(tmp, """
+Small: Main{s -> Debug#(St#(base.Try#(s.iso.close, {t -> base.Block#(t.dataRead(Pub).read(L#("small.png")).readImage(5), "read")})))}
+""", dataLinks(data, data)));
+  }
+  @Test void anAssetWithMorePixelsThanItsMaxPixelsCanNotBeRead(@TempDir Path tmp){
+    utils.Err.strCmp("""
+Resource with path /_base/icons/conflict.png is an image of 256 x 256 = 65536 pixels, more than maxPixels 1
+""", dataRun(tmp, """
+Icon: Main{s -> Debug#(St#(base.Try#(s.iso.close, {t -> base.Block#(base.IconsConflict.readImage(t.assetRead, 1), "read")})))}
+""", List.of()));
+  }
+  @Test void anAssetRemovedWhileTheProgramRunsCanNotBeReadAsBytes(@TempDir Path tmp){
+    utils.Err.strCmp("""
+ok
+Resource with path /_col/note.txt can not be read as bytes
+""", dataRun(tmp, """
+Gone: Main{s -> base.Block#
+  .do{Debug#(Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).delete(L#("_col", "note.txt"))})))}
+  .return{Debug#(St#(s.try#(s.iso.close, {t -> Note.readStrUtf8(t.assetRead, Recover)})))}
+  }
+jjj
+_col/note.txt
+iii
+note
+""", List.of("-DfearlessDataEdit.col.Notes="+PathClassLoader.argOf(tmp.resolve("root")))));
+  }
+  @Test void aZipEntryAssetRemovedWhileTheProgramRunsCanNotBeReadAsBytes(@TempDir Path tmp){
+    utils.Err.strCmp("""
+ok
+Resource with path /_col/pics/one.txt can not be read as bytes
+""", dataRun(tmp, """
+Gone: Main{s -> base.Block#
+  .do{Debug#(Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).delete(L#("_col", "pics", "one.txt"))})))}
+  .return{Debug#(St#(s.try#(s.iso.close, {t -> PicsOne.readStrUtf8(t.assetRead, Recover)})))}
+  }
+jjj
+_col/pics.zip/one.txt
+iii
+one
+jjj
+_col/pics.zip/two.txt
+iii
+two
+""", List.of("-DfearlessDataEdit.col.Notes="+PathClassLoader.argOf(tmp.resolve("root")))));
+  }
+  @Test void aZipAssetRemovedWhileTheProgramRunsCanNotBeReadAsBytes(@TempDir Path tmp){
+    utils.Err.strCmp("""
+ok
+Resource with path /_col/box/three.txt can not be read as bytes
+""", dataRun(tmp, """
+Gone: Main{s -> base.Block#
+  .do{Debug#(Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).delete(L#("_col", "box", "three.txt"))})))}
+  .return{Debug#(St#(s.try#(s.iso.close, {t -> BoxThree.readStrUtf8(t.assetRead, Recover)})))}
+  }
+jjj
+_col/box.zip/three.txt
+iii
+three
+""", List.of("-DfearlessDataEdit.col.Notes="+PathClassLoader.argOf(tmp.resolve("root")))));
+  }
+  @Test void aResourceDeletedAfterItIsOpenedIsANonDeterministicError(@TempDir Path tmp){
     var data= dataProject(tmp);
     utils.Err.strCmp("""
 ok
-The resource "col.Notes/readme" could not be read: NoSuchFileException
-""", dataRun(tmp, """
+Resource with path col.Notes/readme can not be read as bytes
+[###]Resource with path col.Notes/readme can not be read as bytes[###]""", dataRun(tmp, """
 Gone: Main{s -> base.Block#
   .let n= {s.dataEdit(Notes).read(L#("readme"))}
+  .let m= {s.dataEdit(Notes).read(L#("readme"))}
   .do{Debug#(Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).delete(L#("readme"))})))}
-  .return{Debug#(St#(base.Try#(n.iso.close, {m -> m.readStrUtf8 Recover})))}
+  .do{Debug#(St#(s.try#(n.iso.close, {k -> k.readStrUtf8 Recover})))}
+  .return{Debug#(St#(base.Try#(m.iso.close, {k -> k.readStrUtf8 Recover})))}
+  }
+""", dataLinks(data, data)));
+  }
+  @Test void anImageResourceDeletedAfterItIsOpenedIsANonDeterministicError(@TempDir Path tmp) throws IOException{
+    var data= dataProject(tmp);
+    var bout= new ByteArrayOutputStream();
+    ImageIO.write(new BufferedImage(2, 3, BufferedImage.TYPE_INT_ARGB), "png", bout);
+    Fs.write(data.resolve("pic.png"), bout.toByteArray());
+    utils.Err.strCmp("""
+ok
+Resource with path col.Notes/pic.png can not be read as bytes
+[###]Resource with path col.Notes/pic.png can not be read as bytes[###]""", dataRun(tmp, """
+Gone: Main{s -> base.Block#
+  .let n= {s.dataEdit(Notes).read(L#("pic.png"))}
+  .let m= {s.dataEdit(Notes).read(L#("pic.png"))}
+  .do{Debug#(Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).delete(L#("pic.png"))})))}
+  .do{Debug#(St#(s.try#(n.iso.close, {k -> base.Block#(k.readImage(1000), "read")})))}
+  .return{Debug#(St#(base.Try#(m.iso.close, {k -> base.Block#(k.readImage(1000), "read")})))}
   }
 """, dataLinks(data, data)));
   }
