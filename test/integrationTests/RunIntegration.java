@@ -1,5 +1,6 @@
 package integrationTests;
 
+import static java.nio.charset.StandardCharsets.ISO_8859_1;
 import static java.nio.charset.StandardCharsets.UTF_16LE;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
@@ -28,14 +29,18 @@ import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
 import java.security.SecureRandom;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Random;
 import java.util.function.IntBinaryOperator;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 import javax.imageio.ImageIO;
 
@@ -1480,6 +1485,249 @@ NoMounts: Main{s -> base.Block#
   .return{Debug#(Wr#(s.try#(s.iso.close, {t -> t.dataEdit(Notes).writeStrUtf8(L#("a.txt"), "no")})))}
   }
 """, List.of()));
+  }
+  @Test void aDownloadThatCannotConnectSaysSoWithNoJavaName(@TempDir Path tmp) throws IOException{
+    int port; try (var free= new ServerSocket(0)){ port= free.getLocalPort(); }
+    utils.Err.strCmp("""
+Download failed.
+url: http://127.0.0.1:[###]/x
+the connection to the host could not be opened
+""", dataRun(tmp, """
+Refused: Main{s -> Debug#(St#(s.try#(s.iso.close, {t -> t.download.downloadStrUtf8("http://127.0.0.1:PORT/x", 1000, Recover)})))}
+""".replace("PORT", ""+port), List.of()));
+  }
+  @Test void anInvalidUrlSaysSoWithNoJavaText(@TempDir Path tmp){
+    utils.Err.strCmp("""
+Invalid URL descriptor.
+not a valid URI according to RFC 2396 and RFC 2732
+url: http://a b/
+""", dataRun(tmp, """
+Invalid: Main{s -> Debug#(St#(s.try#(s.iso.close, {t -> t.download.downloadStrUtf8("http://a b/", 1000, Recover)})))}
+""", List.of()));
+  }
+  @Test void aStackOverflowCaughtBySysTryHasNoJavaName(@TempDir Path tmp){
+    utils.Err.strCmp("""
+The program ran out of stack space
+""", dataRun(tmp, """
+Deep: { #(n: base.Nat): base.Nat -> this#(n + 1) + 1 }
+Overflow: Main{s -> Debug#(St#(s.try#{(Deep#0).str}))}
+""", List.of()));
+  }
+  @Test void aChildProcessEndingWithAJavaErrorGivesItsParentNoJavaName(@TempDir Path tmp){
+    utils.Err.strCmp("""
+[###]The program ran out of stack space
+""", dataRun(tmp, """
+Deep: { #(n: base.Nat): base.Nat -> this#(n + 1) + 1 }
+Child: Main{s -> Debug#((Deep#0).str)}
+Parent: Main{s -> Debug#(Wr#(s.try#(s.iso.close, {t -> t.process.run(Child, {})})))}
+""", List.of()));
+  }
+  @Test void anEListChangedByItsOwnRemoveIfSaysSoWithNoJavaName(@TempDir Path tmp){
+    utils.Err.strCmp("""
+EList.removeIf: the function changed the EList while removeIf was running
+""", dataRun(tmp, """
+Grow: Main{s -> Debug#(St#(s.try#{base.Block#
+  .let l= {base.ELists#[base.Nat](1, 2)}
+  .return{l.removeIf{e -> base.Block#(l.add e, base.True)}.list.size.str}
+  }))}
+""", List.of()));
+  }
+  @Test void anInconsistentOrderSaysSoWithNoJavaText(@TempDir Path tmp){
+    utils.Err.strCmp("""
+EList.sort: the OrderBy does not give a consistent order to the elements
+""", dataRun(tmp, """
+Bad: base.OrderBy[base.Nat]{a, b -> ((a.imm * 7 + (b.imm * 13)).getRem 3) <=> 1}
+Sort: Main{s -> Debug#(St#(s.try#{base.ELists#[base.Nat]ADDS.sort(Bad).list.size.str}))}
+""".replace("ADDS", Join.of(IntStream.range(0, 61).mapToObj(i -> ".add("+i+")").toList(), "", "", "")), List.of()));
+  }
+  @Test void aBiFlowLimitedToMaxNatKeepsAllItsElements(@TempDir Path tmp){
+    utils.Err.strCmp("""
+2
+""", dataRun(tmp, """
+Lim: Main{s -> Debug#(St#(s.try#{base.Flows#(1, 2).with(base.Flows#(10, 20)).limit(base.Math.maxNat).getMerge{a, b -> a + b}.list.size.str}))}
+""", List.of()));
+  }
+  @Test void anEListWithACapacityLargerThanTheJavaLimitIsOutOfMemoryWithNoJavaText(@TempDir Path tmp){
+    utils.Err.strCmp("""
+The program ran out of memory
+""", dataRun(tmp, """
+Big: Main{s -> Debug#(St#(s.try#{base.ELists.withCapacity[base.Nat](2147483646).list.size.str}))}
+""", List.of()));
+  }
+  @Test void aStrRepeatedPastTheJavaLimitIsOutOfMemoryWithNoJavaText(@TempDir Path tmp){
+    utils.Err.strCmp("""
+The program ran out of memory
+""", dataRun(tmp, """
+Big: Main{s -> Debug#(St#(s.try#{"a".repeat 2147483647}))}
+""", List.of()));
+  }
+  @Test void aWrongKeyNameSaysSoWithNoJavaName(@TempDir Path tmp){
+    utils.Err.strCmp("""
+KeyStroke#"NOPE" is not a key name. Key names are listed in the documentation of KeyStroke, for example "A", "7", "SPACE", "ENTER", "ESCAPE", "BACK_SPACE", "LEFT", "F1", "SHIFT".
+""", dataRun(tmp, """
+Key: Main{s -> Debug#(St#(base.Try#{(base.KeyStroke#"NOPE").get}))}
+""", List.of()));
+  }
+  @Test void aForgedAssetOfAPackageThatDoesNotExistHasNoJavaName(@TempDir Path tmp){
+    utils.Err.strCmp("""
+Invalid asset descriptor.
+This file was not recognized by the compiler as auto-imported.
+package: _nosuch
+diskPath: _nosuch/x.dat
+""", dataRun(tmp, """
+Forged: base.TxtFile{
+  .path: base.Str -> "fear:/_nosuch/x.dat";
+  .diskPath: base.Str -> "_nosuch/x.dat";
+  .zipSteps: base.Str -> "";
+  .zipEntry: base.Str -> "";
+  .originalFileName: base.Str -> "x.dat";
+  }
+Read: Main{s -> Debug#(St#(s.try#(s.iso.close, {t -> Forged.readStrUtf8(t.assetRead, Recover)})))}
+""", List.of()));
+  }
+  @Test void aGuiConsumerEndingWithAJavaErrorHasNoJavaName(@TempDir Path tmp){
+    utils.Err.strCmp("""
+The program ran out of stack space
+""", dataRun(tmp, """
+Deep: { #(n: base.Nat): base.Nat -> this#(n + 1) + 1 }
+Gui: Main{s -> Debug#(Wr#(s.try#(s.iso.close, {t -> t.gui.run{f -> base.Block#((Deep#0).str, base.Void)}})))}
+""", List.of()));
+  }
+  @Test void aGuiModelActionEndingWithAJavaErrorHasNoJavaName(@TempDir Path tmp){
+    utils.Err.strCmp("""
+The program ran out of stack space
+""", dataRun(tmp, """
+Deep: { #(n: base.Nat): base.Nat -> this#(n + 1) + 1 }
+Gui: Main{s -> Debug#(Wr#(s.try#(s.iso.close, {t -> t.gui.run{f -> base.Block#(f.modelFps(10, {m -> m.action{base.Block#((Deep#0).str, base.Void)}}), base.Void)}})))}
+""", List.of()));
+  }
+  @Test void aGuiPainterEndingWithAJavaErrorHasNoJavaName(@TempDir Path tmp){
+    utils.Err.strCmp("""
+The program ran out of stack space
+""", dataRun(tmp, """
+Deep: { #(n: base.Nat): base.Nat -> this#(n + 1) + 1 }
+Gui: Main{s -> Debug#(Wr#(s.try#(s.iso.close, {t -> t.gui.run{f -> f.content.pane{p -> p.paint{g -> base.Block#((Deep#0).str, g)}}}})))}
+""", List.of()));
+  }
+  @Test void aGuiIconThatCanNotBeDecodedNamesTheStandards(@TempDir Path tmp){
+    utils.Err.strCmp("""
+Resource with path /_col/junk.png can not be decoded as an image according to standards PNG (ISO/IEC 15948:2004), JPEG (ISO/IEC 10918-1:1994), WebP (RFC 9649), GIF (GIF89a), BMP (Windows bitmap up to BITMAPV5HEADER), ICO (Windows icon) and WBMP (WAP-237, type 0)
+""", dataRun(tmp, """
+IconGui: Main, base.PreLoadIcon[Junk]{s -> Debug#(Wr#(s.try#(s.iso.close, {t -> t.gui.icon(Junk).run{f -> base.Block#(f.modelFps(10, {m -> m.action{f.close}}), base.Void)}})))}
+jjj
+_col/junk.png
+iii
+not an image
+""", List.of()));
+  }
+  @Test void aDownloadWithAContentLengthThatIsNotANumberSaysSoWithNoJavaText(@TempDir Path tmp) throws IOException{
+    try (var server= new ServerSocket(0, 1, InetAddress.getLoopbackAddress())){
+      Thread.startVirtualThread(() -> answerOnce(server, "HTTP/1.1 200 OK\r\nContent-Length: abc\r\nConnection: close\r\n\r\nhello"));
+      utils.Err.strCmp("""
+Download failed.
+url: http://127.0.0.1:[###]/len
+the Content-Length of the answer is not a number
+""", dataRun(tmp, """
+Len: Main{s -> Debug#(St#(s.try#(s.iso.close, {t -> t.download.downloadStrUtf8("http://127.0.0.1:PORT/len", 1000, Recover)})))}
+""".replace("PORT", ""+server.getLocalPort()), List.of()));
+    }
+  }
+  @Test void aLogThatCanNotBeWrittenHasNoJavaName(@TempDir Path tmp){
+    utils.Err.strCmp("""
+The log file .out/logs/_col/lg.log can not be written
+""", dataRun(tmp, """
+Lg: base.FileLog{}
+Logs: Main{s -> Debug#(Wr#(s.try#{Lg.log "a"}))}
+jjj
+.out
+iii
+not a folder
+""", List.of()));
+  }
+  @Test void aZipOfADataProjectThatIsNotAZipSaysSo(@TempDir Path tmp) throws IOException{
+    var data= dataProject(tmp);
+    Fs.write(data.resolve("bad.zip"), "not a zip".getBytes(UTF_8));
+    utils.Err.strCmp("""
+The path "bad" of "col.Pub" names a zip that is not a valid zip archive: the data project changed while this program runs.
+""", dataRun(tmp, """
+Zips: Main{s -> Debug#(Ls#(s.try#(s.iso.close, {t -> t.dataRead(Pub).paths(L#("bad"))})))}
+""", dataLinks(data, data)));
+  }
+  @Test void aZipOfADataProjectCutInHalfSaysSoWithNoJavaName(@TempDir Path tmp) throws IOException{
+    var data= dataProject(tmp);
+    var bytes= new byte[4000];
+    new Random(1).nextBytes(bytes);
+    var cut= new ByteArrayOutputStream();
+    try (var z= new ZipOutputStream(cut)){ z.putNextEntry(new ZipEntry("one.txt")); z.write(bytes); z.closeEntry(); }
+    Fs.write(data.resolve("cut.zip"), Arrays.copyOf(cut.toByteArray(), 2000));
+    utils.Err.strCmp("""
+The path "cut" of "col.Pub" names a zip that is not a valid zip archive: the data project changed while this program runs.
+""", dataRun(tmp, """
+Zips: Main{s -> Debug#(Ls#(s.try#(s.iso.close, {t -> t.dataRead(Pub).paths(L#("cut"))})))}
+""", dataLinks(data, data)));
+  }
+  @Test void aZipOfADataProjectWithAnEntryNameNotInUtf8SaysSoWithNoJavaName(@TempDir Path tmp) throws IOException{
+    var data= dataProject(tmp);
+    var bytes= new byte[4000];
+    new Random(1).nextBytes(bytes);
+    var latin= new ByteArrayOutputStream();
+    try (var z= new ZipOutputStream(latin, ISO_8859_1)){ z.putNextEntry(new ZipEntry("caf"+(char)0xE9+".txt")); z.write(bytes); z.closeEntry(); }
+    Fs.write(data.resolve("latin.zip"), latin.toByteArray());
+    utils.Err.strCmp("""
+The path "latin" of "col.Pub" names a zip holding an entry whose name is not UTF-8: the data project changed while this program runs.
+""", dataRun(tmp, """
+Zips: Main{s -> Debug#(Ls#(s.try#(s.iso.close, {t -> t.dataRead(Pub).paths(L#("latin"))})))}
+""", dataLinks(data, data)));
+  }
+  @Test void aSetWithAnInconsistentOrderHashSaysSoWithNoJavaName(@TempDir Path tmp){
+    utils.Err.strCmp("""
+Set.+: the OrderHash does not give a consistent order and hash to the elements
+""", dataRun(tmp, """
+Same: base.OrderHashBy[base.Nat]{ .cmp(a, b) -> 0 <=> 0; .hash t -> t.imm; .str t -> t.imm.str }
+Plus: Main{s -> Debug#(St#(s.try#{(base.Sets#(Same, 1) + 2).size.str}))}
+""", List.of()));
+  }
+  @Test void aManagerProgramThatCanNotStartHasNoJavaName(@TempDir Path tmp){
+    utils.Err.strCmp("""
+The message "Show" could not reach the Fearless manager: the manager program could not be started.
+""", dataRun(tmp, """
+NoLauncher: Main{s -> Debug#(Wr#(s.try#(s.iso.close, {t -> t.manager.show})))}
+""", List.of("-DfearlessManager.launcher="+tmp.resolve("missing_launcher").toAbsolutePath())));
+  }
+  static void answer(ServerSocket server){
+    while (true){
+      try (var s= server.accept()){
+        var in= new BufferedReader(new InputStreamReader(s.getInputStream(), UTF_8));
+        var bad= in.readLine().contains("/bad");
+        while (!in.readLine().isEmpty()){}
+        s.getOutputStream().write((bad ? "hello\r\n\r\n" : "HTTP/1.1 200 OK\r\nContent-Length: 10\r\n\r\nabc").getBytes(UTF_8));
+      }
+      catch (IOException e){ return; }
+    }
+  }
+  @Test void aDownloadOfAnAnswerThatIsNotHttpSaysSoWithNoJavaName(@TempDir Path tmp) throws IOException{
+    try (var server= new ServerSocket(0, 8, InetAddress.getLoopbackAddress())){
+      Thread.startVirtualThread(() -> answer(server));
+      utils.Err.strCmp("""
+Download failed.
+url: http://127.0.0.1:[###]/bad
+the host did not answer with a valid HTTP response
+""", dataRun(tmp, """
+Broken: Main{s -> Debug#(St#(s.try#(s.iso.close, {t -> t.download.downloadStrUtf8("http://127.0.0.1:PORT/bad", 1000, Recover)})))}
+""".replace("PORT", ""+server.getLocalPort()), List.of()));
+    }
+  }
+  @Test void aDownloadOfAnAnswerCutShortSaysSoWithNoJavaName(@TempDir Path tmp) throws IOException{
+    try (var server= new ServerSocket(0, 8, InetAddress.getLoopbackAddress())){
+      Thread.startVirtualThread(() -> answer(server));
+      utils.Err.strCmp("""
+Download failed.
+url: http://127.0.0.1:[###]/cut
+the connection ended before the whole response arrived
+""", dataRun(tmp, """
+Broken: Main{s -> Debug#(St#(s.try#(s.iso.close, {t -> t.download.downloadStrUtf8("http://127.0.0.1:PORT/cut", 1000, Recover)})))}
+""".replace("PORT", ""+server.getLocalPort()), List.of()));
+    }
   }
   static Map<String,String> files(MainsInfo info){ return info.mains().entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().file())); }
   static String pathEncoding(){ return Fs.isWindows() ? "utf16Le" : "utf8"; }
