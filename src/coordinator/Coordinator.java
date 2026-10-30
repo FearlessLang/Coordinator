@@ -252,6 +252,7 @@ final class Helper{
 @SuppressWarnings("serial") final class WouldCompile extends RuntimeException{}
 record NoCompile(Optional<Path> baseCachePath) implements Coordinator{
   @Override public List<Literal> frontend(String pkgName, List<Ref> files, SourceOracle oracle, OtherPackages other, Map<String,String> vres, CapabilityEnvironment capabilities){ throw new WouldCompile(); }
+  @Override public Function<TName,String> names(String pkgName, List<Ref> files, SourceOracle oracle, OtherPackages other, Map<String,String> vres){ throw new WouldCompile(); }
   @Override public void backend(String pkgName, List<Literal> core, SourceOracle oracle, OtherPackages other, CapabilityEnvironment capabilities){ throw new WouldCompile(); }
 }
 record NoCommit(Path rootDir) implements OutputOracle{

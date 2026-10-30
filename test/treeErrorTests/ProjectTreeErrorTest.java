@@ -168,7 +168,7 @@ How maps work:
 
 How to fix it:
 - Decide which folder package name "a" refers to, for source code inside folders named "_pkb".
-- Add one map in a rank file of higher rank (typically your top-level application package), with "instead of" listing the folders of the conflicting maps.
+- Add one map in a rank file of higher rank (typically your top-level application package), with "instead of" listing every folder chosen by the maps of lower rank.
 Error 7 WellFormedness
 """,
     "_pka/_rank_app999.fear", "map a as _pkc in _pkb;",

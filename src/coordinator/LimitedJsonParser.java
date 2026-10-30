@@ -30,13 +30,7 @@ final class LimitedJsonParser{
   private int i= 0;
   private final Path forErr;
   LimitedJsonParser(String s, Path forErr){ this.s= s; this.forErr= forErr; }
-  Map<String,Map<String,String>> obj2(){ return end(obj(() -> obj(this::mapValue))); }
-  private String mapValue(){
-    var res= str();
-    var space= res.indexOf(' ');
-    if (space == -1 || !TName.isPkgName(res.substring(0, space))){ throw err("Expected package name and rank file"); }
-    return res;
-  }
+  Map<String,Map<String,String>> obj2(){ return end(obj(() -> obj(this::str))); }
   private <R> R end(R res){
     ws();
     if (i != s.length()){ throw err("Trailing junk"); }
