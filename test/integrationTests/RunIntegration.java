@@ -1002,6 +1002,31 @@ imm Cache#(_) error line: 47 in file caching.fear
 imm A13CacheFunction.main(_) error line: 36 in file _p/_rank_app.fear
 """, coordinator(root).main(root, stLib));
   }
+  @Test void aProcessStartedByAMainWritesIntoTheLogOfThatMain(@TempDir Path tmp) throws InterruptedException{
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_p/_rank_app.fear
+iii
+use base.Main as Main;
+use base.InfoMain as InfoMain;
+use base.Infos as Infos;
+use base.Block as Block;
+use base.Log as Log;
+use base.Void as Void;
+Child: InfoMain{ sys, arg -> Block#(Log.log "child", arg) }
+Parent: Main{ sys -> Block#
+  .do{ Log.log "parent before" }
+  .do{ Block#(sys.process.run(Child, Infos.msg "", {}), Void) }
+  .return{ Log.log "parent after" }
+  }
+""");
+    utils.Err.strCmp("", coordinator(root).main(root, stLib));
+    var logs= Fs.walk(root.resolve(".out").resolve("logs"), s -> s.filter(Fs::isRegularFile).map(Fs::readUtf8).toList());
+    var parent= OneOr.of("one log holding the lines of Parent", logs.stream().filter(l -> l.contains("parent before")));
+    utils.Err.strCmp("[###] parent before\n[###] child\n[###] parent after\n", parent);
+    assertEquals(List.of(), logs.stream().flatMap(String::lines).filter(l -> l.endsWith(" interrupted here")).toList());
+  }
   @Test void anUncaughtErrorShowsAnInfoThatIsNotAMsg(@TempDir Path tmp) throws InterruptedException{
     var root= tmp.resolve("root");
     UserError.root = root;
