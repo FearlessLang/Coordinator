@@ -1687,7 +1687,10 @@ Download: Main{s -> Debug#(St#(base.Try#(s.iso.close, {t -> base.Block#(t.downlo
     var data= dataProject(tmp);
     Fs.write(data.resolve("wide.png"), pngHeader(32768, 1));
     utils.Err.strCmp("""
-Resource with path col.Pub/wide.png is an image of 32768 x 1, which is too large; each side must be <= 32767 and the pixels <= 268435456
+Resource with path col.Pub/wide.png is an image of 32768 x 1, which is too large.
+Height must be at most 32767.
+Width must be at most 32767.
+Height * Width must be at most 268435456.
 """, dataRun(tmp, """
 Wide: Main{s -> Debug#(St#(base.Try#(s.iso.close, {t -> base.Block#(t.dataRead(Pub).read(L#("wide.png")).readImage(1000000), "read")})))}
 """, dataLinks(data, data)));
@@ -1696,7 +1699,10 @@ Wide: Main{s -> Debug#(St#(base.Try#(s.iso.close, {t -> base.Block#(t.dataRead(P
     var data= dataProject(tmp);
     Fs.write(data.resolve("big.png"), pngHeader(20000, 20000));
     utils.Err.strCmp("""
-Resource with path col.Pub/big.png is an image of 20000 x 20000, which is too large; each side must be <= 32767 and the pixels <= 268435456
+Resource with path col.Pub/big.png is an image of 20000 x 20000, which is too large.
+Height must be at most 32767.
+Width must be at most 32767.
+Height * Width must be at most 268435456.
 """, dataRun(tmp, """
 Big: Main{s -> Debug#(St#(base.Try#(s.iso.close, {t -> base.Block#(t.dataRead(Pub).read(L#("big.png")).readImage(1000000), "read")})))}
 """, dataLinks(data, data)));
