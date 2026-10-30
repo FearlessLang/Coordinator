@@ -833,7 +833,7 @@ Hello:Main{s->base.Debug#(`hi`)}
 """);
     utils.Err.strCmp("hi\n", coordinator(root).main(root, stLib));
   }
-  @Test void aSingletonZeroArgumentImmMethodKeepsItsFailure(@TempDir Path tmp) throws InterruptedException{
+  @Test void aCacheWithNoArgumentsKeepsItsFailure(@TempDir Path tmp) throws InterruptedException{
     var root= tmp.resolve("root");
     UserError.root = root;
     FsDsl.materialize(root, """
@@ -845,8 +845,10 @@ use base.Debug as Debug;
 use base.Str as Str;
 use base.Error as Error;
 use base.System as System;
-Answer:{ #: Str -> Block#(Debug#("computing"), Error.msg "boom") }
-Ask:{ #(s: mut System): Str -> s.try#{Answer#}.run{.ok x -> x; .info i -> (i.getMap.get "msg").getMsg} }
+use base.Cache as Cache;
+use base.CacheF as CacheF;
+Answer:CacheF[Str]{ Block#(Debug#("computing"), Error.msg "boom") }
+Ask:{ #(s: mut System): Str -> s.try#{Cache#(Answer)}.run{.ok x -> x; .info i -> (i.getMap.get "msg").getMsg} }
 Hello:Main{s->Block#
   .do{ Debug#(Ask#(s)) }
   .do{ Debug#(Ask#(s)) }
@@ -859,7 +861,7 @@ boom
 boom
 """, coordinator(root).main(root, stLib));
   }
-  @Test void aSingletonRunsAZeroArgumentImmMethodOnlyOneTime(@TempDir Path tmp) throws InterruptedException{
+  @Test void aSingletonRunsAZeroArgumentMethodAtEveryCall(@TempDir Path tmp) throws InterruptedException{
     var root= tmp.resolve("root");
     UserError.root = root;
     FsDsl.materialize(root, """
@@ -891,6 +893,7 @@ Hello:Main{s->Block#
     utils.Err.strCmp("""
 greeting a
 hi a
+greeting a
 hi a
 greeting c
 hi c
@@ -900,6 +903,34 @@ onceF
 5
 onceF
 5
+""", coordinator(root).main(root, stLib));
+  }
+  @Test void aFlushReachesAZeroArgumentMethodReturningACachedResult(@TempDir Path tmp) throws InterruptedException{
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_col/_rank_app.fear
+iii
+use base.Main as Main;
+use base.Block as Block;
+use base.Debug as Debug;
+use base.Nat as Nat;
+use base.Cache as Cache;
+use base.CacheF as CacheF;
+Answer:{ #: Nat -> Cache#(AnswerF) }
+AnswerF:CacheF[Nat]{ Block#(Debug#("computing"), 42) }
+Hello:Main{s->Block#
+  .do{ Debug#(Answer#) }
+  .do{ Cache.flush(AnswerF) }
+  .do{ Debug#(Answer#) }
+  .done
+  }
+""");
+    utils.Err.strCmp("""
+computing
+42
+computing
+42
 """, coordinator(root).main(root, stLib));
   }
   @Test void aCaptureFreeObjectIsACacheKey(@TempDir Path tmp) throws InterruptedException{
@@ -934,7 +965,7 @@ computing b
 b
 """, coordinator(root).main(root, stLib));
   }
-  @Test void anEnumerationFamilyListsItsValuesOneTime(@TempDir Path tmp) throws InterruptedException{
+  @Test void anEnumerationFamilyListsItsValuesOnceForEachCachedMethod(@TempDir Path tmp) throws InterruptedException{
     var root= tmp.resolve("root");
     UserError.root = root;
     FsDsl.materialize(root, """
@@ -973,6 +1004,7 @@ Hello:Main{s->Block#
 listing suits
 0
 1
+listing suits
 2
 2
 listing coins

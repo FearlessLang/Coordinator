@@ -5,7 +5,6 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 import java.util.TreeMap;
 import java.util.function.Consumer;
 import java.util.stream.IntStream;
@@ -59,7 +58,7 @@ public final class Backend{
       sb.a("  void _reprCacheFlush();\n");
     }
     if (!abstractOnly){ sb.a(nameMethod(l, "default")); }
-    if (hasInstance){ sb.a("  "+iface+" instance= new _Instance();\n  final class _Instance implements "+iface+selfNorm(l)+onceMethods(l, iface)+"}\n"+cacheField(l)); }
+    if (hasInstance){ sb.a("  "+iface+" instance= new _Instance();\n  final class _Instance implements "+iface+selfNorm(l)+"}\n"+cacheField(l)); }
     Fs.writeUtf8(out.resolve(iface+".java"), sb.a("}").toString());
     if (hasInstance && MainsInfo.isMain(l)){ mains.put(l.name().s(), iface); preloaded.put(l.name().s(), preloaded(l)); }
     fixers.add(sb);
@@ -83,14 +82,6 @@ public final class Backend{
   private static String selfNorm(Literal l){
     if (!LiteralDeclarations.has(l.cs(), LiteralDeclarations.captureFree)){ return "{"; }
     return ", _base.Norm$o$1.Own{ final Object _norm= _base.Norm$o$1.of(this); public Object _norm(){ return _norm; }";
-  }
-  private String onceMethods(Literal l, String iface){
-    if (implementsType(l, "base.CacheHandler", 0)){ return ""; }
-    return Join.of(l.ms().stream().filter(Backend::isOnce).map(m -> once(iface, mangledMethodName(m.sig().rc(), m.sig().m()))), "\n", "", "  ", "");
-  }
-  private static boolean isOnce(M m){ return m.sig().rc() == RC.imm && m.xs().isEmpty() && m.sig().ret().explicitRC().equals(Optional.of(RC.imm)); }
-  private static String once(String iface, String jName){
-    return "    final _base.Cache0 "+jName+"= new _base.Cache0(1, () -> "+iface+".super."+jName+"());\n    public Object "+jName+"(){ return "+jName+".get(); }\n";
   }
   private boolean hasInstance(Literal l){
     assert !l.thisName().isEmpty() || LiteralDeclarations.has(l.cs(), LiteralDeclarations.captureFree);
