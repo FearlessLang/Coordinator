@@ -154,31 +154,33 @@ Each package folder must contain exactly one file whose name follows this patter
   //Two rank files of the SAME rank map the same virtual name to different real
   //packages, so neither can override the other. Reported as a well formedness error.
   @Test void mapConflict(){ runErr("""
-For package "pkb", the virtual package name "a" is mapped to different real packages:
- - fear:/_pka/_rank_app999.fear
-   "map  a  as  pkc  in  pkb;"
- - fear:/_pkd/_rank_app999.fear
-   "map  a  as  pkb  in  pkb;"
+Maps of the same rank give package name "a" different folders, for source code inside folders named "_pkb":
+- "map a as _pkc in _pkb;"; written in fear:/_pka/_rank_app999.fear
+- "map a as _pkb in _pkb;"; written in fear:/_pkd/_rank_app999.fear
 
-These mappings come from rank files with the same priority (same rank),
+These maps come from rank files with the same rank,
 so there is no higher one to override the other.
-[###]
+
+How maps work:
+- A rank file can have lines like: map name as _folder in _target;
+- With no map, package name "x" refers to the code inside folders named "_x".
+- A map in a rank file of higher rank overrides the maps of lower rank, and lists their folders with "instead of".
+
 How to fix it:
-- Decide which real package should represent "a" inside of "pkb".
-[###]
-""",
-    "_pka/_rank_app999.fear", "map a as pkc in pkb;",
-    "_pkd/_rank_app999.fear", "map a as pkb in pkb;"); }
-  @Test void mapToMissingPackage(){ runErr("""
-For package "pkb", the virtual package name "a" is mapped to "bas",
-but package "bas" does not exist:
- - fear:/_pka/_rank_app999.fear
-   "map  a  as  bas  in  pkb;"
-Did you mean "base" ?
-Existing packages: "base", "pka", "pkb".
+- Decide which folder package name "a" refers to, for source code inside folders named "_pkb".
+- Add one map in a rank file of higher rank (typically your top-level application package), with "instead of" listing the folders of the conflicting maps.
 Error 7 WellFormedness
 """,
-    "_pka/_rank_app999.fear", "map a as bas in pkb;",
+    "_pka/_rank_app999.fear", "map a as _pkc in _pkb;",
+    "_pkd/_rank_app999.fear", "map a as _pkb in _pkb;"); }
+  @Test void mapToMissingPackage(){ runErr("""
+The map refers to the code inside folders named "_bas", but no folder is named "_bas":
+- "map a as _bas in _pkb;"; written in fear:/_pka/_rank_app999.fear
+Did you mean "_base" ?
+Existing folders: "_base", "_pka", "_pkb".
+Error 7 WellFormedness
+""",
+    "_pka/_rank_app999.fear", "map a as _bas in _pkb;",
     "_pkb/_rank_app200.fear", ""); }
   @Test void aPlainResourceFileNamedLikeARankFileIsAlsoAMalformedRankFileName(){
     runErr("""

@@ -2184,11 +2184,11 @@ jjj
 _pka/_rank_app999.fear
 iii
 use base.Main as Main;
-map a as pkc in pkb;
+map a as _pkc in _pkb;
 A:Main{s->base.Debug#(pkb.B.text)}
 """);
     utils.Err.strCmp("c\n", main(root, List.of()));
-    editAndTouch(root.resolve("_pka", "_rank_app999.fear"), "map a as pkc", "map a as pkd");
+    editAndTouch(root.resolve("_pka", "_rank_app999.fear"), "map a as _pkc", "map a as _pkd");
     assertEquals(Map.of("pka", false, "pkb", false, "pkc", false, "pkd", false), Coordinator.pkgsBuilt(root, baseCache));
     utils.Err.strCmp("d\n", main(root, List.of()));
   }
@@ -2731,7 +2731,7 @@ b
 _pka/_rank_app999.fear
 iii
 use base.Main as Main;
-map a as nonexistentpkg in pkb;
+map a as _nonexistentpkg in _pkb;
 Hello:Main{s->base.Debug#(pkb.B.text)}
 jjj
 _pkb/_rank_app200.fear
@@ -2741,11 +2741,9 @@ B:{.text:Str->a.C.text;}
 """);
     var ex= assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib));
     utils.Err.strCmp("""
-For package "pkb", the virtual package name "a" is mapped to "nonexistentpkg",
-but package "nonexistentpkg" does not exist:
- - fear:/_pka/_rank_app999.fear
-   "map  a  as  nonexistentpkg  in  pkb;"
-Existing packages: "base", "pka", "pkb".
+The map refers to the code inside folders named "_nonexistentpkg", but no folder is named "_nonexistentpkg":
+- "map a as _nonexistentpkg in _pkb;"; written in fear:/_pka/_rank_app999.fear
+Existing folders: "_base", "_pka", "_pkb".
 Error 7 WellFormedness
 """, ex.getMessage());
   }
@@ -2822,13 +2820,13 @@ jjj
 _shop/_rank_app100.fear
 iii
 use base.Str as Str;
-map webserver as webserver_v12 in shop;
+map webserver as _webserver_v12 in _shop;
 Shop:{ .server: Str -> webserver.Server.version }
 jjj
 _blog/_rank_app200.fear
 iii
 use base.Str as Str;
-map webserver as webserver_v13 in blog;
+map webserver as _webserver_v13 in _blog;
 use webserver.Server as Server;
 Blog:{ .server: Str -> Server.version }
 jjj
@@ -2861,13 +2859,116 @@ jjj
 _lib/_rank_driver.fear
 iii
 use base.Str as Str;
-map foo as foo_v4 in lib;
+map foo as _foo_v4 in _lib;
 Lib:{ .foo: Str -> foo.Foo.version }
 jjj
 _app/_rank_app.fear
 iii
 use base.Main as Main;
-map foo as foo_v5 in lib;
+map foo as _foo_v5 in _lib instead of _foo_v4;
+Hello:Main{s->base.Debug#("lib uses "+(lib.Lib.foo))}
+""");
+    utils.Err.strCmp("lib uses v5\n", coordinator(root).main(root, stLib));
+  }
+  @Test void anOverrideWithoutInsteadOfIsAnError(@TempDir Path tmp) throws InterruptedException{
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_foo_v4/_rank_core100.fear
+iii
+use base.Str as Str;
+Foo:{ .version: Str -> "v4" }
+jjj
+_foo_v5/_rank_core200.fear
+iii
+use base.Str as Str;
+Foo:{ .version: Str -> "v5" }
+jjj
+_lib/_rank_driver.fear
+iii
+use base.Str as Str;
+map foo as _foo_v4 in _lib;
+Lib:{ .foo: Str -> foo.Foo.version }
+jjj
+_app/_rank_app.fear
+iii
+use base.Main as Main;
+map foo as _foo_v5 in _lib;
+Hello:Main{s->base.Debug#("lib uses "+(lib.Lib.foo))}
+""");
+    var ex= assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib));
+    utils.Err.strCmp("""
+The "instead of" list of a map must name exactly the folders chosen by the maps of lower rank that the map overrides:
+- "map foo as _foo_v5 in _lib;"; written in fear:/_app/_rank_app.fear
+The map overrides these maps of lower rank:
+- "map foo as _foo_v4 in _lib;"; written in fear:/_lib/_rank_driver.fear
+Expected: "map foo as _foo_v5 in _lib instead of _foo_v4;".
+Error 7 WellFormedness
+""", ex.getMessage());
+  }
+  @Test void anInsteadOfWithNothingOverriddenIsAnError(@TempDir Path tmp) throws InterruptedException{
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_foo_v5/_rank_core200.fear
+iii
+use base.Str as Str;
+Foo:{ .version: Str -> "v5" }
+jjj
+_lib/_rank_driver.fear
+iii
+use base.Str as Str;
+Lib:{ .foo: Str -> foo.Foo.version }
+jjj
+_app/_rank_app.fear
+iii
+use base.Main as Main;
+map foo as _foo_v5 in _lib instead of _foo_v4;
+Hello:Main{s->base.Debug#("lib uses "+(lib.Lib.foo))}
+""");
+    var ex= assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib));
+    utils.Err.strCmp("""
+The "instead of" list of a map must name exactly the folders chosen by the maps of lower rank that the map overrides:
+- "map foo as _foo_v5 in _lib instead of _foo_v4;"; written in fear:/_app/_rank_app.fear
+The map overrides no map of lower rank.
+Expected: "map foo as _foo_v5 in _lib;".
+Error 7 WellFormedness
+""", ex.getMessage());
+  }
+  @Test void anOverrideListsOnlyTheFoldersItRejects(@TempDir Path tmp) throws InterruptedException{
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_foo_v4/_rank_core100.fear
+iii
+use base.Str as Str;
+Foo:{ .version: Str -> "v4" }
+jjj
+_foo_v5/_rank_core200.fear
+iii
+use base.Str as Str;
+Foo:{ .version: Str -> "v5" }
+jjj
+_lib/_rank_driver.fear
+iii
+use base.Str as Str;
+map foo as _foo_v4 in _lib;
+Lib:{ .foo: Str -> foo.Foo.version }
+jjj
+_libuser1/_rank_worker100.fear
+iii
+map foo as _foo_v5 in _lib instead of _foo_v4;
+User1:{}
+jjj
+_libuser2/_rank_worker200.fear
+iii
+map foo as _foo_v4 in _lib;
+User2:{}
+jjj
+_app/_rank_app.fear
+iii
+use base.Main as Main;
+map foo as _foo_v5 in _lib instead of _foo_v4;
 Hello:Main{s->base.Debug#("lib uses "+(lib.Lib.foo))}
 """);
     utils.Err.strCmp("lib uses v5\n", coordinator(root).main(root, stLib));
@@ -2889,13 +2990,13 @@ jjj
 _lib/_rank_driver.fear
 iii
 use base.Str as Str;
-map foo as foo_v4 in lib;
+map foo as _foo_v4 in _lib;
 Lib:{ .foo: Str -> foo.Foo.version }
 jjj
 _app/_rank_app.fear
 iii
 use base.Main as Main;
-map foo as foo_v5 in app;
+map foo as _foo_v5 in _app;
 Hello:Main{s->base.Debug#("lib uses "+(lib.Lib.foo)+", app uses "+(foo.Foo.version))}
 """);
     utils.Err.strCmp("lib uses v4, app uses v5\n", coordinator(root).main(root, stLib));
@@ -2912,7 +3013,7 @@ jjj
 _app/_rank_app.fear
 iii
 use base.Main as Main;
-map webserver as webserver_v12 in app;
+map webserver as _webserver_v12 in _app;
 Hello:Main{s->base.Debug#(webserver_v12.Server.version)}
 """);
     var ex= assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib));
@@ -2923,11 +3024,10 @@ In file: fear:/_app/_rank_app.fear
    |                           ^^^^^^^^^^^^^^^^^^^^^
 
 While inspecting a type name
-Package "webserver_v12" does not exist.
+Source code inside folders named "_app" can not use package name "webserver_v12".
 Did you mean "webserver" ?
-Visible packages: "app", "base", "webserver".
-Package "webserver_v12" does exist as a real source location.
-In package "app", package name "webserver" is used to refer to real source location "webserver_v12" because of "map webserver as webserver_v12 in app".
+Visible package names: "base", "webserver".
+Source code inside folders named "_app" uses package name "webserver" to refer to the code inside folders named "_webserver_v12", because of "map webserver as _webserver_v12 in _app", written in fear:/_app/_rank_app.fear.
 Error 7 WellFormedness
 """, ex.getMessage());
   }
@@ -2948,17 +3048,15 @@ jjj
 _b/_rank_app.fear
 iii
 use base.Main as Main;
-map a as c in b;
-map c as a in b;
+map a as _c in _b;
+map c as _a in _b;
 Hello:Main{s->base.Debug#(a.A.text)}
 """);
     var ex= assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib));
     utils.Err.strCmp("""
-For package "b", the virtual package name "a" is mapped to "c",
-but "a" is the name of an existing package:
- - fear:/_b/_rank_app.fear
-   "map  a  as  c  in  b;"
-A map gives a name to a package that does not exist; it can not hide an existing package.
+A map can not give package name "a", because folders named "_a" exist:
+- "map a as _c in _b;"; written in fear:/_b/_rank_app.fear
+With no map, package name "a" refers to the code inside folders named "_a".
 Error 7 WellFormedness
 """, ex.getMessage());
   }
@@ -2974,21 +3072,17 @@ jjj
 _b/_rank_app.fear
 iii
 use base.Main as Main;
-map a as c in b;
-map d as c in b;
-map e as c in b;
+map a as _c in _b;
+map d as _c in _b;
+map e as _c in _b;
 Hello:Main{s->base.Debug#(a.A.text)}
 """);
     var ex= assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib));
     utils.Err.strCmp("""
-For package "b", the real package "c" is mapped from different virtual package names:
- - fear:/_b/_rank_app.fear
-   "map  a  as  c  in  b;"
- - fear:/_b/_rank_app.fear
-   "map  d  as  c  in  b;"
- - fear:/_b/_rank_app.fear
-   "map  e  as  c  in  b;"
-In package "b", only one package name can be used to refer to real source location "c".
+Source code inside folders named "_b" can use only one package name to refer to the code inside folders named "_c":
+- "map a as _c in _b;"; written in fear:/_b/_rank_app.fear
+- "map d as _c in _b;"; written in fear:/_b/_rank_app.fear
+- "map e as _c in _b;"; written in fear:/_b/_rank_app.fear
 Error 7 WellFormedness
 """, ex.getMessage());
   }
@@ -2999,15 +3093,14 @@ Error 7 WellFormedness
 _b/_rank_app.fear
 iii
 use base.Main as Main;
-map me as b in b;
+map me as _b in _b;
 Hello:Main{s->base.Debug#(`b`)}
 """);
     var ex= assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib));
     utils.Err.strCmp("""
-For package "b", the virtual package name "me" is mapped to "b" itself:
- - fear:/_b/_rank_app.fear
-   "map  me  as  b  in  b;"
-The types of package "b" are written by their simple names.
+A map can not refer to the code inside folders named "_b" for source code inside folders named "_b":
+- "map me as _b in _b;"; written in fear:/_b/_rank_app.fear
+Source code inside folders named "_b" refers to its own types by their simple names.
 Error 7 WellFormedness
 """, ex.getMessage());
   }
@@ -3018,7 +3111,7 @@ Error 7 WellFormedness
 _pka/_rank_app999.fear
 iii
 use base.Main as Main;
-map a as pkc in pkbb;
+map a as _pkc in _pkbb;
 Hello:Main{s->base.Debug#(pkb.B.text)}
 jjj
 _pkb/_rank_app200.fear
@@ -3033,12 +3126,10 @@ C:{.text:Str->"c";}
 """);
     var ex= assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib));
     utils.Err.strCmp("""
-For package "pkbb", the virtual package name "a" is mapped to "pkc",
-but package "pkbb" does not exist:
- - fear:/_pka/_rank_app999.fear
-   "map  a  as  pkc  in  pkbb;"
-Did you mean "pkb" ?
-Existing packages: "pka", "pkb", "pkc".
+The map applies to source code inside folders named "_pkbb", but no folder is named "_pkbb":
+- "map a as _pkc in _pkbb;"; written in fear:/_pka/_rank_app999.fear
+Did you mean "_pkb" ?
+Existing folders: "_pka", "_pkb", "_pkc".
 Error 7 WellFormedness
 """, ex.getMessage());
   }
@@ -3049,15 +3140,13 @@ Error 7 WellFormedness
 _pka/_rank_app999.fear
 iii
 use base.Main as Main;
-map a as pka in base;
+map a as _pka in _base;
 Hello:Main{s->base.Debug#(`hi`)}
 """);
     var ex= assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib));
     utils.Err.strCmp("""
-For package "base", the virtual package name "a" is mapped to "pka",
-but the names written in package "base" can not be mapped:
- - fear:/_pka/_rank_app999.fear
-   "map  a  as  pka  in  base;"
+A map can not apply to source code inside folders named "_base":
+- "map a as _pka in _base;"; written in fear:/_pka/_rank_app999.fear
 Error 7 WellFormedness
 """, ex.getMessage());
   }
@@ -3068,7 +3157,7 @@ Error 7 WellFormedness
 _pka/_rank_app999.fear
 iii
 use base.Main as Main;
-map a as pka in pkb;
+map a as _pka in _pkb;
 Hello:Main{s->base.Debug#(pkb.B.text)}
 T:{.text:base.Str->"t";}
 jjj
@@ -3079,12 +3168,10 @@ B:{.text:Str->a.T.text;}
 """);
     var ex= assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib));
     utils.Err.strCmp("""
-For package "pkb", the virtual package name "a" is mapped to "pka",
-but package "pka" has a higher rank than package "pkb":
- - fear:/_pka/_rank_app999.fear
-   "map  a  as  pka  in  pkb;"
-Package "pkb" has rank "app200" ("_rank_app200.fear") and package "pka" has rank "app999" ("_rank_app999.fear").
-A package can only refer to packages of a lower rank.
+The map refers to the code inside folders named "_pka", which has a higher rank than the code inside folders named "_pkb":
+- "map a as _pka in _pkb;"; written in fear:/_pka/_rank_app999.fear
+Folders named "_pkb" have rank "app200" ("_rank_app200.fear") and folders named "_pka" have rank "app999" ("_rank_app999.fear").
+Source code can only refer to code of a lower rank.
 Error 7 WellFormedness
 """, ex.getMessage());
   }
