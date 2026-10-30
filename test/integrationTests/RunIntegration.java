@@ -1628,20 +1628,15 @@ Gone: Main{s -> base.Block#
 """, dataLinks(data, data)));
   }
   static Map<String,String> files(MainsInfo info){ return info.mains().entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().file())); }
-  static String pathEncoding(){ return Fs.isWindows() ? "utf16Le" : "utf8"; }
-  @Test void aProgramStartedWithoutTheManagerSendsNoMessage(@TempDir Path tmp){
-    utils.Err.strCmp("""
-The message "Show" is not sent: this program was not started by the Fearless manager.
-The message "Register" is not sent: this program was not started by the Fearless manager.
-""", dataRun(tmp, """
-Caught: { #(a: mut base.Action[base.Void]): base.Str -> a.run{.ok _ -> "ok"; .info i -> i.msg.match{.some m -> m; .empty -> (i.getMap.get "info").getMsg}} }
-NoManager: Main{s -> base.Block#
-  .do{Debug#(Caught#(s.try#(s.iso.close, {t -> t.manager.show})))}
-  .return{Debug#(Caught#(s.try#(s.iso.close, {t -> t.manager.register("%s".u.%s)})))}
+  static Path managerData(Path tmp){
+    var pub= tmp.resolve("pub");
+    var encoding= Fs.isWindows() ? UTF_16LE : UTF_8;
+    Fs.writeUtf8(pub.resolve("data.fearless"), "");
+    Fs.of(() -> Fs.write(pub.resolve("path.bin"), tmp.toAbsolutePath().toString().getBytes(encoding)));
+    Fs.of(() -> Fs.write(pub.resolve("relative.bin"), "relative".getBytes(encoding)));
+    return pub;
   }
-""".formatted(tmp.toAbsolutePath(), pathEncoding()), List.of()));
-  }
-  @Test void aMessageRunsTheManagerProgramWithTheVerbAndItsArguments(@TempDir Path tmp){
+  @Test void testManagerMessages(@TempDir Path tmp){
     var log= tmp.resolve("log.txt");
     var manager= tmp.resolve("Manager.java");
     Fs.writeUtf8(manager, """
@@ -1659,41 +1654,10 @@ void main(String[] args) throws Exception{
     var launcher= tmp.resolve(Fs.isWindows() ? "launcher.cmd" : "launcher");
     Fs.writeUtf8(launcher, Fs.isWindows() ? "@\""+java+"\" \""+manager+"\" \""+log+"\" %*\n" : "#!/bin/sh\nexec '"+java+"' '"+manager+"' '"+log+"' \"$@\"\n");
     assertTrue(launcher.toFile().setExecutable(true));
-    var path= tmp.toAbsolutePath().toString();
-    var base16= "Base16:"+HexFormat.of().withUpperCase().formatHex(path.getBytes(Fs.isWindows() ? UTF_16LE : UTF_8));
-    utils.Err.strCmp("""
-ok
-ok
-ok
-Output of FearlessCommandRun
-Output of FearlessCommandCompile
-ok
-ok
-ok
-ok
-ok
-ok
-The manager refuses to forget nope.
-The path "relative" of the message "Register" is not an absolute path of this system.
-""", dataRun(tmp, """
-Caught: { #(a: mut base.Action[base.Void]): base.Str -> a.run{.ok _ -> "ok"; .info i -> i.msg.match{.some m -> m; .empty -> (i.getMap.get "info").getMsg}} }
-Out: { #(a: mut base.Action[base.UStr]): base.Str -> a.run{.ok u -> u.tryGetStr.run{.ok o -> o; .info i -> i.getMsg}; .info i -> i.msg.match{.some m -> m; .empty -> (i.getMap.get "info").getMsg}} }
-Send: Main{s -> base.Block#
-  .do{Debug#(Caught#(s.try#(s.iso.close, {t -> t.manager.register("%1$s".u.%2$s)})))}
-  .do{Debug#(Caught#(s.try#(s.iso.close, {t -> t.manager.show})))}
-  .do{Debug#(Caught#(s.try#(s.iso.close, {t -> t.manager.show "hello"})))}
-  .do{Debug#(Out#(s.try#(s.iso.close, {t -> t.manager.run("hello", L#("hello.A", "hello.B"))})))}
-  .do{Debug#(Out#(s.try#(s.iso.close, {t -> t.manager.compile "hello"})))}
-  .do{Debug#(Caught#(s.try#(s.iso.close, {t -> t.manager.kindDataRead "hello"})))}
-  .do{Debug#(Caught#(s.try#(s.iso.close, {t -> t.manager.mount("hello", "hello.Notes", "notes")})))}
-  .do{Debug#(Caught#(s.try#(s.iso.close, {t -> t.manager.unmount("hello", "hello.Pub")})))}
-  .do{Debug#(Caught#(s.try#(s.iso.close, {t -> t.manager.attenuate("hello", "hello.A", L#("base.NoManagerQuit", "hello.NoGui"))})))}
-  .do{Debug#(Caught#(s.try#(s.iso.close, {t -> t.manager.attenuate("hello", "hello.B", {})})))}
-  .do{Debug#(Caught#(s.try#(s.iso.close, {t -> t.manager.openWithOrShortcut("%1$s".u.%2$s, "hello", "hello.A")})))}
-  .do{Debug#(Caught#(base.Try#(s.iso.close, {t -> t.manager.forget "nope"})))}
-  .return{Debug#(Caught#(base.Try#(s.iso.close, {t -> t.manager.register("relative".u.%2$s)})))}
-  }
-""".formatted(path, pathEncoding()), List.of("-DfearlessManager.launcher="+launcher)));
+    var base16= "Base16:"+HexFormat.of().withUpperCase().formatHex(tmp.toAbsolutePath().toString().getBytes(Fs.isWindows() ? UTF_16LE : UTF_8));
+    unitTestsOk("testManagerMessages", freshIntegrationRoot("testManagerMessages"), List.of(
+      "-DfearlessDataRead.mgr.Pub="+PathClassLoader.argOf(managerData(tmp)),
+      "-DfearlessManager.launcher="+launcher));
     utils.Err.strCmp("""
 FearlessCommandRegister %1$s
 FearlessCommandShow
@@ -1708,6 +1672,9 @@ FearlessCommandAttenuate hello hello.B
 FearlessCommandOpenWithOrShortcut %1$s hello hello.A
 FearlessCommandForget nope
 """.formatted(base16), Fs.readUtf8(log).replace("\r\n", "\n"));
+  }
+  @Test void testNoManager(@TempDir Path tmp){
+    unitTestsOk("testNoManager", freshIntegrationRoot("testNoManager"), List.of("-DfearlessDataRead.nomgr.Pub="+PathClassLoader.argOf(managerData(tmp))));
   }
   @Test void aBaseAssetIsReadFromTheStdLibBase(@TempDir Path tmp) throws InterruptedException{
     var root= tmp.resolve("root");
