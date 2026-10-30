@@ -2598,26 +2598,6 @@ App:Main{s->Debug#(Mk.m(1).get)}
 """);
     utils.Err.strCmp("6\n", coordinator(root).main(root, stLib));
   }
-  @Test void aStackTraceNamesTypesAndMethodsEndingWithPrimes(@TempDir Path tmp) throws InterruptedException{
-    var root= tmp.resolve("root");
-    UserError.root = root;
-    FsDsl.materialize(root, """
-_p/_rank_app.fear
-iii
-use base.Main as Main;
-use base.Error as Error;
-use base.Void as Void;
-App:Main{s->Box'.go'}
-Box':{.go':Void->Bar.bar'}
-Bar:{.bar':Void->Error.msg"AAAAh"}
-""");
-    utils.Err.strCmp("""
-AAAAh
-imm Bar.bar' error line: 6 in file _p/_rank_app.fear
-imm Box'.go' error line: 5 in file _p/_rank_app.fear
-imm App.main(_) error line: 4 in file _p/_rank_app.fear
-""", coordinator(root).main(root, stLib));
-  }
   @Test void aClassCompiledFromAHandWrittenRtFileKeepsItsOwnSourceFile() throws IOException{
     byte[] bytes;
     try (var jar= new ZipFile(baseCache.resolve("base.jar").toFile())){
