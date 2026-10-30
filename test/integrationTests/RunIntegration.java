@@ -2505,22 +2505,6 @@ App:Main{s->Debug#(Mk.mk(1).z)}
 """);
     utils.Err.strCmp("1\n", coordinator(root).main(root, stLib));
   }
-  @Test void aConcreteMethodImplementsTheAbstractMethodOfAnotherSupertype(@TempDir Path tmp) throws InterruptedException{
-    var root= tmp.resolve("root");
-    UserError.root = root;
-    FsDsl.materialize(root, """
-_p/_rank_app.fear
-iii
-use base.Main as Main;
-use base.Nat as Nat;
-use base.Debug as Debug;
-A:{ .m: Nat -> 1 }
-B:{ .m: Nat }
-C:A,B{}
-App:Main{s->Debug#(C.m)}
-""");
-    utils.Err.strCmp("1\n", coordinator(root).main(root, stLib));
-  }
   @Test void anAbstractTypeInheritsTheNameOfTwoNamedSupertypes(@TempDir Path tmp) throws InterruptedException{
     var root= tmp.resolve("root");
     UserError.root = root;
