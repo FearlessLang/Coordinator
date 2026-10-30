@@ -1210,7 +1210,10 @@ Ls#(base.Try#(s.iso.close, {t -> t.dataRead(Pub).paths(L#(".hidden"))}))"""));
   }
   @Test void listingADataProjectThatIsNotMountedIsANonDeterministicError(@TempDir Path tmp){
     utils.Err.strCmp("""
-SHOW_ME
+No data project is mounted on "col.Nope".
+read One#(_) error line: 14 in file _col/_rank_app.fear
+imm Ls#(_) error line: 5 in file _col/_rank_app.fear
+imm One.main(_) error line: 14 in file _col/_rank_app.fear
 """, dataAction(tmp, dataProject(tmp), """
 Ls#(base.Try#(s.iso.close, {t -> t.dataRead(Nope).paths({})}))"""));
   }
@@ -1222,7 +1225,10 @@ Rd#(base.Try#(s.iso.close, {t -> t.dataRead(Notes).read(L#("readme"))}))"""));
   }
   @Test void readingADataEditProjectThatIsNotMountedIsANonDeterministicError(@TempDir Path tmp){
     utils.Err.strCmp("""
-SHOW_ME
+No dataEdit project is mounted on "col.Nope".
+read One#(_) error line: 14 in file _col/_rank_app.fear
+imm Rd#(_) error line: 6 in file _col/_rank_app.fear
+imm One.main(_) error line: 14 in file _col/_rank_app.fear
 """, dataAction(tmp, dataProject(tmp), """
 Rd#(base.Try#(s.iso.close, {t -> t.dataEdit(Nope).read(L#("readme"))}))"""));
   }
@@ -1366,7 +1372,10 @@ Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).writeUStrLatin1(L#("latin1.tx
   }
   @Test void writingToADataEditProjectThatIsNotMountedIsANonDeterministicError(@TempDir Path tmp){
     utils.Err.strCmp("""
-SHOW_ME
+No dataEdit project is mounted on "col.Nope".
+read One#(_) error line: 14 in file _col/_rank_app.fear
+imm Wr#(_) error line: 7 in file _col/_rank_app.fear
+imm One.main(_) error line: 14 in file _col/_rank_app.fear
 """, dataAction(tmp, dataProject(tmp), """
 Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Nope).writeStrUtf8(L#("x.txt"), "no")}))"""));
   }
@@ -1471,7 +1480,10 @@ Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).delete(L#("data.fearless"))})
   }
   @Test void deletingFromADataEditProjectThatIsNotMountedIsANonDeterministicError(@TempDir Path tmp){
     utils.Err.strCmp("""
-SHOW_ME
+No dataEdit project is mounted on "col.Nope".
+read One#(_) error line: 14 in file _col/_rank_app.fear
+imm Wr#(_) error line: 7 in file _col/_rank_app.fear
+imm One.main(_) error line: 14 in file _col/_rank_app.fear
 """, dataAction(tmp, dataProject(tmp), """
 Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Nope).delete(L#("readme"))}))"""));
   }
@@ -1595,7 +1607,10 @@ Gone: Main{s -> base.Block#
   }
   @Test void aRootFolderThatCannotBeReachedIsANonDeterministicError(@TempDir Path tmp){
     utils.Err.strCmp("""
-SHOW_ME
+The root folder of the data project mounted on "col.Pub" cannot be reached.
+read Gone#(_) error line: 14 in file _col/_rank_app.fear
+imm Ls#(_) error line: 5 in file _col/_rank_app.fear
+imm Gone.main(_) error line: 14 in file _col/_rank_app.fear
 """, dataRun(tmp, """
 Gone: Main{s -> Debug#(Ls#(base.Try#(s.iso.close, {t -> t.dataRead(Pub).paths({})})))}
 """, dataLinks(tmp.resolve("gone"), dataProject(tmp))));
@@ -1604,20 +1619,29 @@ Gone: Main{s -> Debug#(Ls#(base.Try#(s.iso.close, {t -> t.dataRead(Pub).paths({}
     var data= dataProject(tmp);
     Fs.writeUtf8(data.resolve("notes").resolve("Bad.txt"), "bad");
     utils.Err.strCmp("""
-SHOW_ME
+The folder at the path "notes" of "col.Pub" holds "Bad.txt", which is not a valid resource or folder name: the data project changed while this program runs.
+read One#(_) error line: 14 in file _col/_rank_app.fear
+imm Ls#(_) error line: 5 in file _col/_rank_app.fear
+imm One.main(_) error line: 14 in file _col/_rank_app.fear
 """, dataAction(tmp, data, """
 Ls#(base.Try#(s.iso.close, {t -> t.dataRead(Pub).paths(L#("notes"))}))"""));
   }
   @Test void aProgramWithNoMountsHasNoDataReadProject(@TempDir Path tmp){
     utils.Err.strCmp("""
-SHOW_ME
+No data project is mounted on "col.Pub".
+read NoMounts#(_) error line: 14 in file _col/_rank_app.fear
+imm Ls#(_) error line: 5 in file _col/_rank_app.fear
+imm NoMounts.main(_) error line: 14 in file _col/_rank_app.fear
 """, dataRun(tmp, """
 NoMounts: Main{s -> Debug#(Ls#(base.Try#(s.iso.close, {t -> t.dataRead(Pub).paths({})})))}
 """, List.of()));
   }
   @Test void aProgramWithNoMountsHasNoDataEditProject(@TempDir Path tmp){
     utils.Err.strCmp("""
-SHOW_ME
+No dataEdit project is mounted on "col.Notes".
+read NoMounts#(_) error line: 14 in file _col/_rank_app.fear
+imm Wr#(_) error line: 7 in file _col/_rank_app.fear
+imm NoMounts.main(_) error line: 14 in file _col/_rank_app.fear
 """, dataRun(tmp, """
 NoMounts: Main{s -> Debug#(Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).writeStrUtf8(L#("a.txt"), "no")})))}
 """, List.of()));
@@ -1626,14 +1650,20 @@ NoMounts: Main{s -> Debug#(Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).wr
   static String pathEncoding(){ return Fs.isWindows() ? "utf16Le" : "utf8"; }
   @Test void aProgramStartedWithoutTheManagerSendsNoShowMessage(@TempDir Path tmp){
     utils.Err.strCmp("""
-SHOW_ME
+The message "Show" is not sent: this program was not started by the Fearless manager.
+read NoManager#(_) error line: 14 in file _col/_rank_app.fear
+imm Wr#(_) error line: 7 in file _col/_rank_app.fear
+imm NoManager.main(_) error line: 14 in file _col/_rank_app.fear
 """, dataRun(tmp, """
 NoManager: Main{s -> Debug#(Wr#(base.Try#(s.iso.close, {t -> t.manager.show})))}
 """, List.of()));
   }
   @Test void aProgramStartedWithoutTheManagerSendsNoRegisterMessage(@TempDir Path tmp){
     utils.Err.strCmp("""
-SHOW_ME
+The message "Register" is not sent: this program was not started by the Fearless manager.
+read NoManager#(_) error line: 14 in file _col/_rank_app.fear
+imm Wr#(_) error line: 7 in file _col/_rank_app.fear
+imm NoManager.main(_) error line: 14 in file _col/_rank_app.fear
 """, dataRun(tmp, """
 NoManager: Main{s -> Debug#(Wr#(base.Try#(s.iso.close, {t -> t.manager.register("%s".u.%s)})))}
 """.formatted(tmp.toAbsolutePath(), pathEncoding()), List.of()));
@@ -1659,8 +1689,8 @@ void main(String[] args) throws Exception{
     return dataRun(tmp, """
 Caught: { #(a: mut base.Action[base.Void]): base.Str -> a.run{.ok _ -> "ok"; .info i -> i.msg.match{.some m -> m; .empty -> (i.getMap.get "msg").getMsg}} }
 Out: { #(a: mut base.Action[base.UStr]): base.Str -> a.run{.ok u -> u.tryGetStr.run{.ok o -> o; .info i -> i.getMsg}; .info i -> i.msg.match{.some m -> m; .empty -> (i.getMap.get "msg").getMsg}} }
-Send: Main{s -> Debug#("""+action+""")}
-""", List.of("-DfearlessManager.launcher="+launcher));
+Send: Main{s -> Debug#(ACTION)}
+""".replace("ACTION", action), List.of("-DfearlessManager.launcher="+launcher));
   }
   static String base16(Path tmp){ return "Base16:"+HexFormat.of().withUpperCase().formatHex(tmp.toAbsolutePath().toString().getBytes(Fs.isWindows() ? UTF_16LE : UTF_8)); }
   @Test void aRegisterMessageRunsTheManagerProgramWithTheBase16OfThePath(@TempDir Path tmp){
@@ -3196,7 +3226,9 @@ Hello:Main{s->base.Debug#(base.Try#(s.iso.close, {t ->"""+" "+call.replace("$URL
       FsDsl.materialize(root, downloadProject(url(server, "/ok"),
         "s.download.downloadStrUtf8(\"$URL\", 1000, NeverRecovers)"));
       var out= coordinator(root).main(root, stLib);
-      utils.Err.strCmp("[###]hello download[###]", out);
+      utils.Err.strCmp("""
+hello download
+""", out);
     }
     finally{ server.stop(0); }
   }
@@ -3208,7 +3240,9 @@ Hello:Main{s->base.Debug#(base.Try#(s.iso.close, {t ->"""+" "+call.replace("$URL
       FsDsl.materialize(root, downloadProject(url(server, "/bytes"),
         "s.download.downloadBytes(\"$URL\", 1000).size"));
       var out= coordinator(root).main(root, stLib);
-      utils.Err.strCmp("[###]3[###]", out);
+      utils.Err.strCmp("""
+3
+""", out);
     }
     finally{ server.stop(0); }
   }
@@ -3218,8 +3252,10 @@ Hello:Main{s->base.Debug#(base.Try#(s.iso.close, {t ->"""+" "+call.replace("$URL
     FsDsl.materialize(root, downloadProject("ftp://127.0.0.1/x",
       "s.download.downloadStrUtf8(\"$URL\", 1000, NeverRecovers)"));
     var out= coordinator(root).main(root, stLib);
-    utils.Err.strCmp("[###]caught: Invalid URL descriptor[###]", out);
-    utils.Err.strCmp("[###]unsupported scheme[###]", out);
+    utils.Err.strCmp("""
+caught: Invalid URL descriptor.
+unsupported scheme (only http/https allowed): ftp in ftp://127.0.0.1/x
+""", out);
   }
   @Test void downloadRejectsMalformedUrl(@TempDir Path tmp) throws Exception{
     var root= tmp.resolve("root");
@@ -3227,7 +3263,11 @@ Hello:Main{s->base.Debug#(base.Try#(s.iso.close, {t ->"""+" "+call.replace("$URL
     FsDsl.materialize(root, downloadProject("not a url",
       "s.download.downloadStrUtf8(\"$URL\", 1000, NeverRecovers)"));
     var out= coordinator(root).main(root, stLib);
-    utils.Err.strCmp("[###]caught: Invalid URL descriptor[###]", out);
+    utils.Err.strCmp("""
+caught: Invalid URL descriptor.
+[###]
+url: not a url
+""", out);
   }
   @Test void downloadFailsWhenContentLengthExceedsMaxBytes(@TempDir Path tmp) throws Exception{
     var server= startServer(ex -> reply(ex, 200, "0123456789".getBytes(UTF_8)));
@@ -3237,8 +3277,12 @@ Hello:Main{s->base.Debug#(base.Try#(s.iso.close, {t ->"""+" "+call.replace("$URL
       FsDsl.materialize(root, downloadProject(url(server, "/big"),
         "s.download.downloadBytes(\"$URL\", 4).size"));
       var out= coordinator(root).main(root, stLib);
-      utils.Err.strCmp("[###]caught: Download exceeds maxBytes[###]", out);
-      utils.Err.strCmp("[###]contentLength[###]", out);
+      utils.Err.strCmp("""
+caught: Download exceeds maxBytes.
+url: http://127.0.0.1:[###]/big
+contentLength: 10
+maxBytes: 4
+""", out);
     }
     finally{ server.stop(0); }
   }
@@ -3250,8 +3294,12 @@ Hello:Main{s->base.Debug#(base.Try#(s.iso.close, {t ->"""+" "+call.replace("$URL
       FsDsl.materialize(root, downloadProject(url(server, "/chunked"),
         "s.download.downloadBytes(\"$URL\", 4).size"));
       var out= coordinator(root).main(root, stLib);
-      utils.Err.strCmp("[###]caught: Download exceeds maxBytes[###]", out);
-      utils.Err.strCmp("[###]bytesRead[###]", out);
+      utils.Err.strCmp("""
+caught: Download exceeds maxBytes.
+url: http://127.0.0.1:[###]/chunked
+bytesRead: 10
+maxBytes: 4
+""", out);
     }
     finally{ server.stop(0); }
   }
@@ -3270,7 +3318,9 @@ Hello:Main{s->base.Debug#(base.Try#(s.iso.close, {t ->"""+" "+call.replace("$URL
       FsDsl.materialize(root, downloadProject(url(server, "/start"),
         "s.download.downloadStrUtf8(\"$URL\", 1000, NeverRecovers)"));
       var out= coordinator(root).main(root, stLib);
-      utils.Err.strCmp("[###]landed[###]", out);
+      utils.Err.strCmp("""
+landed
+""", out);
     }
     finally{ server.stop(0); }
   }
@@ -3282,7 +3332,11 @@ Hello:Main{s->base.Debug#(base.Try#(s.iso.close, {t ->"""+" "+call.replace("$URL
       FsDsl.materialize(root, downloadProject(url(server, "/loop"),
         "s.download.downloadStrUtf8(\"$URL\", 1000, NeverRecovers)"));
       var out= coordinator(root).main(root, stLib);
-      utils.Err.strCmp("[###]caught: Download failed.[###]too many redirects[###]", out);
+      utils.Err.strCmp("""
+caught: Download failed.
+url: http://127.0.0.1:[###]/loop
+too many redirects
+""", out);
     }
     finally{ server.stop(0); }
   }
@@ -3294,9 +3348,10 @@ Hello:Main{s->base.Debug#(base.Try#(s.iso.close, {t ->"""+" "+call.replace("$URL
       FsDsl.materialize(root, downloadProject(url(server, "/go"),
         "s.download.downloadStrUtf8(\"$URL\", 1000, NeverRecovers)"));
       var out= coordinator(root).main(root, stLib);
-      utils.Err.strCmp("[###]caught: Invalid URL descriptor[###]", out);
-      utils.Err.strCmp("[###]unsupported scheme[###]", out);
-      utils.Err.strCmp("[###]file:///etc/passwd[###]", out);
+      utils.Err.strCmp("""
+caught: Invalid URL descriptor.
+unsupported scheme (only http/https allowed): file in file:///etc/passwd
+""", out);
     }
     finally{ server.stop(0); }
   }
@@ -3308,7 +3363,11 @@ Hello:Main{s->base.Debug#(base.Try#(s.iso.close, {t ->"""+" "+call.replace("$URL
       FsDsl.materialize(root, downloadProject(url(server, "/missing"),
         "s.download.downloadStrUtf8(\"$URL\", 1000, NeverRecovers)"));
       var out= coordinator(root).main(root, stLib);
-      utils.Err.strCmp("[###]caught: Download failed.[###]HTTP status: 404[###]", out);
+      utils.Err.strCmp("""
+caught: Download failed.
+url: http://127.0.0.1:[###]/missing
+HTTP status: 404
+""", out);
     }
     finally{ server.stop(0); }
   }
@@ -3336,8 +3395,9 @@ Hello:Main{s->base.Debug#(
 `, 1000, NeverRecoversU).size.str))}
 """);
       var out= coordinator(root).main(root, stLib);
-      utils.Err.strCmp("[###]caf?[###]", out);
-      utils.Err.strCmp("[###]|4[###]", out);
+      utils.Err.strCmp("""
+caf?|4
+""", out);
     }
     finally{ server.stop(0); }
   }
@@ -3350,7 +3410,9 @@ Hello:Main{s->base.Debug#(
       FsDsl.materialize(root, downloadProject(url(server, "/img.png"),
         "s.download.downloadImage(\"$URL\", 100_000, 1_000_000).width"));
       var out= coordinator(root).main(root, stLib);
-      utils.Err.strCmp("[###]3[###]", out);
+      utils.Err.strCmp("""
+Width[3]
+""", out);
     }
     finally{ server.stop(0); }
   }
@@ -3370,7 +3432,11 @@ Hello:Main{s->base.Debug#(
       FsDsl.materialize(root, downloadProject(url(server, "/go"),
         "s.download.downloadStrUtf8(\"$URL\", 1000, NeverRecovers)"));
       var out= coordinator(root).main(root, stLib);
-      utils.Err.strCmp("[###]caught: [###]/a b[###]", out);
+      utils.Err.strCmp("""
+caught: Download failed.
+url: http://127.0.0.1:[###]/go
+redirect to a malformed Location: /a b
+""", out);
     }
     finally{ server.stop(0); }
   }
@@ -3380,7 +3446,11 @@ Hello:Main{s->base.Debug#(
     FsDsl.materialize(root, downloadProject("http://127.0.0.1:99999/x",
       "s.download.downloadStrUtf8(\"$URL\", 1000, NeverRecovers)"));
     var out= coordinator(root).main(root, stLib);
-    utils.Err.strCmp("[###]caught: Invalid URL descriptor.[###]99999[###]", out);
+    utils.Err.strCmp("""
+caught: Invalid URL descriptor.
+port out of range: 99999
+url: http://127.0.0.1:99999/x
+""", out);
   }
   @Test void downloadFailsOnMalformedContentLength(@TempDir Path tmp) throws Exception{
     try (var server= new ServerSocket(0, 1, InetAddress.getLoopbackAddress())){
@@ -3390,7 +3460,11 @@ Hello:Main{s->base.Debug#(
       FsDsl.materialize(root, downloadProject("http://127.0.0.1:"+server.getLocalPort()+"/len",
         "s.download.downloadBytes(\"$URL\", 1000).size"));
       var out= coordinator(root).main(root, stLib);
-      utils.Err.strCmp("[###]caught: Download failed.[###]", out);
+      utils.Err.strCmp("""
+caught: Download failed.
+url: http://127.0.0.1:[###]/len
+malformed response: [###]
+""", out);
     }
   }
   @Test void downloadFailureAfterARedirectNamesTheUrlThatAnswered(@TempDir Path tmp) throws Exception{
@@ -3406,7 +3480,11 @@ Hello:Main{s->base.Debug#(
       FsDsl.materialize(root, downloadProject(url(server, "/start"),
         "s.download.downloadStrUtf8(\"$URL\", 1000, NeverRecovers)"));
       var out= coordinator(root).main(root, stLib);
-      utils.Err.strCmp("[###]caught: Download failed.\nurl: "+url(server, "/missing")+"\nHTTP status: 404[###]", out);
+      utils.Err.strCmp("""
+caught: Download failed.
+url: http://127.0.0.1:[###]/missing
+HTTP status: 404
+""", out);
     }
     finally{ server.stop(0); }
   }
@@ -3418,7 +3496,10 @@ Hello:Main{s->base.Debug#(
       FsDsl.materialize(root, downloadProject(url(server, "/go"),
         "s.download.downloadStrUtf8(\"$URL\", 1000, NeverRecovers)"));
       var out= coordinator(root).main(root, stLib);
-      utils.Err.strCmp("[###]caught: Invalid URL descriptor.[###]ftp://127.0.0.1/caf%C3%A9[###]", out);
+      utils.Err.strCmp("""
+caught: Invalid URL descriptor.
+unsupported scheme (only http/https allowed): ftp in ftp://127.0.0.1/caf%C3%A9
+""", out);
     }
     finally{ server.stop(0); }
   }
