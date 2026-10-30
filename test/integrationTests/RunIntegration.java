@@ -1615,32 +1615,46 @@ Linear: Main{s -> base.Block#
     var reds= reds(ImageIO.read(data.resolve("srgb.png").toFile()), 0);
     assertTrue(reds.stream().allMatch(r -> Math.abs(r - 188) <= 6), () -> "A linear gray of 128 is the sRGB gray 188, not "+reds);
   }
-  @Test void anImageThatCanNotBeDecodedNamesTheStandards(@TempDir Path tmp) throws IOException{
+  @Test void aResourceThatIsNotAnImageCanNotBeDecoded(@TempDir Path tmp) throws IOException{
+    var data= dataProject(tmp);
+    Fs.write(data.resolve("text.png"), "not an image".getBytes(UTF_8));
+    utils.Err.strCmp("""
+Resource with path col.Pub/text.png can not be decoded as an image according to standards PNG (ISO/IEC 15948:2004), JPEG (ISO/IEC 10918-1:1994), WebP (RFC 9649), GIF (GIF89a), BMP (Windows bitmap up to BITMAPV5HEADER), ICO (Windows icon) and WBMP (WAP-237, type 0)
+""", dataRun(tmp, """
+Text: Main{s -> Debug#(St#(base.Try#(s.iso.close, {t -> base.Block#(t.dataRead(Pub).read(L#("text.png")).readImage(1000000), "read")})))}
+""", dataLinks(data, data)));
+  }
+  @Test void aResourceThatIsAPngCutInHalfCanNotBeDecoded(@TempDir Path tmp) throws IOException{
     var data= dataProject(tmp);
     var img= new BufferedImage(64, 64, BufferedImage.TYPE_INT_RGB);
     for (int y= 0; y < 64; y += 1){ for (int x= 0; x < 64; x += 1){ img.setRGB(x, y, x * 4 << 16 | y * 4); } }
     var png= new ByteArrayOutputStream();
     ImageIO.write(img, "png", png);
     Fs.write(data.resolve("cut.png"), Arrays.copyOf(png.toByteArray(), png.size() / 2));
-    Fs.write(data.resolve("text.png"), "not an image".getBytes(UTF_8));
-    var in= Fs.write(tmp.resolve("in.png"), "not an image".getBytes(UTF_8));
     utils.Err.strCmp("""
-Resource with path col.Pub/text.png can not be decoded as an image according to standards PNG (ISO/IEC 15948:2004), JPEG (ISO/IEC 10918-1:1994), WebP (RFC 9649), GIF (GIF89a), BMP (Windows bitmap up to BITMAPV5HEADER), ICO (Windows icon) and WBMP (WAP-237, type 0)
 Resource with path col.Pub/cut.png can not be decoded as an image according to standards PNG (ISO/IEC 15948:2004), JPEG (ISO/IEC 10918-1:1994), WebP (RFC 9649), GIF (GIF89a), BMP (Windows bitmap up to BITMAPV5HEADER), ICO (Windows icon) and WBMP (WAP-237, type 0)
-Resource with path /_col/junk.png can not be decoded as an image according to standards PNG (ISO/IEC 15948:2004), JPEG (ISO/IEC 10918-1:1994), WebP (RFC 9649), GIF (GIF89a), BMP (Windows bitmap up to BITMAPV5HEADER), ICO (Windows icon) and WBMP (WAP-237, type 0)
-File with absolute path TMP/in.png can not be decoded as an image according to standards PNG (ISO/IEC 15948:2004), JPEG (ISO/IEC 10918-1:1994), WebP (RFC 9649), GIF (GIF89a), BMP (Windows bitmap up to BITMAPV5HEADER), ICO (Windows icon) and WBMP (WAP-237, type 0)
-""".replace("TMP/in.png", in.toAbsolutePath().toString()), dataRun(tmp, """
-Images: Main{s -> base.Block#
-  .do{Debug#(St#(base.Try#(s.iso.close, {t -> base.Block#(t.dataRead(Pub).read(L#("text.png")).readImage(1000000), "read")})))}
-  .do{Debug#(St#(base.Try#(s.iso.close, {t -> base.Block#(t.dataRead(Pub).read(L#("cut.png")).readImage(1000000), "read")})))}
-  .do{Debug#(St#(base.Try#(s.iso.close, {t -> base.Block#(Junk.readImage(t.assetRead, 1000000), "read")})))}
-  .return{Debug#(St#(base.Try#(s.iso.close, {t -> t.inputCursor#.match{.some n -> base.Block#(n.readImage(1000000), "read"); .empty -> "none"}})))}
+""", dataRun(tmp, """
+Cut: Main{s -> Debug#(St#(base.Try#(s.iso.close, {t -> base.Block#(t.dataRead(Pub).read(L#("cut.png")).readImage(1000000), "read")})))}
+""", dataLinks(data, data)));
   }
+  @Test void anAssetThatIsNotAnImageCanNotBeDecoded(@TempDir Path tmp){
+    utils.Err.strCmp("""
+Resource with path /_col/junk.png can not be decoded as an image according to standards PNG (ISO/IEC 15948:2004), JPEG (ISO/IEC 10918-1:1994), WebP (RFC 9649), GIF (GIF89a), BMP (Windows bitmap up to BITMAPV5HEADER), ICO (Windows icon) and WBMP (WAP-237, type 0)
+""", dataRun(tmp, """
+Asset: Main{s -> Debug#(St#(base.Try#(s.iso.close, {t -> base.Block#(Junk.readImage(t.assetRead, 1000000), "read")})))}
 jjj
 _col/junk.png
 iii
 not an image
-""", Push.of(dataLinks(data, data), "-DfearlessInput.file="+PathClassLoader.argOf(in))));
+""", List.of()));
+  }
+  @Test void anOpenedFileThatIsNotAnImageCanNotBeDecoded(@TempDir Path tmp) throws IOException{
+    var in= Fs.write(tmp.resolve("in.png"), "not an image".getBytes(UTF_8));
+    utils.Err.strCmp("""
+File with absolute path [###]in.png can not be decoded as an image according to standards PNG (ISO/IEC 15948:2004), JPEG (ISO/IEC 10918-1:1994), WebP (RFC 9649), GIF (GIF89a), BMP (Windows bitmap up to BITMAPV5HEADER), ICO (Windows icon) and WBMP (WAP-237, type 0)
+""", dataRun(tmp, """
+Opened: Main{s -> Debug#(St#(base.Try#(s.iso.close, {t -> t.inputCursor#.match{.some n -> base.Block#(n.readImage(1000000), "read"); .empty -> "none"}})))}
+""", List.of("-DfearlessInput.file="+PathClassLoader.argOf(in))));
   }
   @Test void aResourceDeletedAfterItIsOpenedIsADeterministicError(@TempDir Path tmp){
     var data= dataProject(tmp);
