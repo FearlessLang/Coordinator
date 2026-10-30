@@ -2724,7 +2724,7 @@ b
     assertEquals(1, Coordinator.startMain(root, ResolveResource.stLibPath, "rec.NaiveSum", Optional.empty(), Map.of(), Map.of(), List.of(), List.of(), coordinator(root).sharedClasspath(), out::append).await(), out::toString);
     utils.Err.strCmp("[###]java.lang.StackOverflowError[###]", out.toString());
   }
-  @Test void virtualizationMapMentionsAPackageThatDoesNotExist(@TempDir Path tmp) throws InterruptedException{
+  @Test void aMapMentionsAPackageThatDoesNotExist(@TempDir Path tmp) throws InterruptedException{
     var root= tmp.resolve("root");
     UserError.root = root;
     FsDsl.materialize(root, """
@@ -2836,7 +2836,7 @@ use base.Main as Main;
 Hello:Main{s->base.Debug#("shop "+(shop.Shop.server)+", blog "+(blog.Blog.server))}
 """);
   }
-  @Test void twoPackagesUseTwoVersionsOfTheSamePackageThroughTheSameVirtualName(@TempDir Path tmp) throws InterruptedException{
+  @Test void twoPackagesUseTwoVersionsOfTheSamePackageThroughTheSamePackageName(@TempDir Path tmp) throws InterruptedException{
     var root= tmp.resolve("root");
     UserError.root = root;
     versions(root);
@@ -2900,7 +2900,7 @@ Hello:Main{s->base.Debug#("lib uses "+(lib.Lib.foo))}
     utils.Err.strCmp("""
 The "instead of" list of a map must name exactly the folders chosen by the maps of lower rank that the map overrides:
 - "map foo as _foo_v5 in _lib;"; written in fear:/_app/_rank_app.fear
-The map overrides these maps of lower rank:
+These maps of lower rank choose other folders:
 - "map foo as _foo_v4 in _lib;"; written in fear:/_lib/_rank_driver.fear
 Expected: "map foo as _foo_v5 in _lib instead of _foo_v4;".
 Error 7 WellFormedness
@@ -2930,7 +2930,7 @@ Hello:Main{s->base.Debug#("lib uses "+(lib.Lib.foo))}
     utils.Err.strCmp("""
 The "instead of" list of a map must name exactly the folders chosen by the maps of lower rank that the map overrides:
 - "map foo as _foo_v5 in _lib instead of _foo_v4;"; written in fear:/_app/_rank_app.fear
-The map overrides no map of lower rank.
+No map of lower rank chooses another folder.
 Expected: "map foo as _foo_v5 in _lib;".
 Error 7 WellFormedness
 """, ex.getMessage());
@@ -3001,7 +3001,7 @@ Hello:Main{s->base.Debug#("lib uses "+(lib.Lib.foo)+", app uses "+(foo.Foo.versi
 """);
     utils.Err.strCmp("lib uses v4, app uses v5\n", coordinator(root).main(root, stLib));
   }
-  @Test void aVersionedPackageIsNotReachableByItsRealNameThroughAVirtualName(@TempDir Path tmp) throws InterruptedException{
+  @Test void aVersionFolderNameIsNotAPackageNameWhenAMapNamesIt(@TempDir Path tmp) throws InterruptedException{
     var root= tmp.resolve("root");
     UserError.root = root;
     FsDsl.materialize(root, """
@@ -3031,7 +3031,7 @@ Source code inside folders named "_app" uses package name "webserver" to refer t
 Error 7 WellFormedness
 """, ex.getMessage());
   }
-  @Test void virtualizationMapOfAnExistingPackage(@TempDir Path tmp) throws InterruptedException{
+  @Test void aMapOfAnExistingPackage(@TempDir Path tmp) throws InterruptedException{
     var root= tmp.resolve("root");
     UserError.root = root;
     FsDsl.materialize(root, """
@@ -3060,7 +3060,7 @@ With no map, package name "a" refers to the code inside folders named "_a".
 Error 7 WellFormedness
 """, ex.getMessage());
   }
-  @Test void virtualizationThreeVirtualNamesForTheSameRealPackage(@TempDir Path tmp) throws InterruptedException{
+  @Test void threePackageNamesForOneFolderAreAnError(@TempDir Path tmp) throws InterruptedException{
     var root= tmp.resolve("root");
     UserError.root = root;
     FsDsl.materialize(root, """
@@ -3086,7 +3086,7 @@ Source code inside folders named "_b" can use only one package name to refer to 
 Error 7 WellFormedness
 """, ex.getMessage());
   }
-  @Test void virtualizationMapToTheTargetItself(@TempDir Path tmp) throws InterruptedException{
+  @Test void aMapToTheTargetItself(@TempDir Path tmp) throws InterruptedException{
     var root= tmp.resolve("root");
     UserError.root = root;
     FsDsl.materialize(root, """
@@ -3104,7 +3104,7 @@ Source code inside folders named "_b" uses the simple names of its own types.
 Error 7 WellFormedness
 """, ex.getMessage());
   }
-  @Test void virtualizationMapInAPackageThatDoesNotExist(@TempDir Path tmp) throws InterruptedException{
+  @Test void aMapInAPackageThatDoesNotExist(@TempDir Path tmp) throws InterruptedException{
     var root= tmp.resolve("root");
     UserError.root = root;
     FsDsl.materialize(root, """
@@ -3133,7 +3133,7 @@ Existing folders: "_pka", "_pkb", "_pkc".
 Error 7 WellFormedness
 """, ex.getMessage());
   }
-  @Test void virtualizationMapInBase(@TempDir Path tmp) throws InterruptedException{
+  @Test void aMapInBase(@TempDir Path tmp) throws InterruptedException{
     var root= tmp.resolve("root");
     UserError.root = root;
     FsDsl.materialize(root, """
@@ -3150,7 +3150,7 @@ A map can not apply to source code inside folders named "_base":
 Error 7 WellFormedness
 """, ex.getMessage());
   }
-  @Test void virtualizationMapToAHigherRankPackage(@TempDir Path tmp) throws InterruptedException{
+  @Test void aMapToAHigherRankPackage(@TempDir Path tmp) throws InterruptedException{
     var root= tmp.resolve("root");
     UserError.root = root;
     FsDsl.materialize(root, """
@@ -3197,32 +3197,6 @@ jjj
     FsDsl.materialize(root, project);
     return assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib)).getMessage();
   }
-  @Test void aMiddleLayerOverridesAPinAndTheApplicationOverridesBoth(@TempDir Path tmp) throws InterruptedException{
-    utils.Err.strCmp("lib uses v6\n", mapsRun(tmp, foos
-      +fooLib("map foo as _foo_v4 in _lib;\n")
-      +fooUser("mid", "worker", "map foo as _foo_v5 in _lib instead of _foo_v4;\n")
-      +fooApp("map foo as _foo_v6 in _lib instead of _foo_v4, _foo_v5;\n")));
-  }
-  @Test void anInsteadOfListInAnyOrderIsAccepted(@TempDir Path tmp) throws InterruptedException{
-    utils.Err.strCmp("lib uses v6\n", mapsRun(tmp, foos
-      +fooLib("map foo as _foo_v4 in _lib;\n")
-      +fooUser("mid", "worker", "map foo as _foo_v5 in _lib instead of _foo_v4;\n")
-      +fooApp("map foo as _foo_v6 in _lib instead of _foo_v5, _foo_v4;\n")));
-  }
-  @Test void anOverrideMustListTheFoldersOfEveryLayerBelowIt(@TempDir Path tmp){
-    utils.Err.strCmp("""
-The "instead of" list of a map must name exactly the folders chosen by the maps of lower rank that the map overrides:
-- "map foo as _foo_v6 in _lib instead of _foo_v5;"; written in fear:/_app/_rank_app.fear
-The map overrides these maps of lower rank:
-- "map foo as _foo_v4 in _lib;"; written in fear:/_lib/_rank_driver.fear
-- "map foo as _foo_v5 in _lib instead of _foo_v4;"; written in fear:/_mid/_rank_worker.fear
-Expected: "map foo as _foo_v6 in _lib instead of _foo_v4, _foo_v5;".
-Error 7 WellFormedness
-""", mapsError(tmp, foos
-      +fooLib("map foo as _foo_v4 in _lib;\n")
-      +fooUser("mid", "worker", "map foo as _foo_v5 in _lib instead of _foo_v4;\n")
-      +fooApp("map foo as _foo_v6 in _lib instead of _foo_v5;\n")));
-  }
   @Test void aMapAgreeingWithALowerRankMapNeedsNoInsteadOf(@TempDir Path tmp) throws InterruptedException{
     utils.Err.strCmp("lib uses v4\n", mapsRun(tmp, foos
       +fooLib("map foo as _foo_v4 in _lib;\n")
@@ -3232,7 +3206,7 @@ Error 7 WellFormedness
     utils.Err.strCmp("""
 The "instead of" list of a map must name exactly the folders chosen by the maps of lower rank that the map overrides:
 - "map foo as _foo_v4 in _lib instead of _foo_v4;"; written in fear:/_app/_rank_app.fear
-The map overrides no map of lower rank.
+No map of lower rank chooses another folder.
 Expected: "map foo as _foo_v4 in _lib;".
 Error 7 WellFormedness
 """, mapsError(tmp, foos
@@ -3243,7 +3217,7 @@ Error 7 WellFormedness
     utils.Err.strCmp("""
 The "instead of" list of a map must name exactly the folders chosen by the maps of lower rank that the map overrides:
 - "map foo as _foo_v5 in _lib instead of _foo_v4, _foo_v4;"; written in fear:/_app/_rank_app.fear
-The map overrides these maps of lower rank:
+These maps of lower rank choose other folders:
 - "map foo as _foo_v4 in _lib;"; written in fear:/_lib/_rank_driver.fear
 Expected: "map foo as _foo_v5 in _lib instead of _foo_v4;".
 Error 7 WellFormedness
@@ -3255,7 +3229,7 @@ Error 7 WellFormedness
     utils.Err.strCmp("""
 The "instead of" list of a map must name exactly the folders chosen by the maps of lower rank that the map overrides:
 - "map foo as _foo_v5 in _lib instead of _foo_v4, _foo_v3;"; written in fear:/_app/_rank_app.fear
-The map overrides these maps of lower rank:
+These maps of lower rank choose other folders:
 - "map foo as _foo_v4 in _lib;"; written in fear:/_lib/_rank_driver.fear
 Expected: "map foo as _foo_v5 in _lib instead of _foo_v4;".
 Error 7 WellFormedness
@@ -3273,7 +3247,7 @@ Error 7 WellFormedness
     utils.Err.strCmp("""
 The "instead of" list of a map must name exactly the folders chosen by the maps of lower rank that the map overrides:
 - "map foo as _foo_v5 in _lib instead of _foo_v4;"; written in fear:/_app/_rank_app.fear
-The map overrides these maps of lower rank:
+These maps of lower rank choose other folders:
 - "map foo as _foo_v3 in _lib;"; written in fear:/_lib/_rank_driver.fear
 Expected: "map foo as _foo_v5 in _lib instead of _foo_v3;".
 Error 7 WellFormedness
@@ -3319,7 +3293,7 @@ Error 7 WellFormedness
     utils.Err.strCmp("""
 The "instead of" list of a map must name exactly the folders chosen by the maps of lower rank that the map overrides:
 - "map foo as _foo_v5 in _lib;"; written in fear:/_w2/_rank_worker.fear
-The map overrides these maps of lower rank:
+These maps of lower rank choose other folders:
 - "map foo as _foo_v4 in _lib;"; written in fear:/_lib/_rank_driver.fear
 Expected: "map foo as _foo_v5 in _lib instead of _foo_v4;".
 Error 7 WellFormedness
@@ -3467,7 +3441,7 @@ jjj
   static String insteadOfError(String written, String overridden, String expected){ return """
 The "instead of" list of a map must name exactly the folders chosen by the maps of lower rank that the map overrides:
 - "%s;"; written in fear:/_app/_rank_app.fear
-The map overrides these maps of lower rank:
+These maps of lower rank choose other folders:
 - "%s;"; written in fear:/_lib/_rank_driver.fear
 Expected: "%s;".
 Error 7 WellFormedness
@@ -4090,7 +4064,7 @@ Source code inside folders named "_lib" uses package name "foo" to refer to the 
     utils.Err.strCmp("""
 The "instead of" list of a map must name exactly the folders chosen by the maps of lower rank that the map overrides:
 - "map foo as _foo_v6 in _lib instead of _foo_v5;"; written in fear:/_app/_rank_app.fear
-The map overrides these maps of lower rank:
+These maps of lower rank choose other folders:
 - "map foo as _foo_v4 in _lib;"; written in fear:/_lib/_rank_driver.fear
 - "map foo as _foo_v5 in _lib instead of _foo_v4;"; written in fear:/_mid/_rank_worker.fear
 Expected: "map foo as _foo_v6 in _lib instead of _foo_v4, _foo_v5;".
