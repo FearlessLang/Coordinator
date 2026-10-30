@@ -5,12 +5,14 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.TreeMap;
 import java.util.function.Consumer;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import coordinator.MainsInfo;
+import core.AllLs;
 import core.E.Literal;
 import core.LiteralDeclarations;
 import core.M;
@@ -30,10 +32,12 @@ public final class Backend{
   final ArrayList<Consumer<List<Path>>> fixers= new ArrayList<>();
   final TreeMap<String,String> mains= new TreeMap<>();
   final TreeMap<String,String> preloaded= new TreeMap<>();
+  final Map<TName,Literal> local;
   public Backend(Path out, BackendTools tools){
     assert Require.nonNull(out, tools);
     this.out= out;
     this.tools= tools;
+    local= AllLs.of(tools.decs());
   }
   boolean isRepr(Literal l){ return l.name().equals(new TName("base.Repr", 1, Pos.unknown)); }
   public List<Consumer<List<Path>>> produceJavaCode(){
@@ -97,8 +101,12 @@ public final class Backend{
     "(", ", ", ")", "()"
   );}
   void emitTopMethod(BytecodeLineFix sb, Literal l, M m, boolean abstractOnly){
-    if (!m.sig().origin().equals(l.name())){ return; }
     var jName= mangledMethodName(m.sig().rc(), m.sig().m());
+    var o= m.sig().origin();
+    if (!o.equals(l.name())){
+      if (clashes(l, m)){ sb.a("  default Object "+jName+paramsSig(m)+"{ return "+typeName(o)+".super."+jName+Join.of(IntStream.range(0, m.xs().size()).mapToObj(i -> "p"+i), "(", ", ", ")", "()")+"; }\n"); }
+      return;
+    }
     sb.a("  default Object "+jName+paramsSig(m)+"{\n");
     if (abstractOnly || m.sig().abs()){
       sb.a("    throw new AssertionError(\"Uncallable method: "+ifaceNameFor(l)+"."+jName+" on \"+this.getClass().getName());\n  }\n");
@@ -107,6 +115,13 @@ public final class Backend{
     tools.checks().checkTopMethod(m, decTypeName(l.name()), jName, hasInstance(l));
     new ProduceBody(sb, this, l.thisName(), m).emitBody();
   }
+  private boolean clashes(Literal l, M m){
+    var o= dec(m.sig().origin());
+    return l.cs().stream().map(c -> dec(c.name()))
+      .filter(d -> !d.name().equals(o.name()) && !LiteralDeclarations.has(o.cs(), d.name()))
+      .anyMatch(d -> d.ms().stream().anyMatch(mi -> mi.sig().origin().equals(d.name()) && mi.sig().rc() == m.sig().rc() && mi.sig().m().equals(m.sig().m())));
+  }
+  private Literal dec(TName n){ return LiteralDeclarations.from(n, local::get, tools.other()); }
   String ifaceNameFor(Literal l){
     if (!l.infName() || l.onlyImmCapture().inner){ return decTypeName(l.name()); }
     if (l.cs().isEmpty()){ return "Object"; }

@@ -13,9 +13,9 @@ import offensiveUtils.Require;
 import tools.Fs;
 import tools.SourceOracle;
 
-public record BackendTools(String pkgName, List<Literal> decs, Path rootDir, HtmlDocBuilder docs, MagicConsistency checks, CapabilityEnvironment capabilities, Path rtPath){
+public record BackendTools(String pkgName, List<Literal> decs, OtherPackages other, Path rootDir, HtmlDocBuilder docs, MagicConsistency checks, CapabilityEnvironment capabilities, Path rtPath){
   public BackendTools{
-    assert Require.nonNull(pkgName, rootDir, docs, checks, capabilities);
+    assert Require.nonNull(pkgName, other, rootDir, docs, checks, capabilities);
     assert Require.unmodifiable(decs, "decs");
     assert Fs.exists(rtPath);
   }
@@ -25,6 +25,6 @@ public record BackendTools(String pkgName, List<Literal> decs, Path rootDir, Htm
   public static BackendTools of(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, Path rootDir, Optional<Path> baseCachePath, Optional<Path> testsRoot, Path rtPath, CapabilityEnvironment capabilities){
     var docs= new HtmlDocBuilder(oracle, other, core, baseCachePath.map(p -> p.resolve("base.html")));
     docs.packageLocation(pkgName, Coordinator.genJava(rootDir).resolve(pkgName+".html"), testsRoot);
-    return new BackendTools(pkgName, core, rootDir, docs, new MagicConsistency(pkgName, rtPath), capabilities, rtPath);
+    return new BackendTools(pkgName, core, other, rootDir, docs, new MagicConsistency(pkgName, rtPath), capabilities, rtPath);
   }
 }
