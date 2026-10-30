@@ -117,12 +117,13 @@ final class RunIntegration{
   void testOk(String name){ unitTestsOk(name, freshIntegrationRoot(name), List.of()); }
   void unitTestsOk(String name, Path root, List<String> jvmArgs){
     var marker= "EndOfMain"+new BigInteger(128, new SecureRandom()).toString(36);
+    coordinator(root).compile(root, stLib);
+    var mains= coordinator(root).mains(root, stLib).orElseThrow().mains().size();
     var out= main(root, Push.of(jvmArgs, "-Dfearless.endMarker="+marker));
     writeJUnitReport(name, root);
     var fails= out.lines().filter(l -> l.startsWith("Test failure ")).toList();
     assertTrue(fails.isEmpty(), () -> Join.of(fails, "Fearless unit tests failed in "+name+":\n", "\n", ""));
     var lines= out.lines().toList();
-    var mains= coordinator(root).mains(root, stLib).orElseThrow().mains().size();
     var allCompleted= lines.stream().filter(marker::equals).count() == mains && lines.getLast().equals(marker);
     assertTrue(allCompleted, () -> "Not all the "+mains+" mains of "+name+" completed: a main that completes prints the line \""+marker+"\", and the output must end with that line. Output:\n"+out);
   }
@@ -1351,9 +1352,9 @@ Cut: Main{s -> Debug#(s.inputCursor#.match{.some n -> n.READ Show; .empty -> "no
     utils.Err.strCmp("""
 File with absolute path [###]gone.txt
 can not be read as bytes
-mut Gone.some(_) error line: 14 in file _col/_rank_app.fear
-mut Opts.match(_) error line: [###]
-read Gone#(_) error line: 14 in file _col/_rank_app.fear
+imm Gone.main(_) error line: 14 in file _col/_rank_app.fear
+imm Opts#(_) error line: [###]
+imm Gone.main(_) error line: 14 in file _col/_rank_app.fear
 imm St#(_) error line: 9 in file _col/_rank_app.fear
 imm Gone.main(_) error line: 14 in file _col/_rank_app.fear
 """, dataRun(tmp, """
@@ -1520,68 +1521,8 @@ milk
       "fear:/wf/new/five.txt", "fear:/wf/one.txt", "fear:/wn/inner/three.txt", "fear:/wz/deep/four.txt", "fear:/wz/deep/two.txt"), fearPaths(notes));
     assertEquals(List.of(true, true, true, false, false, false, false, false), Stream.of("wz.zip", "wn.zip", "wf.zip", "wz", "wn", "wf", "d3.zip", "d4").map(n -> Fs.exists(notes.resolve(n))).toList());
   }
-  @Test void anImageIsWrittenAsAPng(@TempDir Path tmp) throws IOException{
-    var data= dataProject(tmp);
-    var img= new BufferedImage(2, 3, BufferedImage.TYPE_INT_ARGB);
-    img.setRGB(1, 2, 0xFF336699);
-    var bout= new ByteArrayOutputStream();
-    ImageIO.write(img, "png", bout);
-    Fs.write(data.resolve("pic.png"), bout.toByteArray());
-    utils.Err.strCmp("ok\n", dataRun(tmp, """
-Images: Main{s -> base.Block#
-  .let img= {s.dataRead(Pub).read(L#("pic.png")).readImage(1000)}
-  .return{Debug#(Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).writeImagePng(L#("copy.png"), img)})))}
-  }
-""", dataLinks(data, data)));
-    var copy= ImageIO.read(data.resolve("copy.png").toFile());
-    assertEquals(List.of(2, 3, 0xFF336699, 0), List.of(copy.getWidth(), copy.getHeight(), copy.getRGB(1, 2), copy.getRGB(0, 0)));
-  }
-  @Test void aPaintedImageIsWrittenAsAPng(@TempDir Path tmp) throws IOException{
-    var data= dataProject(tmp);
-    utils.Err.strCmp("""
-Warning: the painter of an image of 4x3 draws past its bottom edge: the part outside the image is clipped
-ok
-""", dataRun(tmp, """
-Painted: Main{s -> base.Block#
-  .let img= {base.Images#(base.WidthNat#4, base.HeightNat#3, base.Color.rgb(0, 0, 255))
-    .paint{g -> g.color(base.Color.rgb(255, 0, 0)).position(base.XInt#(+1), base.YInt#(+1)).rect(base.WidthNat#2, base.HeightNat#5)}}
-  .return{Debug#(Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).writeImagePng(L#("painted.png"), img)})))}
-  }
-""", dataLinks(data, data)));
-    var png= ImageIO.read(data.resolve("painted.png").toFile());
-    assertEquals(List.of(4, 3, 0xFF0000FF, 0xFFFF0000, 0xFFFF0000, 0xFF0000FF, 0xFF0000FF), List.of(png.getWidth(), png.getHeight(), png.getRGB(0, 0), png.getRGB(1, 1), png.getRGB(2, 2), png.getRGB(3, 1), png.getRGB(1, 0)));
-  }
-  static final String columns= """
-Columns: { #(g: mut base.Graphics, x: base.Nat, step: base.Nat, end: base.Nat, h: base.Nat): mut base.Graphics -> (x >= end) ? {
-  .then -> g;
-  .else -> Columns#(g.position(base.XInt#(x.getInt), base.YInt#(+0)).rect(base.WidthNat#1, base.HeightNat#h), x + step, step, end, h);
-  } }
-""";
   static String row(BufferedImage png, int y){ return Join.of(IntStream.range(0, png.getWidth()).mapToObj(x -> "%08x".formatted(png.getRGB(x, y))).toList(), "", " ", ""); }
   static List<Integer> reds(BufferedImage png, int y){ return IntStream.range(0, png.getWidth()).mapToObj(x -> png.getRGB(x, y)>>16 & 255).toList(); }
-  @Test void anImageScaledToItsOwnSizeKeepsItsPixels(@TempDir Path tmp) throws IOException{
-    var data= dataProject(tmp);
-    utils.Err.strCmp("ok\n", dataRun(tmp, """
-Same: Main{s -> base.Block#
-  .let img= {base.Images#(base.WidthNat#5, base.HeightNat#1, base.Color.rgb(0, 0, 0)).paint{g -> g
-    .color(base.Color.rgb(255, 255, 255)).position(base.XInt#(+1), base.YInt#(+0)).rect(base.WidthNat#1, base.HeightNat#1)
-    .color(base.Color.rgb(255, 0, 0)).position(base.XInt#(+3), base.YInt#(+0)).rect(base.WidthNat#1, base.HeightNat#1)}}
-  .return{Debug#(Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).writeImagePng(L#("same.png"), img.scale(img.width, img.height))})))}
-  }
-""", dataLinks(data, data)));
-    utils.Err.strCmp("ff000000 ffffffff ff000000 ffff0000 ff000000", row(ImageIO.read(data.resolve("same.png").toFile()), 0));
-  }
-  @Test void anImageShrunkOnOneSideAveragesThePixelsOfThatSide(@TempDir Path tmp) throws IOException{
-    var data= dataProject(tmp);
-    utils.Err.strCmp("ok\n", dataRun(tmp, columns+"""
-Thin: Main{s -> base.Block#
-  .let img= {base.Images#(base.WidthNat#1024, base.HeightNat#16, base.Color.rgb(0, 0, 0)).paint{g -> Columns#(g.color(base.Color.rgb(255, 255, 255)), 0, 8, 1024, 16)}}
-  .return{Debug#(Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).writeImagePng(L#("thin.png"), img.scale(base.WidthNat#8, base.HeightNat#16))})))}
-  }
-""", dataLinks(data, data)));
-    var reds= reds(ImageIO.read(data.resolve("thin.png").toFile()), 8);
-    assertTrue(reds.stream().allMatch(r -> Math.abs(r - 32) <= 4), () -> "Each pixel covers 128 columns, 16 of them white, so its red is near 32, not "+reds);
-  }
   static byte[] jpegWith(int w, int h, IntBinaryOperator rgb, int marker, byte[] segment) throws IOException{
     var img= new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
     for (int y= 0; y < h; y += 1){ for (int x= 0; x < w; x += 1){ img.setRGB(x, y, rgb.applyAsInt(x, y)); } }
@@ -1595,92 +1536,59 @@ Thin: Main{s -> base.Block#
     res.write(bs, 2, bs.length - 2);
     return res.toByteArray();
   }
-  @Test void aJpegIsReadTurnedByItsExifOrientation(@TempDir Path tmp) throws IOException{
-    var data= dataProject(tmp);
-    byte[] turnedClockwise= {'E', 'x', 'i', 'f', 0, 0, 'M', 'M', 0, 42, 0, 0, 0, 8, 0, 1, 0x01, 0x12, 0, 3, 0, 0, 0, 1, 0, 6, 0, 0, 0, 0, 0, 0};
-    Fs.write(data.resolve("turned.jpg"), jpegWith(32, 16, (x, _) -> x < 16 ? 0xFFFF0000 : 0xFF0000FF, 0xE1, turnedClockwise));
-    utils.Err.strCmp("ok\n", dataRun(tmp, """
-Turned: Main{s -> base.Block#
-  .let img= {s.dataRead(Pub).read(L#("turned.jpg")).readImage(1000)}
-  .return{Debug#(Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).writeImagePng(L#("upright.png"), img)})))}
-  }
-""", dataLinks(data, data)));
-    var png= ImageIO.read(data.resolve("upright.png").toFile());
-    var column= Join.of(IntStream.range(0, png.getHeight()).mapToObj(y -> (png.getRGB(8, y)>>16 & 255) > 128 ? "R" : "B"), "", "", "");
-    utils.Err.strCmp("16 x 32 "+"R".repeat(16)+"B".repeat(16), png.getWidth()+" x "+png.getHeight()+" "+column);
-  }
-  @Test void aJpegWithAColorProfileIsReadInSrgb(@TempDir Path tmp) throws IOException{
-    var data= dataProject(tmp);
-    var profile= new ByteArrayOutputStream();
-    profile.writeBytes("ICC_PROFILE".getBytes(UTF_8));
-    profile.writeBytes(new byte[]{0, 1, 1});
-    profile.writeBytes(ICC_Profile.getInstance(ColorSpace.CS_LINEAR_RGB).getData());
-    Fs.write(data.resolve("linear.jpg"), jpegWith(2, 2, (_, _) -> 0xFF808080, 0xE2, profile.toByteArray()));
-    utils.Err.strCmp("ok\n", dataRun(tmp, """
-Linear: Main{s -> base.Block#
-  .let img= {s.dataRead(Pub).read(L#("linear.jpg")).readImage(1000)}
-  .return{Debug#(Wr#(base.Try#(s.iso.close, {t -> t.dataEdit(Notes).writeImagePng(L#("srgb.png"), img)})))}
-  }
-""", dataLinks(data, data)));
-    var reds= reds(ImageIO.read(data.resolve("srgb.png").toFile()), 0);
-    assertTrue(reds.stream().allMatch(r -> Math.abs(r - 188) <= 6), () -> "A linear gray of 128 is the sRGB gray 188, not "+reds);
-  }
-  @Test void aResourceThatIsNotAnImageCanNotBeDecoded(@TempDir Path tmp) throws IOException{
-    var data= dataProject(tmp);
-    Fs.write(data.resolve("text.png"), "not an image".getBytes(UTF_8));
-    utils.Err.strCmp("""
-Resource with path col.Pub/text.png
-can not be decoded as an image according to standards PNG (ISO/IEC 15948:2004), JPEG (ISO/IEC 10918-1:1994), WebP (RFC 9649), GIF (GIF89a), BMP (Windows bitmap up to BITMAPV5HEADER), ICO (Windows icon) and WBMP (WAP-237, type 0)
-""", dataRun(tmp, """
-Text: Main{s -> Debug#(St#(base.Try#(s.iso.close, {t -> base.Block#(t.dataRead(Pub).read(L#("text.png")).readImage(1000000), "read")})))}
-""", dataLinks(data, data)));
-  }
-  @Test void aResourceThatIsAPngCutInHalfCanNotBeDecoded(@TempDir Path tmp) throws IOException{
-    var data= dataProject(tmp);
+  @Test void testResourceReads(@TempDir Path tmp) throws IOException{
+    var root= tmp.resolve("root");
+    Fs.copyTree(freshIntegrationRoot("testResourceReads"), root);
+    var pub= tmp.resolve("pub");
+    var notes= tmp.resolve("notes");
+    Fs.writeUtf8(pub.resolve("data.fearless"), "");
+    Fs.writeUtf8(notes.resolve("data.fearless"), "");
     var img= new BufferedImage(64, 64, BufferedImage.TYPE_INT_RGB);
     for (int y= 0; y < 64; y += 1){ for (int x= 0; x < 64; x += 1){ img.setRGB(x, y, x * 4 << 16 | y * 4); } }
     var png= new ByteArrayOutputStream();
     ImageIO.write(img, "png", png);
-    Fs.write(data.resolve("cut.png"), Arrays.copyOf(png.toByteArray(), png.size() / 2));
-    utils.Err.strCmp("""
-Resource with path col.Pub/cut.png
-can not be decoded as an image according to standards PNG (ISO/IEC 15948:2004), JPEG (ISO/IEC 10918-1:1994), WebP (RFC 9649), GIF (GIF89a), BMP (Windows bitmap up to BITMAPV5HEADER), ICO (Windows icon) and WBMP (WAP-237, type 0)
-""", dataRun(tmp, """
-Cut: Main{s -> Debug#(St#(base.Try#(s.iso.close, {t -> base.Block#(t.dataRead(Pub).read(L#("cut.png")).readImage(1000000), "read")})))}
-""", dataLinks(data, data)));
-  }
-  @Test void anAssetThatIsNotAnImageCanNotBeDecoded(@TempDir Path tmp){
-    utils.Err.strCmp("""
-Resource with path /_col/junk.png
-can not be decoded as an image according to standards PNG (ISO/IEC 15948:2004), JPEG (ISO/IEC 10918-1:1994), WebP (RFC 9649), GIF (GIF89a), BMP (Windows bitmap up to BITMAPV5HEADER), ICO (Windows icon) and WBMP (WAP-237, type 0)
-""", dataRun(tmp, """
-Asset: Main{s -> Debug#(St#(base.Try#(s.iso.close, {t -> base.Block#(Junk.readImage(t.assetRead, 1000000), "read")})))}
-jjj
-_col/junk.png
-iii
-not an image
-""", List.of()));
-  }
-  @Test void anOpenedFileThatIsNotAnImageCanNotBeDecoded(@TempDir Path tmp) throws IOException{
+    Fs.write(pub.resolve("cut.png"), Arrays.copyOf(png.toByteArray(), png.size() / 2));
+    Fs.write(pub.resolve("text.png"), "not an image".getBytes(UTF_8));
+    Fs.write(pub.resolve("wide.png"), pngHeader(32768, 1));
+    Fs.write(pub.resolve("big.png"), pngHeader(20000, 20000));
+    var pic= new BufferedImage(2, 3, BufferedImage.TYPE_INT_ARGB);
+    pic.setRGB(1, 2, 0xFF336699);
+    var picPng= new ByteArrayOutputStream();
+    ImageIO.write(pic, "png", picPng);
+    Fs.write(pub.resolve("pic.png"), picPng.toByteArray());
+    Fs.write(notes.resolve("gone.png"), picPng.toByteArray());
+    Fs.writeUtf8(notes.resolve("gone.txt"), "gone");
+    byte[] turnedClockwise= {'E', 'x', 'i', 'f', 0, 0, 'M', 'M', 0, 42, 0, 0, 0, 8, 0, 1, 0x01, 0x12, 0, 3, 0, 0, 0, 1, 0, 6, 0, 0, 0, 0, 0, 0};
+    Fs.write(pub.resolve("turned.jpg"), jpegWith(32, 16, (x, _) -> x < 16 ? 0xFFFF0000 : 0xFF0000FF, 0xE1, turnedClockwise));
+    var profile= new ByteArrayOutputStream();
+    profile.writeBytes("ICC_PROFILE".getBytes(UTF_8));
+    profile.writeBytes(new byte[]{0, 1, 1});
+    profile.writeBytes(ICC_Profile.getInstance(ColorSpace.CS_LINEAR_RGB).getData());
+    Fs.write(pub.resolve("linear.jpg"), jpegWith(2, 2, (_, _) -> 0xFF808080, 0xE2, profile.toByteArray()));
     var in= Fs.write(tmp.resolve("in.png"), "not an image".getBytes(UTF_8));
-    utils.Err.strCmp("""
-File with absolute path [###]in.png
-can not be decoded as an image according to standards PNG (ISO/IEC 15948:2004), JPEG (ISO/IEC 10918-1:1994), WebP (RFC 9649), GIF (GIF89a), BMP (Windows bitmap up to BITMAPV5HEADER), ICO (Windows icon) and WBMP (WAP-237, type 0)
-""", dataRun(tmp, """
-Opened: Main{s -> Debug#(St#(base.Try#(s.iso.close, {t -> t.inputCursor#.match{.some n -> base.Block#(n.readImage(1000000), "read"); .empty -> "none"}})))}
-""", List.of("-DfearlessInput.file="+PathClassLoader.argOf(in))));
-  }
-  @Test void aDownloadThatIsNotAnImageCanNotBeDecoded(@TempDir Path tmp) throws IOException{
+    Fs.writeUtf8(pub.resolve("in_path.txt"), in.toAbsolutePath().toString());
     var server= startServer(ex -> reply(ex, 200, "not an image".getBytes(UTF_8)));
     try{
-      utils.Err.strCmp("""
-Resource with url http://127.0.0.1:[###]/x.png
-can not be decoded as an image according to standards PNG (ISO/IEC 15948:2004), JPEG (ISO/IEC 10918-1:1994), WebP (RFC 9649), GIF (GIF89a), BMP (Windows bitmap up to BITMAPV5HEADER), ICO (Windows icon) and WBMP (WAP-237, type 0)
-""", dataRun(tmp, """
-Download: Main{s -> Debug#(St#(base.Try#(s.iso.close, {t -> base.Block#(t.download.downloadImage("URL", 1000, 1000000), "read")})))}
-""".replace("URL", url(server, "/x.png")), List.of()));
+      Fs.writeUtf8(pub.resolve("url.txt"), url(server, "/x.png"));
+      unitTestsOk("testResourceReads", root, List.of(
+        "-DfearlessDataRead.img.Pub="+PathClassLoader.argOf(pub),
+        "-DfearlessDataEdit.img.Notes="+PathClassLoader.argOf(notes),
+        "-DfearlessDataEdit.img.Self="+PathClassLoader.argOf(root),
+        "-DfearlessInput.file="+PathClassLoader.argOf(in)));
     }
     finally{ server.stop(0); }
+    var copy= ImageIO.read(notes.resolve("copy.png").toFile());
+    assertEquals(List.of(2, 3, 0xFF336699, 0), List.of(copy.getWidth(), copy.getHeight(), copy.getRGB(1, 2), copy.getRGB(0, 0)));
+    var painted= ImageIO.read(notes.resolve("painted.png").toFile());
+    assertEquals(List.of(4, 3, 0xFF0000FF, 0xFFFF0000, 0xFFFF0000, 0xFF0000FF, 0xFF0000FF), List.of(painted.getWidth(), painted.getHeight(), painted.getRGB(0, 0), painted.getRGB(1, 1), painted.getRGB(2, 2), painted.getRGB(3, 1), painted.getRGB(1, 0)));
+    utils.Err.strCmp("ff000000 ffffffff ff000000 ffff0000 ff000000", row(ImageIO.read(notes.resolve("same.png").toFile()), 0));
+    var thin= reds(ImageIO.read(notes.resolve("thin.png").toFile()), 8);
+    assertTrue(thin.stream().allMatch(r -> Math.abs(r - 32) <= 4), () -> "Each pixel covers 128 columns, 16 of them white, so its red is near 32, not "+thin);
+    var upright= ImageIO.read(notes.resolve("upright.png").toFile());
+    var column= Join.of(IntStream.range(0, upright.getHeight()).mapToObj(y -> (upright.getRGB(8, y)>>16 & 255) > 128 ? "R" : "B"), "", "", "");
+    utils.Err.strCmp("16 x 32 "+"R".repeat(16)+"B".repeat(16), upright.getWidth()+" x "+upright.getHeight()+" "+column);
+    var srgb= reds(ImageIO.read(notes.resolve("srgb.png").toFile()), 0);
+    assertTrue(srgb.stream().allMatch(r -> Math.abs(r - 188) <= 6), () -> "A linear gray of 128 is the sRGB gray 188, not "+srgb);
   }
   static byte[] pngHeader(int w, int h){
     var res= ByteBuffer.allocate(8+25+12+12).put(new byte[]{(byte)0x89, 'P', 'N', 'G', '\r', '\n', 0x1A, '\n'});
@@ -1690,162 +1598,6 @@ Download: Main{s -> Debug#(St#(base.Try#(s.iso.close, {t -> base.Block#(t.downlo
       res.putInt(c.length - 4).put(c).putInt((int)crc.getValue());
     }
     return res.array();
-  }
-  @Test void aResourceWiderThanTheLimitCanNotBeRead(@TempDir Path tmp) throws IOException{
-    var data= dataProject(tmp);
-    Fs.write(data.resolve("wide.png"), pngHeader(32768, 1));
-    utils.Err.strCmp("""
-Resource with path col.Pub/wide.png
-is an image of 32768 x 1, which is too large.
-Height must be strictly less than 32768.
-Width must be strictly less than 32768.
-Height * Width must be strictly less than 268435457.
-""", dataRun(tmp, """
-Wide: Main{s -> Debug#(St#(base.Try#(s.iso.close, {t -> base.Block#(t.dataRead(Pub).read(L#("wide.png")).readImage(1000000), "read")})))}
-""", dataLinks(data, data)));
-  }
-  @Test void aResourceWithMorePixelsThanTheLimitCanNotBeRead(@TempDir Path tmp) throws IOException{
-    var data= dataProject(tmp);
-    Fs.write(data.resolve("big.png"), pngHeader(20000, 20000));
-    utils.Err.strCmp("""
-Resource with path col.Pub/big.png
-is an image of 20000 x 20000, which is too large.
-Height must be strictly less than 32768.
-Width must be strictly less than 32768.
-Height * Width must be strictly less than 268435457.
-""", dataRun(tmp, """
-Big: Main{s -> Debug#(St#(base.Try#(s.iso.close, {t -> base.Block#(t.dataRead(Pub).read(L#("big.png")).readImage(1000000), "read")})))}
-""", dataLinks(data, data)));
-  }
-  @Test void aResourceWithMorePixelsThanItsMaxPixelsCanNotBeRead(@TempDir Path tmp) throws IOException{
-    var data= dataProject(tmp);
-    var bout= new ByteArrayOutputStream();
-    ImageIO.write(new BufferedImage(2, 3, BufferedImage.TYPE_INT_ARGB), "png", bout);
-    Fs.write(data.resolve("small.png"), bout.toByteArray());
-    utils.Err.strCmp("""
-Resource with path col.Pub/small.png
-is an image of 2 x 3 = 6 pixels, more than maxPixels 5
-""", dataRun(tmp, """
-Small: Main{s -> Debug#(St#(base.Try#(s.iso.close, {t -> base.Block#(t.dataRead(Pub).read(L#("small.png")).readImage(5), "read")})))}
-""", dataLinks(data, data)));
-  }
-  @Test void anAssetWithMorePixelsThanItsMaxPixelsCanNotBeRead(@TempDir Path tmp){
-    utils.Err.strCmp("""
-Resource with path /_base/icons/conflict.png
-is an image of 256 x 256 = 65536 pixels, more than maxPixels 1
-""", dataRun(tmp, """
-Icon: Main{s -> Debug#(St#(base.Try#(s.iso.close, {t -> base.Block#(base.IconsConflict.readImage(t.assetRead, 1), "read")})))}
-""", List.of()));
-  }
-  @Test void anAssetRemovedWhileTheProgramRunsCanNotBeReadAsBytes(@TempDir Path tmp){
-    utils.Err.strCmp("""
-Resource with path /_col/note.txt
-can not be read as bytes
-imm TxtFile.readStrUtf8(_,_) error line: [###]
-read Gone#(_) error line: 16 in file _col/_rank_app.fear
-imm St#(_) error line: 9 in file _col/_rank_app.fear
-mut Gone# error line: 16 in file _col/_rank_app.fear
-mut Block[_].return(_) error line: [###]
-imm Gone.main(_) error line: 16 in file _col/_rank_app.fear
-""", dataRun(tmp, """
-Gone: Main{s -> base.Block#
-  .do{s.dataEdit(Notes).delete(L#("_col", "note.txt"))}
-  .return{Debug#(St#(base.Try#(s.iso.close, {t -> Note.readStrUtf8(t.assetRead, Recover)})))}
-  }
-jjj
-_col/note.txt
-iii
-note
-""", List.of("-DfearlessDataEdit.col.Notes="+PathClassLoader.argOf(tmp.resolve("root")))));
-  }
-  @Test void aZipEntryAssetRemovedWhileTheProgramRunsCanNotBeReadAsBytes(@TempDir Path tmp){
-    utils.Err.strCmp("""
-Resource with path /_col/pics/one.txt
-can not be read as bytes
-imm TxtFile.readStrUtf8(_,_) error line: [###]
-read Gone#(_) error line: 16 in file _col/_rank_app.fear
-imm St#(_) error line: 9 in file _col/_rank_app.fear
-mut Gone# error line: 16 in file _col/_rank_app.fear
-mut Block[_].return(_) error line: [###]
-imm Gone.main(_) error line: 16 in file _col/_rank_app.fear
-""", dataRun(tmp, """
-Gone: Main{s -> base.Block#
-  .do{s.dataEdit(Notes).delete(L#("_col", "pics", "one.txt"))}
-  .return{Debug#(St#(base.Try#(s.iso.close, {t -> PicsOne.readStrUtf8(t.assetRead, Recover)})))}
-  }
-jjj
-_col/pics.zip/one.txt
-iii
-one
-jjj
-_col/pics.zip/two.txt
-iii
-two
-""", List.of("-DfearlessDataEdit.col.Notes="+PathClassLoader.argOf(tmp.resolve("root")))));
-  }
-  @Test void aZipAssetRemovedWhileTheProgramRunsCanNotBeReadAsBytes(@TempDir Path tmp){
-    utils.Err.strCmp("""
-Resource with path /_col/box/three.txt
-can not be read as bytes
-imm TxtFile.readStrUtf8(_,_) error line: [###]
-read Gone#(_) error line: 16 in file _col/_rank_app.fear
-imm St#(_) error line: 9 in file _col/_rank_app.fear
-mut Gone# error line: 16 in file _col/_rank_app.fear
-mut Block[_].return(_) error line: [###]
-imm Gone.main(_) error line: 16 in file _col/_rank_app.fear
-""", dataRun(tmp, """
-Gone: Main{s -> base.Block#
-  .do{s.dataEdit(Notes).delete(L#("_col", "box", "three.txt"))}
-  .return{Debug#(St#(base.Try#(s.iso.close, {t -> BoxThree.readStrUtf8(t.assetRead, Recover)})))}
-  }
-jjj
-_col/box.zip/three.txt
-iii
-three
-""", List.of("-DfearlessDataEdit.col.Notes="+PathClassLoader.argOf(tmp.resolve("root")))));
-  }
-  @Test void aResourceDeletedAfterItIsOpenedIsANonDeterministicError(@TempDir Path tmp) throws IOException{
-    var data= dataProject(tmp);
-    utils.Err.strCmp("""
-Resource with path col.Notes/readme
-can not be read as bytes
-read Gone#(_) error line: 17 in file _col/_rank_app.fear
-imm St#(_) error line: 9 in file _col/_rank_app.fear
-mut Gone# error line: 17 in file _col/_rank_app.fear
-mut Block[_].return(_) error line: [###]
-mut Gone#(_,_) error line: 17 in file _col/_rank_app.fear
-mut Block[_].let(_,_) error line: [###]
-imm Gone.main(_) error line: 15 in file _col/_rank_app.fear
-""", dataRun(tmp, """
-Gone: Main{s -> base.Block#
-  .let n= {s.dataEdit(Notes).read(L#("readme"))}
-  .do{s.dataEdit(Notes).delete(L#("readme"))}
-  .return{Debug#(St#(base.Try#(n.iso.close, {k -> k.readStrUtf8 Recover})))}
-  }
-""", dataLinks(data, data)));
-  }
-  @Test void anImageResourceDeletedAfterItIsOpenedIsANonDeterministicError(@TempDir Path tmp) throws IOException{
-    var data= dataProject(tmp);
-    var bout= new ByteArrayOutputStream();
-    ImageIO.write(new BufferedImage(2, 3, BufferedImage.TYPE_INT_ARGB), "png", bout);
-    Fs.write(data.resolve("pic.png"), bout.toByteArray());
-    utils.Err.strCmp("""
-Resource with path col.Notes/pic.png
-can not be read as bytes
-read Gone#(_) error line: 17 in file _col/_rank_app.fear
-imm St#(_) error line: 9 in file _col/_rank_app.fear
-mut Gone# error line: 17 in file _col/_rank_app.fear
-mut Block[_].return(_) error line: [###]
-mut Gone#(_,_) error line: 17 in file _col/_rank_app.fear
-mut Block[_].let(_,_) error line: [###]
-imm Gone.main(_) error line: 15 in file _col/_rank_app.fear
-""", dataRun(tmp, """
-Gone: Main{s -> base.Block#
-  .let n= {s.dataEdit(Notes).read(L#("pic.png"))}
-  .do{s.dataEdit(Notes).delete(L#("pic.png"))}
-  .return{Debug#(St#(base.Try#(n.iso.close, {k -> base.Block#(k.readImage(1000), "read")})))}
-  }
-""", dataLinks(data, data)));
   }
   static Map<String,String> files(MainsInfo info){ return info.mains().entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().file())); }
   static String pathEncoding(){ return Fs.isWindows() ? "utf16Le" : "utf8"; }
