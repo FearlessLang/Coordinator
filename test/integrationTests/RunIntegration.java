@@ -2955,6 +2955,34 @@ Source code can only refer to code of a lower rank.
 Error 7 WellFormedness
 """, ex.getMessage());
   }
+  @Test void qualifiedNameOfAHigherRankPackageIsReportedAsARankProblem(@TempDir Path tmp) throws InterruptedException{
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_a/_rank_core.fear
+iii
+use base.Main as Main;
+Hello:Main{s->base.Debug#(z.Greeting.hi)}
+jjj
+_z/_rank_app.fear
+iii
+use base.Str as Str;
+Greeting:{ .hi: Str -> "hi" }
+""");
+    var ex= assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib));
+    utils.Err.strCmp("""
+In file: fear:/_a/_rank_core.fear
+
+002| Hello:Main{s->base.Debug#(z.Greeting.hi)}
+   |                           ^^^^^^^^^^^
+
+While inspecting a type name
+The type name "z.Greeting" refers to the code inside folders named "_z", which has a higher rank than the code inside folders named "_a".
+Folders named "_a" have rank "core999" ("_rank_core.fear") and folders named "_z" have rank "app999" ("_rank_app.fear").
+Source code can only refer to code of a lower rank.
+Error 7 WellFormedness
+""", ex.getMessage());
+  }
   @Test void useOfASameRankPackageIsReportedAsARankProblem(@TempDir Path tmp) throws InterruptedException{
     var root= tmp.resolve("root");
     UserError.root = root;
