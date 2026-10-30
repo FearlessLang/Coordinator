@@ -2923,8 +2923,9 @@ In file: fear:/_app/_rank_app.fear
    |                           ^^^^^^^^^^^^^^^^^^^^^
 
 While inspecting a type name
-Type "webserver_v12.Server" is written "webserver.Server" in package "app", because of "map webserver as webserver_v12 in app".
-In a package, each name refers to a single package or type, and each package or type has a single name.
+Package "webserver_v12" does not exist.
+Package "webserver_v12" does exist as a real source location.
+In package "app", package name "webserver" is used to refer to real source location "webserver_v12" because of "map webserver as webserver_v12 in app".
 Error 7 WellFormedness
 """, ex.getMessage());
   }
@@ -2982,7 +2983,7 @@ For package "b", the real package "c" is mapped from different virtual package n
    "map  a  as  c  in  b;"
  - fear:/_b/_rank_app.fear
    "map  d  as  c  in  b;"
-In a package, each name refers to a single package or type, and each package or type has a single name.
+In package "b", only one package name can be used to refer to real source location "c".
 Error 7 WellFormedness
 """, ex.getMessage());
   }
