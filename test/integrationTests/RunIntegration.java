@@ -207,6 +207,43 @@ MyTests: UnitTests {::
     utils.Err.strCmp("", main(root, List.of()));
   }
   @Test void mapAToPkc(){ utils.Err.strCmp("CTEXT\n", run("map_a_to_pkc"));}
+  @Test void mapBilling(){
+    utils.Err.strCmp("""
+log2: # billing
+log2: # monthly report
+log2: == invoice 42 ==
+""", run("map_billing"));
+  }
+  @Test void mapBillingReportsEachChangeOfThePinItOverrides(@TempDir Path tmp) throws IOException, InterruptedException{
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    Fs.copyTree(freshIntegrationRoot("map_billing"), root);
+    var app= root.resolve("_billing", "_rank_app.fear");
+    editAndTouch(app, " instead of _log_v1", "");
+    utils.Err.strCmp("""
+The "instead of" list of a map must name exactly the folders chosen by the maps of lower rank that the map overrides:
+- "map log as _log_v2 in _invoice;"; written in fear:/_billing/_rank_app.fear
+These maps of lower rank choose other folders:
+- "map log as _log_v1 in _invoice;"; written in fear:/_invoice/_rank_worker200.fear
+Expected: "map log as _log_v2 in _invoice instead of _log_v1;".
+Error 7 WellFormedness
+""", assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib)).getMessage());
+    editAndTouch(app, "in _invoice;", "in _invoice instead of _log_v1;");
+    editAndTouch(root.resolve("_invoice", "_rank_worker200.fear"), "_log_v1", "_log_v2");
+    utils.Err.strCmp("""
+The "instead of" list of a map must name exactly the folders chosen by the maps of lower rank that the map overrides:
+- "map log as _log_v2 in _invoice instead of _log_v1;"; written in fear:/_billing/_rank_app.fear
+No map of lower rank chooses another folder.
+Expected: "map log as _log_v2 in _invoice;".
+Error 7 WellFormedness
+""", assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib)).getMessage());
+    editAndTouch(app, " instead of _log_v1", "");
+    utils.Err.strCmp("""
+log2: # billing
+log2: # monthly report
+log2: == invoice 42 ==
+""", coordinator(root).main(root, stLib));
+  }
   // What counts as a main of a package: every type implementing base.Main, declared at
   // the top level or inside a method: base.Main implements base.CaptureFree, so a main
   // captures nothing and the backend gives it an instance.
