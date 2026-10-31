@@ -468,12 +468,6 @@ Fearless expands each zip file into a folder: rename this file if it is not mean
      +"supported by compression tools (zip) or version control systems (git).");
   }
   //-- project layout: which folder defines a package, and the rank file of each package
-  public static UserError projectEmpty(Path root){ return new UserError("""
-This project folder contains no ".fear" files.
-Folder:
-%s
-""".formatted(path(root.toString())));
-  }
   public static UserError projectNoPackageSegment(Ref file){ return new UserError("""
 This file must be placed inside a package.
 File:

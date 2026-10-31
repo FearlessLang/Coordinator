@@ -90,7 +90,7 @@ public interface Coordinator{
   default SourceOracle sourceOracle(Path path){ return new RealSourceOracleWithZip(path); }
   static Map<String,Boolean> pkgsBuilt(Path path, Path baseCache){
     var o= new RealSourceOracleWithZip(path);
-    var map= Helper.pkgMap(o, path);
+    var map= Helper.pkgMap(o);
     var baseApi= Fs.lastModified(baseCache.resolve("base.json"));
     var ranks= map.values().stream().map(Helper::okPkgContent).toList();
     var out= Helper.out(path);
@@ -129,7 +129,7 @@ public interface Coordinator{
   private List<String> compileNow(Path project, SourceOracle stLib){
     var o= sourceOracle(project);
     var out= Helper.out(project);
-    var l= Helper.layerOf(this, o, project, out, stLib);
+    var l= Helper.layerOf(this, o, out, stLib);
     out.forgetAllBut(l.pkgNames());
     l.compile(o, out);
     l.pkgNames().stream().filter(p -> !p.equals("base")).forEach(p -> out.relocate(p, o, stLib));
@@ -139,10 +139,10 @@ public interface Coordinator{
     var c= new NoCompile(baseCachePath());
     var o= sourceOracle(project);
     var out= new NoCommit(Helper.out(project).rootDir());
-    var l= Helper.layerOf(c, o, project, out, stLib);
+    var l= Helper.layerOf(c, o, out, stLib);
     out.forgetAllBut(l.pkgNames());
     l.compile(o, out);
-    var res= MainsInfo.read(project).orElseThrow();
+    var res= MainsInfo.read(project).orElse(new MainsInfo(Map.of(), List.of(), List.of(), List.of()));
     return baseCachePath().map(b -> MainsInfo.merge(Stream.of(res, MainsInfo.parse(b.resolve("base"+MainsInfo.suffix))))).orElse(res);
   }
   static ChildJvm startMain(Path project, Path base, String main, Optional<Path> input, Map<String,Path> reads, Map<String,Path> edits, List<String> attenuators, List<String> desk, List<Path> sharedClasspath, Consumer<String> out){
@@ -195,12 +195,12 @@ final class Helper{
   static OutputOracle out(Path path){
     return () -> path.resolve(Coordinator.outDir);
   }
-  static Layer layerOf(Coordinator coordinator, SourceOracle o, Path project, OutputOracle out, SourceOracle stLib){
-    var map= pkgMap(o, project);
+  static Layer layerOf(Coordinator coordinator, SourceOracle o, OutputOracle out, SourceOracle stLib){
+    var map= pkgMap(o);
     var allRanks= map.values().stream().map(Helper::okPkgContent).toList();
     var res= rankMap(o, allRanks);
     var ranks= allRanks.stream().collect(Collectors.toUnmodifiableMap(Helper::pkgName, r -> r));
-    Layer l= new BaseLayer(coordinator, res, ranks, out.commitMap(res, allRanks.stream().mapToLong(Ref::lastModified).max().getAsLong()), stLib);
+    Layer l= new BaseLayer(coordinator, res, ranks, out.commitMap(res, allRanks.stream().mapToLong(Ref::lastModified).max().orElse(0)), stLib);
     var byRank= new TreeMap<Integer,LinkedHashMap<String,List<Ref>>>();
     for (var r : allRanks.stream().sorted(Comparator.comparing(Ref::fearPath)).toList()){
       byRank.computeIfAbsent(rankNumber(r), _ -> new LinkedHashMap<>()).put(pkgName(r), map.get(pkgName(r)));
@@ -214,8 +214,7 @@ final class Helper{
     try{ return new FrontendLogicMain().parseRankFiles(ranks, Comparator.comparingInt(Helper::rankNumber)); }
     catch (FearlessException e){ throw Report.sourceError(e.render(o)); }
   }
-  static LinkedHashMap<String,List<Ref>> pkgMap(SourceOracle o, Path path){
-    if (o.allFiles().stream().noneMatch(Helper::isFear)){ throw Report.projectEmpty(path); }
+  static LinkedHashMap<String,List<Ref>> pkgMap(SourceOracle o){
     o.allFiles().stream().filter(Helper::isFear).forEach(Helper::pkgName);//err if not under a pkg
     return o.allFiles().stream().filter(u -> pkgNameOpt(u).isPresent()).collect(Collectors.groupingBy(Helper::pkgName, LinkedHashMap::new, Collectors.toList()));
   }

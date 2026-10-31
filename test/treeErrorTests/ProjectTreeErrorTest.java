@@ -43,12 +43,6 @@ final class ProjectTreeErrorTest{
   static void runErr(String expected, String... pathThenContent){
     utils.Err.strCmp(expected, errMsg(pathThenContent));
   }
-  @Test void emptyProject(){ runErr("""
-This project folder contains no ".fear" files.
-Folder:
-  %s
-""".formatted(fakeRoot),
-    "readme.txt", "hi"); }
   @Test void noPackageSegment(){ runErr("""
 This file must be placed inside a package.
 File:
