@@ -111,15 +111,15 @@ public interface Coordinator{
     return sb.toString();
   }
   default List<String> compile(Path project, SourceOracle stLib){ return guardingCache(project, () -> compileNow(project, stLib)); }
-  default Optional<MainsInfo> mains(Path project, SourceOracle stLib){
-    try{ return Optional.of(guardingCache(project, () -> mainsNow(project, stLib))); }
-    catch (WouldCompile _){ return Optional.empty(); }
+  default Optional<MainsInfo> mains(Path project){
+    var base= baseCachePath().orElseThrow();
+    return guardingCache(project, () -> mainsNow(project, base));
   }
   static <R> R guardingCache(Path project, Supplier<R> compile){
     var out= project.resolve(outDir);
     var cached= Fs.exists(out);
     try{ return compile.get(); }
-    catch (UserError | WouldCompile e){ throw e; }
+    catch (UserError e){ throw e; }
     catch (RuntimeException | AssertionError e){
       if (!cached){ throw e; }
       Fs.rmTree(out);
@@ -135,15 +135,12 @@ public interface Coordinator{
     l.pkgNames().stream().filter(p -> !p.equals("base")).forEach(p -> out.relocate(p, o, stLib));
     return List.copyOf(l.pkgs().keySet());//by design: only the highest rank number's packages have their Main run
   }
-  private MainsInfo mainsNow(Path project, SourceOracle stLib){
-    var c= new NoCompile(baseCachePath());
-    var o= sourceOracle(project);
-    var out= new NoCommit(Helper.out(project).rootDir());
-    var l= Helper.layerOf(c, o, project, out, stLib);
-    out.forgetAllBut(l.pkgNames());
-    l.compile(o, out);
-    var res= MainsInfo.read(project).orElseThrow();
-    return baseCachePath().map(b -> MainsInfo.merge(Stream.of(res, MainsInfo.parse(b.resolve("base"+MainsInfo.suffix))))).orElse(res);
+  private static Optional<MainsInfo> mainsNow(Path project, Path base){
+    var built= pkgsBuilt(project, base);
+    if (built.containsValue(false)){ return Optional.empty(); }
+    var out= Helper.out(project).rootDir();
+    var files= Stream.concat(built.keySet().stream().map(p -> out.resolve(p+MainsInfo.suffix)), Stream.of(base.resolve("base"+MainsInfo.suffix)));
+    return Optional.of(MainsInfo.merge(files.map(MainsInfo::parse)));
   }
   static ChildJvm startMain(Path project, Path base, String main, Optional<Path> input, Map<String,Path> reads, Map<String,Path> edits, List<String> attenuators, List<String> desk, List<Path> sharedClasspath, Consumer<String> out){
     var jvmArgs= new ArrayList<>(runData(project, base));
@@ -247,17 +244,5 @@ final class Helper{
     if (!TName.isPkgName(pkg)){ throw Report.projectBadPackageName(u, candidates.getFirst()); }
     if (List.of("base", "rank").contains(pkg)){ throw Report.projectReservedPackageName(u, candidates.getFirst()); }
     return Optional.of(pkg);
-  }
-}
-@SuppressWarnings("serial") final class WouldCompile extends RuntimeException{}
-record NoCompile(Optional<Path> baseCachePath) implements Coordinator{
-  @Override public List<Literal> frontend(String pkgName, List<Ref> files, SourceOracle oracle, OtherPackages other, Map<String,String> vres, CapabilityEnvironment capabilities){ throw new WouldCompile(); }
-  @Override public Function<TName,String> names(String pkgName, List<Ref> files, SourceOracle oracle, OtherPackages other, Map<String,String> vres){ throw new WouldCompile(); }
-  @Override public void backend(String pkgName, List<Literal> core, SourceOracle oracle, OtherPackages other, CapabilityEnvironment capabilities){ throw new WouldCompile(); }
-}
-record NoCommit(Path rootDir) implements OutputOracle{
-  @Override public long commitMap(Map<String,Map<String,String>> map, long minExclusiveMillis){
-    if (OutputHelper.mapFromJson(mapPath()).filter(map::equals).isEmpty()){ throw new WouldCompile(); }
-    return mapStamp();
   }
 }
