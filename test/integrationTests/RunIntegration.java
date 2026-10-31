@@ -1305,73 +1305,25 @@ REAL ASSET CONTENT
     utils.Err.strCmp("[###]was not recognized by the compiler as auto-imported[###]", out);
     utils.Err.strCmp("[###]REAL ASSET CONTENT[###]", out);
   }
-  static Path inputProject(Path tmp){
-    var root= tmp.resolve("root");
-    UserError.root = root;
-    FsDsl.materialize(root, """
-_col/_rank_app.fear
-iii
-use base.Main as Main;
-use base.Debug as Debug;
-Recover: base.BadStrUnitRecover { reason, byteOffset, byteLength, rejectedValue -> "?" }
-First: Main{s -> base.Block#
-  .let in= {s.inputCursor}
-  .do{Debug#(in#.isSome)}
-  .do{Debug#(in#.match{.some n -> n.label+": "+(n.readStrUtf8 Recover); .empty -> "none"})}
-  .return{Debug#(in.next#.isSome)}
-  }
-""");
-    return root;
-  }
-  @Test void theOpenedFileIsTheFirstInputFile(@TempDir Path tmp) throws InterruptedException{
-    var root= inputProject(tmp);
-    var file= tmp.resolve("not"+(Fs.isWindows() ? "é" : "\t")+"s.txt");
+  void openedFileOk(String name, Path folder){
+    var root= folder.resolve("testOpenedFile");
+    Fs.copyTree(freshIntegrationRoot("testOpenedFile"), root);
+    var pub= folder.resolve("pub");
+    Fs.writeUtf8(pub.resolve("data.fearless"), "");
+    Fs.of(() -> Fs.write(pub.resolve("cut8.bin"), new byte[]{'a', (byte)0xE2, (byte)0x82}));
+    Fs.of(() -> Fs.write(pub.resolve("cut16.bin"), new byte[]{'a', 0, 0x3D, (byte)0xD8}));
+    var file= folder.resolve("not"+(Fs.isWindows() ? "é" : "\t")+"s.txt");
     Fs.writeUtf8(file, "caf\u00e9 time");
-    utils.Err.strCmp("True\nnot?s.txt: caf? time\nFalse\n", main(root, List.of("-DfearlessInput.file="+PathClassLoader.argOf(file))));
+    unitTestsOk(name, root, List.of("-DfearlessDataRead.open.Pub="+PathClassLoader.argOf(pub), "-DfearlessInput.file="+PathClassLoader.argOf(file)));
   }
-  @Test void aProjectInAFolderWhoseNameIsNotUtf8CompilesAndRuns(@TempDir Path tmp){
-    var odd= Fs.isLinux() ? Path.of(URI.create(tmp.toUri()+"caf%E9")) : tmp.resolve("caf\u00e9");
-    var root= inputProject(odd);
-    var file= odd.resolve("in.txt");
-    Fs.writeUtf8(file, "caf\u00e9 time");
-    utils.Err.strCmp("True\nin.txt: caf? time\nFalse\n", main(root, List.of("-DfearlessInput.file="+PathClassLoader.argOf(file))));
-  }
+  @Test void testOpenedFile(@TempDir Path tmp){ openedFileOk("testOpenedFile", tmp); }
+  @Test void aProjectInAFolderWhoseNameIsNotUtf8CompilesAndRuns(@TempDir Path tmp){ openedFileOk("testOpenedFileNotUtf8", Fs.isLinux() ? Path.of(URI.create(tmp.toUri()+"caf%E9")) : tmp.resolve("caf\u00e9")); }
+  @Test void testNoOpenedFile(){ testOk("testNoOpenedFile"); }
   @Test void aProjectOfSeveralPackagesInAFolderWhoseNameIsNotUtf8PassesItsTests(@TempDir Path tmp){
     var odd= Fs.isLinux() ? Path.of(URI.create(tmp.toUri()+"caf%E9")) : tmp.resolve("caf\u00e9");
     var root= odd.resolve("testAssets");
     Fs.copyTree(freshIntegrationRoot("testAssets"), root);
     unitTestsOk("testAssetsNotUtf8", root, List.of());
-  }
-  String cutTextRun(Path tmp, String read, byte[] bytes) throws IOException{
-    var root= tmp.resolve("root");
-    UserError.root = root;
-    FsDsl.materialize(root, """
-_col/_rank_app.fear
-iii
-use base.Main as Main;
-use base.Debug as Debug;
-Name: base.F[base.BadTextReason,base.Str]{ ::.match{
-  .malformedEncoding -> "malformedEncoding";
-  .truncatedEncoding -> "truncatedEncoding";
-  .notScalar -> "notScalar";
-  .notInStr -> "notInStr";
-  }}
-Show: base.BadStrUnitRecover { reason, byteOffset, byteLength, rejectedValue ->
-  "["+(Name#reason)+":"+byteOffset+":"+byteLength+":"+rejectedValue+"]"
-  }
-Cut: Main{s -> Debug#(s.inputCursor#.match{.some n -> n.READ Show; .empty -> "none"})}
-""".replace("READ", read));
-    var file= Fs.write(tmp.resolve("cut.bin"), bytes);
-    return main(root, List.of("-DfearlessInput.file="+PathClassLoader.argOf(file)));
-  }
-  @Test void aUtf8SequenceCutByTheEndOfTheBytesIsTruncatedEncoding(@TempDir Path tmp) throws IOException{
-    utils.Err.strCmp("a[truncatedEncoding:1:2:226]\n", cutTextRun(tmp, "readStrUtf8", new byte[]{'a', (byte)0xE2, (byte)0x82}));
-  }
-  @Test void aUtf16SurrogatePairCutByTheEndOfTheBytesIsTruncatedEncoding(@TempDir Path tmp) throws IOException{
-    utils.Err.strCmp("a[truncatedEncoding:2:2:55357]\n", cutTextRun(tmp, "readStrUtf16Le", new byte[]{'a', 0, 0x3D, (byte)0xD8}));
-  }
-  @Test void withNoOpenedFileTheInputFilesStartEmpty(@TempDir Path tmp) throws InterruptedException{
-    utils.Err.strCmp("False\nnone\nFalse\n", main(inputProject(tmp), List.of()));
   }
   @Test void anInputFileThatCanNotBeReadIsANonDeterministicError(@TempDir Path tmp){
     utils.Err.strCmp("""
