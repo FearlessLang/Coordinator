@@ -464,4 +464,26 @@ final class RecompilationCacheTest{
     assertEquals(2, c.calls("a"));
     assertEquals(1, c.calls("b"));
   }
+  private static Literal anonymous(String name){
+    return new Literal(RC.imm, new TName(name, 0, Pos.unknown), List.of(), List.of(), "this", List.of(), Src.synthetic, true);
+  }
+  @Test void anAnonymousLiteralAddedToALowerPackageMustNotRecompileThePackageAbove(@TempDir Path tmp){
+    var start= System.currentTimeMillis();
+    OutputOracle out= () -> tmp;
+    var stub= new ScriptedCoordinator(tmp);
+    stub.fixedOutput("a", List.of(literal("A1", RC.imm)));
+    stub.fixedOutput("c", List.of(literal("C1", RC.imm)));
+    var pkgsA= new LinkedHashMap<String,List<Ref>>();
+    pkgsA.put("a", refs("a", start - margin));
+    var pkgsC= new LinkedHashMap<String,List<Ref>>();
+    pkgsC.put("c", refs("c", start - margin));
+    var top= new MiddleLayer(stub, new MiddleLayer(stub, fixedBase(start - margin), pkgsA), pkgsC);
+    top.compile(emptySrc, out);
+    var afterBuild1= System.currentTimeMillis();
+    pkgsA.put("a", refs("a", afterBuild1 + touchGap));
+    stub.fixedOutput("a", List.of(literal("A1", RC.imm), anonymous("_AA1")));
+    top.compile(emptySrc, out);
+    assertEquals(2, stub.calls("a"));
+    assertEquals(1, stub.calls("c"));
+  }
 }
