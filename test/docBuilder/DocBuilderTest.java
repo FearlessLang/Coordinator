@@ -386,11 +386,11 @@ Foo: Bar {
     var bySelector= (DocLink.Ambiguous)resolver.resolve(new DocRef.MethodName(Optional.empty(), ".bar", OptionalInt.empty()), Scope.of(namedType("pkg.Z", List.of(), List.of()))).get();
     assertEquals(sorted, bySelector.options().stream().map(c -> c.owner().s()).toList());
   }
-  @Test void anAnonymousLiteralOfAnotherPackageIsNeverACandidate(){
-    var name= new TName("other.Foo", 0, Pos.unknown);
-    var anonymous= new Literal(RC.imm, name, List.of(), List.of(), "this", List.of(namedMethod(".bar", name)), freshSrc(), true);
+  @Test void aPrivateTypeOfAnotherPackageIsNeverACandidate(){
+    var name= new TName("other._AFoo", 0, Pos.unknown);
+    var anonymous= new Literal(RC.imm, name, List.of(), List.of(), "this", List.of(namedMethod(".bar", name)), freshSrc(), false);
     var resolver= new DocResolver("pkg", List.of(), OtherPackages.start(Map.of(), List.of(anonymous), 0L));
-    assertTrue(resolver.resolveType(new DocRef.TypeName(Optional.empty(), "Foo", OptionalInt.empty())).isEmpty());
+    assertTrue(resolver.resolveType(new DocRef.TypeName(Optional.empty(), "_AFoo", OptionalInt.empty())).isEmpty());
     assertTrue(resolver.resolve(new DocRef.MethodName(Optional.empty(), ".bar", OptionalInt.empty()), Scope.of(namedType("pkg.Z", List.of(), List.of()))).isEmpty());
   }
   @Test void aQualifiedMethodOnAForeignTypeResolvesThroughAnInheritedSupertypeMethod(){

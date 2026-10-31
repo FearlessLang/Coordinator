@@ -1027,6 +1027,29 @@ Parent: Main{ sys -> Block#
     utils.Err.strCmp("[###] parent before\n[###] child\n[###] parent after\n", parent);
     assertEquals(List.of(), logs.stream().flatMap(String::lines).filter(l -> l.endsWith(" interrupted here")).toList());
   }
+  @Test void aPackageGetsTheSameDocsWhetherThePackageBelowItWasCompiledInTheSameBuildOrNot(@TempDir Path tmp) throws Exception{
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_lib/_rank_core.fear
+iii
+use base.Nat as Nat;
+Zorker:{.zork: Nat}
+Make:{.make: Zorker -> {5}}
+jjj
+_app/_rank_app.fear
+iii
+use base.Main as Main;
+///Calls `.zork`.
+App:Main{s->base.Debug#(`app`)}
+""");
+    utils.Err.strCmp("app\n", main(root, List.of()));
+    var html= Coordinator.genJava(root.resolve(Coordinator.outDir)).resolve("app.html");
+    var clean= Fs.readUtf8(html);
+    editAndTouch(root.resolve("_app", "_rank_app.fear"), "Calls", "Calls");
+    utils.Err.strCmp("app\n", main(root, List.of()));
+    assertEquals(clean, Fs.readUtf8(html));
+  }
   @Test void anUncaughtErrorShowsAnInfoThatIsNotAMsg(@TempDir Path tmp) throws InterruptedException{
     var root= tmp.resolve("root");
     UserError.root = root;

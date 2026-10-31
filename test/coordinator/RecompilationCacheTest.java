@@ -9,6 +9,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -463,5 +464,31 @@ final class RecompilationCacheTest{
     c.main(project, c.sourceOracle(stdLib));
     assertEquals(2, c.calls("a"));
     assertEquals(1, c.calls("b"));
+  }
+  private static Literal anonymous(String name){
+    return new Literal(RC.imm, new TName(name, 0, Pos.unknown), List.of(), List.of(), "this", List.of(), Src.synthetic, true);
+  }
+  private static Map<String,Boolean> anonymity(OtherPackages other){
+    return other.dom().stream().collect(Collectors.toMap(TName::s, n -> other.__of(n).infName()));
+  }
+  @Test void aLowerPackageLooksTheSameToThePackageAboveWhetherItWasCompiledInThisBuildOrReadBackFromItsApi(@TempDir Path tmp){
+    var start= System.currentTimeMillis();
+    OutputOracle out= () -> tmp;
+    var stub= new ScriptedCoordinator(tmp);
+    stub.fixedOutput("a", List.of(literal("A1", RC.imm), anonymous("_AA1")));
+    stub.fixedOutput("c", List.of(literal("C1", RC.imm)));
+    var pkgsA= new LinkedHashMap<String,List<Ref>>();
+    pkgsA.put("a", refs("a", start - margin));
+    var pkgsC= new LinkedHashMap<String,List<Ref>>();
+    pkgsC.put("c", refs("c", start - margin));
+    var top= new MiddleLayer(stub, new MiddleLayer(stub, fixedBase(start - margin), pkgsA), pkgsC);
+    top.compile(emptySrc, out);
+    var compiled= anonymity(stub.lastOtherSeen.get("c"));
+    var afterBuild1= System.currentTimeMillis();
+    pkgsC.put("c", refs("c", afterBuild1 + touchGap));
+    top.compile(emptySrc, out);
+    assertEquals(1, stub.calls("a"));
+    assertEquals(2, stub.calls("c"));
+    assertEquals(compiled, anonymity(stub.lastOtherSeen.get("c")));
   }
 }

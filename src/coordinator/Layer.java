@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 
-import core.AllLs;
 import core.OtherPackages;
 import realSourceOracle.SourceOracleWithAutoload;
 import tools.Fs;
@@ -38,8 +37,8 @@ record MiddleLayer(Coordinator coordinator, Layer next, LinkedHashMap<String,Lis
       var core= coordinator.frontend(pkg, rich.sources(files), rich.oracle(), other, vres, capabilities);
       var mains= MainsInfo.of(core, src, stLib());
       coordinator.backend(pkg, core, rich.oracle(), other, capabilities);
-      var newStamp= out.commit(pkg, core, mains, files, next.pkgNames(), maxIn); // newStamp will be the old api file mtime if there was no reason to commit.
-      nextOther = nextOther.mergeWith(AllLs.of(core), Math.max(nextOther.stamp(), newStamp));
+      out.commit(pkg, core, mains, files, next.pkgNames(), maxIn);
+      nextOther = out.addCachedPkgApi(nextOther, pkg);
     }
     return nextOther;
   }
@@ -56,8 +55,8 @@ record BaseLayer(Coordinator coordinator, Map<String,Map<String,String>> map, Ma
     var capabilities= new CapabilityEnvironment(rich.autoloadedAssets());
     var core= coordinator.frontend(pkgName, rich.sources(stLib.allFiles()), rich.oracle(), other, Map.of(), capabilities);
     coordinator.backend(pkgName, core, rich.oracle(), other, capabilities);
-    var newStamp= out.commit(pkgName, core, new MainsInfo(Map.of(), MainsInfo.attenuators(core), List.of(), List.of()), stLib.allFiles(), List.of(), maxIn);
-    return OtherPackages.start(map, ranks, AllLs.of(core).values(), Math.max(baseStamp, newStamp));
+    out.commit(pkgName, core, new MainsInfo(Map.of(), MainsInfo.attenuators(core), List.of(), List.of()), stLib.allFiles(), List.of(), maxIn);
+    return out.startCachedPkgApi(pkgName, map, ranks, Math.max(baseStamp, out.pkgApiStamp(pkgName)));
   }
   private OtherPackages deployedBaseApi(Path cacheDir, String pkgName){
     var json= cacheDir.resolve(pkgName+".json");
