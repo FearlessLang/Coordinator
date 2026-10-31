@@ -11,7 +11,6 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import apiJson.ApiJson;
-import core.AllLs;
 import core.E.Literal;
 import core.M;
 import core.OtherPackages;
@@ -94,7 +93,7 @@ final class OutputHelper{
   }
   static boolean consistent(Map<TName,Literal> map, List<Literal> core){
     //Not filtered to public-only: privates can still be mentioned in meth parameters and ret types.
-    return api(map.values()).equals(api(AllLs.of(core).values()));
+    return api(map.values()).equals(api(ApiJson.api(core).values()));
   }
   private static Map<TName,List<?>> api(Collection<Literal> ls){
     return ls.stream().collect(Collectors.toMap(Literal::name, l -> List.of(l.rc(), l.thisName(), l.bs(), l.cs(), l.ms().stream().map(M::sig).toList())));

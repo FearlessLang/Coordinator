@@ -62,7 +62,7 @@ record DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other){
       .filter(e -> e.getValue().split(" ")[0].equals(pkg)).map(Map.Entry::getKey)).orElse(pkg);
   }
   private Stream<TName> foreign(){
-    return other.dom().stream().filter(n -> !other.__of(n).infName()).sorted(Comparator.comparing(TName::s).thenComparing(TName::arity));
+    return other.dom().stream().sorted(Comparator.comparing(TName::s).thenComparing(TName::arity));
   }
   private List<TName> matching(Stream<TName> names, DocRef.TypeName ref){
     return names

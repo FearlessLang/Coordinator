@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 
-import core.AllLs;
+import apiJson.ApiJson;
 import core.OtherPackages;
 import realSourceOracle.SourceOracleWithAutoload;
 import tools.Fs;
@@ -39,7 +39,7 @@ record MiddleLayer(Coordinator coordinator, Layer next, LinkedHashMap<String,Lis
       var mains= MainsInfo.of(core, src, stLib());
       coordinator.backend(pkg, core, rich.oracle(), other, capabilities);
       var newStamp= out.commit(pkg, core, mains, files, next.pkgNames(), maxIn); // newStamp will be the old api file mtime if there was no reason to commit.
-      nextOther = nextOther.mergeWith(AllLs.of(core), Math.max(nextOther.stamp(), newStamp));
+      nextOther = nextOther.mergeWith(ApiJson.api(core), Math.max(nextOther.stamp(), newStamp));
     }
     return nextOther;
   }
@@ -57,7 +57,7 @@ record BaseLayer(Coordinator coordinator, Map<String,Map<String,String>> map, Ma
     var core= coordinator.frontend(pkgName, rich.sources(stLib.allFiles()), rich.oracle(), other, Map.of(), capabilities);
     coordinator.backend(pkgName, core, rich.oracle(), other, capabilities);
     var newStamp= out.commit(pkgName, core, new MainsInfo(Map.of(), MainsInfo.attenuators(core), List.of(), List.of()), stLib.allFiles(), List.of(), maxIn);
-    return OtherPackages.start(map, ranks, AllLs.of(core).values(), Math.max(baseStamp, newStamp));
+    return OtherPackages.start(map, ranks, ApiJson.api(core), Math.max(baseStamp, newStamp));
   }
   private OtherPackages deployedBaseApi(Path cacheDir, String pkgName){
     var json= cacheDir.resolve(pkgName+".json");

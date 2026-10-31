@@ -1,6 +1,8 @@
 package apiJson;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import core.AllLs;
@@ -8,11 +10,13 @@ import core.B;
 import core.E.Literal;
 import core.Sig;
 import core.T;
+import core.TName;
 import utils.Join;
 
 public final class ApiJson{
   //Note: we do not filter _names, because they can still be needed since they can appear as meth signatures or subtypes and type system need to reason on them, even if cannot be used by name outside pkg
-  public static String toJson(List<Literal> core){ return arr(AllLs.of(core).values().stream().map(ApiJson::typeJ)); }
+  public static String toJson(List<Literal> core){ return arr(api(core).values().stream().map(ApiJson::typeJ)); }
+  public static Map<TName,Literal> api(List<Literal> core){ return AllLs.of(core).entrySet().stream().filter(e -> !e.getValue().infName()).collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue)); }
   static String arr(Stream<String> es){ return Join.of(es, "[", ",", "]", "[]"); }
   static String typeJ(Literal l){ return arr(Stream.of(q(l.name().s()), q(l.rc().name()), bsJ(l.bs()), arr(l.cs().stream().map(ApiJson::cJ)), arr(l.ms().stream().map(m -> mJ(m.sig()))), q(l.thisName()))); }
   static String bsJ(List<B> bs){ return arr(bs.stream().map(ApiJson::bJ)); }
