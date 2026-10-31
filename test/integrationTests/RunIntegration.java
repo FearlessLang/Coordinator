@@ -119,7 +119,7 @@ final class RunIntegration{
     var fails= out.lines().filter(l -> l.startsWith("Test failure ")).toList();
     assertTrue(fails.isEmpty(), () -> Join.of(fails, "Fearless unit tests failed in "+name+":\n", "\n", ""));
     var lines= out.lines().toList();
-    var mains= coordinator(root).mains(root, stLib).orElseThrow().mains().size();
+    var mains= coordinator(root).mains(root).orElseThrow().mains().size();
     var allCompleted= lines.stream().filter(marker::equals).count() == mains && lines.getLast().equals(marker);
     assertTrue(allCompleted, () -> "Not all the "+mains+" mains of "+name+" completed: a main that completes prints the line \""+marker+"\", and the output must end with that line. Output:\n"+out);
   }
@@ -777,7 +777,7 @@ Again:Main{s->base.Debug#("again")}
   "dataEdit": []
 }
 """, manifests(root));
-    assertEquals(Map.of("col.Again", "_col/more.fear", "col.Hello", "_col/_rank_app.fear"), files(coordinator(root).mains(root, stLib).orElseThrow()));
+    assertEquals(Map.of("col.Again", "_col/more.fear", "col.Hello", "_col/_rank_app.fear"), files(coordinator(root).mains(root).orElseThrow()));
   }
   @Test void theConcreteDataReadAndDataEditTypesAreListed(@TempDir Path tmp){
     var root= tmp.resolve("root");
@@ -815,7 +815,7 @@ Top:Main{s->base.Debug#(`top`)}
 MkFree:{.mk:Main->Free:Main,CaptureFree{s->base.Debug#(`free`)}}
 """);
     utils.Err.strCmp("free\ntop\n", coordinator(root).main(root, stLib));
-    assertEquals(Map.of("col.Free", "_col/_rank_app.fear", "col.Top", "_col/_rank_app.fear"), files(coordinator(root).mains(root, stLib).orElseThrow()));
+    assertEquals(Map.of("col.Free", "_col/_rank_app.fear", "col.Top", "_col/_rank_app.fear"), files(coordinator(root).mains(root).orElseThrow()));
   }
   @Test void aMainWithGenericParametersIsRefused(@TempDir Path tmp){
     var root= tmp.resolve("root");
@@ -2332,10 +2332,10 @@ Foo:Main, OpenWith[IconsFoo,"foo"]{s->base.Debug#(`foo`)}
     assertEquals(Map.of("col", true), Coordinator.pkgsBuilt(root, baseCache));
     Fs.delete(root.resolve(Coordinator.outDir).resolve("col_manifest.info"));
     assertEquals(Map.of("col", false), Coordinator.pkgsBuilt(root, baseCache));
-    assertEquals(Optional.empty(), coordinator(root).mains(root, stLib));
+    assertEquals(Optional.empty(), coordinator(root).mains(root));
     coordinator(root).compile(root, stLib);
     utils.Err.strCmp(text, manifests(root));
-    assertEquals(Map.of("col.Foo", "_col/_rank_app.fear"), files(coordinator(root).mains(root, stLib).orElseThrow()));
+    assertEquals(Map.of("col.Foo", "_col/_rank_app.fear"), files(coordinator(root).mains(root).orElseThrow()));
   }
   @Test void everyPackageListsItsMainsAndARemovedPackageLosesItsManifest(@TempDir Path tmp) throws Exception{
     var root= claimsProject(tmp, """
@@ -2346,7 +2346,7 @@ iii
 Lib:base.Main, base.OpenWith[base.IconsConflict,"fear"]{s->base.Debug#(`lib`)}
 """);
     coordinator(root).compile(root, stLib);
-    assertEquals(Map.of("col.Foo", "_col/_rank_app.fear", "lib.Lib", "_lib/_rank_core.fear"), files(coordinator(root).mains(root, stLib).orElseThrow()));
+    assertEquals(Map.of("col.Foo", "_col/_rank_app.fear", "lib.Lib", "_lib/_rank_core.fear"), files(coordinator(root).mains(root).orElseThrow()));
     Fs.rmTree(root.resolve("_col"));
     assertEquals(Map.of("lib", true), Coordinator.pkgsBuilt(root, baseCache));
     utils.Err.strCmp("lib\n", coordinator(root).main(root, stLib));
@@ -2388,7 +2388,7 @@ Foo:Main{s->base.Debug#(`foo`)}
     var old= Fs.getLastModifiedTime(baseApi);
     try{
       Fs.setLastModifiedTime(baseApi, FileTime.fromMillis(System.currentTimeMillis()+1000));
-      assertEquals(Optional.empty(), coordinator(root).mains(root, stLib));
+      assertEquals(Optional.empty(), coordinator(root).mains(root));
       assertEquals(Map.of("col", false), Coordinator.pkgsBuilt(root, baseCache));
     }
     finally{ Fs.setLastModifiedTime(baseApi, old); }
@@ -2588,7 +2588,7 @@ Lib:base.Main{s->base.Debug#(`lib`)}
 """);
     coordinator(root).compile(root, stLib);
     Fs.rmTree(root.resolve("_col"));
-    assertEquals(Map.of("lib.Lib", "_lib/_rank_core.fear"), files(coordinator(root).mains(root, stLib).orElseThrow()));
+    assertEquals(Map.of("lib.Lib", "_lib/_rank_core.fear"), files(coordinator(root).mains(root).orElseThrow()));
   }
   @Test void aDeletedPackageJarIsBuiltAgain(@TempDir Path tmp) throws Exception{
     var root= tmp.resolve("root");
@@ -4416,7 +4416,7 @@ map bb as _base in _app;
 use base.Str as Str;
 App:bb.Main{s->bb.Debug#("hi")}
 """);
-    assertEquals(Optional.empty(), coordinator(root).mains(root, stLib));
+    assertEquals(Optional.empty(), coordinator(root).mains(root));
     var ex= assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib));
     utils.Err.strCmp("""
 In file: fear:/_app/_rank_app.fear
