@@ -8,16 +8,25 @@ import java.nio.file.attribute.FileTime;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import apiJson.ApiJson;
 import core.E.Literal;
+import core.M;
+import core.MName;
 import core.OtherPackages;
 import core.RC;
+import core.Sig;
 import core.Src;
+import core.T;
 import core.TName;
+import core.TSpan;
 import tools.Fs;
 import tools.SourceOracle;
 import tools.SourceOracle.Ref;
@@ -464,4 +473,58 @@ final class RecompilationCacheTest{
     assertEquals(2, c.calls("a"));
     assertEquals(1, c.calls("b"));
   }
-}
+  private static Literal anonymous(String name){
+    return new Literal(RC.imm, new TName(name, 0, Pos.unknown), List.of(), List.of(), "this", List.of(), Src.synthetic, true);
+  }
+  @Test void anAnonymousLiteralAddedToALowerPackageMustNotRecompileThePackageAbove(@TempDir Path tmp){
+    var start= System.currentTimeMillis();
+    OutputOracle out= () -> tmp;
+    var stub= new ScriptedCoordinator(tmp);
+    stub.fixedOutput("a", List.of(literal("A1", RC.imm)));
+    stub.fixedOutput("c", List.of(literal("C1", RC.imm)));
+    var pkgsA= new LinkedHashMap<String,List<Ref>>();
+    pkgsA.put("a", refs("a", start - margin));
+    var pkgsC= new LinkedHashMap<String,List<Ref>>();
+    pkgsC.put("c", refs("c", start - margin));
+    var top= new MiddleLayer(stub, new MiddleLayer(stub, fixedBase(start - margin), pkgsA), pkgsC);
+    top.compile(emptySrc, out);
+    var afterBuild1= System.currentTimeMillis();
+    pkgsA.put("a", refs("a", afterBuild1 + touchGap));
+    stub.fixedOutput("a", List.of(literal("A1", RC.imm), anonymous("_AA1")));
+    top.compile(emptySrc, out);
+    assertEquals(2, stub.calls("a"));
+    assertEquals(1, stub.calls("c"));
+  }
+  private static Map<String,Boolean> anonymity(OtherPackages other){
+    return other.dom().stream().collect(Collectors.toMap(TName::s, n -> other.__of(n).infName()));
+  }
+  @Test void aLowerPackageLooksTheSameToThePackageAboveWhetherItWasCompiledInThisBuildOrReadBackFromItsApi(@TempDir Path tmp){
+    var start= System.currentTimeMillis();
+    OutputOracle out= () -> tmp;
+    var stub= new ScriptedCoordinator(tmp);
+    stub.fixedOutput("a", List.of(literal("A1", RC.imm), anonymous("_AA1")));
+    stub.fixedOutput("c", List.of(literal("C1", RC.imm)));
+    var pkgsA= new LinkedHashMap<String,List<Ref>>();
+    pkgsA.put("a", refs("a", start - margin));
+    var pkgsC= new LinkedHashMap<String,List<Ref>>();
+    pkgsC.put("c", refs("c", start - margin));
+    var top= new MiddleLayer(stub, new MiddleLayer(stub, fixedBase(start - margin), pkgsA), pkgsC);
+    top.compile(emptySrc, out);
+    var compiled= anonymity(stub.lastOtherSeen.get("c"));
+    var afterBuild1= System.currentTimeMillis();
+    pkgsC.put("c", refs("c", afterBuild1 + touchGap));
+    top.compile(emptySrc, out);
+    assertEquals(1, stub.calls("a"));
+    assertEquals(2, stub.calls("c"));
+    assertEquals(compiled, anonymity(stub.lastOtherSeen.get("c")));
+  }
+  @Test void theApiKeepsThePublicTypesAndThePrivateTypesTheyReach(){
+    var span= TSpan.fromPos(Pos.unknown, 1);
+    var a= new TName("a.A", 0, Pos.unknown);
+    var q= new TName("a._Q", 0, Pos.unknown);
+    var sig= new Sig(RC.imm, new MName(".m", 0), List.of(), List.of(), new T.RCC(RC.imm, new T.C(q, List.of()), span), a, false, span);
+    var pubA= new Literal(RC.imm, a, List.of(), List.of(new T.C(new TName("a._P", 0, Pos.unknown), List.of())), "this", List.of(new M(sig, List.of(), Optional.empty())), Src.synthetic, false);
+    var privQ= new Literal(RC.imm, q, List.of(), List.of(new T.C(new TName("a._S", 0, Pos.unknown), List.of())), "this", List.of(), Src.synthetic, false);
+    var api= ApiJson.api(List.of(pubA, literal("a._P", RC.imm), privQ, literal("a._S", RC.imm), literal("a._R", RC.imm), anonymous("a._AA1")));
+    assertEquals(Set.of("a.A", "a._P", "a._Q", "a._S"), api.keySet().stream().map(TName::s).collect(Collectors.toSet()));
+  }}
