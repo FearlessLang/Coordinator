@@ -18,7 +18,6 @@ import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.UncheckedIOException;
 import java.math.BigInteger;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -2790,7 +2789,7 @@ Hello:Main{s->base.Debug#("from z")}
     return out.toString();
   }
   @Test void aDeepRecursionOverflowsTheStackOfMain() throws InterruptedException{
-    utils.Err.strCmp("[###]java.lang.StackOverflowError[###]", runRecursionMain("rec.NaiveSum"));
+    utils.Err.strCmp("[###]The program ran out of stack space[###]", runRecursionMain("rec.NaiveSum"));
   }
   @Test void runRecursionOnEveryStepIsDeepAndFast() throws InterruptedException{
     var start= System.nanoTime();
@@ -2799,7 +2798,7 @@ Hello:Main{s->base.Debug#("from z")}
     assertTrue(millis < 20_000, "one million steps took "+millis+"ms");
   }
   @Test void aFamilyNestingTooManyCallsOnOneThreadOverflows() throws InterruptedException{
-    utils.Err.strCmp("[###]java.lang.StackOverflowError[###]", runRecursionMain("rec.CrowdedSum"));
+    utils.Err.strCmp("[###]The program ran out of stack space[###]", runRecursionMain("rec.CrowdedSum"));
   }
   @Test void aFamilyWithTheSameStackAndALowerDepthFits() throws InterruptedException{
     utils.Err.strCmp("5000050000", runRecursionMain("rec.SpreadSum"));
@@ -3029,7 +3028,7 @@ App:Main{s -> Debug#(Rec#1_000_000)}
 """);
     var out= coordinator(root).main(root, stLib);
     utils.Err.strCmp("""
-[###]StackOverflowError[###]
+[###]The program ran out of stack space[###]
 imm Rec#(_) error line: 4 in file _p/_rank_app.fear
 [###]""", out);
     assertEquals(List.of(), out.lines().filter(l -> l.startsWith("\tat ")).limit(3).toList());
@@ -3061,7 +3060,7 @@ b
     if (!recursionCompiled){ compileOk("runRecursion"); recursionCompiled = true; }
     var out= new StringBuilder();
     assertEquals(1, Coordinator.startMain(root, ResolveResource.stLibPath, "rec.NaiveSum", Optional.empty(), Map.of(), Map.of(), List.of(), List.of(), coordinator(root).sharedClasspath(), out::append).await(), out::toString);
-    utils.Err.strCmp("[###]java.lang.StackOverflowError[###]", out.toString());
+    utils.Err.strCmp("[###]The program ran out of stack space[###]", out.toString());
   }
   @Test void aMapMentionsAPackageThatDoesNotExist(@TempDir Path tmp) throws InterruptedException{
     var root= tmp.resolve("root");
@@ -4802,14 +4801,6 @@ Hello:Main{s->base.Debug#("hi")}
     ImageIO.write(img, "png", bout);
     return bout.toByteArray();
   }
-  static void answerOnce(ServerSocket server, String response){
-    try (var s= server.accept()){
-      var in= new BufferedReader(new InputStreamReader(s.getInputStream(), UTF_8));
-      while (!in.readLine().isEmpty()){}
-      s.getOutputStream().write(response.getBytes(UTF_8));
-    }
-    catch (IOException e){ throw new UncheckedIOException(e); }
-  }
   @Test void testDownloads(@TempDir Path tmp) throws IOException{
     var png= onePixelPng();
     var accent= ("caf"+new String(Character.toChars(0xE9))).getBytes(UTF_8);
@@ -4832,12 +4823,10 @@ Hello:Main{s->base.Debug#("hi")}
         default -> reply(ex, 404, "nope".getBytes(UTF_8));
       }
     });
-    try (var raw= new ServerSocket(0, 1, InetAddress.getLoopbackAddress())){
-      Thread.startVirtualThread(() -> answerOnce(raw, "HTTP/1.1 200 OK\r\nContent-Length: abc\r\nConnection: close\r\n\r\nhello"));
+    try{
       var pub= tmp.resolve("pub");
       Fs.writeUtf8(pub.resolve("data.fearless"), "");
       Fs.writeUtf8(pub.resolve("base.txt"), url(server, ""));
-      Fs.writeUtf8(pub.resolve("len.txt"), "http://127.0.0.1:"+raw.getLocalPort()+"/len");
       unitTestsOk("testDownloads", freshIntegrationRoot("testDownloads"), List.of("-DfearlessDataRead.dl.Pub="+PathClassLoader.argOf(pub)));
     }
     finally{ server.stop(0); }
