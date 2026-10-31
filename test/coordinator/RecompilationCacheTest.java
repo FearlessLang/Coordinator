@@ -8,17 +8,25 @@ import java.nio.file.attribute.FileTime;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import apiJson.ApiJson;
 import core.E.Literal;
+import core.M;
+import core.MName;
 import core.OtherPackages;
 import core.RC;
+import core.Sig;
 import core.Src;
+import core.T;
 import core.TName;
+import core.TSpan;
 import tools.Fs;
 import tools.SourceOracle;
 import tools.SourceOracle.Ref;
@@ -510,4 +518,13 @@ final class RecompilationCacheTest{
     assertEquals(2, stub.calls("c"));
     assertEquals(compiled, anonymity(stub.lastOtherSeen.get("c")));
   }
-}
+  @Test void theApiKeepsThePublicTypesAndThePrivateTypesTheyReach(){
+    var span= TSpan.fromPos(Pos.unknown, 1);
+    var a= new TName("a.A", 0, Pos.unknown);
+    var q= new TName("a._Q", 0, Pos.unknown);
+    var sig= new Sig(RC.imm, new MName(".m", 0), List.of(), List.of(), new T.RCC(RC.imm, new T.C(q, List.of()), span), a, false, span);
+    var pubA= new Literal(RC.imm, a, List.of(), List.of(new T.C(new TName("a._P", 0, Pos.unknown), List.of())), "this", List.of(new M(sig, List.of(), Optional.empty())), Src.synthetic, false);
+    var privQ= new Literal(RC.imm, q, List.of(), List.of(new T.C(new TName("a._S", 0, Pos.unknown), List.of())), "this", List.of(), Src.synthetic, false);
+    var api= ApiJson.api(List.of(pubA, literal("a._P", RC.imm), privQ, literal("a._S", RC.imm), literal("a._R", RC.imm), anonymous("a._AA1")));
+    assertEquals(Set.of("a.A", "a._P", "a._Q", "a._S"), api.keySet().stream().map(TName::s).collect(Collectors.toSet()));
+  }}
