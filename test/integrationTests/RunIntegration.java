@@ -1,5 +1,6 @@
 package integrationTests;
 
+import static java.nio.charset.StandardCharsets.ISO_8859_1;
 import static java.nio.charset.StandardCharsets.UTF_16LE;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
@@ -34,10 +35,13 @@ import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Random;
 import java.util.function.IntBinaryOperator;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 import java.util.zip.CRC32;
 
 import javax.imageio.ImageIO;
@@ -4837,5 +4841,48 @@ Hello:Main{s->base.Debug#("hi")}
       unitTestsOk("testDownloads", freshIntegrationRoot("testDownloads"), List.of("-DfearlessDataRead.dl.Pub="+PathClassLoader.argOf(pub)));
     }
     finally{ server.stop(0); }
+  }
+  static void answerLeaks(ServerSocket server){
+    while (true){
+      try (var s= server.accept()){
+        var in= new BufferedReader(new InputStreamReader(s.getInputStream(), UTF_8));
+        var path= in.readLine().split(" ")[1];
+        while (!in.readLine().isEmpty()){}
+        s.getOutputStream().write(switch (path){
+          case "/bad" -> "hello\r\n\r\n".getBytes(UTF_8);
+          case "/cut" -> "HTTP/1.1 200 OK\r\nContent-Length: 10\r\n\r\nabc".getBytes(UTF_8);
+          default -> "HTTP/1.1 200 OK\r\nContent-Length: abc\r\nConnection: close\r\n\r\nhello".getBytes(UTF_8);
+        });
+      }
+      catch (IOException e){ return; }
+    }
+  }
+  @Test void testJavaLeaks(@TempDir Path tmp) throws IOException{
+    var root= tmp.resolve("testJavaLeaks");
+    Fs.copyTree(freshIntegrationRoot("testJavaLeaks"), root);
+    Fs.writeUtf8(root.resolve(".out", "logs", "_leak"), "not a folder");
+    int refused; try (var free= new ServerSocket(0)){ refused= free.getLocalPort(); }
+    var bytes= new byte[4000];
+    new Random(1).nextBytes(bytes);
+    var cut= new ByteArrayOutputStream();
+    try (var z= new ZipOutputStream(cut)){ z.putNextEntry(new ZipEntry("one.txt")); z.write(bytes); z.closeEntry(); }
+    var latin= new ByteArrayOutputStream();
+    try (var z= new ZipOutputStream(latin, ISO_8859_1)){ z.putNextEntry(new ZipEntry("caf"+(char)0xE9+".txt")); z.write(bytes); z.closeEntry(); }
+    var zips= tmp.resolve("zips");
+    Fs.writeUtf8(zips.resolve("data.fearless"), "");
+    Fs.write(zips.resolve("bad.zip"), "not a zip".getBytes(UTF_8));
+    Fs.write(zips.resolve("cut.zip"), Arrays.copyOf(cut.toByteArray(), 2000));
+    Fs.write(zips.resolve("latin.zip"), latin.toByteArray());
+    try (var server= new ServerSocket(0, 8, InetAddress.getLoopbackAddress())){
+      Thread.startVirtualThread(() -> answerLeaks(server));
+      var pub= tmp.resolve("pub");
+      Fs.writeUtf8(pub.resolve("data.fearless"), "");
+      Fs.writeUtf8(pub.resolve("base.txt"), "http://127.0.0.1:"+server.getLocalPort());
+      Fs.writeUtf8(pub.resolve("refused.txt"), "http://127.0.0.1:"+refused);
+      unitTestsOk("testJavaLeaks", root, List.of(
+        "-DfearlessDataRead.leak.Pub="+PathClassLoader.argOf(pub),
+        "-DfearlessDataRead.leak.Zips="+PathClassLoader.argOf(zips),
+        "-DfearlessManager.launcher="+tmp.resolve("missing_launcher")));
+    }
   }
 }
