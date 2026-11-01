@@ -2924,6 +2924,31 @@ App:Main{s->Debug#(D.x)}
 """);
     utils.Err.strCmp("3\n", coordinator(root).main(root, stLib));
   }
+  @Test void aRemoveIfPredicateCanNotChangeItsEList(@TempDir Path tmp){
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_col/_rank_app.fear
+iii
+use base.Main as Main;
+use base.Nat as Nat;
+Grow:Main{s -> base.Block#
+  .let l= {base.ELists#[Nat](1, 2)}
+  .return{base.Debug#(l.removeIf{e -> base.Block#(l.add e, base.True)}.list.size)}
+  }
+""");
+    var ex= assertThrows(UserError.class, () -> coordinator(root).compile(root, stLib));
+    utils.Err.strCmp("""
+[###]
+005|   .return{base.Debug#(l.removeIf{e -> base.Block#(l.add e, base.True)}.list.size)}
+   |                                  -----------------~^^^^~~~-----------
+
+While inspecting [###]
+This call to method "mut base.EList[_].add(_)" cannot typecheck.
+The receiver (the expression before the method name) has capability "read".
+This call requires a receiver with capability "mut" or "iso".
+[###]""", ex.getMessage());
+  }
   @Test void aTypeCannotImplementTwoCaches(@TempDir Path tmp){
     var root= tmp.resolve("root");
     UserError.root = root;
