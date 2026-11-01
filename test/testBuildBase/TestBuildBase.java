@@ -6,9 +6,11 @@ import static org.junit.jupiter.api.Assertions.fail;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import org.opentest4j.AssertionFailedError;
 
 import coordinator.CapabilityEnvironment;
 import coordinator.Coordinator;
@@ -18,17 +20,19 @@ import core.OtherPackages;
 import naiveBackend.BackendTools;
 import realSourceOracle.SourceOracleWithAutoload;
 import resources.ResolveResource;
+import tools.Fs;
 import tools.SourceOracle;
 import utils.Push;
 
 final class TestBuildBase{
-  final Coordinator c= new Coordinator(){
+  static{ utils.Err.setUp(AssertionFailedError.class, Assertions::assertEquals, Assertions::assertTrue); }
+  static Coordinator coordinator(Path base, Path debugOut){ return new Coordinator(){
     @Override public Path modsPath(){  return ResolveResource.coordinatorJars; }
     @Override public BackendTools backendTools(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, CapabilityEnvironment capabilities){
-      return BackendTools.of(pkgName, oracle, other, core, ResolveResource.stLibDebugOut, baseCachePath(), Optional.of(ResolveResource.stLibPath), ResolveResource.stLibRTPath, capabilities);
+      return BackendTools.of(pkgName, oracle, other, core, debugOut, baseCachePath(), true, ResolveResource.stLibRTPath, capabilities);
     }
     @Override public String main(Path path, SourceOracle stLib) throws InterruptedException{
-      OutputOracle out= () -> ResolveResource.stLibDebugOut;
+      OutputOracle out= () -> debugOut;
       var pkgName= "base";
       var other= OtherPackages.empty();
       var rich= SourceOracleWithAutoload.ofBase(stLib);
@@ -36,13 +40,24 @@ final class TestBuildBase{
       var core= frontend(pkgName, rich.sources(stLib.allFiles()), rich.oracle(), other, Map.of(), capabilities);
       backend(pkgName, core, rich.oracle(), other, capabilities);
       var jars= Push.of(Coordinator.genJava(out.rootDir()), sharedClasspath());
-      var runOut= Coordinator.runMains(Coordinator.runData(out.rootDir().getParent(), ResolveResource.stLibPath), jars, "_"+pkgName+".Main");
-      assertEquals("", runOut);
-      return runOut;
+      return Coordinator.runMains(Coordinator.runData(out.rootDir().getParent(), base), jars, "_"+pkgName+".Main");
     }
-  };
-  @Test void test(){
-    try{ c.main(ResolveResource.stLibPath, c.sourceOracle(ResolveResource.stLibPath)); }
-    catch (InterruptedException e){ fail(e); }
+  };}
+  static String run(Path base, Path debugOut){
+    var c= coordinator(base, debugOut);
+    try{ return c.main(base, c.sourceOracle(base)); }
+    catch (InterruptedException e){ return fail(e); }
+  }
+  @Test void test(){ assertEquals("", run(ResolveResource.stLibPath, ResolveResource.stLibDebugOut)); }
+  @Test void aFailingExampleOfBaseInAFileOfTheErrorMachineryIsReportedAtItsLine(@TempDir Path tmp){
+    var base= tmp.resolve("base");
+    Fs.copyTree(ResolveResource.stLibPath, base);
+    var action= base.resolve("action.fear");
+    var text= Fs.readUtf8(action)+"///A probe.\n//> .check{1 .assertEq 2}\nMachineryProbe:{}\n";
+    Fs.writeUtf8(action, text);
+    var line= text.lines().toList().indexOf("//> .check{1 .assertEq 2}")+1;
+    utils.Err.strCmp("""
+Test failure _MachineryProbe_Examples at line: %d in file: action.fear
+[###]""".formatted(line), run(base, tmp.resolve("dbgOut")));
   }
 }

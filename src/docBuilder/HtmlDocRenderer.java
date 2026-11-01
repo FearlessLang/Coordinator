@@ -1,6 +1,7 @@
 package docBuilder;
 
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -19,6 +20,7 @@ import core.M;
 import core.OtherPackages;
 import core.T;
 import core.TName;
+import main.FrontendLogicMain.TestSource;
 import offensiveUtils.Require;
 import tools.Fs;
 import utils.Bug;
@@ -75,11 +77,17 @@ final class HtmlDocRenderer{
   List<TypeDoc> testableTypes(){
     return visibleTypes().stream()
       .filter(t -> !t.main().infName())
-      .filter(t -> docGroups(t).anyMatch(d -> !testLines(d).isEmpty()))
+      .filter(t -> !testGroups(t).isEmpty())
       .toList();
   }
   Stream<List<DocOcc>> docGroups(TypeDoc t){ return Stream.concat(Stream.of(t.docs), visibleMethods(t).stream().map(m -> m.docs)); }
-  List<String> testLines(List<DocOcc> docs){ return docs.stream().filter(d -> d.example() || d.testOnly()).map(DocOcc::text).toList(); }
+  List<List<DocOcc>> testGroups(TypeDoc t){
+    return docGroups(t)
+      .map(ds -> ds.stream().filter(d -> d.example() || d.testOnly()).toList())
+      .filter(g -> !g.isEmpty())
+      .sorted(Comparator.comparingInt((List<DocOcc> g) -> g.getFirst().line()))
+      .toList();
+  }
   GeneratedTestNames testNames(){
     var shown= testableTypes();
     return new GeneratedTestNames(
@@ -92,20 +100,33 @@ final class HtmlDocRenderer{
     var noPrimes= s.replaceAll("'+$", "");
     return "_"+noPrimes+"_Examples"+(n.arity()==0 ? "" : "_"+n.arity())+s.substring(noPrimes.length());
   }
-  String renderTest(Function<TName,String> pkgNames){
+  List<TestSource> renderTests(Function<TName,String> pkgNames){
     var shown= testableTypes();
     var names= testNames();
     var test= pkgNames.apply(new TName("base.Test", 0, Pos.unknown));
-    var sb= new StringBuilder(4_000).append(HtmlDocBuilder.generatedMark).append(pkgName).append("; any edit is overwritten\n\n");
-    for (int i : Range.of(shown)){
-      sb.append(names.perType().get(i)).append(": ").append(test).append(" {::\n");
-      docGroups(shown.get(i)).forEach(d -> sb.append(Join.of(testLines(d), "  .test "+test+"{::\n", "\n", "\n  }\n", "")));
-      sb.append("  }\n\n");
+    var res= new ArrayList<TestSource>();
+    for (int i : Range.of(shown)){ res.add(renderSuite(names.perType().get(i), test, testGroups(shown.get(i)))); }
+    var first= testGroups(shown.getFirst()).getFirst().getFirst();
+    var top= new TestLines();
+    top.wrapper(names.top()+": "+pkgNames.apply(new TName("base.UnitTests", 0, Pos.unknown))+" {::", first.line(), first.textColumn());
+    names.perType().forEach(n -> top.wrapper("  .test "+n, first.line(), first.textColumn()));
+    top.wrapper("  }", first.line(), first.textColumn());
+    res.add(top.source(first.file()));
+    return res;
+  }
+  static TestSource renderSuite(String name, String test, List<List<DocOcc>> groups){
+    var first= groups.getFirst().getFirst();
+    var last= groups.getLast().getLast();
+    assert groups.stream().flatMap(List::stream).allMatch(d -> d.file().equals(first.file()));
+    var lines= new TestLines();
+    lines.wrapper(name+": "+test+" {::", first.line(), first.textColumn());
+    for (var g : groups){
+      lines.wrapper("  .test "+test+"{::", g.getFirst().line(), g.getFirst().textColumn());
+      g.forEach(lines::example);
+      lines.wrapper("  }", g.getLast().line(), g.getLast().textColumn()+g.getLast().text().length());
     }
-    sb.append(names.top()).append(": ").append(pkgNames.apply(new TName("base.UnitTests", 0, Pos.unknown))).append(" {::\n");
-    names.perType().forEach(n -> sb.append("  .test ").append(n).append('\n'));
-    sb.append("  }\n");
-    return sb.toString();
+    lines.wrapper("  }", last.line(), last.textColumn()+last.text().length());
+    return lines.source(first.file());
   }
   void renderTypeText(StringBuilder sb, TypeDoc t, Map<DocOcc,Object> claims){
     sb.append(typeTitle(t)).append(Join.of(t.main().cs().stream().map(toStr::typeName), " : ", ", ", "", "")).append('\n');
