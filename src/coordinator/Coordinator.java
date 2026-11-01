@@ -1,6 +1,5 @@
 package coordinator;
 
-import java.net.URI;
 import java.nio.ByteBuffer;
 import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
@@ -27,6 +26,7 @@ import core.FearlessException;
 import core.OtherPackages;
 import core.TName;
 import main.FrontendLogicMain;
+import main.FrontendLogicMain.TestSource;
 import naiveBackend.BackendTools;
 import naiveBackend.NaiveBackendLogicMain;
 import offensiveUtils.Require;
@@ -82,11 +82,7 @@ public interface Coordinator{
     try{ StandardCharsets.UTF_8.newDecoder().decode(ByteBuffer.wrap(bytes)); return true; }
     catch (CharacterCodingException _){ return false; }
   }
-  static Optional<URI> testsUri(String pkg, List<Ref> files){
-    var rank= OneOr.of("One rank file per package", files.stream().filter(Helper::hasReservedRankPrefix));
-    if (rank instanceof ZipEntry){ return Optional.empty(); }
-    return Optional.of(rank.fearURI().resolve("auto_tests/"+pkg+"_test.fear"));
-  }
+  static boolean zipped(List<Ref> files){ return OneOr.of("One rank file per package", files.stream().filter(Helper::hasReservedRankPrefix)) instanceof ZipEntry; }
   default SourceOracle sourceOracle(Path path){ return new RealSourceOracleWithZip(path); }
   static Map<String,Boolean> pkgsBuilt(Path path, Path baseCache){
     var o= new RealSourceOracleWithZip(path);
@@ -157,27 +153,24 @@ public interface Coordinator{
   static Path genJava(Path outRoot){ return outRoot.resolve("gen_java"); }
   String outDir= ".fearless_out";
   default List<Literal> frontend(String pkgName, List<Ref> files, SourceOracle oracle, OtherPackages other, Map<String,String> vres, CapabilityEnvironment capabilities){
-    var tests= new ArrayList<Ref>();
-    try{ return new FrontendLogicMain().of(pkgName, vres, files, other, core -> docs(pkgName, testsUri(pkgName, files), oracle, other, core, capabilities, tests, names(pkgName, files, oracle, other, vres))); }
-    catch (FearlessException e){ throw Report.sourceError(e.render(oracle.withFallback(() -> tests))); }
+    try{ return new FrontendLogicMain().of(pkgName, vres, files, other, core -> docs(pkgName, !zipped(files), oracle, other, core, capabilities, names(pkgName, files, oracle, other, vres))); }
+    catch (FearlessException e){ throw Report.sourceError(e.render(oracle)); }
   }
   default Function<TName,String> names(String pkgName, List<Ref> files, SourceOracle oracle, OtherPackages other, Map<String,String> vres){
     try{ return new FrontendLogicMain().names(pkgName, vres, files, other); }
     catch (FearlessException e){ throw Report.sourceError(e.render(oracle)); }
   }
-  private Optional<Ref> docs(String pkgName, Optional<URI> testsUri, SourceOracle oracle, OtherPackages other, List<Literal> core, CapabilityEnvironment capabilities, ArrayList<Ref> tests, Function<TName,String> names){
+  private List<TestSource> docs(String pkgName, boolean testable, SourceOracle oracle, OtherPackages other, List<Literal> core, CapabilityEnvironment capabilities, Function<TName,String> names){
     var docs= backendTools(pkgName, oracle, other, core, capabilities).docs();
     core.forEach(docs::visitAll);
-    var res= docs.complete(testsUri, names);
-    res.ifPresent(tests::add);
-    return res;
+    return docs.complete(names, testable);
   }
   default void backend(String pkgName, List<Literal> core, SourceOracle oracle, OtherPackages other, CapabilityEnvironment capabilities){
     new NaiveBackendLogicMain().of(backendTools(pkgName, oracle, other, core, capabilities), sharedClasspath());
   }
   default BackendTools backendTools(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, CapabilityEnvironment capabilities){
     var unused= Path.of("unused");
-    return BackendTools.of(pkgName, oracle, other, core, unused, baseCachePath(), Optional.empty(), unused, capabilities);
+    return BackendTools.of(pkgName, oracle, other, core, unused, baseCachePath(), false, unused, capabilities);
   }
   default Path modsPath(){
     var path= JavacTool.reqAppDir(Violation::mustUseLauncher).resolve(JavacTool.deployedModsDirName);
