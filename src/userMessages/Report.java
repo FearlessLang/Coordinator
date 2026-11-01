@@ -463,7 +463,7 @@ Fearless expands each zip file into a folder: rename this file if it is not mean
   }
   public static UserError zipEmptyDirectoryEntry(Path diskZip, List<String> steps, String entryName){
     return directFail(showZipRel(diskZip, steps, entryName),
-      "This zip contains a folder entry called "+disp(entryName)+", but it is empty.\n"
+      "This zip contains a folder entry called "+disp(entryName)+",\nbut it is empty.\n"
      +"Different systems handle empty folders differently, and they may not be\n"
      +"supported by compression tools (zip) or version control systems (git).");
   }
@@ -602,7 +602,7 @@ Rank files:
   %s
 
 Each package must contain exactly one rank file.
-""".formatted(disp(pkg), Join.of(rankFiles.stream().map(f -> disp(f.fearPath())), "", ", ", "")));
+""".formatted(disp(pkg), Join.of(rankFiles.stream().map(f -> disp(f.fearPath())), "", "\n  ", "")));
   }
   public static UserError projectMalformedRankFileName(Ref rankFile){ return new UserError("""
 Malformed rank file name.

@@ -118,7 +118,8 @@ Package:
   "bla"
 
 Rank files:
-  "fear:/src/_bla/_rank_app.fear", "fear:/src/_bla/_rank_core.fear"
+  "fear:/src/_bla/_rank_app.fear"
+  "fear:/src/_bla/_rank_core.fear"
 
 Each package must contain exactly one rank file.
 """,

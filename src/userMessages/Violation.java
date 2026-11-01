@@ -3,12 +3,15 @@ package userMessages;
 import static userMessages.UserError.die;
 import static userMessages.UserError.path;
 
+import java.nio.file.FileSystemException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.stream.Stream;
 
 import fileAssociations.LinuxAssociations;
 import utils.Join;
@@ -21,7 +24,8 @@ import utils.Join;
 /// The counterpart is Report, for what the user gave us and can change.
 public final class Violation{
   //-- the pieces of text that more than one message needs, written once
-  public static String reported(Throwable cause){ return "Reported reason:\n"+cause.getMessage(); }
+  public static String reported(Throwable cause){ return "Reported reason:\n"+(cause instanceof FileSystemException f ? lines(f) : cause.getMessage()); }
+  public static String lines(FileSystemException f){ return Join.of(Stream.of(f.getFile(), f.getOtherFile(), f.getReason()).filter(Objects::nonNull), "", "\n", ""); }
   private static Supplier<List<String>> running= List::of;
   public static void running(Supplier<List<String>> live){ running = live; }
   static String associatedPrograms(){ return Join.of(running.get().stream().map(s -> "  "+s), "", "\n", "", ""); }

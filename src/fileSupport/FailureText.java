@@ -155,9 +155,9 @@ final class CommonInfo{
   }
   private static String located(Path path, Suppressed suppressed){
     return "Path: "+Message.displayString(path.toString())
-      +", Root: "+Message.displayString(rootOf(path))
-      +", Volume: "+volumeOf(path, suppressed)
-      +", Device: [[???]](queries from the volume handle,model, bus, removable flag,DiskArbitration)";
+      +"\n  Root: "+Message.displayString(rootOf(path))
+      +"\n  Volume: "+volumeOf(path, suppressed)
+      +"\n  Device: [[???]](queries from the volume handle,model, bus, removable flag,DiskArbitration)";
   // Device names the physical hardware behind the volume.
   // Windows: IOCTL_STORAGE_GET_DEVICE_NUMBER / SetupDi queries from the volume handle.
   // Linux: the volume's entry under /sys/block (model, bus, removable flag).
@@ -171,7 +171,7 @@ final class CommonInfo{
     }
     try{
       var store= Files.getFileStore(existing);
-      return Message.displayString(store.name())+"  "+Message.displayString(store.type());
+      return Message.displayString(store.name())+"\n  Volume type: "+Message.displayString(store.type());
     }
     catch (IOException e){ return "<reading volume failed>"+suppressed.mark(e); }//documented: getFileStore throws when the file/volume cannot be read
   }
