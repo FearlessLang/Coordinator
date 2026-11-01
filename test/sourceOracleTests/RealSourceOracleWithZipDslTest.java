@@ -402,7 +402,8 @@ Root: [###]
 Path: "_pkg/e.zip"
 Entry: "d"
 
-This zip contains a folder entry called "d", but it is empty.
+This zip contains a folder entry called "d",
+but it is empty.
 Different systems handle empty folders differently, and they may not be
 supported by compression tools (zip) or version control systems (git).
 
@@ -420,7 +421,8 @@ Root: [###]
 Path: "_pkg/e.zip"
 Entry: "d"
 
-This zip contains a folder entry called "d", but it is empty.
+This zip contains a folder entry called "d",
+but it is empty.
 Different systems handle empty folders differently, and they may not be
 supported by compression tools (zip) or version control systems (git).
 
