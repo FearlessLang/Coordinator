@@ -106,11 +106,13 @@ public record MainsInfo(Map<String,Main> mains, List<String> attenuators, List<S
     var of= new Of(src, stLib);
     all.stream().sorted(Comparator.comparingInt((Literal l) -> l.cs().size()).thenComparing(l -> l.name().s())).forEach(of::check);
     var mains= all.stream().filter(MainsInfo::isMain).collect(Collectors.toUnmodifiableMap(l -> l.name().s(), of::main));
-    var dataEdit= concrete(core, new TName("base.DataEdit", 0, Pos.unknown));
-    var dataRead= concrete(core, LiteralDeclarations.dataRead).stream().filter(n -> !dataEdit.contains(n)).toList();
+    var dataEdit= data(core, new TName("base.DataEdit", 0, Pos.unknown));
+    var dataRead= data(core, LiteralDeclarations.dataRead).stream().filter(n -> !dataEdit.contains(n)).toList();
     return new MainsInfo(mains, attenuators(core), dataRead, dataEdit);
   }
   public static List<String> attenuators(List<Literal> core){ return concrete(core, LiteralDeclarations.attenuator); }
+  /// a concrete DataRead or DataEdit type has no generic parameter (DataReadDataEditDesign)
+  private static List<String> data(List<Literal> core, TName t){ return AllLs.of(core).values().stream().filter(l -> l.name().arity() == 0 && concrete(l, t)).map(l -> l.name().s()).toList(); }
   private static List<String> concrete(List<Literal> core, TName t){ return AllLs.of(core).values().stream().filter(l -> concrete(l, t)).map(l -> l.name().s()).toList(); }
   public static boolean isMain(Literal l){ return concrete(l, LiteralDeclarations.main); }
   private static boolean concrete(Literal l, TName t){ return LiteralDeclarations.has(l.cs(), t) && l.ms().stream().noneMatch(m -> m.sig().abs()); }
