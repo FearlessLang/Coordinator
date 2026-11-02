@@ -5058,6 +5058,14 @@ Foo:Main, OpenWith[IconsFoo]{s->base.Debug#(`foo`)}
     return bout.toByteArray();
   }
   static final String iconRule= " (from [###]foo.png[###]): an icon must be a square PNG image with a side from 64 to 1024 pixels.";
+  @Test void theIconErrorNamesTheClaimAsTheSourceWritesIt(@TempDir Path tmp) throws IOException{
+    var root= claimsProject(tmp, """
+Foo:Main, Shortcut[IconsFoo, "fapp123"]{s->base.Debug#(`foo`)}
+""");
+    Fs.write(root.resolve("_col", "icons", "foo.png"), png(64, 65));
+    var error= compileWith(coordinator(root), root, cs -> cs.stream().findFirst()).orElseThrow();
+    utils.Err.strCmp("The icon \"col.IconsFoo\" in \"base.Shortcut[col.IconsFoo,\\\"fapp123\\\"]\" of main \"col.Foo\" is 64x65 pixels"+iconRule, error.getMessage());
+  }
   @Test void aNonSquareIconIsRefused(@TempDir Path tmp) throws IOException{ anIconIsRefused(tmp, png(64, 65), "The icon [###] of main [###] is 64x65 pixels"+iconRule); }
   @Test void anIconSmallerThan64PixelsIsRefused(@TempDir Path tmp) throws IOException{ anIconIsRefused(tmp, png(63, 63), "The icon [###] of main [###] is 63x63 pixels"+iconRule); }
   @Test void anIconLargerThan1024PixelsIsRefused(@TempDir Path tmp) throws IOException{ anIconIsRefused(tmp, png(1025, 1025), "The icon [###] of main [###] is 1025x1025 pixels"+iconRule); }

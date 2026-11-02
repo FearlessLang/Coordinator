@@ -191,22 +191,23 @@ final class Cache{
   }
   private static final byte[] pngHead= {(byte)0x89, 'P', 'N', 'G', '\r', '\n', 0x1A, '\n', 0, 0, 0, 13, 'I', 'H', 'D', 'R'};
   private void writeIcons(MainsInfo manifest, Path stdLibBase){
-    manifest.mains().forEach((main, m) -> m.icons().forEach(icon -> writeIcon(main, kindOf(m, icon), icon, stdLibBase)));
+    manifest.mains().forEach((main, m) -> m.icons().forEach(icon -> writeIcon(main, written(m, icon), icon, stdLibBase)));
   }
-  private static String kindOf(MainsInfo.Main m, MainsInfo.Claim icon){
-    if (m.shortcuts().stream().anyMatch(c -> c.icon().equals(icon.icon()))){ return "Shortcut"; }
-    if (m.openWiths().stream().anyMatch(c -> c.icon().equals(icon.icon()))){ return "OpenWith"; }
-    return "PreLoadIcon";
+  /// the kind and the claim of the icon as the source writes the claim, for the error of a refused icon
+  private static Map.Entry<String,MainsInfo.Claim> written(MainsInfo.Main m, MainsInfo.Claim icon){
+    var shortcut= m.shortcuts().stream().filter(c -> c.icon().equals(icon.icon())).findFirst().map(c -> Map.entry("Shortcut", c));
+    var openWith= m.openWiths().stream().filter(c -> c.icon().equals(icon.icon())).findFirst().map(c -> Map.entry("OpenWith", c));
+    return shortcut.or(() -> openWith).orElse(Map.entry("PreLoadIcon", icon));
   }
-  private void writeIcon(String main, String kind, MainsInfo.Claim icon, Path stdLibBase){
+  private void writeIcon(String main, Map.Entry<String,MainsInfo.Claim> claim, MainsInfo.Claim icon, Path stdLibBase){
     var file= (icon.icon().startsWith(base+".") ? stdLibBase : folder).resolve(icon.diskPath());
     var steps= icon.zipSteps().isEmpty() ? List.<String>of() : List.of(icon.zipSteps().split(";"));
     var bytes= icon.zipEntry().isEmpty() ? Fs.of(() -> Fs.readAllBytes(file)) : ZipLocator.entryBytes(file, steps, icon.zipEntry());
-    if (bytes.length < 24 || !Arrays.equals(bytes, 0, 16, pngHead, 0, 16)){ throw Report.iconRefused(main, kind, icon, "is not a PNG image"); }
+    if (bytes.length < 24 || !Arrays.equals(bytes, 0, 16, pngHead, 0, 16)){ throw Report.iconRefused(main, claim.getKey(), claim.getValue(), "is not a PNG image"); }
     var w= ByteBuffer.wrap(bytes).getInt(16);
     var h= ByteBuffer.wrap(bytes).getInt(20);
-    if (w != h || w < 64 || w > 1024){ throw Report.iconRefused(main, kind, icon, "is "+w+"x"+h+" pixels"); }
-    if (!decodes(bytes)){ throw Report.iconRefused(main, kind, icon, "is not a PNG image"); }
+    if (w != h || w < 64 || w > 1024){ throw Report.iconRefused(main, claim.getKey(), claim.getValue(), "is "+w+"x"+h+" pixels"); }
+    if (!decodes(bytes)){ throw Report.iconRefused(main, claim.getKey(), claim.getValue(), "is not a PNG image"); }
     var files= Coordinator.iconFiles(folder, icon.icon());
     replace(files.getFirst(), bytes);
     if (files.size() > 1){
