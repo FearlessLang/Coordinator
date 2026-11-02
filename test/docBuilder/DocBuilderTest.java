@@ -395,6 +395,30 @@ Foo: Bar {
     var bySelector= (DocLink.Ambiguous)resolver.resolve(new DocRef.MethodName(Optional.empty(), ".bar", OptionalInt.empty()), Scope.of(namedType("pkg.Z", List.of(), List.of()))).get();
     assertEquals(sorted, bySelector.options().stream().map(c -> c.owner().s()).toList());
   }
+  @Test void aBareSelectorNamingAnInheritedMethodLinksToItsOneDeclaration(){
+    var supName= new TName("pkg.Sup", 0, Pos.unknown);
+    var bar= namedMethod(".bar", supName);
+    var sup= namedType("pkg.Sup", List.of(), List.of(bar));
+    var sub= namedType("pkg.Sub", List.of(new T.C(supName, List.of())), List.of(bar));
+    SourceOracle oracle= List::of;
+    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(sup, sub), Optional.empty());
+    builder.visitLiteral(sup);
+    builder.visitLiteral(sub);
+    var resolver= new DocResolver("pkg", builder.types, OtherPackages.empty());
+    var link= resolver.resolve(new DocRef.MethodName(Optional.empty(), ".bar", OptionalInt.empty()), Scope.of(sup)).get();
+    assertTrue(link instanceof DocLink.Resolved, link.toString());
+    assertEquals(supName, ((DocLink.Resolved)link).hit().owner());
+  }
+  @Test void aBareSelectorNamingAForeignInheritedMethodLinksToItsOneDeclaration(){
+    var supName= new TName("other.Sup", 0, Pos.unknown);
+    var bar= namedMethod(".bar", supName);
+    var sup= namedType("other.Sup", List.of(), List.of(bar));
+    var sub= namedType("other.Sub", List.of(new T.C(supName, List.of())), List.of(bar));
+    var resolver= new DocResolver("pkg", List.of(), OtherPackages.start(Map.of(), List.of(sup, sub), 0L));
+    var link= resolver.resolve(new DocRef.MethodName(Optional.empty(), ".bar", OptionalInt.empty()), Scope.of(namedType("pkg.Z", List.of(), List.of()))).get();
+    assertTrue(link instanceof DocLink.Resolved, link.toString());
+    assertEquals(supName, ((DocLink.Resolved)link).hit().owner());
+  }
   @Test void aQualifiedMethodOnAForeignTypeResolvesThroughAnInheritedSupertypeMethod(){
     var supName= new TName("other.Sup", 0, Pos.unknown);
     var subName= new TName("other.Sub", 0, Pos.unknown);

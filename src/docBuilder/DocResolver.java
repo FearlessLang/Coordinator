@@ -114,11 +114,11 @@ record DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other){
     var localCands= types.stream()
       .filter(TypeDoc::visible)
       .flatMap(t -> t.methods.stream()
-        .filter(MethodDoc::visible)
+        .filter(m -> m.declared)
         .filter(m -> named(m.main(), selector, arity))
         .map(m -> Candidate.ofLocalMethod(t.main().name(), m)));
     var foreignCands= foreign()
-      .flatMap(n -> foreignCandidates(n, other.__of(n).ms(), selector, arity));
+      .flatMap(n -> foreignCandidates(n, other.__of(n).ms().stream().filter(m -> m.sig().origin().equals(n)).toList(), selector, arity));
     return pack(selector+shape(arity, "(", ")"), Stream.concat(localCands, foreignCands).toList());
   }
   private Stream<Candidate> foreignCandidates(TName owner, List<M> ms, String selector, OptionalInt arity){
