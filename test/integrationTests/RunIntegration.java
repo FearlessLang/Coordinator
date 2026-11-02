@@ -1683,9 +1683,10 @@ import java.net.*;
 import java.nio.file.*;
 import java.util.*;
 void main(String[] args) throws Exception{
-  var words= List.of(args);
-  Files.writeString(Path.of(words.getFirst()), String.join(" ", words.subList(1, words.size()-1))+"\\n", StandardOpenOption.CREATE, StandardOpenOption.APPEND);
-  var out= words.get(1).equals("FearlessCommandForget") ? "Refused\\nThe manager refuses to forget "+words.get(2)+"." : "Applied\\nOutput of "+words.get(1);
+  if (args.length != 2){ throw new IllegalArgumentException(String.join("|", args)); }
+  var words= List.of(args[1].split(" "));
+  Files.writeString(Path.of(args[0]), String.join(" ", words.subList(0, words.size()-1))+"\\n", StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+  var out= words.get(0).equals("FearlessCommandForget") ? "Refused\\nThe manager refuses to forget "+words.get(1)+"." : "Applied\\nOutput of "+words.get(0);
   try (var s= new Socket(InetAddress.getLoopbackAddress(), Integer.parseInt(words.getLast().substring("Port:".length())))){ s.getOutputStream().write(out.getBytes()); }
 }
 """);
@@ -1701,11 +1702,13 @@ void main(String[] args) throws Exception{
 FearlessCommandRegister %1$s
 FearlessCommandShow
 FearlessCommandShow hello
-FearlessCommandRun hello hello.A hello.B
+FearlessCommandSelectMains hello hello.B hello.A
+FearlessCommandSelectMains hello
+FearlessCommandRun hello
 FearlessCommandCompile hello
 FearlessCommandKind hello dataRead
 FearlessCommandMount hello hello.Notes notes
-FearlessCommandMount hello hello.Pub
+FearlessCommandUnmount hello hello.Pub
 FearlessCommandAttenuate hello hello.A base.NoManagerQuit hello.NoGui
 FearlessCommandAttenuate hello hello.B
 FearlessCommandOpenWithOrShortcut %1$s hello hello.A
