@@ -1383,10 +1383,10 @@ Forged: base.TxtFile{
   .originalFileName: base.Str -> "secret.dat";
   }
 
-NeverRecovers: base.BadStrUnitRecover { reason, byteOffset, byteLength, rejectedValue -> "should not happen" }
+NeverRecovers: base.StrFixer { reason, byteOffset, byteLength, rejectedValue -> "should not happen" }
 
-ReadsForgedAsset: Main{s->base.Debug#(Forged.readStrUtf8(s.assetRead, NeverRecovers))}
-ReadsLegitAsset: Main{s->base.Debug#(Note.readStrUtf8(s.assetRead, NeverRecovers))}
+ReadsForgedAsset: Main{s->base.Debug#(Forged.readStr(s.assetRead, base.StrCleaners.utf8OrElse{NeverRecovers}))}
+ReadsLegitAsset: Main{s->base.Debug#(Note.readStr(s.assetRead, base.StrCleaners.utf8OrElse{NeverRecovers}))}
 jjj
 _col/secret.dat
 iii
@@ -1408,6 +1408,7 @@ REAL ASSET CONTENT
     Fs.writeUtf8(pub.resolve("data.fearless"), "");
     Fs.of(() -> Fs.write(pub.resolve("cut8.bin"), new byte[]{'a', (byte)0xE2, (byte)0x82}));
     Fs.of(() -> Fs.write(pub.resolve("cut16.bin"), new byte[]{'a', 0, 0x3D, (byte)0xD8}));
+    Fs.of(() -> Fs.write(pub.resolve("mixed.bin"), new byte[]{'a', '\r', '\n', 'b', '\r', 'c', (byte)0xE2, (byte)0x80, (byte)0xA8, 'd', (byte)0xEF, (byte)0xBB, (byte)0xBF, 'e', (byte)0xCC, (byte)0x81, (byte)0xFF, '\n'}));
     var file= folder.resolve("not"+(Fs.isWindows() ? "é" : "\t")+"s.txt");
     Fs.writeUtf8(file, "caf\u00e9 time");
     unitTestsOk(name, root, List.of("-DfearlessDataRead.open.Pub="+PathClassLoader.argOf(pub), "-DfearlessInput.file="+PathClassLoader.argOf(file)));
@@ -4317,8 +4318,8 @@ jjj
 _app/_rank_app.fear
 iii
 map bb as _base in _app;
-NeverRecovers: bb.BadStrUnitRecover { reason, byteOffset, byteLength, rejectedValue -> "should not happen" }
-App: bb.Main{s->bb.Debug#(Note.readStrUtf8(s.assetRead, NeverRecovers))}
+NeverRecovers: bb.StrFixer { reason, byteOffset, byteLength, rejectedValue -> "should not happen" }
+App: bb.Main{s->bb.Debug#(Note.readStr(s.assetRead, bb.StrCleaners.utf8OrElse{NeverRecovers}))}
 jjj
 _app/note.txt
 iii
@@ -4335,8 +4336,8 @@ use base.Main as Main;
 use base.Str as Str;
 use base.TxtFile as TxtFile;
 use base.ImageFile as ImageFile;
-NeverRecovers: base.BadStrUnitRecover { reason, byteOffset, byteLength, rejectedValue -> "should not happen" }
-App: Main{s->base.Debug#(Note.readStrUtf8(s.assetRead, NeverRecovers))}
+NeverRecovers: base.StrFixer { reason, byteOffset, byteLength, rejectedValue -> "should not happen" }
+App: Main{s->base.Debug#(Note.readStr(s.assetRead, base.StrCleaners.utf8OrElse{NeverRecovers}))}
 Picture: {.f:ImageFile -> IconsLogo; .t:TxtFile -> Note; .s:Str -> IconsLogo.path}
 jjj
 _app/note.txt
