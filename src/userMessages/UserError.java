@@ -107,10 +107,10 @@ Error: Fearless crashed (this is a bug).
   }
   public static UserError cacheCorruptedOrCrash(Throwable t){
     return new UserError("""
-Error: Fearless crashed: either this project's compilation cache was corrupted, or this is a Fearless bug.
+Fearless crashed: either this project's compilation cache was corrupted, or this is a Fearless bug.
 """+details(t), t);
   }
-  public static boolean cacheCorrupted(String message){ return message.startsWith("Error: Fearless crashed: either this project's compilation cache was corrupted"); }
+  public static boolean cacheCorrupted(String message){ return message.startsWith("Fearless crashed: either this project's compilation cache was corrupted"); }
   private static String details(Throwable t){ return "\nDetails:\n"+stackTrace(t); }
   public static String stackTrace(Throwable t){
     var sw= new StringWriter();

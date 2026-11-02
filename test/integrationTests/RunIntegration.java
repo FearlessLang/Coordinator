@@ -2437,7 +2437,7 @@ A:Main{s->base.Debug#(`hi`)}
     Coordinator.deleteCache(root);
     utils.Err.strCmp("hi\n", main(root, List.of()));
   }
-  static String crashedWithCache(String detail){ return "Error: Fearless crashed: either this project's compilation cache was corrupted, or this is a Fearless bug.\n\nDetails:\n"+detail+"[###]"; }
+  static String crashedWithCache(String detail){ return "Fearless crashed: either this project's compilation cache was corrupted, or this is a Fearless bug.\n\nDetails:\n"+detail+"[###]"; }
   @Test void aGarbledInputsSnapshotMakesItsPackageBuildAgain(@TempDir Path tmp){
     var root= tmp.resolve("root");
     UserError.root = root;
@@ -5057,7 +5057,7 @@ Foo:Main, OpenWith[IconsFoo]{s->base.Debug#(`foo`)}
     ImageIO.write(new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB), "png", bout);
     return bout.toByteArray();
   }
-  static final String iconRule= " (from [###]foo.png[###]):\nan icon must be a square PNG image with a side from 64 to 1024 pixels.";
+  static final String iconRule= " (from [###]foo.png[###]): an icon must be a square PNG image with a side from 64 to 1024 pixels.";
   @Test void aNonSquareIconIsRefused(@TempDir Path tmp) throws IOException{ anIconIsRefused(tmp, png(64, 65), "The icon [###] of main [###] is 64x65 pixels"+iconRule); }
   @Test void anIconSmallerThan64PixelsIsRefused(@TempDir Path tmp) throws IOException{ anIconIsRefused(tmp, png(63, 63), "The icon [###] of main [###] is 63x63 pixels"+iconRule); }
   @Test void anIconLargerThan1024PixelsIsRefused(@TempDir Path tmp) throws IOException{ anIconIsRefused(tmp, png(1025, 1025), "The icon [###] of main [###] is 1025x1025 pixels"+iconRule); }

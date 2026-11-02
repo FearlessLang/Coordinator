@@ -637,12 +637,12 @@ File:
     var name= main.substring(main.lastIndexOf('.')+1).toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]", "");
     var cut= name.substring(0, Math.min(name.length(), Fs.maxExtSeg));
     var system= !cut.isEmpty() && !cut.matches("fearless|fapp[0-9]{3}|ffile[0-9]{3}");
-    return new UserError(used+" Claim a system extension instead, for example "+claim("OpenWith", icon, system ? cut : "ext")+".");
+    return new UserError(used+" A system extension can be claimed instead, for example "+claim("OpenWith", icon, system ? cut : "ext")+".");
   }
   private static String claim(String kind, String icon, String ext){ return "\"base."+kind+"["+icon+(ext.isEmpty() ? "" : ",\\\""+ext+"\\\"")+"]\""; }
   public static UserError iconRefused(String main, String kind, MainsInfo.Claim c, String problem){
     var from= disp(Join.of(Stream.of(c.diskPath(), c.zipSteps().replace(';', '/'), c.zipEntry()).filter(x -> !x.isEmpty()), "", "/", ""));
-    return new UserError("The icon "+disp(c.icon())+" in "+claim(kind, c.icon(), c.extension())+" of main "+disp(main)+" "+problem+" (from "+from+"):\nan icon must be a square PNG image with a side from 64 to 1024 pixels.");
+    return new UserError("The icon "+disp(c.icon())+" in "+claim(kind, c.icon(), c.extension())+" of main "+disp(main)+" "+problem+" (from "+from+"): an icon must be a square PNG image with a side from 64 to 1024 pixels.");
   }
   public static UserError claimIconNotAsset(SourceOracle src, Literal l, T.C c){
     var owner= owner(l);
