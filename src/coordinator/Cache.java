@@ -99,7 +99,7 @@ final class Cache{
   String inputsSnapshot(Pkg p){
     var paths= p.files().stream().map(Ref::fearPath).sorted();
     var lower= lowerPackages(p).stream().map(q -> q.name()+" "+optJarTime(q.name()).orElseThrow()).sorted();
-    var directives= rankMap.getOrDefault(p.name(), Map.of()).entrySet().stream().map(e -> e.getKey()+" "+e.getValue()).sorted();
+    var directives= rankMap.getOrDefault(p.name(), Map.of()).entrySet().stream().map(e -> e.getKey()+" "+e.getValue().split(" ")[0]).sorted();
     return Join.of(paths, "", "\n", "")+"\n---\n"+Join.of(lower, "", "\n", "")+"\n---\n"+Join.of(directives, "", "\n", "", "");
   }
   static long newestFileTime(Pkg p){ return p.files().stream().mapToLong(Ref::lastModified).max().getAsLong(); }
@@ -129,6 +129,7 @@ final class Cache{
   }
   Optional<UserError> compile(Path stdLibBase, String projectName, TakeFreeExtension take){
     if (problem.isPresent()){ return fail(problem.get()); }
+    var cached= Fs.exists(out);
     if (unfinished()){ jars().forEach(Fs::rmTree); }
     Fs.writeUtf8(out.resolve(unfinishedFile), "");
     otherFiles().forEach(Fs::rmTree);
@@ -136,6 +137,10 @@ final class Cache{
     Optional<UserError> error= Optional.empty();
     try{ for (var p : ownPackages){ if (!upToDate(p)){ compilePackage(p, stLib, stdLibBase, projectName, take); } } }
     catch (UserError e){ error = Optional.of(e); }
+    catch (RuntimeException|AssertionError e){
+      if (!cached){ throw e; }
+      error = Optional.of(UserError.cacheCorruptedOrCrash(e));
+    }
     if (!of(c, folder).files.equals(files)){ return fail(Report.filesUpdated(projectName)); }
     if (error.isPresent()){ return fail(error.get()); }
     Fs.ofV(() -> Fs.deleteIfExists(out.resolve(errorFile)));

@@ -4910,4 +4910,165 @@ Hello:Main{s->base.Debug#("hi")}
         "-DfearlessManager.launcher="+tmp.resolve("missing_launcher")));
     }
   }
+  static Path helloProject(Path tmp){
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_p/_rank_app999.fear
+iii
+use base.Main as Main;
+A:Main{s->base.Debug#(`hi`)}
+""");
+    return root;
+  }
+  static Path out(Path root, String file){ return root.resolve(Coordinator.outDir).resolve(file); }
+  static Optional<UserError> compileWith(Coordinator c, Path root, Coordinator.TakeFreeExtension take){ return c.compile(root, stLib, "root", take); }
+  static MainsInfo.Main onlyMain(MainsInfo info){ return OneOr.of("one main", info.mains().values().stream()); }
+  @Test void aCompileLeavesItsUnfinishedFileUntilFinish(@TempDir Path tmp){
+    var root= helloProject(tmp);
+    var c= coordinator(root);
+    assertEquals(Optional.empty(), compileWith(c, root, cs -> cs.stream().findFirst()));
+    assertTrue(Fs.exists(out(root, "_unfinished.txt")));
+    assertTrue(c.check(root) instanceof Coordinator.State.OutOfDate);
+    Coordinator.finish(root);
+    assertFalse(Fs.exists(out(root, "_unfinished.txt")));
+    assertTrue(compiled(root));
+  }
+  @Test void dropUnfinishedDeletesOnlyAnUnfinishedCache(@TempDir Path tmp){
+    var root= helloProject(tmp);
+    compile(coordinator(root), root);
+    Coordinator.dropUnfinished(root);
+    assertTrue(compiled(root));
+    Fs.writeUtf8(out(root, "_unfinished.txt"), "");
+    Coordinator.dropUnfinished(root);
+    assertFalse(Fs.exists(root.resolve(Coordinator.outDir)));
+  }
+  @Test void aCompileOverAnUnfinishedCacheCompilesEveryPackageAgain(@TempDir Path tmp) throws IOException{
+    var root= helloProject(tmp);
+    compile(coordinator(root), root);
+    var jar= out(root, "p.jar");
+    var time= Fs.getLastModifiedTime(jar);
+    Fs.write(jar, new byte[]{1, 2, 3});
+    Fs.setLastModifiedTime(jar, time);
+    assertTrue(compiled(root));
+    Fs.writeUtf8(out(root, "_unfinished.txt"), "");
+    compile(coordinator(root), root);
+    assertFalse(Arrays.equals(new byte[]{1, 2, 3}, Fs.readAllBytes(jar)));
+    utils.Err.strCmp("hi\n", main(root, List.of()));
+  }
+  @Test void anOtherFileOfTheCacheMakesTheProjectOutOfDateAndTheNextCompileDeletesIt(@TempDir Path tmp){
+    var root= helloProject(tmp);
+    compile(coordinator(root), root);
+    Fs.writeUtf8(out(root, "junk.txt"), "");
+    Fs.writeUtf8(out(root, "gen_java").resolve("p.txt"), "");
+    assertFalse(compiled(root));
+    compile(coordinator(root), root);
+    assertFalse(Fs.exists(out(root, "junk.txt")));
+    assertFalse(Fs.exists(out(root, "gen_java")));
+    assertTrue(compiled(root));
+  }
+  @Test void aFailedCompileWritesTheErrorFileAndASuccessfulCompileDeletesIt(@TempDir Path tmp){
+    var root= helloProject(tmp);
+    var file= root.resolve("_p", "_rank_app999.fear");
+    var good= Fs.readUtf8(file);
+    Fs.writeUtf8(file, good.replace("`hi`", "Undefined"));
+    var error= compileWith(coordinator(root), root, cs -> cs.stream().findFirst()).orElseThrow();
+    assertEquals(error.getMessage(), Fs.readUtf8(out(root, "_error.txt")));
+    Coordinator.finish(root);
+    Fs.writeUtf8(file, good);
+    compile(coordinator(root), root);
+    assertFalse(Fs.exists(out(root, "_error.txt")));
+  }
+  @Test void anInvalidProjectIsInvalidAndItsCompileWritesTheProblem(@TempDir Path tmp){
+    var root= helloProject(tmp);
+    Fs.writeUtf8(root.resolve("top.fear"), "");
+    var problem= ((Coordinator.State.Invalid)coordinator(root).check(root)).problem();
+    utils.Err.strCmp("[###]top.fear[###]", problem);
+    var error= compileWith(coordinator(root), root, cs -> cs.stream().findFirst()).orElseThrow();
+    assertEquals(problem, error.getMessage());
+    assertEquals(problem, Fs.readUtf8(out(root, "_error.txt")));
+  }
+  @Test void aCorruptedJsonFoundByACompileIsTheErrorOfTheCompile(@TempDir Path tmp){
+    var root= helloProject(tmp);
+    compile(coordinator(root), root);
+    Fs.writeUtf8(out(root, "p.json"), "{");
+    var error= compileWith(coordinator(root), root, cs -> cs.stream().findFirst()).orElseThrow();
+    assertTrue(UserError.cacheCorrupted(error.getMessage()));
+    assertEquals(error.getMessage(), Fs.readUtf8(out(root, "_error.txt")));
+  }
+  @Test void deleteCacheRemovesTheCacheFolder(@TempDir Path tmp){
+    var root= helloProject(tmp);
+    compile(coordinator(root), root);
+    Coordinator.deleteCache(root);
+    assertFalse(Fs.exists(root.resolve(Coordinator.outDir)));
+    assertFalse(compiled(root));
+  }
+  @Test void aFileEditedWhileTheProjectCompilesFailsTheCompile(@TempDir Path tmp) throws IOException{
+    var root= claimsProject(tmp, """
+Foo:Main, OpenWith[IconsFoo]{s->base.Debug#(`foo`)}
+""");
+    var error= compileWith(coordinator(root), root, cs -> { Fs.writeUtf8(root.resolve("_col", "extra.fear"), ""); return cs.stream().findFirst(); }).orElseThrow();
+    utils.Err.strCmp("Some files inside the project [###]root[###] were updated while the project was compiling.", error.getMessage());
+    assertEquals(error.getMessage(), Fs.readUtf8(out(root, "_error.txt")));
+  }
+  @Test void eachAutoselectedExtensionIsTakenFromTheCandidatesAndTheNextCompileKeepsIt(@TempDir Path tmp) throws IOException{
+    var root= claimsProject(tmp, """
+Foo:Main, OpenWith[IconsFoo], Shortcut[IconsFoo], Shortcut[base.IconsConflict,`fapp042`]{s->base.Debug#(`foo`)}
+""");
+    var asked= new ArrayList<List<String>>();
+    var c= coordinator(root);
+    assertEquals(Optional.empty(), compileWith(c, root, cs -> { asked.add(cs); return Optional.of(cs.getLast()); }));
+    Coordinator.finish(root);
+    assertEquals(List.of(999, 1000), asked.stream().map(List::size).toList());
+    assertTrue(asked.get(0).stream().allMatch(e -> e.matches("fapp[0-9]{3}")) && !asked.get(0).contains("fapp042"));
+    assertTrue(asked.get(1).stream().allMatch(e -> e.matches("ffile[0-9]{3}")));
+    var main= onlyMain(mains(c, root));
+    var chosen= List.of(main.shortcuts().stream().filter(s -> s.named().isEmpty()).findFirst().orElseThrow().extension(), main.openWiths().getFirst().extension());
+    assertEquals(List.of(asked.get(0).getLast(), asked.get(1).getLast()), chosen);
+    var rank= root.resolve("_col", "_rank_app.fear");
+    Fs.writeUtf8(rank, Fs.readUtf8(rank)+"\n");
+    asked.clear();
+    assertEquals(Optional.empty(), compileWith(c, root, cs -> { asked.add(cs); return Optional.empty(); }));
+    Coordinator.finish(root);
+    assertEquals(List.of(), asked);
+    var again= onlyMain(mains(c, root));
+    assertEquals(chosen, List.of(again.shortcuts().stream().filter(s -> s.named().isEmpty()).findFirst().orElseThrow().extension(), again.openWiths().getFirst().extension()));
+  }
+  @Test void noFreeExtensionFailsTheCompile(@TempDir Path tmp) throws IOException{
+    var root= claimsProject(tmp, """
+Foo:Main, OpenWith[IconsFoo]{s->base.Debug#(`foo`)}
+""");
+    var error= compileWith(coordinator(root), root, cs -> Optional.empty()).orElseThrow();
+    utils.Err.strCmp("No free extension is left for [###] of main [###]: all the 1000 extensions \"ffile000\" to \"ffile999\" are used by the projects of this manager.[###]", error.getMessage());
+  }
+  void anIconIsRefused(Path tmp, byte[] icon, String expected) throws IOException{
+    var root= claimsProject(tmp, """
+Foo:Main, OpenWith[IconsFoo]{s->base.Debug#(`foo`)}
+""");
+    Fs.write(root.resolve("_col", "icons", "foo.png"), icon);
+    var error= compileWith(coordinator(root), root, cs -> cs.stream().findFirst()).orElseThrow();
+    utils.Err.strCmp(expected, error.getMessage());
+  }
+  static byte[] png(int w, int h) throws IOException{
+    var bout= new ByteArrayOutputStream();
+    ImageIO.write(new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB), "png", bout);
+    return bout.toByteArray();
+  }
+  static final String iconRule= " (from [###]foo.png[###]):\nan icon must be a square PNG image with a side from 64 to 1024 pixels.";
+  @Test void aNonSquareIconIsRefused(@TempDir Path tmp) throws IOException{ anIconIsRefused(tmp, png(64, 65), "The icon [###] of main [###] is 64x65 pixels"+iconRule); }
+  @Test void anIconSmallerThan64PixelsIsRefused(@TempDir Path tmp) throws IOException{ anIconIsRefused(tmp, png(63, 63), "The icon [###] of main [###] is 63x63 pixels"+iconRule); }
+  @Test void anIconLargerThan1024PixelsIsRefused(@TempDir Path tmp) throws IOException{ anIconIsRefused(tmp, png(1025, 1025), "The icon [###] of main [###] is 1025x1025 pixels"+iconRule); }
+  @Test void anIconThatIsNotAPngIsRefused(@TempDir Path tmp) throws IOException{ anIconIsRefused(tmp, "not an image".getBytes(UTF_8), "The icon [###] of main [###] is not a PNG image"+iconRule); }
+  @Test void finishDeletesTheIconsNoClaimUses(@TempDir Path tmp) throws IOException{
+    var root= claimsProject(tmp, """
+Foo:Main, OpenWith[IconsFoo]{s->base.Debug#(`foo`)}
+""");
+    compile(coordinator(root), root);
+    var icons= out(root, "icons");
+    var kept= Fs.walk(icons, s -> s.filter(Fs::isRegularFile).sorted().toList());
+    assertFalse(kept.isEmpty());
+    Fs.writeUtf8(icons.resolve("gone.png"), "");
+    Coordinator.finish(root);
+    assertEquals(kept, Fs.walk(icons, s -> s.filter(Fs::isRegularFile).sorted().toList()));
+  }
 }
