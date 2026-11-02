@@ -1,5 +1,6 @@
 package coordinator;
 
+import java.io.UncheckedIOException;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -137,6 +138,7 @@ final class Cache{
     Optional<UserError> error= Optional.empty();
     try{ for (var p : ownPackages){ if (!upToDate(p)){ compilePackage(p, stLib, stdLibBase, projectName, take); } } }
     catch (UserError e){ error = Optional.of(e); }
+    catch (UncheckedIOException e){ throw e; }
     catch (RuntimeException|AssertionError e){
       if (!cached){ throw e; }
       error = Optional.of(UserError.cacheCorruptedOrCrash(e));

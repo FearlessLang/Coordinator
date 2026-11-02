@@ -1,5 +1,6 @@
 package coordinator;
 
+import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
@@ -160,7 +161,7 @@ public interface Coordinator{
   static <R> R guarded(Path project, Supplier<R> f){
     var cached= Fs.exists(project.resolve(outDir));
     try{ return f.get(); }
-    catch (UserError e){ throw e; }
+    catch (UserError|UncheckedIOException e){ throw e; }
     catch (RuntimeException | AssertionError e){
       if (!cached){ throw e; }
       throw UserError.cacheCorruptedOrCrash(e);
