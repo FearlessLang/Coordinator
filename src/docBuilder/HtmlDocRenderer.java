@@ -464,6 +464,7 @@ code{
   }
   String renderCandidate(Candidate c){
     var sb= new StringBuilder("<a href=\"").append(h(candidateHref(c))).append("\">")
+      .append(c.localMethod().map(m -> m.main().sig().rc().toStrSpace()).orElse(""))
       .append(h(toStr.typeNameWithArity(c.owner())));
     c.selector().ifPresent(s -> sb.append(h(s+DocResolver.shape(c.arity(), "(", ")"))));
     sb.append("</a>");

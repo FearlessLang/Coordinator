@@ -948,6 +948,19 @@ Holder
     var builder= fixtureBuilder();
     return new HtmlDocRenderer("pkg", Map.of(), builder.types, OtherPackages.empty(), Map.of(), Optional.empty()).renderText();
   }
+  @Test void noTwoOptionsOfADisambiguationPageReadTheSame(){
+    var name= new TName("pkg.Foo", 0, Pos.unknown);
+    var imm= fooMethodAt(RC.imm, name, TSpan.fromPos(Pos.of(file, 0, 1), 1));
+    var mut= fooMethodAt(RC.mut, name, TSpan.fromPos(Pos.of(file, 0, 2), 1));
+    var foo= namedType("pkg.Foo", List.of(), List.of(imm, mut));
+    SourceOracle oracle= List::of;
+    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(foo), Optional.empty());
+    builder.visitLiteral(foo);
+    var renderer= new HtmlDocRenderer("pkg", Map.of(), builder.types, OtherPackages.empty(), Map.of(), Optional.empty());
+    var page= (DocLink.Ambiguous)renderer.resolver.resolve(new DocRef.MethodName(Optional.empty(), ".foo", OptionalInt.empty()), Scope.of(foo)).get();
+    var shown= page.options().stream().map(renderer::renderCandidate).map(s -> s.replaceAll("<[^>]*>", "")).toList();
+    assertEquals(List.of("Foo.foo()", "mut Foo.foo()"), shown);
+  }
   private static List<String> idsIn(String html, String prefix){
     var res= new ArrayList<String>();
     for (int i= html.indexOf(prefix); i >= 0; i = html.indexOf(prefix, i+1)){
