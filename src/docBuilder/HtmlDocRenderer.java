@@ -463,9 +463,10 @@ code{
     sb.append("</ul>\n</section>\n");
   }
   String renderCandidate(Candidate c){
+    var anonymous= OneOr.opt("type "+c.owner(), types.stream().filter(t -> t.main().infName() && t.main().name().equals(c.owner())));
     var sb= new StringBuilder("<a href=\"").append(h(candidateHref(c))).append("\">")
       .append(c.localMethod().map(m -> m.main().sig().rc().toStrSpace()).orElse(""))
-      .append(h(toStr.typeNameWithArity(c.owner())));
+      .append(h(anonymous.map(this::shortTitle).orElseGet(() -> toStr.typeNameWithArity(c.owner()))));
     c.selector().ifPresent(s -> sb.append(h(s+DocResolver.shape(c.arity(), "(", ")"))));
     sb.append("</a>");
     c.localMethod().ifPresent(m -> m.docs.stream().filter(d -> !d.example() && !d.testOnly()).findFirst()

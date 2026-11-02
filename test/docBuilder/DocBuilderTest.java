@@ -961,6 +961,27 @@ Holder
     var shown= page.options().stream().map(renderer::renderCandidate).map(s -> s.replaceAll("<[^>]*>", "")).toList();
     assertEquals(List.of("Foo.foo()", "mut Foo.foo()"), shown);
   }
+  private static Literal anonymousAt(Pos at, List<M> ms){
+    var src= new Src(new Src.SrcObj(){
+      @Override public Pos pos(){ return at; }
+      @Override public TSpan span(){ return TSpan.fromPos(at, 1); }
+    });
+    return new Literal(RC.imm, new TName("pkg._AFoo", 0, at), List.of(), List.of(), "self", ms, src, true);
+  }
+  @Test void aDisambiguationOptionOnAnAnonymousLiteralShowsTheNameTheListShows(){
+    var anonName= new TName("pkg._AFoo", 0, Pos.unknown);
+    var anonBar= namedMethod(".bar", anonName);
+    var anon= new TypeDoc(anonymousAt(Pos.of(file, 2, 1), List.of(anonBar)), List.of());
+    anon.declared(Pos.of(file, 3, 1), anonBar, List.of(new DocOcc(file, 3, 1, 4, "the anonymous bar", true, false, false)), List.of());
+    var namedName= new TName("pkg.Named", 0, Pos.unknown);
+    var named= new TypeDoc(namedType("pkg.Named", List.of(), List.of()), List.of());
+    named.declared(Pos.of(file, 9, 1), namedMethod(".bar", namedName), List.of(), List.of());
+    var renderer= new HtmlDocRenderer("pkg", Map.of(), List.of(anon, named), OtherPackages.empty(), Map.of(), Optional.empty());
+    var page= (DocLink.Ambiguous)renderer.resolver.resolve(new DocRef.MethodName(Optional.empty(), ".bar", OptionalInt.empty()), Scope.of(named.main())).get();
+    var shown= page.options().stream().map(renderer::renderCandidate).map(s -> s.replaceAll("<[^>]*>", "")).toList();
+    assertEquals(List.of("Anon@a:2.bar() — the anonymous bar", "Named.bar()"), shown);
+    assertEquals(List.of("Named", "Anon@a:2"), renderer.visibleTypes().stream().map(renderer::shortTitle).toList());
+  }
   private static List<String> idsIn(String html, String prefix){
     var res= new ArrayList<String>();
     for (int i= html.indexOf(prefix); i >= 0; i = html.indexOf(prefix, i+1)){
