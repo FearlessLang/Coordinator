@@ -132,7 +132,7 @@ public interface Coordinator{
   /// the mains, once the icon files of every icon of the mains hold an image: a missing or broken icon file is a corrupted cache
   private static Map<String,MainsInfo.Main> iconed(Path folder, Map<String,MainsInfo.Main> mains){
     mains.values().stream().flatMap(m -> m.icons().stream()).flatMap(c -> iconFiles(folder, c.icon()).stream())
-      .filter(f -> !Fs.isRegularFile(f) || f.toString().endsWith(".png") && !Cache.decodes(Fs.of(() -> Fs.readAllBytes(f)))).findFirst()
+      .filter(f -> !Fs.isRegularFile(f) || !Cache.decodes(f, Fs.of(() -> Fs.readAllBytes(f)))).findFirst()
       .ifPresent(f -> { throw new IllegalStateException("The icon file "+f+" does not hold the icon the Coordinator wrote there"); });
     return mains;
   }

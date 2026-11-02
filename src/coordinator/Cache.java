@@ -218,7 +218,12 @@ final class Cache{
       Fs.ofV(() -> Fs.move(tmp, files.get(1), StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING));
     }
   }
-  static boolean decodes(byte[] bytes){
+  /// a PNG decodes as an image; an ico starts with the header of an icon resource
+  static boolean decodes(Path file, byte[] bytes){
+    if (!file.toString().endsWith(".ico")){ return decodes(bytes); }
+    return bytes.length > 6 && bytes[0] == 0 && bytes[1] == 0 && bytes[2] == 1 && bytes[3] == 0 && (bytes[4] != 0 || bytes[5] != 0);
+  }
+  private static boolean decodes(byte[] bytes){
     try{ return ImageIO.read(new ByteArrayInputStream(bytes)) != null; }
     catch (IOException e){ return false; }
   }
