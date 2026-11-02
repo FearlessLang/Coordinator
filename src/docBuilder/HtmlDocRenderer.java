@@ -266,14 +266,14 @@ code{
   font-size:.92em; background:var(--bg-code); border:1px solid var(--border-soft);
   padding:.05em .32em; border-radius:.3em;
 }
-.example,.variant{
+.example,.variant,.fenced{
   font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
   white-space:pre-wrap; font-size:.88em; margin:.4em 0 .2em;
   background:var(--bg-code); border:1px solid var(--border-soft);
   border-left:3px solid var(--orange); border-radius:.3em;
   padding:.6em .8em; overflow-x:auto; color:var(--fg);
 }
-.variant{border-left-color:var(--border)}
+.variant,.fenced{border-left-color:var(--border)}
 /* every declaration a name could mean, when it names more than one */
 .options{list-style:none; margin:.6em 0; padding:0}
 .options li{padding:.4em .1em; border-top:1px solid var(--border-soft)}
@@ -434,7 +434,19 @@ code{
   //of them are one paragraph, kept on their own lines so that a list stays a list and
   //an indented line stays indented (the doc block is rendered with pre-wrap).
   void renderProse(StringBuilder sb, List<DocOcc> prose){
-    var lines= Join.of(prose.stream().map(o -> o.text().isBlank() ? "" : renderText(o)), "", "\n", "", "");
+    var block= new ArrayList<DocOcc>();
+    var inFence= false;
+    for (var o : prose){
+      if (!o.text().strip().equals("```")){ block.add(o); continue; }
+      renderBlock(sb, block, inFence);
+      block.clear();
+      inFence = !inFence;
+    }
+    renderBlock(sb, block, inFence);
+  }
+  void renderBlock(StringBuilder sb, List<DocOcc> block, boolean fenced){
+    if (fenced){ sb.append("<pre class=\"fenced\">").append(Join.of(block.stream().map(o -> h(o.text())), "", "\n", "", "")).append("</pre>\n"); return; }
+    var lines= Join.of(block.stream().map(o -> o.text().isBlank() ? "" : renderText(o)), "", "\n", "", "");
     paragraph.matcher(lines).results().forEach(p -> sb.append("<p>").append(p.group()).append("</p>\n"));
   }
   private static final Pattern paragraph= Pattern.compile("(?dm)^.+(\n.+)*");
