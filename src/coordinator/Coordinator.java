@@ -107,6 +107,7 @@ public interface Coordinator{
   static void writeError(Path folder, String error){ Cache.writeError(folder, error); }
   static void deleteCache(Path folder){
     var out= folder.resolve(outDir);
+    if (!Fs.exists(out)){ return; }
     var unfinished= out.resolve(Cache.unfinishedFile);
     Fs.writeUtf8(unfinished, "");
     try (var s= Fs.of(() -> Fs.list(out))){ s.filter(f -> !f.equals(unfinished)).toList().forEach(Fs::rmTree); }
