@@ -218,7 +218,7 @@ final class Cache{
       Fs.ofV(() -> Fs.move(tmp, files.get(1), StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING));
     }
   }
-  private static boolean decodes(byte[] bytes){
+  static boolean decodes(byte[] bytes){
     try{ return ImageIO.read(new ByteArrayInputStream(bytes)) != null; }
     catch (IOException e){ return false; }
   }
