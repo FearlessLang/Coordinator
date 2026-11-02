@@ -1383,10 +1383,8 @@ Forged: base.TxtFile{
   .originalFileName: base.Str -> "secret.dat";
   }
 
-NeverRecovers: base.StrFixer { reason, byteOffset, byteLength, rejectedValue -> "should not happen" }
-
-ReadsForgedAsset: Main{s->base.Debug#(Forged.readStr(s.assetRead, base.StrCleaners.utf8OrElse{NeverRecovers}))}
-ReadsLegitAsset: Main{s->base.Debug#(Note.readStr(s.assetRead, base.StrCleaners.utf8OrElse{NeverRecovers}))}
+ReadsForgedAsset: Main{s->base.Debug#(Forged.readStr(s.assetRead, base.StrCleaners.utf8))}
+ReadsLegitAsset: Main{s->base.Debug#(Note.readStr(s.assetRead, base.StrCleaners.utf8))}
 jjj
 _col/secret.dat
 iii
@@ -4318,8 +4316,7 @@ jjj
 _app/_rank_app.fear
 iii
 map bb as _base in _app;
-NeverRecovers: bb.StrFixer { reason, byteOffset, byteLength, rejectedValue -> "should not happen" }
-App: bb.Main{s->bb.Debug#(Note.readStr(s.assetRead, bb.StrCleaners.utf8OrElse{NeverRecovers}))}
+App: bb.Main{s->bb.Debug#(Note.readStr(s.assetRead, bb.StrCleaners.utf8))}
 jjj
 _app/note.txt
 iii
@@ -4336,8 +4333,7 @@ use base.Main as Main;
 use base.Str as Str;
 use base.TxtFile as TxtFile;
 use base.ImageFile as ImageFile;
-NeverRecovers: base.StrFixer { reason, byteOffset, byteLength, rejectedValue -> "should not happen" }
-App: Main{s->base.Debug#(Note.readStr(s.assetRead, base.StrCleaners.utf8OrElse{NeverRecovers}))}
+App: Main{s->base.Debug#(Note.readStr(s.assetRead, base.StrCleaners.utf8))}
 Picture: {.f:ImageFile -> IconsLogo; .t:TxtFile -> Note; .s:Str -> IconsLogo.path}
 jjj
 _app/note.txt
