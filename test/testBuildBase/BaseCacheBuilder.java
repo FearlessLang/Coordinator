@@ -2,16 +2,12 @@ package testBuildBase;
 
 import java.nio.file.Path;
 import java.util.List;
-import java.util.Map;
 
 import coordinator.CapabilityEnvironment;
 import coordinator.Coordinator;
-import coordinator.MainsInfo;
-import coordinator.OutputOracle;
 import core.E.Literal;
 import core.OtherPackages;
 import naiveBackend.BackendTools;
-import realSourceOracle.SourceOracleWithAutoload;
 import resources.ResolveResource;
 import tools.Fs;
 import tools.SourceOracle;
@@ -39,20 +35,7 @@ public final class BaseCacheBuilder{
           return BackendTools.of(pkgName, oracle, other, core, scratch, baseCachePath(), generatesTests, ResolveResource.stLibRTPath, capabilities);
         }
       };
-      OutputOracle out= () -> scratch;
-      var other= OtherPackages.empty();
-      var o= c.sourceOracle(ResolveResource.stLibPath);
-      var rich= SourceOracleWithAutoload.ofBase(o);
-      var capabilities= new CapabilityEnvironment(rich.autoloadedAssets());
-      var core= c.frontend(pkgName, rich.sources(o.allFiles()), rich.oracle(), other, Map.of(), capabilities);
-      c.backend(pkgName, core, rich.oracle(), other, capabilities);
-      out.commitPkgApi(pkgName, core, -1);
-      var baseCache= stdLibDir.resolve("baseCache");
-      Fs.copyFresh(scratch.resolve("base.json"), baseCache.resolve("base.json"));
-      Fs.copyFresh(Coordinator.genJava(scratch).resolve("base.jar"), baseCache.resolve("base.jar"));
-      Fs.copyFresh(Coordinator.genJava(scratch).resolve("base.html"), baseCache.resolve("base.html"));
-      Fs.copyFresh(Coordinator.genJava(scratch).resolve("base.txt"), baseCache.resolve("base.txt"));
-      Fs.writeUtf8(baseCache.resolve(pkgName+MainsInfo.suffix), new MainsInfo(Map.of(), MainsInfo.attenuators(core), List.of(), List.of()).print());
+      c.buildBaseCache(ResolveResource.stLibPath, scratch, stdLibDir.resolve("baseCache"));
     }
     finally{ Fs.rmTree(scratch); }
   }

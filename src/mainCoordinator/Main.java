@@ -78,7 +78,7 @@ public final class Main{
         return BackendTools.of(pkgName, oracle, other, core, project.resolve(Coordinator.outDir), baseCachePath(), rt, capabilities);
       }
     };
-    c.main(project, RealSourceOracleWithZip.stdLib(base));
+    c.main(project, base);
   }
   private static final Predicate<String> belongsToFamily= s -> s.contains("earless");
   private static void offerAssociation(Path appDir){

@@ -28,49 +28,34 @@ import utils.Pos;
 public record MainsInfo(Map<String,Main> mains, List<String> attenuators, List<String> dataRead, List<String> dataEdit){
   public MainsInfo{ mains = Collections.unmodifiableMap(new TreeMap<>(mains)); attenuators = attenuators.stream().sorted().toList(); dataRead = dataRead.stream().sorted().toList(); dataEdit = dataEdit.stream().sorted().toList(); }
   public MainsInfo(Map<String,Main> mains){ this(mains, List.of(), List.of(), List.of()); }
-  public record Main(String file, List<Claim> shortcuts, List<Claim> openWiths, List<Claim> icons){}
-  public record Claim(String icon, String diskPath, String zipSteps, String zipEntry, String extension){}
-  public static final String suffix= "_manifest.info";
-  public static List<Path> files(Path project){
-    var out= Helper.out(project).rootDir();
-    if (!Fs.isDirectory(out)){ return List.of(); }
-    try (var s= Fs.of(() -> Fs.list(out))){ return s.filter(p -> p.getFileName().toString().endsWith(suffix)).sorted().toList(); }
+  public record Main(List<Claim> shortcuts, List<Claim> openWiths, List<Claim> icons){}
+  /// An icon, as the source writes the claim, with the chosen extension: named is the extension the source names, empty for an autoselected one.
+  public record Claim(String icon, String diskPath, String zipSteps, String zipEntry, String named, String extension){}
+  public interface Choose{ String extension(String main, boolean shortcut, Claim claim); }
+  MainsInfo withExtensions(Choose f){
+    return new MainsInfo(mains.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, e -> chosen(e.getKey(), e.getValue(), f))), attenuators, dataRead, dataEdit);
   }
-  public static Optional<MainsInfo> read(Path project){ return Coordinator.guardingCache(project, () -> readNow(project)); }
-  private static Optional<MainsInfo> readNow(Path project){
-    var fs= files(project);
-    if (fs.isEmpty()){ return Optional.empty(); }
-    return Optional.of(merge(fs.stream().map(MainsInfo::parse)));
+  private static Main chosen(String main, Main m, Choose f){ return new Main(chosen(main, m.shortcuts(), true, f), chosen(main, m.openWiths(), false, f), m.icons()); }
+  private static List<Claim> chosen(String main, List<Claim> cs, boolean shortcut, Choose f){
+    return cs.stream().map(c -> new Claim(c.icon(), c.diskPath(), c.zipSteps(), c.zipEntry(), c.named(), c.named().isEmpty() ? f.extension(main, shortcut, c) : c.named())).toList();
   }
   static MainsInfo merge(Stream<MainsInfo> infos){
     var all= infos.toList();
     var mains= all.stream().flatMap(i -> i.mains().entrySet().stream()).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     return new MainsInfo(mains, all.stream().flatMap(i -> i.attenuators().stream()).toList(), all.stream().flatMap(i -> i.dataRead().stream()).toList(), all.stream().flatMap(i -> i.dataEdit().stream()).toList());
   }
-  public static void write(Path project, MainsInfo info){
-    for (var f : files(project)){
-      var old= parse(f);
-      var now= new MainsInfo(old.mains().keySet().stream().collect(Collectors.toMap(k -> k, k -> info.mains().get(k))), old.attenuators(), old.dataRead(), old.dataEdit());
-      if (!now.equals(old)){ Fs.writeUtf8(f, now.print()); }
-    }
-  }
   public String print(){
     var ms= mains.entrySet().stream().map(e -> new Info.Obj.Field(e.getKey(), Info.noSpan, info(e.getValue()))).toList();
     var fields= List.of(new Info.Obj.Field("mains", Info.noSpan, new Info.Obj(ms, Info.noSpan)), names("attenuators", attenuators), names("dataRead", dataRead), names("dataEdit", dataEdit));
     return Info.print(new Info.Obj(fields, Info.noSpan));
   }
-  MainsInfo located(SourceOracle src, SourceOracle stLib){
-    var of= new Of(src, stLib);
-    return new MainsInfo(mains.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, e -> of.located(e.getValue()))), attenuators, dataRead, dataEdit);
-  }
-  private static Info info(Main m){ return lst(List.of(str(m.file()), claims(m.shortcuts()), claims(m.openWiths()), claims(m.icons()))); }
+  private static Info info(Main m){ return lst(List.of(claims(m.shortcuts()), claims(m.openWiths()), claims(m.icons()))); }
   private static Info claims(List<Claim> cs){ return lst(cs.stream().map(MainsInfo::info).toList()); }
-  private static Info info(Claim c){ return lst(Stream.of(c.icon(), c.diskPath(), c.zipSteps(), c.zipEntry(), c.extension()).map(MainsInfo::str).toList()); }
+  private static Info info(Claim c){ return lst(Stream.of(c.icon(), c.diskPath(), c.zipSteps(), c.zipEntry(), c.named(), c.extension()).map(MainsInfo::str).toList()); }
   private static Info.Obj.Field names(String key, List<String> names){ return new Info.Obj.Field(key, Info.noSpan, lst(names.stream().map(MainsInfo::str).toList())); }
   private static Info str(String s){ return new Info.Str(s, Info.noSpan); }
   private static Info lst(List<Info> items){ return new Info.Lst(items, Info.noSpan); }
-  static MainsInfo parse(Path file){
-    var text= OutputHelper.read(file).orElseThrow();
+  static MainsInfo parse(String text, Path file){
     try{ return new Shape(text).all(Info.parse(text, file.toUri())); }
     catch (UserError e){ throw Bug.of(e); }
   }
@@ -83,17 +68,17 @@ public record MainsInfo(Map<String,Main> mains, List<String> attenuators, List<S
     }
     List<String> names(Info i, String what){ return lst(i, "a list [...] of "+what+" names").stream().map(this::str).toList(); }
     Map<String,Main> mains(Info i){
-      if (!(i instanceof Info.Obj o)){ throw err(i, "an object {...} mapping each main to [file, [shortcut claims], [openWith claims], [icon claims]]"); }
+      if (!(i instanceof Info.Obj o)){ throw err(i, "an object {...} mapping each main to [[shortcut claims], [openWith claims], [icon claims]]"); }
       return o.fields().stream().collect(Collectors.toMap(Info.Obj.Field::key, f -> main(f.value())));
     }
     Main main(Info i){
-      var l= lst(i, 4, "a main as [file, [shortcut claims], [openWith claims], [icon claims]]");
-      return new Main(str(l.get(0)), claims(l.get(1)), claims(l.get(2)), claims(l.get(3)));
+      var l= lst(i, 3, "a main as [[shortcut claims], [openWith claims], [icon claims]]");
+      return new Main(claims(l.get(0)), claims(l.get(1)), claims(l.get(2)));
     }
     List<Claim> claims(Info i){ return lst(i, "a list [...] of claims").stream().map(this::claim).toList(); }
     Claim claim(Info i){
-      var s= lst(i, 5, "a claim as [icon, diskPath, zipSteps, zipEntry, extension]").stream().map(this::str).toList();
-      return new Claim(s.get(0), s.get(1), s.get(2), s.get(3), s.get(4));
+      var s= lst(i, 6, "a claim as [icon, diskPath, zipSteps, zipEntry, named, extension]").stream().map(this::str).toList();
+      return new Claim(s.get(0), s.get(1), s.get(2), s.get(3), s.get(4), s.get(5));
     }
     List<Info> lst(Info i, int size, String what){
       var l= lst(i, what);
@@ -136,10 +121,7 @@ public record MainsInfo(Map<String,Main> mains, List<String> attenuators, List<S
         if (notAsset){ throw Report.claimIconNotAsset(src, l, c); }
       }
     }
-    Main main(Literal l){
-      var file= l.name().pos().fileName().toString().substring(SourceOracle.root.length());
-      return new Main(file, claims(l, "Shortcut"), claims(l, "OpenWith"), icons(l.cs()).stream().map(n -> claim(n, "").orElseThrow()).toList());
-    }
+    Main main(Literal l){ return new Main(claims(l, "Shortcut"), claims(l, "OpenWith"), icons(l.cs()).stream().map(n -> claim(n, "").orElseThrow()).toList()); }
     List<Claim> claims(Literal l, String kind){
       return l.cs().stream()
         .filter(c -> LiteralDeclarations.claims.contains(c.name()) && c.name().simpleName().equals(kind))
@@ -150,10 +132,8 @@ public record MainsInfo(Map<String,Main> mains, List<String> attenuators, List<S
       return claim(name(c.ts().getFirst()), lit.isEmpty() ? "" : lit.substring(1, lit.length()-1)).orElseThrow();
     }
     Optional<Claim> claim(TName icon, String ext){
-      return SourceOracleWithAutoload.imageAsset(src, stLib, icon).map(t -> new Claim(icon.s(), t.diskPath(), t.zipSteps(), t.zipEntry(), ext));
+      return SourceOracleWithAutoload.imageAsset(src, stLib, icon).map(t -> new Claim(icon.s(), t.diskPath(), t.zipSteps(), t.zipEntry(), ext, ext));
     }
-    Main located(Main m){ return new Main(m.file(), located(m.shortcuts()), located(m.openWiths()), located(m.icons())); }
-    List<Claim> located(List<Claim> cs){ return cs.stream().map(c -> claim(new TName(c.icon(), 0, Pos.unknown), c.extension()).orElseThrow()).toList(); }
     static TName name(T t){ return ((T.RCC)t).c().name(); }
   }
 }

@@ -30,30 +30,25 @@ final class LimitedJsonParser{
   private int i= 0;
   private final Path forErr;
   LimitedJsonParser(String s, Path forErr){ this.s= s; this.forErr= forErr; }
-  Map<String,Map<String,String>> obj2(){ return end(obj(() -> obj(this::str))); }
+  Cache.Api api(){
+    req('{'); key("inputsSnapshot");
+    var snapshot= str();
+    req(','); key("manifest");
+    var manifest= MainsInfo.parse(str(), forErr);
+    req(','); key("types");
+    var types= arr();
+    req('}');
+    return end(new Cache.Api(Collections.unmodifiableMap(types.stream().map(x -> typeLit(asArr(x))).collect(Collectors.toMap(Literal::name, l -> l, this::dup, LinkedHashMap::new))), snapshot, manifest));
+  }
+  private void key(String k){
+    ws();
+    if (!str().equals(k)){ throw err("Expected key "+k); }
+    req(':');
+  }
   private <R> R end(R res){
     ws();
     if (i != s.length()){ throw err("Trailing junk"); }
     return res;
-  }
-  private <TT> Map<String,TT> obj(Supplier<TT> v){
-    req('{'); if (eat('}')){ return Map.of(); }
-    var res= new LinkedHashMap<String,TT>();
-    for (;;req(',')){
-      var k= name();
-      req(':');
-      if (res.put(k, v.get()) != null){ throw err("Duplicate key "+k); }
-      if (eat('}')){ return Collections.unmodifiableMap(res); }
-    }
-  }
-  private String name(){
-    var res= str();
-    if (!TName.isPkgName(res)){ throw err("Expected name"); }
-    return res;
-  }
-  Map<TName,Literal> apiJsonToMap(){
-    var types= end(arr());
-    return Collections.unmodifiableMap(types.stream().map(x -> typeLit(asArr(x))).collect(Collectors.toMap(Literal::name, l -> l, this::dup, LinkedHashMap::new)));
   }
   private Literal dup(Literal a, Literal b){ throw err("Duplicate type "+a.name().s()); }
   private Literal typeLit(List<Object> a){
@@ -127,7 +122,15 @@ final class LimitedJsonParser{
     var j= i;
     for (; i<s.length() && s.charAt(i)!='"'; i += s.charAt(i)=='\\' ? 2 : 1){}
     if (i >= s.length()){ throw err("Unterminated string"); }
-    return s.substring(j, i++).replaceAll("\\\\(.)", "$1");
+    var raw= s.substring(j, i++);
+    var res= new StringBuilder();
+    for (var k= 0; k < raw.length(); k += 1){
+      var ch= raw.charAt(k);
+      if (ch != '\\'){ res.append(ch); continue; }
+      k += 1;
+      res.append(raw.charAt(k)=='n' ? '\n' : raw.charAt(k));
+    }
+    return res.toString();
   }
   private String asStr(Object o){
     if (o instanceof String s){ return s; }
