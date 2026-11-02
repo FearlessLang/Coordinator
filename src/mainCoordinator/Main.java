@@ -11,8 +11,10 @@ import java.lang.reflect.InvocationTargetException;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -81,6 +83,13 @@ public final class Main{
     c.main(project, base);
   }
   private static final Predicate<String> belongsToFamily= s -> s.contains("earless");
+  /// The manager of that folder never sees the folder deleted in part: the folder is renamed in its folder, then deleted.
+  private static void removeAtOnce(Path dir){
+    if (!Fs.exists(dir)){ return; }
+    var gone= dir.resolveSibling(dir.getFileName()+"_"+UUID.randomUUID().toString().replace("-", ""));
+    Fs.ofV(() -> Fs.move(dir, gone, StandardCopyOption.ATOMIC_MOVE));
+    Fs.rmTree(gone);
+  }
   private static void offerAssociation(Path appDir){
     if (Fs.isMac()){ return; }
     var launcher= ProcessHandle.current().info().command().map(Path::of);
@@ -90,7 +99,7 @@ public final class Main{
     if (!belongsToFamily.test(identity)){ return; }
     var icon= appDir.resolve("icon.png");
     FileAssociations.reconcile(identity, belongsToFamily, l, List.of(new Icon(".fearless", l, icon)), List.of(), l, icon,
-      c -> JavacTool.managerFolderOf(c).ifPresent(Fs::rmTree),
+      c -> JavacTool.managerFolderOf(c).ifPresent(Main::removeAtOnce),
       reported -> Violation.associationsAmbiguous(reported).withRecovery(
         "Remove all Fearless registrations", () -> FileAssociations.eradicateAll(belongsToFamily, Violation::associationLeftHalfDone)),
       locked -> Violation.associationUserLocked(locked, e -> ""),
