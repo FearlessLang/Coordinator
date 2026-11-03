@@ -108,7 +108,10 @@ public final class BuildWithZip{
     var now= System.currentTimeMillis();
     if (t > now+futureTolerance){ throw future.apply(now); }
   }
-  static void checkTooLong(RefParent kid){ if (kid.fearPath().length() > 200+SourceOracle.root.length()){ throw Report.pathTooLong(kid); } }
+  static void checkTooLong(RefParent kid){
+    var limit= isInvisible(kid) ? 250 : 200;
+    if (kid.fearPath().length() > limit+SourceOracle.root.length()){ throw Report.pathTooLong(kid, limit); }
+  }
   public static void checkIndividualVisibleSegment(RefParent kid){
     checkTooLong(kid);
     var name= Fs.fileNameWithExtension(kid.fearPath());

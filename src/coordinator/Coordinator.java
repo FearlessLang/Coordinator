@@ -99,10 +99,8 @@ public interface Coordinator{
   }
   static void finish(Path folder){
     var icons= folder.resolve(outDir).resolve(Project.iconsDir);
-    var kept= cachedMains(folder).values().stream().flatMap(m -> m.icons().stream()).flatMap(i -> iconFiles(folder, i.icon()).stream()).toList();
-    if (Fs.isDirectory(icons)){
-      try (var s= Fs.of(() -> Fs.list(icons))){ s.filter(f -> !kept.contains(f)).toList().forEach(Fs::rmTree); }
-    }
+    var kept= cachedMains(folder).values().stream().flatMap(m -> m.icons().stream()).flatMap(i -> iconFiles(folder, i).stream()).toList();
+    if (Fs.isDirectory(icons)){ Fs.walk(icons, s -> s.filter(f -> Fs.isRegularFile(f) && !kept.contains(f)).toList()).forEach(Fs::rmTree); }
     Fs.ofV(() -> Fs.deleteIfExists(folder.resolve(outDir).resolve(Project.unfinishedFile)));
   }
   static void dropUnfinished(Path folder){ if (Fs.exists(folder.resolve(outDir).resolve(Project.unfinishedFile))){ deleteCache(folder); } }
@@ -116,10 +114,12 @@ public interface Coordinator{
     Fs.ofV(() -> Fs.delete(unfinished));
     Fs.ofV(() -> Fs.delete(out));
   }
-  static List<Path> iconFiles(Path folder, String icon){
-    var dir= folder.resolve(outDir).resolve(Project.iconsDir);
-    var png= dir.resolve(icon+".png");
-    return Fs.isWindows() ? List.of(png, dir.resolve(icon+".ico")) : List.of(png);
+  static List<Path> iconFiles(Path folder, MainsInfo.Claim icon){
+    var zips= Stream.concat(Stream.of(icon.diskPath()), Stream.of(icon.zipSteps().split(";")).filter(z -> !z.isEmpty()));
+    var segments= icon.zipEntry().isEmpty() ? Stream.of(icon.diskPath()) : Stream.concat(zips.map(z -> z.substring(0, z.length()-".zip".length())), Stream.of(icon.zipEntry()));
+    var png= folder.resolve(outDir).resolve(Project.iconsDir).resolve((icon.icon().startsWith(Project.base+".") ? "_base/" : "")+Join.of(segments, "", "/", ""));
+    var name= png.getFileName().toString();
+    return Fs.isWindows() ? List.of(png, png.resolveSibling(name.substring(0, name.lastIndexOf('.'))+".ico")) : List.of(png);
   }
   /// The mains of every <pkg>.json of .fearless_out, by name.
   static Map<String,MainsInfo.Main> cachedMains(Path folder){

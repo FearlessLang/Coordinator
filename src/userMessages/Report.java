@@ -202,9 +202,9 @@ when deciding what needs compiling, so such a date cannot be trusted.
   }
   private static String dateOf(long t){ return DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").format(Instant.ofEpochMilli(t).atZone(ZoneId.systemDefault())); }
   //-- visible names
-  public static UserError pathTooLong(RefParent kid){
+  public static UserError pathTooLong(RefParent kid, int limit){
     return fail(showRel(kid),
-      "- The path is longer than 200 characters.\n"
+      "- The path is longer than "+limit+" characters.\n"
     +"  Long paths often fail on Windows and in some tools.",
       "- Shorten folder/file names, or move this content closer to the project root."
     );

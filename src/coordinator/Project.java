@@ -205,7 +205,7 @@ final class Project{
     var h= ByteBuffer.wrap(bytes).getInt(20);
     if (w != h || w < 64 || w > 1024){ throw Report.iconRefused(main, claim.getKey(), claim.getValue(), "is "+w+"x"+h+" pixels"); }
     if (!decodes(bytes)){ throw Report.iconRefused(main, claim.getKey(), claim.getValue(), "is not a PNG image"); }
-    var files= Coordinator.iconFiles(folder, icon.icon());
+    var files= Coordinator.iconFiles(folder, icon);
     replace(files.getFirst(), bytes);
     if (files.size() > 1){
       var tmp= files.get(1).resolveSibling(UUID.randomUUID()+".tmp");

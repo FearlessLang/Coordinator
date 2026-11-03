@@ -4999,7 +4999,7 @@ use base.Main as Main;
 A:Main{s->base.Debug#(`hi`)}
 """);
     compile(coordinator(root), root);
-    assertTrue(Fs.isRegularFile(out(root, "icons").resolve("base.IconsFearless.png")));
+    assertTrue(Fs.isRegularFile(out(root, "icons").resolve("_base").resolve("icons").resolve("fearless.png")));
     utils.Err.strCmp("hi\n", main(root, List.of()));
   }
   @Test void aFileNewerThanTheStartOfTheCompileIsRefused(@TempDir Path tmp) throws IOException{
@@ -5136,6 +5136,17 @@ Foo:Main, OpenWith[IconsFoo]{s->base.Debug#(`foo`)}
     Fs.write(root.resolve("_col", "icons", "foo.png"), icon);
     var error= compileWith(coordinator(root), root, cs -> cs.stream().findFirst()).orElseThrow();
     utils.Err.strCmp(expected, error.getMessage());
+  }
+  @Test void theIconsOfTheCacheAreNamedByThePathsOfTheirImages(@TempDir Path tmp) throws IOException{
+    var root= claimsProject(tmp, """
+Foo:Main, OpenWith[IconsBarX], Shortcut[IconsBarx]{s->base.Debug#(`foo`)}
+""");
+    Fs.write(root.resolve("_col", "icons", "bar_x.png"), png(64, 64));
+    Fs.write(root.resolve("_col", "icons", "barx.png"), png(64, 64));
+    compile(coordinator(root), root);
+    var icons= out(root, "icons");
+    assertEquals(List.of("_base/icons/fearless.png", "_col/icons/bar_x.png", "_col/icons/barx.png"), Fs.walk(icons, s -> s.filter(f -> f.toString().endsWith(".png")).map(f -> icons.relativize(f).toString().replace('\\', '/')).sorted().toList()));
+    assertTrue(compiled(root));
   }
   @Test void anIconNewerThanTheStartOfTheCompileIsRefused(@TempDir Path tmp) throws IOException{
     var root= claimsProject(tmp, """

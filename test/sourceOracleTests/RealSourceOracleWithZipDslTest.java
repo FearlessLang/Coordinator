@@ -1663,4 +1663,13 @@ A:{}
     Fs.ofV(() -> Fs.delete(root.resolve("_pkg/a.fear")));
     utils.Err.strCmp("Some files inside the project \"hello\" were updated while the project was compiling.", assertThrows(UserError.class, ref::loadString).getMessage());
   }
+  @Test void aHiddenPathMayHave250Characters(@TempDir Path tmp){
+    var root= tmp.resolve("root").toAbsolutePath().normalize();
+    UserError.root = root;
+    Fs.writeUtf8(root.resolve("_pkg").resolve("_rank_app.fear"), "");
+    Fs.writeUtf8(root.resolve(".x").resolve("a".repeat(240)+".txt"), "");
+    assertEquals(1, new RealSourceOracleWithZip(root).allFiles().size());
+    Fs.writeUtf8(root.resolve(".x").resolve("b".repeat(250)+".txt"), "");
+    utils.Err.strCmp("[###]The path is longer than 250 characters.[###]", assertThrows(UserError.class, () -> new RealSourceOracleWithZip(root)).getMessage());
+  }
 }
