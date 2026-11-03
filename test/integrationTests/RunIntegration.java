@@ -4984,10 +4984,10 @@ A:Main{s->base.Debug#(`hi`)}
     assertFalse(Fs.exists(out(root, "_unfinished.txt")));
     assertTrue(compiled(root));
   }
-  @Test void aCompileGivesEachJarTheTimeOfItsUnfinishedFile(@TempDir Path tmp){
+  @Test void aCompileWritesItsStartBeforeTheJars(@TempDir Path tmp){
     var root= helloProject(tmp);
     assertEquals(Optional.empty(), compileWith(coordinator(root), root, cs -> cs.stream().findFirst()));
-    assertEquals(Fs.lastModified(out(root, "_unfinished.txt")), Fs.lastModified(out(root, "p.jar")));
+    assertTrue(Fs.lastModified(out(root, "_compile_start.txt")) < Fs.lastModified(out(root, "p.jar")));
   }
   @Test void aPackageNamedIconsKeepsTheIconsOfTheCache(@TempDir Path tmp){
     var root= tmp.resolve("root");

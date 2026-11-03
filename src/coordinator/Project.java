@@ -7,7 +7,6 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import java.nio.file.attribute.FileTime;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
@@ -45,6 +44,7 @@ import utils.OneOr;
 final class Project{
   static final String errorFile= "_error.txt";
   static final String unfinishedFile= "_unfinished.txt";
+  static final String startFile= "_compile_start.txt";
   static final String iconsDir= "icons";
   static final String base= "base";
   record Pkg(String name, int rank, List<Ref> files){}
@@ -94,16 +94,15 @@ final class Project{
     return Join.of(paths, "", "\n", "")+"\n---\n"+Join.of(lower, "", "\n", "")+"\n---\n"+Join.of(directives, "", "\n", "", "");
   }
   static long newestFileTime(Pkg p){ return p.files().stream().mapToLong(Ref::lastModified).max().getAsLong(); }
-  boolean upToDate(Pkg p){
+  boolean upToDate(Pkg p, long start){
     var api= optApi(p.name());
-    var jar= optJarTime(p.name());
-    if (api.isEmpty() || jar.isEmpty()){ return false; }
-    return api.get().inputsSnapshot().equals(inputsSnapshot(p)) && jar.get() >= newestFileTime(p);
+    if (api.isEmpty() || optJarTime(p.name()).isEmpty()){ return false; }
+    return api.get().inputsSnapshot().equals(inputsSnapshot(p)) && start >= newestFileTime(p);
   }
   boolean unfinished(){ return Fs.exists(out.resolve(unfinishedFile)); }
   List<Path> otherFiles(){
     if (!Fs.isDirectory(out)){ return List.of(); }
-    var kept= Stream.concat(Stream.of(errorFile, unfinishedFile, iconsDir),
+    var kept= Stream.concat(Stream.of(errorFile, unfinishedFile, startFile, iconsDir),
       ownPackages.stream().flatMap(p -> Stream.of(".json", ".jar", ".html", ".txt").map(x -> p.name()+x))).toList();
     try (var s= Fs.of(() -> Fs.list(out))){ return s.filter(f -> !kept.contains(f.getFileName().toString())).sorted().toList(); }
   }
@@ -112,7 +111,7 @@ final class Project{
     if (problem.isPresent()){ return new State.Invalid(problem.get().getMessage()); }
     if (unfinished()){ return new State.OutOfDate(); }
     if (!otherFiles().isEmpty()){ return new State.OutOfDate(); }
-    if (ownPackages.stream().anyMatch(p -> !upToDate(p))){ return new State.OutOfDate(); }
+    if (ownPackages.stream().anyMatch(p -> !upToDate(p, Fs.lastModified(out.resolve(startFile))))){ return new State.OutOfDate(); }
     return new State.Compiled(mergedManifest(), packages().stream().map(Pkg::name).toList());
   }
   static Optional<UserError> compile(Coordinator c, Path folder, Path stdLibBase, String projectName, TakeFreeExtension take){
@@ -122,8 +121,10 @@ final class Project{
     if (Fs.exists(unfinished)){
       try (var s= Fs.of(() -> Fs.list(out))){ s.filter(f -> f.getFileName().toString().endsWith(".jar")).toList().forEach(Fs::rmTree); }
     }
+    var previous= Fs.lastModified(out.resolve(startFile));
     Fs.writeUtf8(unfinished, "");
-    var since= Fs.lastModified(unfinished);
+    Fs.writeUtf8(out.resolve(startFile), "");
+    var since= Fs.lastModified(out.resolve(startFile));
     var probe= out.resolve(UUID.randomUUID()+".tmp");
     Fs.writeUtf8(probe, "", since);
     Fs.ofV(() -> Fs.delete(probe));
@@ -132,7 +133,7 @@ final class Project{
     project.otherFiles().forEach(Fs::rmTree);
     var stLib= RealSourceOracleWithZip.stdLib(stdLibBase);
     Optional<UserError> error= Optional.empty();
-    try{ for (var p : project.ownPackages){ if (!project.upToDate(p)){ project.compilePackage(p, stLib, stdLibBase, projectName, take); } } }
+    try{ for (var p : project.ownPackages){ if (!project.upToDate(p, previous)){ project.compilePackage(p, stLib, stdLibBase, projectName, take); } } }
     catch (UserError e){ error = Optional.of(e); }
     catch (UncheckedIOException e){ throw e; }
     catch (RuntimeException|AssertionError e){
@@ -166,7 +167,6 @@ final class Project{
     replace(out.resolve(p.name()+".json"), OutputHelper.apiJson(core, inputsSnapshot(p), chosen));
     writes.forEach(Runnable::run);
     c.backend(p.name(), core, rich.oracle(), other, capabilities);
-    Fs.ofV(() -> Fs.setLastModifiedTime(out.resolve(p.name()+".jar"), FileTime.fromMillis(Fs.lastModified(out.resolve(unfinishedFile)))));
   }
   private String autoselect(Pkg p, MainsInfo manifest, String projectName, String main, boolean shortcut, MainsInfo.Claim claim, TakeFreeExtension take){
     var named= Stream.concat(Stream.of(manifest), lowerPackages(p).stream().map(q -> optApi(q.name()).orElseThrow().manifest()))
@@ -198,7 +198,7 @@ final class Project{
     var inProject= !icon.icon().startsWith(base+".");
     var file= (inProject ? folder : stdLibBase).resolve(icon.diskPath());
     var steps= icon.zipSteps().isEmpty() ? List.<String>of() : List.of(icon.zipSteps().split(";"));
-    var since= inProject ? new Since(Fs.lastModified(out.resolve(unfinishedFile)), projectName) : Since.anyTime;
+    var since= inProject ? new Since(Fs.lastModified(out.resolve(startFile)), projectName) : Since.anyTime;
     var bytes= since.read(file, () -> icon.zipEntry().isEmpty() ? Fs.of(() -> Fs.readAllBytes(file)) : ZipLocator.entryBytes(file, steps, icon.zipEntry()));
     if (bytes.length < 24 || !Arrays.equals(bytes, 0, 16, pngHead, 0, 16)){ throw Report.iconRefused(main, claim.getKey(), claim.getValue(), "is not a PNG image"); }
     var w= ByteBuffer.wrap(bytes).getInt(16);

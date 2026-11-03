@@ -1651,4 +1651,16 @@ B:{}
     var since= new Since(System.currentTimeMillis()-60_000, "hello");
     utils.Err.strCmp("Some files inside the project \"hello\" were updated while the project was compiling.", assertThrows(UserError.class, () -> new RealSourceOracleWithZip(root, since)).getMessage());
   }
+  @Test void aFileGoneAfterSinceIsRefusedWhenRead(@TempDir Path tmp){
+    var root= tmp.resolve("root").toAbsolutePath().normalize();
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_pkg/a.fear
+iii
+A:{}
+""");
+    var ref= OneOr.of("one file", new RealSourceOracleWithZip(root, new Since(System.currentTimeMillis()+60_000, "hello")).allFiles().stream());
+    Fs.ofV(() -> Fs.delete(root.resolve("_pkg/a.fear")));
+    utils.Err.strCmp("Some files inside the project \"hello\" were updated while the project was compiling.", assertThrows(UserError.class, ref::loadString).getMessage());
+  }
 }
