@@ -444,11 +444,11 @@ code{
   }
   void renderBlock(StringBuilder sb, List<DocOcc> block, boolean fenced){
     if (fenced){ sb.append("<pre class=\"fenced\">").append(Join.of(block.stream().map(o -> h(o.text())), "", "\n", "", "")).append("</pre>\n"); return; }
-    var lines= Join.of(block.stream().map(o -> o.text().isBlank() ? "" : renderText(o)), "", "\n", "", "");
+    var lines= Join.of(block.stream().map(o -> o.text().isBlank() ? "" : renderLine(o)), "", "\n", "", "");
     paragraph.matcher(lines).results().forEach(p -> sb.append("<p>").append(p.group()).append("</p>\n"));
   }
   private static final Pattern paragraph= Pattern.compile("(?dm)^.+(\n.+)*");
-  String renderText(DocOcc occ){
+  String renderLine(DocOcc occ){
     var text= occ.text();
     var linked= spans.getOrDefault(occ, Map.of());
     var sb= new StringBuilder();
