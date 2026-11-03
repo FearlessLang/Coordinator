@@ -19,26 +19,26 @@ import utils.Push;
 //     The last keeps the extension, even it is .zip
 
 //Here Both PathEntry and ZipEntry can be used as Ref for a RealSourceOracleWithZip implements SourceOracle
-public record ZipEntry(Path root, Path local, List<String> segments, List<String> zips, String lastZips) implements SourceOracle.Ref{
+public record ZipEntry(Path root, Path local, List<String> segments, List<String> zips, String lastZips, Since since) implements SourceOracle.Ref{
   @Override public String fearPath(){ return Join.of(Push.of(dropZipExt(PathEntry.localSegments(local)), segments), SourceOracle.root, "/", ""); }
-  @Override public byte[] loadBytes(){ return ZipLocator.entryBytes(root.resolve(local), zips, lastZips); }
+  @Override public byte[] loadBytes(){ return since.read(ZipLocator.entryBytes(root.resolve(local), zips, lastZips), this); }
   @Override public long lastModified(){ return Fs.lastModified(root.resolve(local)); }
   @Override public RuntimeException notUtf8(long line, int offset){ return Report.notUtf8(this, line, offset); }
   @Override public String toString(){ return fearPath(); }
   private static final int maxZipNesting= 64;
-  public static List<ZipEntry> allEntryPaths(Path root, Path local){
+  public static List<ZipEntry> allEntryPaths(Path root, Path local, Since since){
     assert root.isAbsolute() && !local.isAbsolute();
     var res= new ArrayList<ZipEntry>();
-    reqCollect(root.resolve(local), root, local, List.of(), res);
+    reqCollect(root.resolve(local), root, local, List.of(), since, res);
     reqNoFileUsedAsDirectory(res);
     reqNoFolderForNestedZipName(res);
     return List.copyOf(res);
   }
-  private static void reqCollect(Path diskZip, Path root, Path local, List<String> steps, ArrayList<ZipEntry> res){
+  private static void reqCollect(Path diskZip, Path root, Path local, List<String> steps, Since since, ArrayList<ZipEntry> res){
     if (steps.size() > maxZipNesting){ throw Report.zipNestingTooDeep(diskZip, steps); }
     for (var name : ZipLocator.entryNames(diskZip, steps)){
-      res.add(new ZipEntry(root, local, zipsToSegments(steps, name), steps, name));
-      if (name.endsWith(".zip")){ reqCollect(diskZip, root, local, Push.of(steps, name), res); }
+      res.add(new ZipEntry(root, local, zipsToSegments(steps, name), steps, name, since));
+      if (name.endsWith(".zip")){ reqCollect(diskZip, root, local, Push.of(steps, name), since, res); }
     }
   }
   private static void reqNoFileUsedAsDirectory(List<ZipEntry> es){

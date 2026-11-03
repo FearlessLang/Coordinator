@@ -7,11 +7,9 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
+import java.nio.file.attribute.FileTime;
 import java.util.Arrays;
 import java.util.Comparator;
-import java.util.HexFormat;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -31,6 +29,7 @@ import core.OtherPackages;
 import core.TName;
 import fileAssociations.Ico;
 import realSourceOracle.RealSourceOracleWithZip;
+import realSourceOracle.Since;
 import realSourceOracle.SourceOracleWithAutoload;
 import realSourceOracle.ZipLocator;
 import tools.Fs;
@@ -38,19 +37,17 @@ import tools.SourceOracle;
 import tools.SourceOracle.Ref;
 import userMessages.Report;
 import userMessages.UserError;
-import utils.Bug;
 import utils.Join;
 import utils.OneOr;
 
 /// The Project of CoordinatorDesign: the files of a project folder at one moment, and what
 /// the Coordinator keeps of them in `.fearless_out`.
-final class Cache{
+final class Project{
   static final String errorFile= "_error.txt";
   static final String unfinishedFile= "_unfinished.txt";
   static final String iconsDir= "icons";
   static final String base= "base";
   record Pkg(String name, int rank, List<Ref> files){}
-  record File(String path, long time, String content){}
   record Api(Map<TName,Literal> types, String inputsSnapshot, MainsInfo manifest){}
   final Coordinator c;
   final Path folder;
@@ -60,31 +57,22 @@ final class Cache{
   final List<Pkg> ownPackages;
   final Map<String,Map<String,String>> rankMap;
   final Map<String,Ref> rankFiles;
-  private Cache(Coordinator c, Path folder, SourceOracle o, Optional<UserError> problem, List<Pkg> ownPackages, Map<String,Map<String,String>> rankMap, Map<String,Ref> rankFiles){
+  private Project(Coordinator c, Path folder, SourceOracle o, Optional<UserError> problem, List<Pkg> ownPackages, Map<String,Map<String,String>> rankMap, Map<String,Ref> rankFiles){
     this.c= c; this.folder= folder; out= folder.resolve(Coordinator.outDir); this.o= o; this.problem= problem;
     this.ownPackages= ownPackages; this.rankMap= rankMap; this.rankFiles= rankFiles;
   }
-  static Cache of(Coordinator c, Path folder){
+  static Project of(Coordinator c, Path folder, Since since){
     try{
-      var o= c.sourceOracle(folder);
+      var o= c.sourceOracle(folder, since);
       var map= Helper.pkgMap(o);
       var ranks= map.values().stream().map(Helper::okPkgContent).toList();
       var rankMap= Helper.rankMap(o, ranks);
       var own= ranks.stream().map(r -> new Pkg(Helper.pkgName(r), Helper.rankNumber(r), map.get(Helper.pkgName(r))))
         .sorted(Comparator.comparingInt(Pkg::rank).thenComparing(Pkg::name)).toList();
       var rankFiles= ranks.stream().collect(Collectors.toUnmodifiableMap(Helper::pkgName, r -> r));
-      return new Cache(c, folder, o, Optional.empty(), own, rankMap, rankFiles);
+      return new Project(c, folder, o, Optional.empty(), own, rankMap, rankFiles);
     }
-    catch (UserError e){ return new Cache(c, folder, null, Optional.of(e), List.of(), Map.of(), Map.of()); }
-  }
-  /// the files of the project folder, with their times and hashes; none for a folder whose files can not be read
-  private List<File> files(){
-    if (problem.isPresent()){ return List.of(); }
-    return o.allFiles().stream().map(r -> new File(r.fearPath(), r.lastModified(), sha(r.loadBytes()))).sorted(Comparator.comparing(File::path)).toList();
-  }
-  private static String sha(byte[] bytes){
-    try{ return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes)); }
-    catch (NoSuchAlgorithmException e){ throw Bug.of(e); }
+    catch (UserError e){ return new Project(c, folder, null, Optional.of(e), List.of(), Map.of(), Map.of()); }
   }
   List<Pkg> packages(){ return Stream.concat(Stream.of(new Pkg(base, 0, List.of())), ownPackages.stream()).toList(); }
   Path outFolder(String pkg){ return pkg.equals(base) ? c.baseCachePath().orElseThrow() : out; }
@@ -113,9 +101,6 @@ final class Cache{
     return api.get().inputsSnapshot().equals(inputsSnapshot(p)) && jar.get() >= newestFileTime(p);
   }
   boolean unfinished(){ return Fs.exists(out.resolve(unfinishedFile)); }
-  private List<Path> jars(){
-    try (var s= Fs.of(() -> Fs.list(out))){ return s.filter(f -> f.getFileName().toString().endsWith(".jar")).toList(); }
-  }
   List<Path> otherFiles(){
     if (!Fs.isDirectory(out)){ return List.of(); }
     var kept= Stream.concat(Stream.of(errorFile, unfinishedFile, iconsDir),
@@ -130,24 +115,31 @@ final class Cache{
     if (ownPackages.stream().anyMatch(p -> !upToDate(p))){ return new State.OutOfDate(); }
     return new State.Compiled(mergedManifest(), packages().stream().map(Pkg::name).toList());
   }
-  Optional<UserError> compile(Path stdLibBase, String projectName, TakeFreeExtension take){
-    if (problem.isPresent()){ return fail(problem.get()); }
-    var files= files();
+  static Optional<UserError> compile(Coordinator c, Path folder, Path stdLibBase, String projectName, TakeFreeExtension take){
+    var out= folder.resolve(Coordinator.outDir);
+    var unfinished= out.resolve(unfinishedFile);
     var cached= Fs.exists(out);
-    if (unfinished()){ jars().forEach(Fs::rmTree); }
-    Fs.writeUtf8(out.resolve(unfinishedFile), "");
-    otherFiles().forEach(Fs::rmTree);
+    if (Fs.exists(unfinished)){
+      try (var s= Fs.of(() -> Fs.list(out))){ s.filter(f -> f.getFileName().toString().endsWith(".jar")).toList().forEach(Fs::rmTree); }
+    }
+    Fs.writeUtf8(unfinished, "");
+    var since= Fs.lastModified(unfinished);
+    var probe= out.resolve(UUID.randomUUID()+".tmp");
+    Fs.writeUtf8(probe, "", since);
+    Fs.ofV(() -> Fs.delete(probe));
+    var project= of(c, folder, new Since(since, projectName));
+    if (project.problem.isPresent()){ return project.fail(project.problem.get()); }
+    project.otherFiles().forEach(Fs::rmTree);
     var stLib= RealSourceOracleWithZip.stdLib(stdLibBase);
     Optional<UserError> error= Optional.empty();
-    try{ for (var p : ownPackages){ if (!upToDate(p)){ compilePackage(p, stLib, stdLibBase, projectName, take); } } }
+    try{ for (var p : project.ownPackages){ if (!project.upToDate(p)){ project.compilePackage(p, stLib, stdLibBase, projectName, take); } } }
     catch (UserError e){ error = Optional.of(e); }
     catch (UncheckedIOException e){ throw e; }
     catch (RuntimeException|AssertionError e){
       if (!cached){ throw e; }
       error = Optional.of(UserError.cacheCorruptedOrCrash(e));
     }
-    if (!of(c, folder).files().equals(files)){ return fail(Report.filesUpdated(projectName)); }
-    if (error.isPresent()){ return fail(error.get()); }
+    if (error.isPresent()){ return project.fail(error.get()); }
     Fs.ofV(() -> Fs.deleteIfExists(out.resolve(errorFile)));
     return Optional.empty();
   }
@@ -169,15 +161,12 @@ final class Cache{
     var writes= new ArrayList<Runnable>();
     var core= c.frontend(p.name(), rich.sources(p.files()), rich.oracle(), other, vres, capabilities, writes::add);
     var manifest= MainsInfo.of(core, o, stLib);
-    writeIcons(manifest, stdLibBase);
+    writeIcons(manifest, stdLibBase, projectName);
     var chosen= manifest.withExtensions((main, kind, claim) -> autoselect(p, manifest, projectName, main, kind, claim, take));
     replace(out.resolve(p.name()+".json"), OutputHelper.apiJson(core, inputsSnapshot(p), chosen));
-    writeCompiled(p, () -> { writes.forEach(Runnable::run); c.backend(p.name(), core, rich.oracle(), other, capabilities); });
-  }
-  private void writeCompiled(Pkg p, Runnable backend){
-    Fs.writeUtf8(out.resolve(unfinishedFile), "", newestFileTime(p));
-    backend.run();
-    Fs.writeUtf8(out.resolve(unfinishedFile), "", Fs.lastModified(out.resolve(p.name()+".jar")));
+    writes.forEach(Runnable::run);
+    c.backend(p.name(), core, rich.oracle(), other, capabilities);
+    Fs.ofV(() -> Fs.setLastModifiedTime(out.resolve(p.name()+".jar"), FileTime.fromMillis(Fs.lastModified(out.resolve(unfinishedFile)))));
   }
   private String autoselect(Pkg p, MainsInfo manifest, String projectName, String main, boolean shortcut, MainsInfo.Claim claim, TakeFreeExtension take){
     var named= Stream.concat(Stream.of(manifest), lowerPackages(p).stream().map(q -> optApi(q.name()).orElseThrow().manifest()))
@@ -196,8 +185,8 @@ final class Cache{
     return take.take(candidates).orElseThrow(() -> Report.noFreeExtension(main, shortcut, claim.icon()));
   }
   private static final byte[] pngHead= {(byte)0x89, 'P', 'N', 'G', '\r', '\n', 0x1A, '\n', 0, 0, 0, 13, 'I', 'H', 'D', 'R'};
-  private void writeIcons(MainsInfo manifest, Path stdLibBase){
-    manifest.mains().forEach((main, m) -> m.icons().forEach(icon -> writeIcon(main, written(m, icon), icon, stdLibBase)));
+  private void writeIcons(MainsInfo manifest, Path stdLibBase, String projectName){
+    manifest.mains().forEach((main, m) -> m.icons().forEach(icon -> writeIcon(main, written(m, icon), icon, stdLibBase, projectName)));
   }
   /// the kind and the claim of the icon as the source writes the claim, for the error of a refused icon
   private static Map.Entry<String,MainsInfo.Claim> written(MainsInfo.Main m, MainsInfo.Claim icon){
@@ -205,10 +194,12 @@ final class Cache{
     var openWith= m.openWiths().stream().filter(c -> c.icon().equals(icon.icon())).findFirst().map(c -> Map.entry("OpenWith", c));
     return shortcut.or(() -> openWith).orElse(Map.entry("PreLoadIcon", icon));
   }
-  private void writeIcon(String main, Map.Entry<String,MainsInfo.Claim> claim, MainsInfo.Claim icon, Path stdLibBase){
-    var file= (icon.icon().startsWith(base+".") ? stdLibBase : folder).resolve(icon.diskPath());
+  private void writeIcon(String main, Map.Entry<String,MainsInfo.Claim> claim, MainsInfo.Claim icon, Path stdLibBase, String projectName){
+    var inProject= !icon.icon().startsWith(base+".");
+    var file= (inProject ? folder : stdLibBase).resolve(icon.diskPath());
     var steps= icon.zipSteps().isEmpty() ? List.<String>of() : List.of(icon.zipSteps().split(";"));
     var bytes= icon.zipEntry().isEmpty() ? Fs.of(() -> Fs.readAllBytes(file)) : ZipLocator.entryBytes(file, steps, icon.zipEntry());
+    if (inProject && Fs.lastModified(file) > Fs.lastModified(out.resolve(unfinishedFile))){ throw Report.filesUpdated(projectName); }
     if (bytes.length < 24 || !Arrays.equals(bytes, 0, 16, pngHead, 0, 16)){ throw Report.iconRefused(main, claim.getKey(), claim.getValue(), "is not a PNG image"); }
     var w= ByteBuffer.wrap(bytes).getInt(16);
     var h= ByteBuffer.wrap(bytes).getInt(20);

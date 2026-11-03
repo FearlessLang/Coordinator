@@ -33,6 +33,7 @@ import naiveBackend.BackendTools;
 import naiveBackend.NaiveBackendLogicMain;
 import offensiveUtils.Require;
 import realSourceOracle.RealSourceOracleWithZip;
+import realSourceOracle.Since;
 import realSourceOracle.SourceOracleWithAutoload;
 import realSourceOracle.ZipEntry;
 import tools.ChildJvm;
@@ -83,7 +84,7 @@ public interface Coordinator{
     catch (CharacterCodingException _){ return false; }
   }
   static boolean zipped(List<Ref> files){ return OneOr.of("One rank file per package", files.stream().filter(Helper::hasReservedRankPrefix)) instanceof ZipEntry; }
-  default SourceOracle sourceOracle(Path path){ return new RealSourceOracleWithZip(path); }
+  default SourceOracle sourceOracle(Path path, Since since){ return new RealSourceOracleWithZip(path, since); }
   /// What Coordinator.check gives (see CoordinatorDesign).
   sealed interface State{
     record Invalid(String problem) implements State{}
@@ -92,31 +93,31 @@ public interface Coordinator{
   }
   /// Answered by the manager: the first candidate no claim uses, if any.
   interface TakeFreeExtension{ Optional<String> take(List<String> candidates); }
-  default State check(Path folder){ return guarded(folder, () -> Cache.of(this, folder).check()); }
+  default State check(Path folder){ return guarded(folder, () -> Project.of(this, folder, Since.anyTime).check()); }
   default Optional<UserError> compile(Path folder, Path stdLibBase, String projectName, TakeFreeExtension take){
-    return guarded(folder, () -> Cache.of(this, folder).compile(stdLibBase, projectName, take));
+    return guarded(folder, () -> Project.compile(this, folder, stdLibBase, projectName, take));
   }
   static void finish(Path folder){
-    var icons= folder.resolve(outDir).resolve(Cache.iconsDir);
+    var icons= folder.resolve(outDir).resolve(Project.iconsDir);
     var kept= cachedMains(folder).values().stream().flatMap(m -> m.icons().stream()).flatMap(i -> iconFiles(folder, i.icon()).stream()).toList();
     if (Fs.isDirectory(icons)){
       try (var s= Fs.of(() -> Fs.list(icons))){ s.filter(f -> !kept.contains(f)).toList().forEach(Fs::rmTree); }
     }
-    Fs.ofV(() -> Fs.deleteIfExists(folder.resolve(outDir).resolve(Cache.unfinishedFile)));
+    Fs.ofV(() -> Fs.deleteIfExists(folder.resolve(outDir).resolve(Project.unfinishedFile)));
   }
-  static void dropUnfinished(Path folder){ if (Fs.exists(folder.resolve(outDir).resolve(Cache.unfinishedFile))){ deleteCache(folder); } }
-  static void writeError(Path folder, String error){ Cache.writeError(folder, error); }
+  static void dropUnfinished(Path folder){ if (Fs.exists(folder.resolve(outDir).resolve(Project.unfinishedFile))){ deleteCache(folder); } }
+  static void writeError(Path folder, String error){ Project.writeError(folder, error); }
   static void deleteCache(Path folder){
     var out= folder.resolve(outDir);
     if (!Fs.exists(out)){ return; }
-    var unfinished= out.resolve(Cache.unfinishedFile);
+    var unfinished= out.resolve(Project.unfinishedFile);
     Fs.writeUtf8(unfinished, "");
     try (var s= Fs.of(() -> Fs.list(out))){ s.filter(f -> !f.equals(unfinished)).toList().forEach(Fs::rmTree); }
     Fs.ofV(() -> Fs.delete(unfinished));
     Fs.ofV(() -> Fs.delete(out));
   }
   static List<Path> iconFiles(Path folder, String icon){
-    var dir= folder.resolve(outDir).resolve(Cache.iconsDir);
+    var dir= folder.resolve(outDir).resolve(Project.iconsDir);
     var png= dir.resolve(icon+".png");
     return Fs.isWindows() ? List.of(png, dir.resolve(icon+".ico")) : List.of(png);
   }
@@ -130,15 +131,15 @@ public interface Coordinator{
     }
   }
   default Path docs(Path folder, String packageName){
-    return packageName.equals(Cache.base) ? baseCachePath().orElseThrow().resolve("base.html") : folder.resolve(outDir).resolve(packageName+".html");
+    return packageName.equals(Project.base) ? baseCachePath().orElseThrow().resolve("base.html") : folder.resolve(outDir).resolve(packageName+".html");
   }
   /// Compiles, then runs the mains of the packages of the highest rank: the portable Fearless.
   default String main(Path project, Path stdLibBase) throws InterruptedException{
     var used= new java.util.HashSet<String>();
     compile(project, stdLibBase, project.getFileName().toString(), cs -> cs.stream().filter(used::add).findFirst()).ifPresent(e -> { throw e; });
     finish(project);
-    var c= Cache.of(this, project);
-    var top= c.ownPackages.stream().mapToInt(Cache.Pkg::rank).max().orElse(0);
+    var c= Project.of(this, project, Since.anyTime);
+    var top= c.ownPackages.stream().mapToInt(Project.Pkg::rank).max().orElse(0);
     var sb= new StringBuilder();
     for (var p : c.ownPackages.stream().filter(p -> p.rank() == top).toList()){ sb.append(runAllMains(project, stdLibBase, p.name())); }
     return sb.toString();
@@ -149,13 +150,13 @@ public interface Coordinator{
   /// Writes base.json, base.jar, base.html and base.txt into baseCache; the backend of this Coordinator writes base into out.
   default void buildBaseCache(Path stdLibBase, Path out, Path baseCache){
     Fs.ensureDir(baseCache);
-    var o= sourceOracle(stdLibBase);
+    var o= sourceOracle(stdLibBase, Since.anyTime);
     var other= OtherPackages.empty();
     var rich= SourceOracleWithAutoload.ofBase(o);
     var capabilities= new CapabilityEnvironment(rich.autoloadedAssets());
-    var core= frontend(Cache.base, rich.sources(o.allFiles()), rich.oracle(), other, Map.of(), capabilities, Runnable::run);
-    backend(Cache.base, core, rich.oracle(), other, capabilities);
-    Cache.replace(baseCache.resolve("base.json"), OutputHelper.apiJson(core, "", new MainsInfo(Map.of(), MainsInfo.attenuators(core), List.of(), List.of())));
+    var core= frontend(Project.base, rich.sources(o.allFiles()), rich.oracle(), other, Map.of(), capabilities, Runnable::run);
+    backend(Project.base, core, rich.oracle(), other, capabilities);
+    Project.replace(baseCache.resolve("base.json"), OutputHelper.apiJson(core, "", new MainsInfo(Map.of(), MainsInfo.attenuators(core), List.of(), List.of())));
     for (var x : List.of(".jar", ".html", ".txt")){ Fs.ofV(() -> Fs.move(out.resolve("base"+x), baseCache.resolve("base"+x), StandardCopyOption.REPLACE_EXISTING)); }
   }
   static <R> R guarded(Path project, Supplier<R> f){

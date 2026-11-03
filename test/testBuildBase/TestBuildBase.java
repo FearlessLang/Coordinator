@@ -1,5 +1,6 @@
 package testBuildBase;
 
+import realSourceOracle.Since;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -31,7 +32,7 @@ final class TestBuildBase{
       return BackendTools.of(pkgName, oracle, other, core, debugOut, baseCachePath(), true, ResolveResource.stLibRTPath, capabilities);
     }
     @Override public String main(Path path, Path stdLibBase) throws InterruptedException{
-      var stLib= sourceOracle(stdLibBase);
+      var stLib= sourceOracle(stdLibBase, Since.anyTime);
       var pkgName= "base";
       var other= OtherPackages.empty();
       var rich= SourceOracleWithAutoload.ofBase(stLib);

@@ -30,7 +30,7 @@ final class LimitedJsonParser{
   private int i= 0;
   private final Path forErr;
   LimitedJsonParser(String s, Path forErr){ this.s= s; this.forErr= forErr; }
-  Cache.Api api(){
+  Project.Api api(){
     req('{'); key("inputsSnapshot");
     var snapshot= str();
     req(','); key("manifest");
@@ -38,7 +38,7 @@ final class LimitedJsonParser{
     req(','); key("types");
     var types= arr();
     req('}');
-    return end(new Cache.Api(Collections.unmodifiableMap(types.stream().map(x -> typeLit(asArr(x))).collect(Collectors.toMap(Literal::name, l -> l, this::dup, LinkedHashMap::new))), snapshot, manifest));
+    return end(new Project.Api(Collections.unmodifiableMap(types.stream().map(x -> typeLit(asArr(x))).collect(Collectors.toMap(Literal::name, l -> l, this::dup, LinkedHashMap::new))), snapshot, manifest));
   }
   private void key(String k){
     ws();

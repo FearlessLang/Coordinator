@@ -28,12 +28,14 @@ public final class BuildWithZip{
   }
   private final Path root;
   private final boolean dated;
+  private final Since since;
   private final ArrayList<Ref> visibleFiles= new ArrayList<>();
   private final LinkedHashMap<RefParent,LinkedHashSet<RefParent>> visKidsByDir= new LinkedHashMap<>();
   private final LinkedHashMap<RefParent,LinkedHashSet<RefParent>> dotKidsByDir= new LinkedHashMap<>();
-  BuildWithZip(Path root, boolean dated){
+  BuildWithZip(Path root, boolean dated, Since since){
     this.root= root.toAbsolutePath().normalize();
     this.dated= dated;
+    this.since= since;
   }
   List<Ref> build(){
     reqNoEmptyDirs();
@@ -54,7 +56,7 @@ public final class BuildWithZip{
   }
   private void collectFile(Path abs){
     var rel= root.relativize(abs);
-    var pe= new PathEntry(root, rel);
+    var pe= new PathEntry(root, rel, since);
     var invisible= isInvisible(pe);
     if (!Fs.isRegularFile(abs)){ throw invisible
       ? Report.invisibleOnlyRegularFilesAndDirs(abs)
@@ -88,7 +90,7 @@ public final class BuildWithZip{
     BuildWithZip.reqTime(t, () -> Report.dateUnset(rel, t), now -> Report.dateInTheFuture(rel, t, now));
   }
   private void collectBodyDiskZip(Path rel){
-    for (var e : ZipEntry.allEntryPaths(root, rel)){
+    for (var e : ZipEntry.allEntryPaths(root, rel, since)){
       if (e.segments().getLast().endsWith(".zip")){ continue; }//expanded
       addKids(e);
       if (!isInvisible(e)){ visibleFiles.add(e); }
