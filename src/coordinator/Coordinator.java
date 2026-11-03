@@ -126,15 +126,8 @@ public interface Coordinator{
     if (!Fs.isDirectory(out)){ return Map.of(); }
     try (var s= Fs.of(() -> Fs.list(out))){
       var jsons= s.filter(f -> f.getFileName().toString().endsWith(".json")).sorted().toList();
-      return guarded(folder, () -> iconed(folder, MainsInfo.merge(jsons.stream().map(j -> new LimitedJsonParser(OutputHelper.read(j).orElseThrow(), j).api().manifest())).mains()));
+      return guarded(folder, () -> MainsInfo.merge(jsons.stream().map(j -> new LimitedJsonParser(OutputHelper.read(j).orElseThrow(), j).api().manifest())).mains());
     }
-  }
-  /// the mains, once the icon files of every icon of the mains hold an image: a missing or broken icon file is a corrupted cache
-  private static Map<String,MainsInfo.Main> iconed(Path folder, Map<String,MainsInfo.Main> mains){
-    mains.values().stream().flatMap(m -> m.icons().stream()).flatMap(c -> iconFiles(folder, c.icon()).stream())
-      .filter(f -> !Fs.isRegularFile(f) || !Cache.decodes(f, Fs.of(() -> Fs.readAllBytes(f)))).findFirst()
-      .ifPresent(f -> { throw new IllegalStateException("The icon file "+f+" does not hold the icon the Coordinator wrote there"); });
-    return mains;
   }
   default Path docs(Path folder, String packageName){
     return packageName.equals(Cache.base) ? baseCachePath().orElseThrow().resolve("base.html") : folder.resolve(outDir).resolve(packageName+".html");

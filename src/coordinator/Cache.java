@@ -56,13 +56,12 @@ final class Cache{
   final Path folder;
   final Path out;
   final SourceOracle o;
-  final List<File> files;
   final Optional<UserError> problem;
   final List<Pkg> ownPackages;
   final Map<String,Map<String,String>> rankMap;
   final Map<String,Ref> rankFiles;
-  private Cache(Coordinator c, Path folder, SourceOracle o, List<File> files, Optional<UserError> problem, List<Pkg> ownPackages, Map<String,Map<String,String>> rankMap, Map<String,Ref> rankFiles){
-    this.c= c; this.folder= folder; out= folder.resolve(Coordinator.outDir); this.o= o; this.files= files; this.problem= problem;
+  private Cache(Coordinator c, Path folder, SourceOracle o, Optional<UserError> problem, List<Pkg> ownPackages, Map<String,Map<String,String>> rankMap, Map<String,Ref> rankFiles){
+    this.c= c; this.folder= folder; out= folder.resolve(Coordinator.outDir); this.o= o; this.problem= problem;
     this.ownPackages= ownPackages; this.rankMap= rankMap; this.rankFiles= rankFiles;
   }
   static Cache of(Coordinator c, Path folder){
@@ -74,11 +73,13 @@ final class Cache{
       var own= ranks.stream().map(r -> new Pkg(Helper.pkgName(r), Helper.rankNumber(r), map.get(Helper.pkgName(r))))
         .sorted(Comparator.comparingInt(Pkg::rank).thenComparing(Pkg::name)).toList();
       var rankFiles= ranks.stream().collect(Collectors.toUnmodifiableMap(Helper::pkgName, r -> r));
-      return new Cache(c, folder, o, files(o), Optional.empty(), own, rankMap, rankFiles);
+      return new Cache(c, folder, o, Optional.empty(), own, rankMap, rankFiles);
     }
-    catch (UserError e){ return new Cache(c, folder, null, List.of(), Optional.of(e), List.of(), Map.of(), Map.of()); }
+    catch (UserError e){ return new Cache(c, folder, null, Optional.of(e), List.of(), Map.of(), Map.of()); }
   }
-  private static List<File> files(SourceOracle o){
+  /// the files of the project folder, with their times and hashes; none for a folder whose files can not be read
+  private List<File> files(){
+    if (problem.isPresent()){ return List.of(); }
     return o.allFiles().stream().map(r -> new File(r.fearPath(), r.lastModified(), sha(r.loadBytes()))).sorted(Comparator.comparing(File::path)).toList();
   }
   private static String sha(byte[] bytes){
@@ -131,6 +132,7 @@ final class Cache{
   }
   Optional<UserError> compile(Path stdLibBase, String projectName, TakeFreeExtension take){
     if (problem.isPresent()){ return fail(problem.get()); }
+    var files= files();
     var cached= Fs.exists(out);
     if (unfinished()){ jars().forEach(Fs::rmTree); }
     Fs.writeUtf8(out.resolve(unfinishedFile), "");
@@ -144,7 +146,7 @@ final class Cache{
       if (!cached){ throw e; }
       error = Optional.of(UserError.cacheCorruptedOrCrash(e));
     }
-    if (!of(c, folder).files.equals(files)){ return fail(Report.filesUpdated(projectName)); }
+    if (!of(c, folder).files().equals(files)){ return fail(Report.filesUpdated(projectName)); }
     if (error.isPresent()){ return fail(error.get()); }
     Fs.ofV(() -> Fs.deleteIfExists(out.resolve(errorFile)));
     return Optional.empty();
@@ -219,11 +221,6 @@ final class Cache{
       Ico.fromPng(files.getFirst(), tmp);
       Fs.ofV(() -> Fs.move(tmp, files.get(1), StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING));
     }
-  }
-  /// a PNG decodes as an image; an ico starts with the header of an icon resource
-  static boolean decodes(Path file, byte[] bytes){
-    if (!file.toString().endsWith(".ico")){ return decodes(bytes); }
-    return bytes.length > 6 && bytes[0] == 0 && bytes[1] == 0 && bytes[2] == 1 && bytes[3] == 0 && (bytes[4] != 0 || bytes[5] != 0);
   }
   private static boolean decodes(byte[] bytes){
     try{ return ImageIO.read(new ByteArrayInputStream(bytes)) != null; }
