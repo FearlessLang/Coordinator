@@ -817,6 +817,25 @@ Holder
     utils.Err.strCmp("[###]from: Sup.foo[###]", text);
     assertFalse(text.contains("<a "), text);
   }
+  @Test void aDocInAFileWithNoDeclarationIsAttachedToNothing(@TempDir Path tmp){
+    var owner= namedType("pkg.Holder", List.of(), List.of());
+    var rank= URI.create("fear:/_pkg/_rank_pkg.fear");
+    var oracle= SourceOracle.debugBuilder().putURI(file, "Holder:{}\n").putURI(rank, "use base.Nat as Nat;\n/// stray\n").build();
+    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(owner), Optional.empty(), "pkg", tmp.resolve("pkg.html"), true);
+    builder.visitLiteral(owner);
+    var ex= assertThrows(UserError.class, () -> builder.complete(TName::s, true));
+    utils.Err.strCmp("""
+Broken reference in a doc comment.
+
+In file: fear:/_pkg/_rank_pkg.fear
+
+002| /// stray
+   | ^^^^^^^^^
+
+While inspecting the documentation of package pkg
+This documentation is attached to nothing.
+[###]""", ex.getMessage());
+  }
   @Test void aTrailingDocSharedByTwoDeclarationsOnOneLineIsAnAmbiguousReferenceError(@TempDir Path tmp){
     var ownerName= new TName("pkg.Holder", 0, Pos.unknown);
     var zzz= namedMethodAt(".zzz", ownerName, Pos.of(file, 1, 1));

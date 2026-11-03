@@ -75,6 +75,7 @@ public final class HtmlDocBuilder{
     var resolver= new DocResolver(pkgName, types, other);
     var spans= new HashMap<DocOcc,Map<Integer,DocLink>>();
     var problems= new ArrayList<String>();
+    oracle.allFiles().forEach(f -> sources.computeIfAbsent(f.fearURI(), u -> new SourceDocs(u, f.loadString())));
     sources.values().stream().flatMap(s -> s.orphanRuns().stream()).map(this::orphan).forEach(problems::add);
     sources.values().stream().flatMap(s -> s.ambiguousInline.stream()).map(this::ambiguousInline).forEach(problems::add);
     types.forEach(t -> linkType(resolver, t, spans, problems));

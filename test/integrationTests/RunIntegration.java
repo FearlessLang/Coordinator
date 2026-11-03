@@ -536,6 +536,21 @@ Test failure _Calc_Examples at line: 2 in file: _p/calc.fear
 hi
 """, main(root, List.of()));
   }
+  @Test void aDocInAFileWithNoDeclarationIsAnError(@TempDir Path tmp){
+    var root= docExamplesInFiles(tmp, "///A stray note.", "Box:{}");
+    var ex= assertThrows(UserError.class, () -> coordinator(root).compile(root, stLib));
+    utils.Err.strCmp("""
+Broken reference in a doc comment.
+
+In file: fear:/_p/calc.fear
+
+001| ///A stray note.
+   | ^^^^^^^^^^^^^^^^
+
+While inspecting the documentation of package p
+This documentation is attached to nothing.
+[###]""", ex.getMessage());
+  }
   @Test void failingExamplesOfTwoFilesAreEachReportedInTheirOwnFile(@TempDir Path tmp){
     var root= docExamplesInFiles(tmp, """
 Calc:{
