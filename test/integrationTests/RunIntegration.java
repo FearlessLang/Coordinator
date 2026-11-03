@@ -36,6 +36,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Optional;
 import java.util.Random;
+import java.util.function.Consumer;
 import java.util.function.IntBinaryOperator;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -354,9 +355,9 @@ App:Main{s->Debug#("hi")}
       @Override public BackendTools backendTools(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, CapabilityEnvironment capabilities){
         return base.backendTools(pkgName, oracle, other, core, capabilities);
       }
-      @Override public List<Literal> frontend(String pkgName, List<Ref> files, SourceOracle oracle, OtherPackages other, Map<String,String> vres, CapabilityEnvironment capabilities){
+      @Override public List<Literal> frontend(String pkgName, List<Ref> files, SourceOracle oracle, OtherPackages other, Map<String,String> vres, CapabilityEnvironment capabilities, Consumer<Runnable> writes){
         frontends.add(pkgName);
-        return Coordinator.super.frontend(pkgName, files, oracle, other, vres, capabilities);
+        return Coordinator.super.frontend(pkgName, files, oracle, other, vres, capabilities, writes);
       }
     };
   }
@@ -2126,6 +2127,18 @@ Type declaration "A" implements `OpenWith[IconsFoo,"fapp042"]`.
 "fapp042" is a shortcut extension: "fapp" followed by three digits names the shortcut files of the Fearless manager.
 Use an extension of the form "ffile" followed by three digits, like "ffile042", or a system extension, like "htm"; or implement "OpenWith[_]" to let the Fearless manager choose one.
 Error 7 WellFormedness"""); }
+  @Test void aCompilationFailingAfterTheFrontendKeepsTheOldDocumentation(@TempDir Path tmp) throws Exception{
+    var root= claimsProject(tmp, "///The first text.\nA:Main{}\n");
+    compile(coordinator(root), root);
+    var html= root.resolve(Coordinator.outDir).resolve("col.html");
+    var before= Fs.readUtf8(html);
+    assertTrue(before.contains("The first text."));
+    var rank= root.resolve("_col").resolve("_rank_app.fear");
+    Fs.writeUtf8(rank, Fs.readUtf8(rank).replace("///The first text.\nA:Main{}", "///The second text.\nA:Main,OpenWith[base.Str,\"q\"]{}"));
+    assertThrows(UserError.class, () -> compile(coordinator(root), root));
+    assertEquals(before, Fs.readUtf8(html));
+    assertEquals(Fs.readUtf8(root.resolve(Coordinator.outDir).resolve("col.txt")).contains("The second text."), false);
+  }
   @Test void aClaimWhoseIconIsNotAnImageFileIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 A:Main,OpenWith[base.Str,"q"]{}
 """, """

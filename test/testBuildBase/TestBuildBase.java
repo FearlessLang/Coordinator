@@ -36,7 +36,7 @@ final class TestBuildBase{
       var other= OtherPackages.empty();
       var rich= SourceOracleWithAutoload.ofBase(stLib);
       var capabilities= new CapabilityEnvironment(rich.autoloadedAssets());
-      var core= frontend(pkgName, rich.sources(stLib.allFiles()), rich.oracle(), other, Map.of(), capabilities);
+      var core= frontend(pkgName, rich.sources(stLib.allFiles()), rich.oracle(), other, Map.of(), capabilities, Runnable::run);
       backend(pkgName, core, rich.oracle(), other, capabilities);
       var jars= Push.of(debugOut, sharedClasspath());
       return Coordinator.runMains(Coordinator.runData(debugOut.getParent(), base), jars, "_"+pkgName+".Main");

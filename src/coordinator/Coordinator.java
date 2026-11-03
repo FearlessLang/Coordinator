@@ -160,7 +160,7 @@ public interface Coordinator{
     var other= OtherPackages.empty();
     var rich= SourceOracleWithAutoload.ofBase(o);
     var capabilities= new CapabilityEnvironment(rich.autoloadedAssets());
-    var core= frontend(Cache.base, rich.sources(o.allFiles()), rich.oracle(), other, Map.of(), capabilities);
+    var core= frontend(Cache.base, rich.sources(o.allFiles()), rich.oracle(), other, Map.of(), capabilities, Runnable::run);
     backend(Cache.base, core, rich.oracle(), other, capabilities);
     Cache.replace(baseCache.resolve("base.json"), OutputHelper.apiJson(core, "", new MainsInfo(Map.of(), MainsInfo.attenuators(core), List.of(), List.of())));
     for (var x : List.of(".jar", ".html", ".txt")){ Fs.ofV(() -> Fs.move(out.resolve("base"+x), baseCache.resolve("base"+x), StandardCopyOption.REPLACE_EXISTING)); }
@@ -184,18 +184,18 @@ public interface Coordinator{
     return startProgram(jvmArgs, Push.of(project.resolve(outDir), sharedClasspath), "_"+main.substring(0, main.indexOf('.'))+".Main", out, main);
   }
   String outDir= ".fearless_out";
-  default List<Literal> frontend(String pkgName, List<Ref> files, SourceOracle oracle, OtherPackages other, Map<String,String> vres, CapabilityEnvironment capabilities){
-    try{ return new FrontendLogicMain().of(pkgName, vres, files, other, core -> docs(pkgName, !zipped(files), oracle, other, core, capabilities, names(pkgName, files, oracle, other, vres))); }
+  default List<Literal> frontend(String pkgName, List<Ref> files, SourceOracle oracle, OtherPackages other, Map<String,String> vres, CapabilityEnvironment capabilities, Consumer<Runnable> writes){
+    try{ return new FrontendLogicMain().of(pkgName, vres, files, other, core -> docs(pkgName, !zipped(files), oracle, other, core, capabilities, names(pkgName, files, oracle, other, vres), writes)); }
     catch (FearlessException e){ throw Report.sourceError(e.render(oracle)); }
   }
   default Function<TName,String> names(String pkgName, List<Ref> files, SourceOracle oracle, OtherPackages other, Map<String,String> vres){
     try{ return new FrontendLogicMain().names(pkgName, vres, files, other); }
     catch (FearlessException e){ throw Report.sourceError(e.render(oracle)); }
   }
-  private List<TestSource> docs(String pkgName, boolean testable, SourceOracle oracle, OtherPackages other, List<Literal> core, CapabilityEnvironment capabilities, Function<TName,String> names){
+  private List<TestSource> docs(String pkgName, boolean testable, SourceOracle oracle, OtherPackages other, List<Literal> core, CapabilityEnvironment capabilities, Function<TName,String> names, Consumer<Runnable> writes){
     var docs= backendTools(pkgName, oracle, other, core, capabilities).docs();
     core.forEach(docs::visitAll);
-    return docs.complete(names, testable);
+    return docs.complete(names, testable, writes);
   }
   default void backend(String pkgName, List<Literal> core, SourceOracle oracle, OtherPackages other, CapabilityEnvironment capabilities){
     new NaiveBackendLogicMain().of(backendTools(pkgName, oracle, other, core, capabilities), sharedClasspath());

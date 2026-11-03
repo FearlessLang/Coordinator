@@ -20,6 +20,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
+import java.util.ArrayList;
 
 import javax.imageio.ImageIO;
 
@@ -163,12 +164,13 @@ final class Cache{
     var vres= other.virtualizationMap().getOrDefault(p.name(), Map.of());
     var rich= SourceOracleWithAutoload.of(o, "_"+p.name(), c.names(p.name(), p.files(), o, other, vres));
     var capabilities= new CapabilityEnvironment(rich.autoloadedAssets());
-    var core= c.frontend(p.name(), rich.sources(p.files()), rich.oracle(), other, vres, capabilities);
+    var writes= new ArrayList<Runnable>();
+    var core= c.frontend(p.name(), rich.sources(p.files()), rich.oracle(), other, vres, capabilities, writes::add);
     var manifest= MainsInfo.of(core, o, stLib);
     writeIcons(manifest, stdLibBase);
     var chosen= manifest.withExtensions((main, kind, claim) -> autoselect(p, manifest, projectName, main, kind, claim, take));
     replace(out.resolve(p.name()+".json"), OutputHelper.apiJson(core, inputsSnapshot(p), chosen));
-    writeCompiled(p, () -> c.backend(p.name(), core, rich.oracle(), other, capabilities));
+    writeCompiled(p, () -> { writes.forEach(Runnable::run); c.backend(p.name(), core, rich.oracle(), other, capabilities); });
   }
   private void writeCompiled(Pkg p, Runnable backend){
     Fs.writeUtf8(out.resolve(unfinishedFile), "", newestFileTime(p));
