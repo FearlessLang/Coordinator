@@ -36,25 +36,21 @@ public final class HtmlDocBuilder{
   final SourceOracle oracle;
   final OtherPackages other;
   final Map<TName,Literal> currentByName;
-  String pkgName;
-  Path htmlPath;
-  boolean generatesTests;
+  final String pkgName;
+  final Path htmlPath;
+  final boolean generatesTests;
   final ArrayList<TypeDoc> types= new ArrayList<>();
   final IdentityHashMap<Src,TypeDoc> typeBySrc= new IdentityHashMap<>();
   final LinkedHashMap<URI,SourceDocs> sources= new LinkedHashMap<>();
-  public HtmlDocBuilder(SourceOracle oracle, OtherPackages other, List<Literal> core, Optional<Path> baseDocLocation){
-    assert Require.nonNull(oracle, other, core, baseDocLocation);
+  public HtmlDocBuilder(SourceOracle oracle, OtherPackages other, List<Literal> core, Optional<Path> baseDocLocation, String pkgName, Path htmlPath, boolean generatesTests){
+    assert Require.nonNull(oracle, other, core, baseDocLocation, pkgName, htmlPath);
     this.oracle= oracle;
     this.other= other;
     this.baseDocLocation= baseDocLocation;
+    this.pkgName= pkgName;
+    this.htmlPath= htmlPath;
+    this.generatesTests= generatesTests;
     currentByName= core.stream().collect(Collectors.toUnmodifiableMap(Literal::name, l -> l));
-  }
-  public void packageLocation(String pkgName, Path htmlPath, boolean generatesTests){
-    assert Require.nonNull(pkgName, htmlPath);
-    assert this.pkgName == null;
-    this.pkgName = pkgName;
-    this.htmlPath = htmlPath;
-    this.generatesTests = generatesTests;
   }
   public void visitAll(E e){
     if (e instanceof Literal l){ visitLiteral(l); }
@@ -76,7 +72,6 @@ public final class HtmlDocBuilder{
     }
   }
   public List<TestSource> complete(Function<TName,String> pkgNames, boolean testable){
-    assert Require.nonNull(pkgName, htmlPath);
     var resolver= new DocResolver(pkgName, types, other);
     var spans= new HashMap<DocOcc,Map<Integer,DocLink>>();
     var problems= new ArrayList<String>();
@@ -84,7 +79,7 @@ public final class HtmlDocBuilder{
     sources.values().stream().flatMap(s -> s.ambiguousInline.stream()).map(this::ambiguousInline).forEach(problems::add);
     types.forEach(t -> linkType(resolver, t, spans, problems));
     if (!problems.isEmpty()){ throw Report.docReferences(problems); }
-    var renderer= new HtmlDocRenderer(pkgName, DocNames.uses(pkgName, currentByName.values()), types, other, spans, baseDocLocation);
+    var renderer= new HtmlDocRenderer(DocNames.uses(pkgName, currentByName.values()), resolver, spans, baseDocLocation);
     Fs.writeUtf8(htmlPath, renderer.render());
     Fs.writeUtf8(htmlPath.resolveSibling(pkgName+".txt"), renderer.renderText());
     if (!generatesTests || !testable){ return List.of(); }

@@ -1,6 +1,5 @@
 package docBuilder;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -97,28 +96,20 @@ record DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other){
         .map(m -> Candidate.ofLocalMethod(owner, m))
         .toList();
     }
-    return literalOf(owner).stream().flatMap(lit -> foreignCandidates(owner, declaredAndInherited(lit), selector, arity)).toList();
+    return foreignCandidates(owner, other.__of(owner).ms(), selector, arity).toList();
   }
   private Optional<TypeDoc> localTypeDoc(TName n){
     return OneOr.opt("type "+n, types.stream().filter(t -> t.main().name().equals(n)));
-  }
-  private List<M> declaredAndInherited(Literal owner){
-    var res= new ArrayList<>(owner.ms());
-    owner.cs().forEach(c -> literalOf(c.name()).ifPresent(sup -> res.addAll(declaredAndInherited(sup))));
-    return res;
-  }
-  private Optional<Literal> literalOf(TName n){
-    return localTypeDoc(n).map(TypeDoc::main).or(() -> Optional.ofNullable(other.__of(n)));
   }
   private Optional<DocLink> resolveBareSelector(String selector, OptionalInt arity){
     var localCands= types.stream()
       .filter(TypeDoc::visible)
       .flatMap(t -> t.methods.stream()
-        .filter(MethodDoc::visible)
+        .filter(m -> m.declared)
         .filter(m -> named(m.main(), selector, arity))
         .map(m -> Candidate.ofLocalMethod(t.main().name(), m)));
     var foreignCands= foreign()
-      .flatMap(n -> foreignCandidates(n, other.__of(n).ms(), selector, arity));
+      .flatMap(n -> foreignCandidates(n, other.__of(n).ms().stream().filter(m -> m.sig().origin().equals(n)).toList(), selector, arity));
     return pack(selector+shape(arity, "(", ")"), Stream.concat(localCands, foreignCands).toList());
   }
   private Stream<Candidate> foreignCandidates(TName owner, List<M> ms, String selector, OptionalInt arity){

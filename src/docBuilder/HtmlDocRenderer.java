@@ -17,7 +17,6 @@ import java.util.stream.Stream;
 import core.B;
 import core.ExportedToStr;
 import core.M;
-import core.OtherPackages;
 import core.T;
 import core.TName;
 import main.FrontendLogicMain.TestSource;
@@ -39,15 +38,14 @@ final class HtmlDocRenderer{
   final LinkedHashMap<DocLink.Ambiguous,String> pages= new LinkedHashMap<>();
   final ExportedToStr toStr;
   final DocResolver resolver;
-  HtmlDocRenderer(String pkgName, Map<String,String> uses, List<TypeDoc> types, OtherPackages other,
-      Map<DocOcc,Map<Integer,DocLink>> spans, Optional<Path> baseDocLocation){
-    assert Require.nonNull(pkgName, uses, types, other, spans, baseDocLocation);
-    this.pkgName= pkgName;
-    this.types= types;
+  HtmlDocRenderer(Map<String,String> uses, DocResolver resolver, Map<DocOcc,Map<Integer,DocLink>> spans, Optional<Path> baseDocLocation){
+    assert Require.nonNull(uses, resolver, spans, baseDocLocation);
+    pkgName= resolver.pkgName();
+    types= resolver.types();
     this.spans= spans;
     this.baseDocLocation= baseDocLocation;
     toStr= new ExportedToStr(pkgName, uses);
-    resolver= new DocResolver(pkgName, types, other);
+    this.resolver= resolver;
   }
   String render(){
     var shown= visibleTypes();
@@ -76,7 +74,6 @@ final class HtmlDocRenderer{
   record GeneratedTestNames(String top, List<String> perType){}
   List<TypeDoc> testableTypes(){
     return visibleTypes().stream()
-      .filter(t -> !t.main().infName())
       .filter(t -> !testGroups(t).isEmpty())
       .toList();
   }
@@ -266,14 +263,14 @@ code{
   font-size:.92em; background:var(--bg-code); border:1px solid var(--border-soft);
   padding:.05em .32em; border-radius:.3em;
 }
-.example,.variant{
+.example,.variant,.fenced{
   font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
   white-space:pre-wrap; font-size:.88em; margin:.4em 0 .2em;
   background:var(--bg-code); border:1px solid var(--border-soft);
   border-left:3px solid var(--orange); border-radius:.3em;
   padding:.6em .8em; overflow-x:auto; color:var(--fg);
 }
-.variant{border-left-color:var(--border)}
+.variant,.fenced{border-left-color:var(--border)}
 /* every declaration a name could mean, when it names more than one */
 .options{list-style:none; margin:.6em 0; padding:0}
 .options li{padding:.4em .1em; border-top:1px solid var(--border-soft)}
@@ -322,7 +319,8 @@ code{
   List<TypeDoc> visibleTypes(){
     return types.stream()
       .filter(TypeDoc::visible)
-      .sorted(Comparator.comparing(t -> (t.main().infName() ? "1:" : "0:")+typeTitle(t)))
+      .sorted(Comparator.comparing((TypeDoc t) -> t.main().infName() ? "1:"+typeTitle(t) : "0:"+toStr.typeName(t.main().name()))
+        .thenComparingInt(t -> t.main().name().arity()))
       .toList();
   }
   List<MethodDoc> visibleMethods(TypeDoc t){
@@ -434,7 +432,19 @@ code{
   //of them are one paragraph, kept on their own lines so that a list stays a list and
   //an indented line stays indented (the doc block is rendered with pre-wrap).
   void renderProse(StringBuilder sb, List<DocOcc> prose){
-    var lines= Join.of(prose.stream().map(o -> o.text().isBlank() ? "" : renderText(o)), "", "\n", "", "");
+    var block= new ArrayList<DocOcc>();
+    var inFence= false;
+    for (var o : prose){
+      if (!o.text().strip().equals("```")){ block.add(o); continue; }
+      renderBlock(sb, block, inFence);
+      block.clear();
+      inFence = !inFence;
+    }
+    renderBlock(sb, block, inFence);
+  }
+  void renderBlock(StringBuilder sb, List<DocOcc> block, boolean fenced){
+    if (fenced){ sb.append("<pre class=\"fenced\">").append(Join.of(block.stream().map(o -> h(o.text())), "", "\n", "", "")).append("</pre>\n"); return; }
+    var lines= Join.of(block.stream().map(o -> o.text().isBlank() ? "" : renderText(o)), "", "\n", "", "");
     paragraph.matcher(lines).results().forEach(p -> sb.append("<p>").append(p.group()).append("</p>\n"));
   }
   private static final Pattern paragraph= Pattern.compile("(?dm)^.+(\n.+)*");
@@ -463,8 +473,10 @@ code{
     sb.append("</ul>\n</section>\n");
   }
   String renderCandidate(Candidate c){
+    var anonymous= OneOr.opt("type "+c.owner(), types.stream().filter(t -> t.main().infName() && t.main().name().equals(c.owner())));
     var sb= new StringBuilder("<a href=\"").append(h(candidateHref(c))).append("\">")
-      .append(h(toStr.typeNameWithArity(c.owner())));
+      .append(c.localMethod().map(m -> m.main().sig().rc().toStrSpace()).orElse(""))
+      .append(h(anonymous.map(this::shortTitle).orElseGet(() -> toStr.typeNameWithArity(c.owner()))));
     c.selector().ifPresent(s -> sb.append(h(s+DocResolver.shape(c.arity(), "(", ")"))));
     sb.append("</a>");
     c.localMethod().ifPresent(m -> m.docs.stream().filter(d -> !d.example() && !d.testOnly()).findFirst()
