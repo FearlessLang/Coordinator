@@ -7,6 +7,7 @@ import java.nio.ByteBuffer;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.regex.MatchResult;
 import java.util.regex.Pattern;
@@ -33,13 +34,15 @@ public final class JUnitReport{
 %s</testsuites>
 """.formatted(suites);
   }
-  private static Optional<LogFiles.Entry> newest(Path folder){
+  private static Optional<LogFiles.Entry> newest(Path folder){ return unitTestLogs(folder).stream().findFirst(); }
+  /// the unit test logs of the project, newest first
+  public static List<LogFiles.Entry> unitTestLogs(Path folder){
     var base= folder.resolve(LogFiles.runDir).resolve("logs").resolve("_base");
     return LogFiles.list(folder).stream()
       .filter(e -> e.path().getParent().equals(base) && e.path().getFileName().toString().matches("unit_test_log(\\$.*)?\\.log"))
-      .findFirst();
+      .toList();
   }
-  private static String suiteOf(String name, Path log){
+  public static String suiteOf(String name, Path log){
     var body= disabled.matcher(complete(log)).replaceAll(JUnitReport::skipped)
       .replaceAll("(?m)^PLAN\\|RUN\\|.*$\\r?\\n?", "");
     return """
