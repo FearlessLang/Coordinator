@@ -4989,6 +4989,19 @@ A:Main{s->base.Debug#(`hi`)}
     assertEquals(Optional.empty(), compileWith(coordinator(root), root, cs -> cs.stream().findFirst()));
     assertEquals(Fs.lastModified(out(root, "_unfinished.txt")), Fs.lastModified(out(root, "p.jar")));
   }
+  @Test void aPackageNamedIconsKeepsTheIconsOfTheCache(@TempDir Path tmp){
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_icons/_rank_app999.fear
+iii
+use base.Main as Main;
+A:Main{s->base.Debug#(`hi`)}
+""");
+    compile(coordinator(root), root);
+    assertTrue(Fs.isRegularFile(out(root, "icons").resolve("base.IconsFearless.png")));
+    utils.Err.strCmp("hi\n", main(root, List.of()));
+  }
   @Test void aFileNewerThanTheStartOfTheCompileIsRefused(@TempDir Path tmp) throws IOException{
     var root= helloProject(tmp);
     Fs.setLastModifiedTime(root.resolve("_p", "_rank_app999.fear"), FileTime.fromMillis(System.currentTimeMillis()+3000));

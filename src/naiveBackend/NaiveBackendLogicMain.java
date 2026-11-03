@@ -13,7 +13,7 @@ import tools.JavacTool;
 public final class NaiveBackendLogicMain{
   public void of(BackendTools tools, List<Path> extraClasspathDirs){
     var out= tools.rootDir();
-    var outPath= out.resolve(tools.pkgName());
+    var outPath= out.resolve("_java");
     var fixers= new Backend(outPath, tools).produceJavaCode();
     var classes= out.resolve("_classes");
     Fs.cleanDir(classes);
