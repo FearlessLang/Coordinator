@@ -17,7 +17,6 @@ import java.util.stream.Stream;
 import core.B;
 import core.ExportedToStr;
 import core.M;
-import core.OtherPackages;
 import core.T;
 import core.TName;
 import main.FrontendLogicMain.TestSource;
@@ -39,15 +38,14 @@ final class HtmlDocRenderer{
   final LinkedHashMap<DocLink.Ambiguous,String> pages= new LinkedHashMap<>();
   final ExportedToStr toStr;
   final DocResolver resolver;
-  HtmlDocRenderer(String pkgName, Map<String,String> uses, List<TypeDoc> types, OtherPackages other,
-      Map<DocOcc,Map<Integer,DocLink>> spans, Optional<Path> baseDocLocation){
-    assert Require.nonNull(pkgName, uses, types, other, spans, baseDocLocation);
-    this.pkgName= pkgName;
-    this.types= types;
+  HtmlDocRenderer(Map<String,String> uses, DocResolver resolver, Map<DocOcc,Map<Integer,DocLink>> spans, Optional<Path> baseDocLocation){
+    assert Require.nonNull(uses, resolver, spans, baseDocLocation);
+    pkgName= resolver.pkgName();
+    types= resolver.types();
     this.spans= spans;
     this.baseDocLocation= baseDocLocation;
     toStr= new ExportedToStr(pkgName, uses);
-    resolver= new DocResolver(pkgName, types, other);
+    this.resolver= resolver;
   }
   String render(){
     var shown= visibleTypes();

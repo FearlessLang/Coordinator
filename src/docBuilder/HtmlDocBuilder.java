@@ -79,7 +79,7 @@ public final class HtmlDocBuilder{
     sources.values().stream().flatMap(s -> s.ambiguousInline.stream()).map(this::ambiguousInline).forEach(problems::add);
     types.forEach(t -> linkType(resolver, t, spans, problems));
     if (!problems.isEmpty()){ throw Report.docReferences(problems); }
-    var renderer= new HtmlDocRenderer(pkgName, DocNames.uses(pkgName, currentByName.values()), types, other, spans, baseDocLocation);
+    var renderer= new HtmlDocRenderer(DocNames.uses(pkgName, currentByName.values()), resolver, spans, baseDocLocation);
     Fs.writeUtf8(htmlPath, renderer.render());
     Fs.writeUtf8(htmlPath.resolveSibling(pkgName+".txt"), renderer.renderText());
     if (!generatesTests || !testable){ return List.of(); }
