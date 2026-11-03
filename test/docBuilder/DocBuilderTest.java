@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
+import java.util.stream.IntStream;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -1013,6 +1014,18 @@ Holder
 3:4|   .test __AFoo_Examples
 3:4|   }
 """, show(test));
+  }
+  @Test void typesAreListedByNameThenByArity(){
+    var action= new TypeDoc(new Literal(RC.imm, new TName("pkg.Action", 2, Pos.unknown), twoBounds(), List.of(), "this", List.of(), freshSrc(), false), List.of());
+    var actionMatch= new TypeDoc(namedType("pkg.ActionMatch", List.of(), List.of()), List.of());
+    var renderer= new HtmlDocRenderer("pkg", Map.of(), List.of(actionMatch, action), OtherPackages.empty(), Map.of(), Optional.empty());
+    assertEquals(List.of("pkg.Action", "pkg.ActionMatch"), renderer.visibleTypes().stream().map(t -> t.main().name().s()).toList());
+  }
+  @Test void typesOfOneNameAreListedByArityAsANumber(){
+    var ten= new TypeDoc(new Literal(RC.imm, new TName("pkg.F", 10, Pos.unknown), IntStream.range(0, 10).mapToObj(i -> new B("X"+i, EnumSet.of(RC.imm))).toList(), List.of(), "this", List.of(), freshSrc(), false), List.of());
+    var two= new TypeDoc(new Literal(RC.imm, new TName("pkg.F", 2, Pos.unknown), twoBounds(), List.of(), "this", List.of(), freshSrc(), false), List.of());
+    var renderer= new HtmlDocRenderer("pkg", Map.of(), List.of(ten, two), OtherPackages.empty(), Map.of(), Optional.empty());
+    assertEquals(List.of(2, 10), renderer.visibleTypes().stream().map(t -> t.main().name().arity()).toList());
   }
   private static List<String> idsIn(String html, String prefix){
     var res= new ArrayList<String>();
