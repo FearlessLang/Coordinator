@@ -178,7 +178,7 @@ public interface Coordinator{
   }
   String outDir= ".fearless_out";
   default List<Literal> frontend(String pkgName, List<Ref> files, SourceOracle oracle, OtherPackages other, Map<String,String> vres, CapabilityEnvironment capabilities, Consumer<Runnable> writes){
-    try{ return new FrontendLogicMain().of(pkgName, vres, files, other, core -> docs(pkgName, !zipped(files), oracle, other, core, capabilities, names(pkgName, files, oracle, other, vres), writes)); }
+    try{ return new FrontendLogicMain().of(pkgName, vres, files, other, core -> docs(pkgName, !zipped(files), () -> files, other, core, capabilities, names(pkgName, files, oracle, other, vres), writes)); }
     catch (FearlessException e){ throw Report.sourceError(e.render(oracle)); }
   }
   default Function<TName,String> names(String pkgName, List<Ref> files, SourceOracle oracle, OtherPackages other, Map<String,String> vres){
