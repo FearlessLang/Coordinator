@@ -1616,13 +1616,39 @@ _pkg/z.zip/b.fear
 iii
 B:{}
 """);
-    var oracle= new RealSourceOracleWithZip(root, new Since(1_000_000, "hello"));
-    Fs.setLastModifiedTime(root.resolve("_pkg/a.fear"), FileTime.fromMillis(1_000_000));
-    Fs.setLastModifiedTime(root.resolve("_pkg/z.zip"), FileTime.fromMillis(1_000_000));
+    var t= System.currentTimeMillis()+60_000;
+    var oracle= new RealSourceOracleWithZip(root, new Since(t, "hello"));
+    Fs.setLastModifiedTime(root.resolve("_pkg/a.fear"), FileTime.fromMillis(t));
+    Fs.setLastModifiedTime(root.resolve("_pkg/z.zip"), FileTime.fromMillis(t));
     for (var r : oracle.allFiles()){ r.loadString(); }
-    for (var f : List.of("_pkg/a.fear", "_pkg/z.zip")){ Fs.setLastModifiedTime(root.resolve(f), FileTime.fromMillis(1_000_001)); }
+    for (var f : List.of("_pkg/a.fear", "_pkg/z.zip")){ Fs.setLastModifiedTime(root.resolve(f), FileTime.fromMillis(t+1)); }
     for (var r : oracle.allFiles()){
       utils.Err.strCmp("Some files inside the project \"hello\" were updated while the project was compiling.", assertThrows(UserError.class, r::loadString).getMessage());
     }
+  }
+  @Test void aZipBrokenAfterSinceIsRefusedAsUpdated(@TempDir Path tmp) throws Exception{
+    var root= tmp.resolve("root").toAbsolutePath().normalize();
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_pkg/z.zip/b.fear
+iii
+B:{}
+""");
+    var t= System.currentTimeMillis()+60_000;
+    var zipRef= OneOr.of("one zip entry", new RealSourceOracleWithZip(root, new Since(t, "hello")).allFiles().stream());
+    Fs.writeUtf8(root.resolve("_pkg/z.zip"), "not a zip");
+    Fs.setLastModifiedTime(root.resolve("_pkg/z.zip"), FileTime.fromMillis(t+1));
+    utils.Err.strCmp("Some files inside the project \"hello\" were updated while the project was compiling.", assertThrows(UserError.class, zipRef::loadString).getMessage());
+  }
+  @Test void aZipNewerThanSinceIsRefusedWhenListed(@TempDir Path tmp){
+    var root= tmp.resolve("root").toAbsolutePath().normalize();
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_pkg/z.zip/b.fear
+iii
+B:{}
+""");
+    var since= new Since(System.currentTimeMillis()-60_000, "hello");
+    utils.Err.strCmp("Some files inside the project \"hello\" were updated while the project was compiling.", assertThrows(UserError.class, () -> new RealSourceOracleWithZip(root, since)).getMessage());
   }
 }

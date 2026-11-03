@@ -90,7 +90,7 @@ public final class BuildWithZip{
     BuildWithZip.reqTime(t, () -> Report.dateUnset(rel, t), now -> Report.dateInTheFuture(rel, t, now));
   }
   private void collectBodyDiskZip(Path rel){
-    for (var e : ZipEntry.allEntryPaths(root, rel, since)){
+    for (var e : since.read(root.resolve(rel), () -> ZipEntry.allEntryPaths(root, rel, since))){
       if (e.segments().getLast().endsWith(".zip")){ continue; }//expanded
       addKids(e);
       if (!isInvisible(e)){ visibleFiles.add(e); }

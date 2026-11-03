@@ -198,8 +198,8 @@ final class Project{
     var inProject= !icon.icon().startsWith(base+".");
     var file= (inProject ? folder : stdLibBase).resolve(icon.diskPath());
     var steps= icon.zipSteps().isEmpty() ? List.<String>of() : List.of(icon.zipSteps().split(";"));
-    var bytes= icon.zipEntry().isEmpty() ? Fs.of(() -> Fs.readAllBytes(file)) : ZipLocator.entryBytes(file, steps, icon.zipEntry());
-    if (inProject && Fs.lastModified(file) > Fs.lastModified(out.resolve(unfinishedFile))){ throw Report.filesUpdated(projectName); }
+    var since= inProject ? new Since(Fs.lastModified(out.resolve(unfinishedFile)), projectName) : Since.anyTime;
+    var bytes= since.read(file, () -> icon.zipEntry().isEmpty() ? Fs.of(() -> Fs.readAllBytes(file)) : ZipLocator.entryBytes(file, steps, icon.zipEntry()));
     if (bytes.length < 24 || !Arrays.equals(bytes, 0, 16, pngHead, 0, 16)){ throw Report.iconRefused(main, claim.getKey(), claim.getValue(), "is not a PNG image"); }
     var w= ByteBuffer.wrap(bytes).getInt(16);
     var h= ByteBuffer.wrap(bytes).getInt(20);

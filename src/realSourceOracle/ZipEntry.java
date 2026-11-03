@@ -21,7 +21,7 @@ import utils.Push;
 //Here Both PathEntry and ZipEntry can be used as Ref for a RealSourceOracleWithZip implements SourceOracle
 public record ZipEntry(Path root, Path local, List<String> segments, List<String> zips, String lastZips, Since since) implements SourceOracle.Ref{
   @Override public String fearPath(){ return Join.of(Push.of(dropZipExt(PathEntry.localSegments(local)), segments), SourceOracle.root, "/", ""); }
-  @Override public byte[] loadBytes(){ return since.read(ZipLocator.entryBytes(root.resolve(local), zips, lastZips), this); }
+  @Override public byte[] loadBytes(){ return since.read(root.resolve(local), () -> ZipLocator.entryBytes(root.resolve(local), zips, lastZips)); }
   @Override public long lastModified(){ return Fs.lastModified(root.resolve(local)); }
   @Override public RuntimeException notUtf8(long line, int offset){ return Report.notUtf8(this, line, offset); }
   @Override public String toString(){ return fearPath(); }
