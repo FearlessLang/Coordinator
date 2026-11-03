@@ -5008,6 +5008,12 @@ A:Main{s->base.Debug#(`hi`)}
     var error= compileWith(coordinator(root), root, cs -> cs.stream().findFirst()).orElseThrow();
     utils.Err.strCmp("Some files inside the project \"root\" were updated while the project was compiling.", error.getMessage());
   }
+  @Test void aHiddenFileOfTheCacheIsNoOtherFile(@TempDir Path tmp){
+    var root= helloProject(tmp);
+    compile(coordinator(root), root);
+    Fs.writeUtf8(out(root, ".p.html.swp"), "");
+    assertTrue(compiled(root));
+  }
   @Test void dropUnfinishedDeletesOnlyAnUnfinishedCache(@TempDir Path tmp){
     var root= helloProject(tmp);
     compile(coordinator(root), root);

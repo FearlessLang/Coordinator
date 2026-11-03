@@ -104,7 +104,7 @@ final class Project{
     if (!Fs.isDirectory(out)){ return List.of(); }
     var kept= Stream.concat(Stream.of(errorFile, unfinishedFile, startFile, iconsDir),
       ownPackages.stream().flatMap(p -> Stream.of(".json", ".jar", ".html", ".txt").map(x -> p.name()+x))).toList();
-    try (var s= Fs.of(() -> Fs.list(out))){ return s.filter(f -> !kept.contains(f.getFileName().toString())).sorted().toList(); }
+    try (var s= Fs.of(() -> Fs.list(out))){ return s.filter(f -> !f.getFileName().toString().startsWith(".") && !kept.contains(f.getFileName().toString())).sorted().toList(); }
   }
   MainsInfo mergedManifest(){ return MainsInfo.merge(packages().stream().map(p -> optApi(p.name()).orElseThrow().manifest())); }
   State check(){
