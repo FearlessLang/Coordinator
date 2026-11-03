@@ -13,6 +13,7 @@ import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import java.util.function.Consumer;
 
 import core.E;
 import core.E.Literal;
@@ -71,7 +72,7 @@ public final class HtmlDocBuilder{
       else{ t.imported(m, inheritedMethods(l, m)); }
     }
   }
-  public List<TestSource> complete(Function<TName,String> pkgNames, boolean testable){
+  public List<TestSource> complete(Function<TName,String> pkgNames, boolean testable, Consumer<Runnable> writes){
     var resolver= new DocResolver(pkgName, types, other);
     var spans= new HashMap<DocOcc,Map<Integer,DocLink>>();
     var problems= new ArrayList<String>();
@@ -81,8 +82,9 @@ public final class HtmlDocBuilder{
     types.forEach(t -> linkType(resolver, t, spans, problems));
     if (!problems.isEmpty()){ throw Report.docReferences(problems); }
     var renderer= new HtmlDocRenderer(DocNames.uses(pkgName, currentByName.values()), resolver, spans, baseDocLocation);
-    Fs.writeUtf8(htmlPath, renderer.render());
-    Fs.writeUtf8(htmlPath.resolveSibling(pkgName+".txt"), renderer.renderText());
+    var html= renderer.render();
+    var txt= renderer.renderText();
+    writes.accept(() -> { Fs.writeUtf8(htmlPath, html); Fs.writeUtf8(htmlPath.resolveSibling(pkgName+".txt"), txt); });
     if (!generatesTests || !testable){ return List.of(); }
     return tests(renderer, pkgNames);
   }

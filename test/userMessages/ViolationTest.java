@@ -105,7 +105,7 @@ The only way to clear it is Settings, Apps, Default apps, Reset - which
 resets every app default on your machine, not only this one.
 
 What is locked:
-.fearless""", Violation.associationUserLocked(List.of(".fearless"), e -> "").getMessage());
+.fearless -> SomeApp.fearless""", Violation.associationUserLocked(Map.of(".fearless", List.of("SomeApp.fearless")), e -> "").getMessage());
   }
   @Test void associationUserLockedSeveralClaimed(){
     utils.Err.strCmp("""
@@ -121,8 +121,14 @@ The only way to clear it is Settings, Apps, Default apps, Reset - which
 resets every app default on your machine, not only this one.
 
 What is locked:
-.foo claimed by "hello.Foo" of project "demo"
-.fapp042 claimed by "hello.Bar" of project "demo\"""", Violation.associationUserLocked(List.of(".foo", ".fapp042"), ViolationTest::claimedBy).getMessage());
+.foo claimed by "hello.Foo" of project "demo" -> SomeApp.foo
+.fapp042 claimed by "hello.Bar" of project "demo" -> SomeApp.fapp042""", Violation.associationUserLocked(ordered(".foo", "SomeApp.foo", ".fapp042", "SomeApp.fapp042"), ViolationTest::claimedBy).getMessage());
+  }
+  private static Map<String,List<String>> ordered(String e1, String p1, String e2, String p2){
+    var res= new java.util.LinkedHashMap<String,List<String>>();
+    res.put(e1, List.of(p1));
+    res.put(e2, List.of(p2));
+    return res;
   }
   @Test void associationNotOurs(){
     utils.Err.strCmp("""
@@ -181,7 +187,7 @@ Removing the line of that type from the section, or choosing Fearless
 for these files, clears the choice.
 
 What is locked:
-.htm -> application/x-fearless-htm""", Violation.associationChosenDefault(List.of(".htm"), e -> "").getMessage());
+.htm (application/x-fearless-htm) -> browser.desktop""", Violation.associationChosenDefault(Map.of(".htm", List.of("browser.desktop")), e -> "").getMessage());
   }
   @Test void associationChosenDefaultSeveralClaimed(){
     utils.Err.strCmp("""
@@ -197,8 +203,8 @@ Removing the line of that type from the section, or choosing Fearless
 for these files, clears the choice.
 
 What is locked:
-.foo claimed by "hello.Foo" of project "demo" -> application/x-fearless-foo
-.pdf claimed by "hello.Bar" of project "demo" -> application/x-fearless-pdf""", Violation.associationChosenDefault(List.of(".foo", ".pdf"), ViolationTest::claimedBy).getMessage());
+.foo claimed by "hello.Foo" of project "demo" (application/x-fearless-foo) -> editor.desktop
+.pdf claimed by "hello.Bar" of project "demo" (application/x-fearless-pdf) -> viewer.desktop""", Violation.associationChosenDefault(ordered(".foo", "editor.desktop", ".pdf", "viewer.desktop"), ViolationTest::claimedBy).getMessage());
   }
   private static String claimedBy(String ext){ return " claimed by \"hello."+(List.of(".foo", ".ffile001").contains(ext) ? "Foo" : "Bar")+"\" of project \"demo\""; }
   @Test void associationNotWritable(){

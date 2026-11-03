@@ -1,10 +1,12 @@
 package coordinator;
 
+import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -31,6 +33,7 @@ import naiveBackend.BackendTools;
 import naiveBackend.NaiveBackendLogicMain;
 import offensiveUtils.Require;
 import realSourceOracle.RealSourceOracleWithZip;
+import realSourceOracle.SourceOracleWithAutoload;
 import realSourceOracle.ZipEntry;
 import tools.ChildJvm;
 import tools.Fs;
@@ -46,9 +49,6 @@ import utils.OneOr;
 import utils.Push;
 
 public interface Coordinator{
-  default String runAllMains(String pkgName, OutputOracle out) throws InterruptedException{
-    return runMains(runData(out.rootDir().getParent(), stdLibBase()), Push.of(genJava(out.rootDir()), sharedClasspath()), "_"+pkgName+".Main");
-  }
   static String runMains(List<String> jvmArgs, List<Path> jarDirs, String mainClass) throws InterruptedException{
     var sb= new StringBuilder();
     var jvm= startProgram(jvmArgs, jarDirs, mainClass, s -> { sb.append(s); System.out.print(s); });
@@ -84,62 +84,88 @@ public interface Coordinator{
   }
   static boolean zipped(List<Ref> files){ return OneOr.of("One rank file per package", files.stream().filter(Helper::hasReservedRankPrefix)) instanceof ZipEntry; }
   default SourceOracle sourceOracle(Path path){ return new RealSourceOracleWithZip(path); }
-  static Map<String,Boolean> pkgsBuilt(Path path, Path baseCache){
-    var o= new RealSourceOracleWithZip(path);
-    var map= Helper.pkgMap(o);
-    var baseApi= Fs.lastModified(baseCache.resolve("base.json"));
-    var ranks= map.values().stream().map(Helper::okPkgContent).toList();
-    var out= Helper.out(path);
-    var mapCommitted= OutputHelper.mapFromJson(out.mapPath()).filter(Helper.rankMap(o, ranks)::equals).isPresent();
-    var res= new LinkedHashMap<String,Boolean>();
-    for (var r : ranks){
-      var pkg= Helper.pkgName(r);
-      var lower= ranks.stream().filter(d -> Helper.rankNumber(d) < Helper.rankNumber(r)).map(Helper::pkgName).toList();
-      var below= lower.stream().mapToLong(out::pkgApiStamp);
-      var maxIn= LongStream.concat(LongStream.concat(map.get(pkg).stream().mapToLong(Ref::lastModified), below), LongStream.of(out.mapStamp(), baseApi)).max().getAsLong();
-      res.put(pkg, mapCommitted && out.stillBuilt(pkg, map.get(pkg), Push.of(lower, "base"), maxIn));
-    }
-    return Collections.unmodifiableMap(res);
+  /// What Coordinator.check gives (see CoordinatorDesign).
+  sealed interface State{
+    record Invalid(String problem) implements State{}
+    record OutOfDate() implements State{}
+    record Compiled(MainsInfo manifest, List<String> packages) implements State{}
   }
-  default String main(Path project, SourceOracle stLib) throws InterruptedException{
+  /// Answered by the manager: the first candidate no claim uses, if any.
+  interface TakeFreeExtension{ Optional<String> take(List<String> candidates); }
+  default State check(Path folder){ return guarded(folder, () -> Cache.of(this, folder).check()); }
+  default Optional<UserError> compile(Path folder, Path stdLibBase, String projectName, TakeFreeExtension take){
+    return guarded(folder, () -> Cache.of(this, folder).compile(stdLibBase, projectName, take));
+  }
+  static void finish(Path folder){
+    var icons= folder.resolve(outDir).resolve(Cache.iconsDir);
+    var kept= cachedMains(folder).values().stream().flatMap(m -> m.icons().stream()).flatMap(i -> iconFiles(folder, i.icon()).stream()).toList();
+    if (Fs.isDirectory(icons)){
+      try (var s= Fs.of(() -> Fs.list(icons))){ s.filter(f -> !kept.contains(f)).toList().forEach(Fs::rmTree); }
+    }
+    Fs.ofV(() -> Fs.deleteIfExists(folder.resolve(outDir).resolve(Cache.unfinishedFile)));
+  }
+  static void dropUnfinished(Path folder){ if (Fs.exists(folder.resolve(outDir).resolve(Cache.unfinishedFile))){ deleteCache(folder); } }
+  static void writeError(Path folder, String error){ Cache.writeError(folder, error); }
+  static void deleteCache(Path folder){
+    var out= folder.resolve(outDir);
+    if (!Fs.exists(out)){ return; }
+    var unfinished= out.resolve(Cache.unfinishedFile);
+    Fs.writeUtf8(unfinished, "");
+    try (var s= Fs.of(() -> Fs.list(out))){ s.filter(f -> !f.equals(unfinished)).toList().forEach(Fs::rmTree); }
+    Fs.ofV(() -> Fs.delete(unfinished));
+    Fs.ofV(() -> Fs.delete(out));
+  }
+  static List<Path> iconFiles(Path folder, String icon){
+    var dir= folder.resolve(outDir).resolve(Cache.iconsDir);
+    var png= dir.resolve(icon+".png");
+    return Fs.isWindows() ? List.of(png, dir.resolve(icon+".ico")) : List.of(png);
+  }
+  /// The mains of every <pkg>.json of .fearless_out, by name.
+  static Map<String,MainsInfo.Main> cachedMains(Path folder){
+    var out= folder.resolve(outDir);
+    if (!Fs.isDirectory(out)){ return Map.of(); }
+    try (var s= Fs.of(() -> Fs.list(out))){
+      var jsons= s.filter(f -> f.getFileName().toString().endsWith(".json")).sorted().toList();
+      return guarded(folder, () -> MainsInfo.merge(jsons.stream().map(j -> new LimitedJsonParser(OutputHelper.read(j).orElseThrow(), j).api().manifest())).mains());
+    }
+  }
+  default Path docs(Path folder, String packageName){
+    return packageName.equals(Cache.base) ? baseCachePath().orElseThrow().resolve("base.html") : folder.resolve(outDir).resolve(packageName+".html");
+  }
+  /// Compiles, then runs the mains of the packages of the highest rank: the portable Fearless.
+  default String main(Path project, Path stdLibBase) throws InterruptedException{
+    var used= new java.util.HashSet<String>();
+    compile(project, stdLibBase, project.getFileName().toString(), cs -> cs.stream().filter(used::add).findFirst()).ifPresent(e -> { throw e; });
+    finish(project);
+    var c= Cache.of(this, project);
+    var top= c.ownPackages.stream().mapToInt(Cache.Pkg::rank).max().orElse(0);
     var sb= new StringBuilder();
-    for (var p : compile(project, stLib)){ sb.append(runAllMains(p, Helper.out(project))); }
+    for (var p : c.ownPackages.stream().filter(p -> p.rank() == top).toList()){ sb.append(runAllMains(project, stdLibBase, p.name())); }
     return sb.toString();
   }
-  default List<String> compile(Path project, SourceOracle stLib){ return guardingCache(project, () -> compileNow(project, stLib)); }
-  default Optional<MainsInfo> mains(Path project, SourceOracle stLib){
-    try{ return Optional.of(guardingCache(project, () -> mainsNow(project, stLib))); }
-    catch (WouldCompile _){ return Optional.empty(); }
+  default String runAllMains(Path project, Path stdLibBase, String pkgName) throws InterruptedException{
+    return runMains(runData(project, stdLibBase), Push.of(project.resolve(outDir), sharedClasspath()), "_"+pkgName+".Main");
   }
-  static <R> R guardingCache(Path project, Supplier<R> compile){
-    var out= project.resolve(outDir);
-    var cached= Fs.exists(out);
-    try{ return compile.get(); }
-    catch (UserError | WouldCompile e){ throw e; }
+  /// Writes base.json, base.jar, base.html and base.txt into baseCache; the backend of this Coordinator writes base into out.
+  default void buildBaseCache(Path stdLibBase, Path out, Path baseCache){
+    Fs.ensureDir(baseCache);
+    var o= sourceOracle(stdLibBase);
+    var other= OtherPackages.empty();
+    var rich= SourceOracleWithAutoload.ofBase(o);
+    var capabilities= new CapabilityEnvironment(rich.autoloadedAssets());
+    var core= frontend(Cache.base, rich.sources(o.allFiles()), rich.oracle(), other, Map.of(), capabilities, Runnable::run);
+    backend(Cache.base, core, rich.oracle(), other, capabilities);
+    Cache.replace(baseCache.resolve("base.json"), OutputHelper.apiJson(core, "", new MainsInfo(Map.of(), MainsInfo.attenuators(core), List.of(), List.of())));
+    for (var x : List.of(".jar", ".html", ".txt")){ Fs.ofV(() -> Fs.move(out.resolve("base"+x), baseCache.resolve("base"+x), StandardCopyOption.REPLACE_EXISTING)); }
+  }
+  static <R> R guarded(Path project, Supplier<R> f){
+    var cached= Fs.exists(project.resolve(outDir));
+    try{ return f.get(); }
+    catch (UserError|UncheckedIOException e){ throw e; }
     catch (RuntimeException | AssertionError e){
       if (!cached){ throw e; }
-      Fs.rmTree(out);
       throw UserError.cacheCorruptedOrCrash(e);
     }
-  }
-  private List<String> compileNow(Path project, SourceOracle stLib){
-    var o= sourceOracle(project);
-    var out= Helper.out(project);
-    var l= Helper.layerOf(this, o, out, stLib);
-    out.forgetAllBut(l.pkgNames());
-    l.compile(o, out);
-    l.pkgNames().stream().filter(p -> !p.equals("base")).forEach(p -> out.relocate(p, o, stLib));
-    return List.copyOf(l.pkgs().keySet());//by design: only the highest rank number's packages have their Main run
-  }
-  private MainsInfo mainsNow(Path project, SourceOracle stLib){
-    var c= new NoCompile(baseCachePath());
-    var o= sourceOracle(project);
-    var out= new NoCommit(Helper.out(project).rootDir());
-    var l= Helper.layerOf(c, o, out, stLib);
-    out.forgetAllBut(l.pkgNames());
-    l.compile(o, out);
-    var res= MainsInfo.read(project).orElse(new MainsInfo(Map.of(), List.of(), List.of(), List.of()));
-    return baseCachePath().map(b -> MainsInfo.merge(Stream.of(res, MainsInfo.parse(b.resolve("base"+MainsInfo.suffix))))).orElse(res);
   }
   static ChildJvm startMain(Path project, Path base, String main, Optional<Path> input, Map<String,Path> reads, Map<String,Path> edits, List<String> attenuators, List<String> desk, List<Path> sharedClasspath, Consumer<String> out){
     var jvmArgs= new ArrayList<>(runData(project, base));
@@ -148,22 +174,21 @@ public interface Coordinator{
     edits.forEach((k,v) -> jvmArgs.add("-DfearlessDataEdit."+k+"="+PathClassLoader.argOf(v)));
     if (!attenuators.isEmpty()){ jvmArgs.add("-DfearlessAttenuators="+String.join(",", attenuators)); }
     jvmArgs.addAll(desk);
-    return startProgram(jvmArgs, Push.of(genJava(project.resolve(outDir)), sharedClasspath), "_"+main.substring(0, main.indexOf('.'))+".Main", out, main);
+    return startProgram(jvmArgs, Push.of(project.resolve(outDir), sharedClasspath), "_"+main.substring(0, main.indexOf('.'))+".Main", out, main);
   }
-  static Path genJava(Path outRoot){ return outRoot.resolve("gen_java"); }
   String outDir= ".fearless_out";
-  default List<Literal> frontend(String pkgName, List<Ref> files, SourceOracle oracle, OtherPackages other, Map<String,String> vres, CapabilityEnvironment capabilities){
-    try{ return new FrontendLogicMain().of(pkgName, vres, files, other, core -> docs(pkgName, !zipped(files), () -> files, other, core, capabilities, names(pkgName, files, oracle, other, vres))); }
+  default List<Literal> frontend(String pkgName, List<Ref> files, SourceOracle oracle, OtherPackages other, Map<String,String> vres, CapabilityEnvironment capabilities, Consumer<Runnable> writes){
+    try{ return new FrontendLogicMain().of(pkgName, vres, files, other, core -> docs(pkgName, !zipped(files), () -> files, other, core, capabilities, names(pkgName, files, oracle, other, vres), writes)); }
     catch (FearlessException e){ throw Report.sourceError(e.render(oracle)); }
   }
   default Function<TName,String> names(String pkgName, List<Ref> files, SourceOracle oracle, OtherPackages other, Map<String,String> vres){
     try{ return new FrontendLogicMain().names(pkgName, vres, files, other); }
     catch (FearlessException e){ throw Report.sourceError(e.render(oracle)); }
   }
-  private List<TestSource> docs(String pkgName, boolean testable, SourceOracle oracle, OtherPackages other, List<Literal> core, CapabilityEnvironment capabilities, Function<TName,String> names){
+  private List<TestSource> docs(String pkgName, boolean testable, SourceOracle oracle, OtherPackages other, List<Literal> core, CapabilityEnvironment capabilities, Function<TName,String> names, Consumer<Runnable> writes){
     var docs= backendTools(pkgName, oracle, other, core, capabilities).docs();
     core.forEach(docs::visitAll);
-    return docs.complete(names, testable);
+    return docs.complete(names, testable, writes);
   }
   default void backend(String pkgName, List<Literal> core, SourceOracle oracle, OtherPackages other, CapabilityEnvironment capabilities){
     new NaiveBackendLogicMain().of(backendTools(pkgName, oracle, other, core, capabilities), sharedClasspath());
@@ -185,22 +210,6 @@ public interface Coordinator{
 }
 final class Helper{
   static boolean isFear(Ref u){ return u.fearPath().endsWith(".fear"); }
-  static OutputOracle out(Path path){
-    return () -> path.resolve(Coordinator.outDir);
-  }
-  static Layer layerOf(Coordinator coordinator, SourceOracle o, OutputOracle out, SourceOracle stLib){
-    var map= pkgMap(o);
-    var allRanks= map.values().stream().map(Helper::okPkgContent).toList();
-    var res= rankMap(o, allRanks);
-    var ranks= allRanks.stream().collect(Collectors.toUnmodifiableMap(Helper::pkgName, r -> r));
-    Layer l= new BaseLayer(coordinator, res, ranks, out.commitMap(res, allRanks.stream().mapToLong(Ref::lastModified).max().orElse(0)), stLib);
-    var byRank= new TreeMap<Integer,LinkedHashMap<String,List<Ref>>>();
-    for (var r : allRanks.stream().sorted(Comparator.comparing(Ref::fearPath)).toList()){
-      byRank.computeIfAbsent(rankNumber(r), _ -> new LinkedHashMap<>()).put(pkgName(r), map.get(pkgName(r)));
-    }
-    for (var pkgs : byRank.values()){ l = new MiddleLayer(coordinator, l, pkgs); }
-    return l;
-  }
   static Map<String,Map<String,String>> rankMap(SourceOracle o, List<Ref> allRanks){
     var ranks= new LinkedHashMap<String,Ref>();
     allRanks.forEach(r -> ranks.put(pkgName(r), r));
@@ -239,17 +248,5 @@ final class Helper{
     if (!TName.isPkgName(pkg)){ throw Report.projectBadPackageName(u, candidates.getFirst()); }
     if (List.of("base", "rank").contains(pkg)){ throw Report.projectReservedPackageName(u, candidates.getFirst()); }
     return Optional.of(pkg);
-  }
-}
-@SuppressWarnings("serial") final class WouldCompile extends RuntimeException{}
-record NoCompile(Optional<Path> baseCachePath) implements Coordinator{
-  @Override public List<Literal> frontend(String pkgName, List<Ref> files, SourceOracle oracle, OtherPackages other, Map<String,String> vres, CapabilityEnvironment capabilities){ throw new WouldCompile(); }
-  @Override public Function<TName,String> names(String pkgName, List<Ref> files, SourceOracle oracle, OtherPackages other, Map<String,String> vres){ throw new WouldCompile(); }
-  @Override public void backend(String pkgName, List<Literal> core, SourceOracle oracle, OtherPackages other, CapabilityEnvironment capabilities){ throw new WouldCompile(); }
-}
-record NoCommit(Path rootDir) implements OutputOracle{
-  @Override public long commitMap(Map<String,Map<String,String>> map, long minExclusiveMillis){
-    if (OutputHelper.mapFromJson(mapPath()).filter(map::equals).isEmpty()){ throw new WouldCompile(); }
-    return mapStamp();
   }
 }

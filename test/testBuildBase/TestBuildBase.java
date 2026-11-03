@@ -14,7 +14,6 @@ import org.opentest4j.AssertionFailedError;
 
 import coordinator.CapabilityEnvironment;
 import coordinator.Coordinator;
-import coordinator.OutputOracle;
 import core.E.Literal;
 import core.OtherPackages;
 import naiveBackend.BackendTools;
@@ -31,21 +30,21 @@ final class TestBuildBase{
     @Override public BackendTools backendTools(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, CapabilityEnvironment capabilities){
       return BackendTools.of(pkgName, oracle, other, core, debugOut, baseCachePath(), true, ResolveResource.stLibRTPath, capabilities);
     }
-    @Override public String main(Path path, SourceOracle stLib) throws InterruptedException{
-      OutputOracle out= () -> debugOut;
+    @Override public String main(Path path, Path stdLibBase) throws InterruptedException{
+      var stLib= sourceOracle(stdLibBase);
       var pkgName= "base";
       var other= OtherPackages.empty();
       var rich= SourceOracleWithAutoload.ofBase(stLib);
       var capabilities= new CapabilityEnvironment(rich.autoloadedAssets());
-      var core= frontend(pkgName, rich.sources(stLib.allFiles()), rich.oracle(), other, Map.of(), capabilities);
+      var core= frontend(pkgName, rich.sources(stLib.allFiles()), rich.oracle(), other, Map.of(), capabilities, Runnable::run);
       backend(pkgName, core, rich.oracle(), other, capabilities);
-      var jars= Push.of(Coordinator.genJava(out.rootDir()), sharedClasspath());
-      return Coordinator.runMains(Coordinator.runData(out.rootDir().getParent(), base), jars, "_"+pkgName+".Main");
+      var jars= Push.of(debugOut, sharedClasspath());
+      return Coordinator.runMains(Coordinator.runData(debugOut.getParent(), base), jars, "_"+pkgName+".Main");
     }
   };}
   static String run(Path base, Path debugOut){
     var c= coordinator(base, debugOut);
-    try{ return c.main(base, c.sourceOracle(base)); }
+    try{ return c.main(base, base); }
     catch (InterruptedException e){ return fail(e); }
   }
   @Test void test(){ assertEquals("", run(ResolveResource.stLibPath, ResolveResource.stLibDebugOut)); }

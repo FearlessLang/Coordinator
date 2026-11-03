@@ -95,7 +95,7 @@ was.
 What is registered:
 %s""".formatted(reported));
   }
-  public static UserError associationUserLocked(List<String> locked, Function<String,String> claimedBy){
+  public static UserError associationUserLocked(Map<String,List<String>> locked, Function<String,String> claimedBy){
     return new UserError("""
 Fearless cannot become the program that opens the kinds of file listed
 below.
@@ -109,7 +109,12 @@ The only way to clear it is Settings, Apps, Default apps, Reset - which
 resets every app default on your machine, not only this one.
 
 What is locked:
-%s""".formatted(Join.of(locked.stream().map(e -> e+claimedBy.apply(e)), "", "\n", "")));
+%s""".formatted(lockedLines(locked, claimedBy, e -> "")));
+  }
+  private static String lockedLines(Map<String,List<String>> locked, Function<String,String> claimedBy, Function<String,String> type){
+    var lines= new ArrayList<String>();
+    locked.forEach((e,ps) -> ps.forEach(p -> lines.add(e+claimedBy.apply(e)+type.apply(e)+" -> "+p)));
+    return Join.of(lines, "", "\n", "");
   }
   public static UserError associationNotOurs(Map<String,List<String>> held, Function<String,String> claimedBy){
     var lines= new ArrayList<String>();
@@ -124,7 +129,7 @@ stopped before touching anything: your system is exactly as it was.
 What stood in the way:
 %s""".formatted(Join.of(lines, "", "\n", "")));
   }
-  public static UserError associationChosenDefault(List<String> locked, Function<String,String> claimedBy){
+  public static UserError associationChosenDefault(Map<String,List<String>> locked, Function<String,String> claimedBy){
     return new UserError("""
 Fearless cannot become the program that opens the kinds of file listed
 below.
@@ -138,7 +143,7 @@ Removing the line of that type from the section, or choosing Fearless
 for these files, clears the choice.
 
 What is locked:
-%s""".formatted(Join.of(locked.stream().map(e -> e+claimedBy.apply(e)+" -> "+LinuxAssociations.typeOf(e)), "", "\n", "")));
+%s""".formatted(lockedLines(locked, claimedBy, e -> " ("+LinuxAssociations.typeOf(e)+")")));
   }
   public static UserError associationNotWritable(String reported){
     return new UserError("""

@@ -33,8 +33,10 @@ import java.util.Arrays;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.Optional;
 import java.util.Random;
+import java.util.function.Consumer;
 import java.util.function.IntBinaryOperator;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -58,7 +60,6 @@ import com.sun.net.httpserver.HttpServer;
 import coordinator.CapabilityEnvironment;
 import coordinator.Coordinator;
 import coordinator.MainsInfo;
-import coordinator.OutputOracle;
 import core.E.Literal;
 import core.OtherPackages;
 import fileSupport.JUnitReport;
@@ -86,7 +87,7 @@ final class RunIntegration{
   static final Path reportsDir= ResolveResource.coordinatorSrc.getParent().resolve(".out", "junit_xml");
   static final Path reportsFile= reportsDir.resolve("all_auto_tests.xml");
   static final ArrayList<String> suites= new ArrayList<>();
-  static final SourceOracle stLib= new RealSourceOracleWithZip(ResolveResource.stLibPath);
+  static final Path stLib= ResolveResource.stLibPath;
   @BeforeAll static void buildBaseOnce(){
     BaseCacheBuilder.buildInto(ResolveResource.coordinatorJars, ResolveResource.stLibDebugOut, true);
     Fs.rmTree(reportsDir);
@@ -102,11 +103,17 @@ final class RunIntegration{
       @Override public BackendTools backendTools(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, CapabilityEnvironment capabilities){
         return BackendTools.of(pkgName, oracle, other, core, project.resolve(Coordinator.outDir), baseCachePath(), ResolveResource.stLibRTPath, capabilities);
       }
-      @Override public String runAllMains(String pkgName, OutputOracle out) throws InterruptedException{
-        return Coordinator.runMains(Push.of(Coordinator.runData(out.rootDir().getParent(), stdLibBase()), jvmArgs), Push.of(Coordinator.genJava(out.rootDir()), sharedClasspath()), "_"+pkgName+".Main");
+      @Override public String runAllMains(Path p, Path stdLibBase, String pkgName) throws InterruptedException{
+        return Coordinator.runMains(Push.of(Coordinator.runData(p, stdLibBase), jvmArgs), Push.of(p.resolve(Coordinator.outDir), sharedClasspath()), "_"+pkgName+".Main");
       }
     };
   }
+  static void compile(Coordinator c, Path root){
+    c.compile(root, stLib, root.getFileName().toString(), cs -> cs.stream().findFirst()).ifPresent(e -> { throw e; });
+    Coordinator.finish(root);
+  }
+  static MainsInfo mains(Coordinator c, Path root){ return ((Coordinator.State.Compiled)c.check(root)).manifest(); }
+  boolean compiled(Path root){ return coordinator(root).check(root) instanceof Coordinator.State.Compiled; }
   static Path freshIntegrationRoot(String name){
     var root= ResolveResource.integrationTests.resolve(name);
     Fs.rmTree(root.resolve(Coordinator.outDir));
@@ -120,8 +127,8 @@ final class RunIntegration{
   void testOk(String name){ unitTestsOk(name, freshIntegrationRoot(name), List.of()); }
   void unitTestsOk(String name, Path root, List<String> jvmArgs){
     var marker= "EndOfMain"+new BigInteger(128, new SecureRandom()).toString(36);
-    coordinator(root).compile(root, stLib);
-    var mains= coordinator(root).mains(root, stLib).orElseThrow().mains().size();
+    compile(coordinator(root), root);
+    var mains= mains(coordinator(root), root).mains().size();
     var out= main(root, Push.of(jvmArgs, "-Dfearless.endMarker="+marker));
     writeJUnitReport(name, root);
     var fails= out.lines().filter(l -> l.startsWith("Test failure ")).toList();
@@ -348,9 +355,9 @@ App:Main{s->Debug#("hi")}
       @Override public BackendTools backendTools(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, CapabilityEnvironment capabilities){
         return base.backendTools(pkgName, oracle, other, core, capabilities);
       }
-      @Override public List<Literal> frontend(String pkgName, List<Ref> files, SourceOracle oracle, OtherPackages other, Map<String,String> vres, CapabilityEnvironment capabilities){
+      @Override public List<Literal> frontend(String pkgName, List<Ref> files, SourceOracle oracle, OtherPackages other, Map<String,String> vres, CapabilityEnvironment capabilities, Consumer<Runnable> writes){
         frontends.add(pkgName);
-        return Coordinator.super.frontend(pkgName, files, oracle, other, vres, capabilities);
+        return Coordinator.super.frontend(pkgName, files, oracle, other, vres, capabilities, writes);
       }
     };
   }
@@ -364,29 +371,29 @@ Test failure _Calc_Examples at line: 9 in file: _p/_rank_app.fear
 hi
 """;
     utils.Err.strCmp(expected, c.main(root, stLib));
-    assertEquals(Map.of("p", true), Coordinator.pkgsBuilt(root, baseCache));
+    assertTrue(compiled(root));
     utils.Err.strCmp(expected, c.main(root, stLib));
     utils.Err.strCmp(expected, c.main(root, stLib));
     assertEquals(List.of(root.resolve("_p", "_rank_app.fear")), projectFiles(root));
-    assertEquals(Map.of("p", true), Coordinator.pkgsBuilt(root, baseCache));
+    assertTrue(compiled(root));
     assertEquals(List.of("p"), frontends);
   }
   @Test void anEditedExampleRunsAsEdited(@TempDir Path tmp) throws IOException, InterruptedException{
     var root= docExamplesProject(tmp);
     var frontends= new ArrayList<String>();
     var c= counting(root, frontends);
-    c.compile(root, stLib);
+    compile(c, root);
     editAndTouch(root.resolve("_p", "_rank_app.fear"), "Calc.twice(2) .assertEq 5", "Calc.twice(2) .assertEq 4");
     utils.Err.strCmp("hi\n", c.main(root, stLib));
-    assertEquals(Map.of("p", true), Coordinator.pkgsBuilt(root, baseCache));
+    assertTrue(compiled(root));
     assertEquals(List.of("p", "p"), frontends);
   }
   @Test void aBrokenExampleIsReportedAtItsDocCommentAtEveryCompile(@TempDir Path tmp) throws IOException{
     var root= docExamplesProject(tmp);
-    coordinator(root).compile(root, stLib);
+    compile(coordinator(root), root);
     editAndTouch(root.resolve("_p", "_rank_app.fear"), "Calc.twice(2)", "Calc.thrice(2)");
     for (var _ : List.of(1, 2)){
-      var ex= assertThrows(UserError.class, () -> coordinator(root).compile(root, stLib));
+      var ex= assertThrows(UserError.class, () -> compile(coordinator(root), root));
       utils.Err.strCmp("""
 In file: fear:/_p/_rank_app.fear
 
@@ -538,7 +545,7 @@ hi
   }
   @Test void aDocInAFileWithNoDeclarationIsAnError(@TempDir Path tmp){
     var root= docExamplesInFiles(tmp, "///A stray note.", "Box:{}");
-    var ex= assertThrows(UserError.class, () -> coordinator(root).compile(root, stLib));
+    var ex= assertThrows(UserError.class, () -> compile(coordinator(root), root));
     utils.Err.strCmp("""
 Broken reference in a doc comment.
 
@@ -579,7 +586,7 @@ Calc:{
   //> .check{Calc.zz .assertEq 2}
   .one: base.Nat -> 1;
   }""", "Box:{}");
-    var ex= assertThrows(UserError.class, () -> coordinator(root).compile(root, stLib));
+    var ex= assertThrows(UserError.class, () -> compile(coordinator(root), root));
     utils.Err.strCmp("""
 In file: fear:/_p/calc.fear
 
@@ -597,7 +604,7 @@ Calc:{
   //> .check{Calc.one .assertEq 1
   .one: base.Nat -> 1;
   }""", "Box:{}");
-    var ex= assertThrows(UserError.class, () -> coordinator(root).compile(root, stLib));
+    var ex= assertThrows(UserError.class, () -> compile(coordinator(root), root));
     utils.Err.strCmp("""
 In file: fear:/_p/calc.fear
 
@@ -649,10 +656,10 @@ App:Main, lib.Lib{s->base.Debug#(`app`)}
 """);
     utils.Err.strCmp("app\n", main(root, List.of()));
     Fs.rmTree(root.resolve("_lib"));
-    assertEquals(Map.of("app", false), Coordinator.pkgsBuilt(root, baseCache));
+    assertFalse(compiled(root));
     var ex= assertThrows(UserError.class, () -> main(root, List.of()));
     utils.Err.strCmp("[###]lib.Lib[###]", ex.getMessage());
-    assertFalse(Fs.exists(Coordinator.genJava(root.resolve(Coordinator.outDir)).resolve("lib.jar")));
+    assertFalse(Fs.exists(root.resolve(Coordinator.outDir).resolve("lib.jar")));
     assertFalse(Fs.exists(root.resolve(Coordinator.outDir).resolve("lib.built")));
   }
   @Test void onlyImmCapture(@TempDir Path tmp){
@@ -684,7 +691,7 @@ Cases:{
 """);
     var genJava= tmp.resolve("genJava");
     var base= coordinator(root);
-    new Coordinator(){
+    compile(new Coordinator(){
       @Override public Path modsPath(){ return base.modsPath(); }
       @Override public Optional<Path> baseCachePath(){ return base.baseCachePath(); }
       @Override public Path stdLibBase(){ return base.stdLibBase(); }
@@ -694,7 +701,7 @@ Cases:{
       @Override public void backend(String pkgName, List<Literal> core, SourceOracle oracle, OtherPackages other, CapabilityEnvironment capabilities){
         new Backend(genJava, base.backendTools(pkgName, oracle, other, core, capabilities)).produceJavaCode();
       }
-    }.compile(root, stLib);
+    }, root);
     var got= Fs.walk(genJava, s -> s.filter(Fs::isRegularFile).sorted().map(p -> p.getFileName()+(Fs.readUtf8(p).contains("_base.OnlyImmCapture") ? " only imm" : "")).toList());
     utils.Err.strCmp("""
 AnyX$p$1.java
@@ -729,7 +736,7 @@ Applog: FileLog{}
 """);
     var genJava= tmp.resolve("genJava");
     var base= coordinator(root);
-    new Coordinator(){
+    compile(new Coordinator(){
       @Override public Path modsPath(){ return base.modsPath(); }
       @Override public Optional<Path> baseCachePath(){ return base.baseCachePath(); }
       @Override public Path stdLibBase(){ return base.stdLibBase(); }
@@ -739,7 +746,7 @@ Applog: FileLog{}
       @Override public void backend(String pkgName, List<Literal> core, SourceOracle oracle, OtherPackages other, CapabilityEnvironment capabilities){
         new Backend(genJava, base.backendTools(pkgName, oracle, other, core, capabilities)).produceJavaCode();
       }
-    }.compile(root, stLib);
+    }, root);
     var logFiles= Fs.walk(genJava, s -> s.filter(Fs::isRegularFile)
       .flatMap(p -> Fs.readUtf8(p).lines().filter(l -> l.contains("_base.AppLog.open("))).sorted().toList());
     utils.Err.strCmp("""
@@ -845,7 +852,7 @@ zeroMemo
 7
 """, run("testingNorms"));
   }
-  void compileOk(String name){ var project= freshIntegrationRoot(name); coordinator(project).compile(project, stLib); }
+  void compileOk(String name){ var project= freshIntegrationRoot(name); compile(coordinator(project), project); }
   @Test void theInteractiveProjectsStillCompile(){
     for (var name : List.of("testGui1", "testGui2", "testGuiImg", "testGuiLive", "testGuiInput", "testGuiText", "testGuiTiles", "testBasketball", "testTicTacToe")){ compileOk(name); }
   }
@@ -889,7 +896,7 @@ How to fix
 We check this so that you[###]
 """, ex.getMessage());
   }
-  @Test void mainsAreListedWithTheFileDeclaringThem(@TempDir Path tmp){
+  @Test void mainsAreListedByTheirNames(@TempDir Path tmp){
     var root= tmp.resolve("root");
     UserError.root = root;
     FsDsl.materialize(root, """
@@ -902,20 +909,20 @@ _col/more.fear
 iii
 Again:Main{s->base.Debug#("again")}
 """);
-    coordinator(root).compile(root, stLib);
+    compile(coordinator(root), root);
     utils.Err.strCmp("""
---- col_manifest.info
+--- col.json
 {
   "mains": {
-    "col.Again": ["_col/more.fear", [], [], [["base.IconsFearless", "icons/fearless.png", "", "", ""]]],
-    "col.Hello": ["_col/_rank_app.fear", [], [], [["base.IconsFearless", "icons/fearless.png", "", "", ""]]]
+    "col.Again": [[], [], [["base.IconsFearless", "icons/fearless.png", "", "", "", ""]]],
+    "col.Hello": [[], [], [["base.IconsFearless", "icons/fearless.png", "", "", "", ""]]]
   },
   "attenuators": [],
   "dataRead": [],
   "dataEdit": []
 }
 """, manifests(root));
-    assertEquals(Map.of("col.Again", "_col/more.fear", "col.Hello", "_col/_rank_app.fear"), files(coordinator(root).mains(root, stLib).orElseThrow()));
+    assertEquals(Set.of("col.Again", "col.Hello"), files(mains(coordinator(root), root)));
   }
   @Test void theConcreteDataReadAndDataEditTypesAreListed(@TempDir Path tmp){
     var root= tmp.resolve("root");
@@ -930,9 +937,9 @@ Archive: Pub{}
 Diary: DataEdit{}
 Shape: DataRead{ .extra: base.Nat }
 """);
-    coordinator(root).compile(root, stLib);
+    compile(coordinator(root), root);
     utils.Err.strCmp("""
---- col_manifest.info
+--- col.json
 {
   "mains": {},
   "attenuators": [],
@@ -953,7 +960,7 @@ Top:Main{s->base.Debug#(`top`)}
 MkFree:{.mk:Main->Free:Main,CaptureFree{s->base.Debug#(`free`)}}
 """);
     utils.Err.strCmp("free\ntop\n", coordinator(root).main(root, stLib));
-    assertEquals(Map.of("col.Free", "_col/_rank_app.fear", "col.Top", "_col/_rank_app.fear"), files(coordinator(root).mains(root, stLib).orElseThrow()));
+    assertEquals(Set.of("col.Free", "col.Top"), files(mains(coordinator(root), root)));
   }
   @Test void aMainWithGenericParametersIsRefused(@TempDir Path tmp){
     var root= tmp.resolve("root");
@@ -965,7 +972,7 @@ use base.Main as Main;
 Hello:Main{s->base.Debug#(`plain`)}
 Hello[X]:Main{s->base.Debug#(`generic`)}
 """);
-    var ex= assertThrows(UserError.class, () -> coordinator(root).compile(root, stLib));
+    var ex= assertThrows(UserError.class, () -> compile(coordinator(root), root));
     utils.Err.strCmp("""
 In file: fear:/_col/_rank_app.fear
 
@@ -987,7 +994,7 @@ use base.Main as Main;
 Hello:Main{s->base.Debug#(`hi`)}
 """);
     Fs.write(root.resolve("_col", "notes.fear"), new byte[]{'/', '/', 'c', 'a', 'f', (byte)0xE9, '\n'});
-    var ex= assertThrows(UserError.class, () -> coordinator(root).compile(root, stLib));
+    var ex= assertThrows(UserError.class, () -> compile(coordinator(root), root));
     utils.Err.strCmp("""
 [###]Path: "_col/notes.fear"
 
@@ -1697,7 +1704,7 @@ milk
     }
     return res.array();
   }
-  static Map<String,String> files(MainsInfo info){ return info.mains().entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().file())); }
+  static Set<String> files(MainsInfo info){ return info.mains().keySet(); }
   static Path managerData(Path tmp){
     var pub= tmp.resolve("pub");
     var encoding= Fs.isWindows() ? UTF_16LE : UTF_8;
@@ -1714,9 +1721,10 @@ import java.net.*;
 import java.nio.file.*;
 import java.util.*;
 void main(String[] args) throws Exception{
-  var words= List.of(args);
-  Files.writeString(Path.of(words.getFirst()), String.join(" ", words.subList(1, words.size()-1))+"\\n", StandardOpenOption.CREATE, StandardOpenOption.APPEND);
-  var out= words.get(1).equals("FearlessCommandForget") ? "Refused\\nThe manager refuses to forget "+words.get(2)+"." : "Applied\\nOutput of "+words.get(1);
+  if (args.length != 2){ throw new IllegalArgumentException(String.join("|", args)); }
+  var words= List.of(args[1].split(" "));
+  Files.writeString(Path.of(args[0]), String.join(" ", words.subList(0, words.size()-1))+"\\n", StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+  var out= words.get(0).equals("FearlessCommandForget") ? "Refused\\nThe manager refuses to forget "+words.get(1)+"." : "Applied\\nOutput of "+words.get(0);
   try (var s= new Socket(InetAddress.getLoopbackAddress(), Integer.parseInt(words.getLast().substring("Port:".length())))){ s.getOutputStream().write(out.getBytes()); }
 }
 """);
@@ -1732,11 +1740,13 @@ void main(String[] args) throws Exception{
 FearlessCommandRegister %1$s
 FearlessCommandShow
 FearlessCommandShow hello
-FearlessCommandRun hello hello.A hello.B
+FearlessCommandSelectMains hello hello.B hello.A
+FearlessCommandSelectMains hello
+FearlessCommandRun hello
 FearlessCommandCompile hello
 FearlessCommandKind hello dataRead
 FearlessCommandMount hello hello.Notes notes
-FearlessCommandMount hello hello.Pub
+FearlessCommandUnmount hello hello.Pub
 FearlessCommandAttenuate hello hello.A base.NoManagerQuit hello.NoGui
 FearlessCommandAttenuate hello hello.B
 FearlessCommandOpenWithOrShortcut %1$s hello hello.A
@@ -1769,7 +1779,30 @@ use base.Shortcut as Shortcut;
 """+code);
     Fs.ensureDir(root.resolve("_col", "icons"));
     Fs.write(root.resolve("_col", "icons", "foo.png"), onePixelPng());
+    realIcons(root);
     return root;
+  }
+  /// The icons of claims are checked by the compiler: every png, also inside a zip, becomes a 64x64 PNG image.
+  static void realIcons(Path root) throws IOException{
+    var img= new BufferedImage(64, 64, BufferedImage.TYPE_INT_ARGB);
+    var bout= new ByteArrayOutputStream();
+    ImageIO.write(img, "png", bout);
+    var png= bout.toByteArray();
+    for (var f : Fs.walk(root, s -> s.filter(Fs::isRegularFile).toList())){
+      var name= f.getFileName().toString();
+      if (name.endsWith(".png")){ Fs.write(f, png); }
+      if (!name.endsWith(".zip")){ continue; }
+      var zout= new ByteArrayOutputStream();
+      try (var in= new java.util.zip.ZipInputStream(new java.io.ByteArrayInputStream(Fs.readAllBytes(f))); var out= new java.util.zip.ZipOutputStream(zout)){
+        for (var e= in.getNextEntry(); e != null; e = in.getNextEntry()){
+          var bytes= in.readAllBytes();
+          out.putNextEntry(new java.util.zip.ZipEntry(e.getName()));
+          out.write(e.getName().endsWith(".png") ? png : bytes);
+          out.closeEntry();
+        }
+      }
+      Fs.write(f, zout.toByteArray());
+    }
   }
   @Test void mainsClaimingExtensionsRunOnThePortablePath(@TempDir Path tmp) throws Exception{
     var root= claimsProject(tmp, """
@@ -1784,7 +1817,7 @@ Lib:base.Main, base.OpenWith[base.IconsConflict,"fear"]{s->base.Debug#(`lib`)}
   }
   void claimRefused(Path tmp, String code, String expected) throws IOException{
     var root= claimsProject(tmp, code);
-    var ex= assertThrows(UserError.class, () -> coordinator(root).compile(root, stLib));
+    var ex= assertThrows(UserError.class, () -> compile(coordinator(root), root));
     utils.Err.strCmp(expected, ex.getMessage());
   }
   @Test void wellFormedClaimsAreAccepted(@TempDir Path tmp) throws Exception{
@@ -1801,19 +1834,19 @@ Exts:Main, OpenWith[IconsFoo,"fear"], Shortcut[IconsFoo,"fapp123"], OpenWith[Ico
 Test:{ #: I -> I: Main, Shortcut[IconsFoo]{s->base.Debug#(`i`)} }
 Pre:Main, base.PreLoadIcon[base.IconsConflict], base.PreLoadIcon[IconsFoo]{s->base.Debug#(`pre`)}
 """);
-    coordinator(root).compile(root, stLib);
+    compile(coordinator(root), root);
     utils.Err.strCmp("""
---- col_manifest.info
+--- col.json
 {
   "mains": {
-    "col.Again": ["_col/_rank_app.fear", [["col.IconsFoo", "_col/icons/foo.png", "", "", ""]], [["col.IconsFoo", "_col/icons/foo.png", "", "", "q"]], [["col.IconsFoo", "_col/icons/foo.png", "", "", ""], ["base.IconsFearless", "icons/fearless.png", "", "", ""]]],
-    "col.Exts": ["_col/_rank_app.fear", [["col.IconsFoo", "_col/icons/foo.png", "", "", "fapp123"]], [["col.IconsFoo", "_col/icons/foo.png", "", "", "fear"], ["col.IconsFoo", "_col/icons/foo.png", "", "", "ffile123"], ["col.IconsFoo", "_col/icons/foo.png", "", "", "abcdefghij012345"], ["col.IconsFoo", "_col/icons/foo.png", "", "", "doc"], ["col.IconsFoo", "_col/icons/foo.png", "", "", "htm"]], [["col.IconsFoo", "_col/icons/foo.png", "", "", ""], ["base.IconsFearless", "icons/fearless.png", "", "", ""]]],
-    "col.Foo": ["_col/_rank_app.fear", [["col.IconsFoo", "_col/icons/foo.png", "", "", "fapp001"], ["col.IconsFoo", "_col/icons/foo.png", "", "", ""]], [["col.IconsFoo", "_col/icons/foo.png", "", "", "q"], ["col.IconsFoo", "_col/icons/foo.png", "", "", ""]], [["col.IconsFoo", "_col/icons/foo.png", "", "", ""], ["base.IconsFearless", "icons/fearless.png", "", "", ""]]],
-    "col.I": ["_col/_rank_app.fear", [["col.IconsFoo", "_col/icons/foo.png", "", "", ""]], [], [["col.IconsFoo", "_col/icons/foo.png", "", "", ""], ["base.IconsFearless", "icons/fearless.png", "", "", ""]]],
-    "col.Inherited": ["_col/_rank_app.fear", [["col.IconsFoo", "_col/icons/foo.png", "", "", "fapp042"]], [], [["col.IconsFoo", "_col/icons/foo.png", "", "", ""], ["base.IconsFearless", "icons/fearless.png", "", "", ""]]],
-    "col.Paths": ["_col/_rank_app.fear", [["col.IconsFoo", "_col/icons/foo.png", "", "", ""]], [["col.IconsFoo", "_col/icons/foo.png", "", "", "q"]], [["col.IconsFoo", "_col/icons/foo.png", "", "", ""], ["base.IconsFearless", "icons/fearless.png", "", "", ""]]],
-    "col.Pre": ["_col/_rank_app.fear", [], [], [["base.IconsFearless", "icons/fearless.png", "", "", ""], ["base.IconsConflict", "icons/conflict.png", "", "", ""], ["col.IconsFoo", "_col/icons/foo.png", "", "", ""]]],
-    "col.Two": ["_col/_rank_app.fear", [], [["col.IconsFoo", "_col/icons/foo.png", "", "", "q"], ["base.IconsConflict", "icons/conflict.png", "", "", "b"]], [["base.IconsFearless", "icons/fearless.png", "", "", ""], ["col.IconsFoo", "_col/icons/foo.png", "", "", ""], ["base.IconsConflict", "icons/conflict.png", "", "", ""]]]
+    "col.Again": [[["col.IconsFoo", "_col/icons/foo.png", "", "", "", "fapp810"]], [["col.IconsFoo", "_col/icons/foo.png", "", "", "q", "q"]], [["col.IconsFoo", "_col/icons/foo.png", "", "", "", ""], ["base.IconsFearless", "icons/fearless.png", "", "", "", ""]]],
+    "col.Exts": [[["col.IconsFoo", "_col/icons/foo.png", "", "", "fapp123", "fapp123"]], [["col.IconsFoo", "_col/icons/foo.png", "", "", "fear", "fear"], ["col.IconsFoo", "_col/icons/foo.png", "", "", "ffile123", "ffile123"], ["col.IconsFoo", "_col/icons/foo.png", "", "", "abcdefghij012345", "abcdefghij012345"], ["col.IconsFoo", "_col/icons/foo.png", "", "", "doc", "doc"], ["col.IconsFoo", "_col/icons/foo.png", "", "", "htm", "htm"]], [["col.IconsFoo", "_col/icons/foo.png", "", "", "", ""], ["base.IconsFearless", "icons/fearless.png", "", "", "", ""]]],
+    "col.Foo": [[["col.IconsFoo", "_col/icons/foo.png", "", "", "fapp001", "fapp001"], ["col.IconsFoo", "_col/icons/foo.png", "", "", "", "fapp720"]], [["col.IconsFoo", "_col/icons/foo.png", "", "", "q", "q"], ["col.IconsFoo", "_col/icons/foo.png", "", "", "", "ffile720"]], [["col.IconsFoo", "_col/icons/foo.png", "", "", "", ""], ["base.IconsFearless", "icons/fearless.png", "", "", "", ""]]],
+    "col.I": [[["col.IconsFoo", "_col/icons/foo.png", "", "", "", "fapp331"]], [], [["col.IconsFoo", "_col/icons/foo.png", "", "", "", ""], ["base.IconsFearless", "icons/fearless.png", "", "", "", ""]]],
+    "col.Inherited": [[["col.IconsFoo", "_col/icons/foo.png", "", "", "fapp042", "fapp042"]], [], [["col.IconsFoo", "_col/icons/foo.png", "", "", "", ""], ["base.IconsFearless", "icons/fearless.png", "", "", "", ""]]],
+    "col.Paths": [[["col.IconsFoo", "_col/icons/foo.png", "", "", "", "fapp552"]], [["col.IconsFoo", "_col/icons/foo.png", "", "", "q", "q"]], [["col.IconsFoo", "_col/icons/foo.png", "", "", "", ""], ["base.IconsFearless", "icons/fearless.png", "", "", "", ""]]],
+    "col.Pre": [[], [], [["base.IconsFearless", "icons/fearless.png", "", "", "", ""], ["base.IconsConflict", "icons/conflict.png", "", "", "", ""], ["col.IconsFoo", "_col/icons/foo.png", "", "", "", ""]]],
+    "col.Two": [[], [["col.IconsFoo", "_col/icons/foo.png", "", "", "q", "q"], ["base.IconsConflict", "icons/conflict.png", "", "", "b", "b"]], [["base.IconsFearless", "icons/fearless.png", "", "", "", ""], ["col.IconsFoo", "_col/icons/foo.png", "", "", "", ""], ["base.IconsConflict", "icons/conflict.png", "", "", "", ""]]]
   },
   "attenuators": [],
   "dataRead": [],
@@ -2109,6 +2142,18 @@ Type declaration "A" implements `OpenWith[IconsFoo,"fapp042"]`.
 "fapp042" is a shortcut extension: "fapp" followed by three digits names the shortcut files of the Fearless manager.
 Use an extension of the form "ffile" followed by three digits, like "ffile042", or a system extension, like "htm"; or implement "OpenWith[_]" to let the Fearless manager choose one.
 Error 7 WellFormedness"""); }
+  @Test void aCompilationFailingAfterTheFrontendKeepsTheOldDocumentation(@TempDir Path tmp) throws Exception{
+    var root= claimsProject(tmp, "///The first text.\nA:Main{}\n");
+    compile(coordinator(root), root);
+    var html= root.resolve(Coordinator.outDir).resolve("col.html");
+    var before= Fs.readUtf8(html);
+    assertTrue(before.contains("The first text."));
+    var rank= root.resolve("_col").resolve("_rank_app.fear");
+    Fs.writeUtf8(rank, Fs.readUtf8(rank).replace("///The first text.\nA:Main{}", "///The second text.\nA:Main,OpenWith[base.Str,\"q\"]{}"));
+    assertThrows(UserError.class, () -> compile(coordinator(root), root));
+    assertEquals(before, Fs.readUtf8(html));
+    assertEquals(Fs.readUtf8(root.resolve(Coordinator.outDir).resolve("col.txt")).contains("The second text."), false);
+  }
   @Test void aClaimWhoseIconIsNotAnImageFileIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 A:Main,OpenWith[base.Str,"q"]{}
 """, """
@@ -2252,7 +2297,22 @@ both `OpenWith[IconsFoo,"fear"]` and `OpenWith[base.IconsConflict,"fear"]` claim
 A main can claim each extension at most once, across all its "OpenWith[_,_]" and "Shortcut[_,_]", since one extension has one icon.
 Error 7 WellFormedness""", ex.getMessage());
   }
-  static String manifests(Path root){ return MainsInfo.files(root).stream().map(p -> "--- "+p.getFileName()+"\n"+Fs.readUtf8(p)).reduce("", String::concat); }
+  /// The manifest of every <pkg>.json of the project, as its Info text.
+  static String manifests(Path root){
+    var jsons= Fs.walk(root.resolve(Coordinator.outDir), s -> s.filter(p -> p.getFileName().toString().endsWith(".json")).sorted().toList());
+    return jsons.stream().map(p -> "--- "+p.getFileName()+"\n"+manifest(Fs.readUtf8(p))).reduce("", String::concat);
+  }
+  private static String manifest(String json){
+    var start= json.indexOf("\"manifest\":\"")+12;
+    var res= new StringBuilder();
+    for (var i= start; json.charAt(i) != '"'; i += 1){
+      var c= json.charAt(i);
+      if (c != '\\'){ res.append(c); continue; }
+      i += 1;
+      res.append(json.charAt(i) == 'n' ? '\n' : json.charAt(i));
+    }
+    return res.toString();
+  }
   @Test void mainsInfoRecordsTheClaimsOfTheTopRankMainsWithTheirIcons(@TempDir Path tmp) throws Exception{
     var root= claimsProject(tmp, """
 Foo:Main, OpenWith[IconsFoo,"foo"], OpenWith[lib.IconsLib], Shortcut[base.IconsConflict,`fapp042`], Shortcut[ZInBar]{s->base.Debug#(`foo`)}
@@ -2269,21 +2329,21 @@ _lib/icons/lib.png
 iii
 not read by the compiler
 """);
-    coordinator(root).compile(root, stLib);
+    compile(coordinator(root), root);
     utils.Err.strCmp("""
---- col_manifest.info
+--- col.json
 {
   "mains": {
-    "col.Foo": ["_col/_rank_app.fear", [["base.IconsConflict", "icons/conflict.png", "", "", "fapp042"], ["col.ZInBar", "_col/z.zip", "", "in/bar.png", ""]], [["col.IconsFoo", "_col/icons/foo.png", "", "", "foo"], ["lib.IconsLib", "_lib/icons/lib.png", "", "", ""]], [["base.IconsConflict", "icons/conflict.png", "", "", ""], ["col.ZInBar", "_col/z.zip", "", "in/bar.png", ""], ["base.IconsFearless", "icons/fearless.png", "", "", ""], ["col.IconsFoo", "_col/icons/foo.png", "", "", ""], ["lib.IconsLib", "_lib/icons/lib.png", "", "", ""]]]
+    "col.Foo": [[["base.IconsConflict", "icons/conflict.png", "", "", "fapp042", "fapp042"], ["col.ZInBar", "_col/z.zip", "", "in/bar.png", "", "fapp504"]], [["col.IconsFoo", "_col/icons/foo.png", "", "", "foo", "foo"], ["lib.IconsLib", "_lib/icons/lib.png", "", "", "", "ffile074"]], [["base.IconsConflict", "icons/conflict.png", "", "", "", ""], ["col.ZInBar", "_col/z.zip", "", "in/bar.png", "", ""], ["base.IconsFearless", "icons/fearless.png", "", "", "", ""], ["col.IconsFoo", "_col/icons/foo.png", "", "", "", ""], ["lib.IconsLib", "_lib/icons/lib.png", "", "", "", ""]]]
   },
   "attenuators": [],
   "dataRead": [],
   "dataEdit": []
 }
---- lib_manifest.info
+--- lib.json
 {
   "mains": {
-    "lib.Lib": ["_lib/_rank_core.fear", [], [["base.IconsConflict", "icons/conflict.png", "", "", "fear"]], [["base.IconsFearless", "icons/fearless.png", "", "", ""], ["base.IconsConflict", "icons/conflict.png", "", "", ""]]]
+    "lib.Lib": [[], [["base.IconsConflict", "icons/conflict.png", "", "", "fear", "fear"]], [["base.IconsFearless", "icons/fearless.png", "", "", "", ""], ["base.IconsConflict", "icons/conflict.png", "", "", "", ""]]]
   },
   "attenuators": [],
   "dataRead": [],
@@ -2310,24 +2370,25 @@ iii
 use base.Main as Main;
 B:Main{s->base.Debug#(`b`)}
 """);
-    coordinator(root).compile(root, stLib);
+    realIcons(root);
+    compile(coordinator(root), root);
     editAndTouch(root.resolve("_b", "_rank_app.fear"), "B:Main", "C:Main{s->base.Debug#(`c`)}\nB:Main");
-    coordinator(root).compile(root, stLib);
+    compile(coordinator(root), root);
     utils.Err.strCmp("""
---- a_manifest.info
+--- a.json
 {
   "mains": {
-    "a.A": ["_a/_rank_app.fear", [], [["a.IconsA", "_a/icons/a.png", "", "", ""]], [["base.IconsFearless", "icons/fearless.png", "", "", ""], ["a.IconsA", "_a/icons/a.png", "", "", ""]]]
+    "a.A": [[], [["a.IconsA", "_a/icons/a.png", "", "", "", "ffile614"]], [["base.IconsFearless", "icons/fearless.png", "", "", "", ""], ["a.IconsA", "_a/icons/a.png", "", "", "", ""]]]
   },
   "attenuators": [],
   "dataRead": [],
   "dataEdit": []
 }
---- b_manifest.info
+--- b.json
 {
   "mains": {
-    "b.B": ["_b/_rank_app.fear", [], [], [["base.IconsFearless", "icons/fearless.png", "", "", ""]]],
-    "b.C": ["_b/_rank_app.fear", [], [], [["base.IconsFearless", "icons/fearless.png", "", "", ""]]]
+    "b.B": [[], [], [["base.IconsFearless", "icons/fearless.png", "", "", "", ""]]],
+    "b.C": [[], [], [["base.IconsFearless", "icons/fearless.png", "", "", "", ""]]]
   },
   "attenuators": [],
   "dataRead": [],
@@ -2335,19 +2396,19 @@ B:Main{s->base.Debug#(`b`)}
 }
 """, manifests(root));
   }
-  @Test void aDeletedPackageMainsInfoForcesARecompile(@TempDir Path tmp) throws Exception{
+  @Test void aDeletedPackageJsonForcesARecompile(@TempDir Path tmp) throws Exception{
     var root= claimsProject(tmp, """
 Foo:Main, OpenWith[IconsFoo,"foo"]{s->base.Debug#(`foo`)}
 """);
-    coordinator(root).compile(root, stLib);
+    compile(coordinator(root), root);
     var text= manifests(root);
-    assertEquals(Map.of("col", true), Coordinator.pkgsBuilt(root, baseCache));
-    Fs.delete(root.resolve(Coordinator.outDir).resolve("col_manifest.info"));
-    assertEquals(Map.of("col", false), Coordinator.pkgsBuilt(root, baseCache));
-    assertEquals(Optional.empty(), coordinator(root).mains(root, stLib));
-    coordinator(root).compile(root, stLib);
+    assertTrue(compiled(root));
+    Fs.delete(root.resolve(Coordinator.outDir).resolve("col.json"));
+    assertFalse(compiled(root));
+    assertFalse(compiled(root));
+    compile(coordinator(root), root);
     utils.Err.strCmp(text, manifests(root));
-    assertEquals(Map.of("col.Foo", "_col/_rank_app.fear"), files(coordinator(root).mains(root, stLib).orElseThrow()));
+    assertEquals(Set.of("col.Foo"), files(mains(coordinator(root), root)));
   }
   @Test void everyPackageListsItsMainsAndARemovedPackageLosesItsManifest(@TempDir Path tmp) throws Exception{
     var root= claimsProject(tmp, """
@@ -2357,16 +2418,17 @@ _lib/_rank_core.fear
 iii
 Lib:base.Main, base.OpenWith[base.IconsConflict,"fear"]{s->base.Debug#(`lib`)}
 """);
-    coordinator(root).compile(root, stLib);
-    assertEquals(Map.of("col.Foo", "_col/_rank_app.fear", "lib.Lib", "_lib/_rank_core.fear"), files(coordinator(root).mains(root, stLib).orElseThrow()));
+    compile(coordinator(root), root);
+    assertEquals(Set.of("col.Foo", "lib.Lib"), files(mains(coordinator(root), root)));
     Fs.rmTree(root.resolve("_col"));
-    assertEquals(Map.of("lib", true), Coordinator.pkgsBuilt(root, baseCache));
+    assertFalse(compiled(root));
     utils.Err.strCmp("lib\n", coordinator(root).main(root, stLib));
+    assertFalse(Fs.exists(root.resolve(Coordinator.outDir).resolve("col.json")));
     utils.Err.strCmp("""
---- lib_manifest.info
+--- lib.json
 {
   "mains": {
-    "lib.Lib": ["_lib/_rank_core.fear", [], [["base.IconsConflict", "icons/conflict.png", "", "", "fear"]], [["base.IconsFearless", "icons/fearless.png", "", "", ""], ["base.IconsConflict", "icons/conflict.png", "", "", ""]]]
+    "lib.Lib": [[], [["base.IconsConflict", "icons/conflict.png", "", "", "fear", "fear"]], [["base.IconsFearless", "icons/fearless.png", "", "", "", ""], ["base.IconsConflict", "icons/conflict.png", "", "", "", ""]]]
   },
   "attenuators": [],
   "dataRead": [],
@@ -2382,30 +2444,30 @@ _more/_rank_app.fear
 iii
 More:base.Main{s->base.Debug#(`more`)}
 """);
-    coordinator(root).compile(root, stLib);
+    compile(coordinator(root), root);
     var text= manifests(root);
-    for (var p : MainsInfo.files(root)){ Fs.delete(p); }
-    assertEquals(Map.of("col", false, "more", false), Coordinator.pkgsBuilt(root, baseCache));
-    coordinator(root).compile(root, stLib);
+    try (var s= Fs.list(root.resolve(Coordinator.outDir))){ for (var p : s.filter(p -> p.toString().endsWith(".json")).toList()){ Fs.delete(p); } }
+    assertFalse(compiled(root));
+    compile(coordinator(root), root);
     utils.Err.strCmp(text, manifests(root));
-    assertEquals(Map.of("col", true, "more", true), Coordinator.pkgsBuilt(root, baseCache));
+    assertTrue(compiled(root));
   }
-  @Test void aBaseApiNewerThanAPackageMakesThatPackageNotBuilt(@TempDir Path tmp) throws Exception{
+  @Test void aBaseJarWithAnotherTimeMakesEveryPackageNotBuilt(@TempDir Path tmp) throws Exception{
     var root= claimsProject(tmp, """
 Foo:Main{s->base.Debug#(`foo`)}
 """);
-    coordinator(root).compile(root, stLib);
-    assertEquals(Map.of("col", true), Coordinator.pkgsBuilt(root, baseCache));
-    var baseApi= baseCache.resolve("base.json");
+    compile(coordinator(root), root);
+    assertTrue(compiled(root));
+    var baseApi= baseCache.resolve("base.jar");
     var old= Fs.getLastModifiedTime(baseApi);
     try{
       Fs.setLastModifiedTime(baseApi, FileTime.fromMillis(System.currentTimeMillis()+1000));
-      assertEquals(Optional.empty(), coordinator(root).mains(root, stLib));
-      assertEquals(Map.of("col", false), Coordinator.pkgsBuilt(root, baseCache));
+      assertFalse(compiled(root));
     }
     finally{ Fs.setLastModifiedTime(baseApi, old); }
+    assertTrue(compiled(root));
   }
-  void aCorruptedCacheFileIsDeletedWithTheWholeCache(Path tmp, String file, java.util.function.UnaryOperator<byte[]> corrupt, String expected){
+  void aCorruptedCacheFileIsCacheCorrupted(Path tmp, String file, java.util.function.UnaryOperator<byte[]> corrupt, String expected){
     var root= tmp.resolve("root");
     UserError.root = root;
     FsDsl.materialize(root, """
@@ -2420,11 +2482,13 @@ A:Main{s->base.Debug#(`hi`)}
     Fs.ofV(() -> Fs.write(cached, corrupt.apply(Fs.readAllBytes(cached))));
     var ex= assertThrows(UserError.class, () -> main(root, List.of()));
     utils.Err.strCmp(expected, ex.getMessage());
-    assertFalse(Fs.exists(out));
+    assertTrue(UserError.cacheCorrupted(ex.getMessage()));
+    assertTrue(Fs.exists(cached));
+    Coordinator.deleteCache(root);
     utils.Err.strCmp("hi\n", main(root, List.of()));
   }
-  static String crashedWithCache(String detail){ return "Error: Fearless crashed: either this project's compilation cache was corrupted, or this is a Fearless bug.[###]Fearless deleted this project's .fearless_out folder: compile again to rebuild it.[###]Details:\n"+detail+"[###]"; }
-  @Test void aGarbledBuiltFileMakesItsPackageBuildAgain(@TempDir Path tmp){
+  static String crashedWithCache(String detail){ return "Fearless crashed: either this project's compilation cache was corrupted, or this is a Fearless bug.\n\nDetails:\n"+detail+"[###]"; }
+  @Test void aGarbledInputsSnapshotMakesItsPackageBuildAgain(@TempDir Path tmp){
     var root= tmp.resolve("root");
     UserError.root = root;
     FsDsl.materialize(root, """
@@ -2434,26 +2498,27 @@ use base.Main as Main;
 A:Main{s->base.Debug#(`hi`)}
 """);
     utils.Err.strCmp("hi\n", main(root, List.of()));
-    var built= root.resolve(Coordinator.outDir).resolve("p.built");
-    var good= Fs.of(() -> Fs.readAllBytes(built));
-    Fs.ofV(() -> Fs.write(built, new byte[]{(byte)0xff}));
+    var json= root.resolve(Coordinator.outDir).resolve("p.json");
+    var good= Fs.readUtf8(json);
+    Fs.writeUtf8(json, good.replaceFirst("\"inputsSnapshot\":\"", "\"inputsSnapshot\":\"garbled"));
+    assertFalse(compiled(root));
     utils.Err.strCmp("hi\n", main(root, List.of()));
-    assertArrayEquals(good, Fs.of(() -> Fs.readAllBytes(built)));
+    assertEquals(good, Fs.readUtf8(json));
   }
-  @Test void aGarbledMainsInfoDeletesTheCache(@TempDir Path tmp){
-    aCorruptedCacheFileIsDeletedWithTheWholeCache(tmp, "p_manifest.info", _ -> "[".getBytes(UTF_8), crashedWithCache("utils.Bug"));
+  @Test void aGarbledManifestIsCacheCorrupted(@TempDir Path tmp){
+    aCorruptedCacheFileIsCacheCorrupted(tmp, "p.json", bs -> new String(bs, UTF_8).replaceFirst("\"manifest\":\"", "\"manifest\":\"[").getBytes(UTF_8), crashedWithCache("utils.Bug"));
   }
-  @Test void anApiJsonWithAnUnknownReferenceCapabilityDeletesTheCache(@TempDir Path tmp){
-    aCorruptedCacheFileIsDeletedWithTheWholeCache(tmp, "p.json", bs -> new String(bs, UTF_8).replaceFirst("\"imm\"", "\"imx\"").getBytes(UTF_8), crashedWithCache("java.lang.IllegalArgumentException"));
+  @Test void anApiJsonWithAnUnknownReferenceCapabilityIsCacheCorrupted(@TempDir Path tmp){
+    aCorruptedCacheFileIsCacheCorrupted(tmp, "p.json", bs -> new String(bs, UTF_8).replaceFirst("\"imm\"", "\"imx\"").getBytes(UTF_8), crashedWithCache("java.lang.IllegalArgumentException"));
   }
-  @Test void anApiJsonWithATypeOfReferenceCapabilityMutHDeletesTheCache(@TempDir Path tmp){
-    aCorruptedCacheFileIsDeletedWithTheWholeCache(tmp, "p.json", bs -> new String(bs, UTF_8).replaceFirst("\\[\"p.A\",\"mut\"", "[\"p.A\",\"mutH\"").getBytes(UTF_8), crashedWithCache("java.lang.AssertionError"));
+  @Test void anApiJsonWithATypeOfReferenceCapabilityMutHIsCacheCorrupted(@TempDir Path tmp){
+    aCorruptedCacheFileIsCacheCorrupted(tmp, "p.json", bs -> new String(bs, UTF_8).replaceFirst("\\[\"p.A\",\"mut\"", "[\"p.A\",\"mutH\"").getBytes(UTF_8), crashedWithCache("java.lang.AssertionError"));
   }
-  @Test void anApiJsonWithAnIsoMethodDeletesTheCache(@TempDir Path tmp){
-    aCorruptedCacheFileIsDeletedWithTheWholeCache(tmp, "p.json", bs -> new String(bs, UTF_8).replaceFirst("\\[\".main\",\"imm\"", "[\".main\",\"iso\"").getBytes(UTF_8), crashedWithCache("java.lang.AssertionError"));
+  @Test void anApiJsonWithAnIsoMethodIsCacheCorrupted(@TempDir Path tmp){
+    aCorruptedCacheFileIsCacheCorrupted(tmp, "p.json", bs -> new String(bs, UTF_8).replaceFirst("\\[\".main\",\"imm\"", "[\".main\",\"iso\"").getBytes(UTF_8), crashedWithCache("java.lang.AssertionError"));
   }
-  @Test void anApiJsonWithARepeatedSupertypeDeletesTheCache(@TempDir Path tmp){
-    aCorruptedCacheFileIsDeletedWithTheWholeCache(tmp, "p.json", bs -> new String(bs, UTF_8).replaceFirst("\\[\"base.Main\"\\]", "[\"base.Main\"],[\"base.Main\"]").getBytes(UTF_8), crashedWithCache("java.lang.AssertionError"));
+  @Test void anApiJsonWithARepeatedSupertypeIsCacheCorrupted(@TempDir Path tmp){
+    aCorruptedCacheFileIsCacheCorrupted(tmp, "p.json", bs -> new String(bs, UTF_8).replaceFirst("\\[\"base.Main\"\\]", "[\"base.Main\"],[\"base.Main\"]").getBytes(UTF_8), crashedWithCache("java.lang.AssertionError"));
   }
   @Test void aMapDirectiveEditedInAHigherRankPackageMakesItsTargetPackageNotBuilt(@TempDir Path tmp) throws IOException{
     var root= tmp.resolve("root");
@@ -2482,7 +2547,7 @@ A:Main{s->base.Debug#(pkb.B.text)}
 """);
     utils.Err.strCmp("c\n", main(root, List.of()));
     editAndTouch(root.resolve("_pka", "_rank_app999.fear"), "map a as _pkc", "map a as _pkd");
-    assertEquals(Map.of("pka", false, "pkb", false, "pkc", false, "pkd", false), Coordinator.pkgsBuilt(root, baseCache));
+    assertFalse(compiled(root));
     utils.Err.strCmp("d\n", main(root, List.of()));
   }
   @Test void aMovedIconOfALowerRankPackageIsFollowed(@TempDir Path tmp) throws Exception{
@@ -2497,20 +2562,20 @@ _lib/icons/lib.png
 iii
 not read by the compiler
 """);
-    coordinator(root).compile(root, stLib);
+    compile(coordinator(root), root);
     Fs.move(root.resolve("_lib", "icons", "lib.png"), root.resolve("_lib", "icons", "lib.gif"));
-    coordinator(root).compile(root, stLib);
+    compile(coordinator(root), root);
     utils.Err.strCmp("""
---- col_manifest.info
+--- col.json
 {
   "mains": {
-    "col.Foo": ["_col/_rank_app.fear", [], [["lib.IconsLib", "_lib/icons/lib.gif", "", "", ""]], [["base.IconsFearless", "icons/fearless.png", "", "", ""], ["lib.IconsLib", "_lib/icons/lib.gif", "", "", ""]]]
+    "col.Foo": [[], [["lib.IconsLib", "_lib/icons/lib.gif", "", "", "", "ffile074"]], [["base.IconsFearless", "icons/fearless.png", "", "", "", ""], ["lib.IconsLib", "_lib/icons/lib.gif", "", "", "", ""]]]
   },
   "attenuators": [],
   "dataRead": [],
   "dataEdit": []
 }
---- lib_manifest.info
+--- lib.json
 {
   "mains": {},
   "attenuators": [],
@@ -2535,14 +2600,30 @@ _lib/icons/lib.png
 iii
 not read by the compiler
 """);
-    coordinator(root).compile(root, stLib);
+    compile(coordinator(root), root);
     Fs.move(root.resolve("_lib", "icons", "lib.png"), root.resolve("_lib", "icons", "lib.gif"));
-    coordinator(root).compile(root, stLib);
+    compile(coordinator(root), root);
     utils.Err.strCmp("""
-[###]--- mid_manifest.info
+--- col.json
 {
   "mains": {
-    "mid.Mid": ["_mid/_rank_driver.fear", [], [["lib.IconsLib", "_lib/icons/lib.gif", "", "", ""]], [["base.IconsFearless", "icons/fearless.png", "", "", ""], ["lib.IconsLib", "_lib/icons/lib.gif", "", "", ""]]]
+    "col.Foo": [[], [], [["base.IconsFearless", "icons/fearless.png", "", "", "", ""]]]
+  },
+  "attenuators": [],
+  "dataRead": [],
+  "dataEdit": []
+}
+--- lib.json
+{
+  "mains": {},
+  "attenuators": [],
+  "dataRead": [],
+  "dataEdit": []
+}
+--- mid.json
+{
+  "mains": {
+    "mid.Mid": [[], [["lib.IconsLib", "_lib/icons/lib.gif", "", "", "", "ffile972"]], [["base.IconsFearless", "icons/fearless.png", "", "", "", ""], ["lib.IconsLib", "_lib/icons/lib.gif", "", "", "", ""]]]
   },
   "attenuators": [],
   "dataRead": [],
@@ -2567,7 +2648,7 @@ Foo:{ .make: Bar -> {'self
 App:Main{s->base.Debug#(`app`)}
 """);
     utils.Err.strCmp("app\n", main(root, List.of()));
-    var html= Fs.readUtf8(Coordinator.genJava(root.resolve(Coordinator.outDir)).resolve("p.html"));
+    var html= Fs.readUtf8(root.resolve(Coordinator.outDir).resolve("p.html"));
     utils.Err.strCmp("[###]id=\"literal-fear_3a__2f__5f_p_2f__5f_rank_5f_app_2e_fear-4-21\"[###]<p>Twice the bar of <code><a href=\"#literal-fear_3a__2f__5f_p_2f__5f_rank_5f_app_2e_fear-4-21\">self</a></code>.</p>[###]", html);
   }
   @Test void theSelfNameOfAnAnonymousLiteralInADocNamesTheLiteral(@TempDir Path tmp) throws InterruptedException{
@@ -2587,10 +2668,10 @@ Foo:{ .make: Bar -> {'self
 App:Main{s->base.Debug#(`app`)}
 """);
     utils.Err.strCmp("app\n", main(root, List.of()));
-    var html= Fs.readUtf8(Coordinator.genJava(root.resolve(Coordinator.outDir)).resolve("p.html"));
+    var html= Fs.readUtf8(root.resolve(Coordinator.outDir).resolve("p.html"));
     utils.Err.strCmp("[###]<p>Twice <code><a href=\"#method-p_2e__5f_AFoo-0-imm-_2e_bar-0\">self.bar</a></code>.</p>[###]", html);
   }
-  @Test void aRemovedPackageLosesItsMainsBeforeTheNextCompile(@TempDir Path tmp) throws Exception{
+  @Test void aRemovedPackageMakesTheProjectOutOfDateAndLosesItsMains(@TempDir Path tmp) throws Exception{
     var root= claimsProject(tmp, """
 Foo:Main{s->base.Debug#(`foo`)}
 jjj
@@ -2598,9 +2679,11 @@ _lib/_rank_core.fear
 iii
 Lib:base.Main{s->base.Debug#(`lib`)}
 """);
-    coordinator(root).compile(root, stLib);
+    compile(coordinator(root), root);
     Fs.rmTree(root.resolve("_col"));
-    assertEquals(Map.of("lib.Lib", "_lib/_rank_core.fear"), files(coordinator(root).mains(root, stLib).orElseThrow()));
+    assertFalse(compiled(root));
+    compile(coordinator(root), root);
+    assertEquals(Set.of("lib.Lib"), files(mains(coordinator(root), root)));
   }
   @Test void aPackageGetsTheSameDocsWhetherThePackageBelowItWasCompiledInTheSameBuildOrNot(@TempDir Path tmp) throws Exception{
     var root= tmp.resolve("root");
@@ -2619,7 +2702,7 @@ use base.Main as Main;
 App:Main{s->base.Debug#(`app`)}
 """);
     utils.Err.strCmp("app\n", main(root, List.of()));
-    var html= Coordinator.genJava(root.resolve(Coordinator.outDir)).resolve("app.html");
+    var html= root.resolve(Coordinator.outDir).resolve("app.html");
     var clean= Fs.readUtf8(html);
     editAndTouch(root.resolve("_app", "_rank_app.fear"), "Calls", "Calls");
     utils.Err.strCmp("app\n", main(root, List.of()));
@@ -2635,8 +2718,8 @@ use base.Main as Main;
 A:Main{s->base.Debug#(`hi`)}
 """);
     utils.Err.strCmp("hi\n", main(root, List.of()));
-    Fs.delete(Coordinator.genJava(root.resolve(Coordinator.outDir)).resolve("p.jar"));
-    assertEquals(Map.of("p", false), Coordinator.pkgsBuilt(root, baseCache));
+    Fs.delete(root.resolve(Coordinator.outDir).resolve("p.jar"));
+    assertFalse(compiled(root));
     utils.Err.strCmp("hi\n", main(root, List.of()));
   }
   @Test void inheritedClaimsAreListedOnce(@TempDir Path tmp) throws Exception{
@@ -2645,12 +2728,12 @@ Opener:Main, OpenWith[IconsFoo,"foo"], Shortcut[IconsFoo]{}
 Other:Main, Shortcut[IconsFoo], OpenWith[IconsFoo]{}
 Foo:Opener, Other, Shortcut[base.IconsConflict,"fapp042"], OpenWith[IconsFoo]{s->base.Debug#(`foo`)}
 """);
-    coordinator(root).compile(root, stLib);
+    compile(coordinator(root), root);
     utils.Err.strCmp("""
---- col_manifest.info
+--- col.json
 {
   "mains": {
-    "col.Foo": ["_col/_rank_app.fear", [["base.IconsConflict", "icons/conflict.png", "", "", "fapp042"], ["col.IconsFoo", "_col/icons/foo.png", "", "", ""]], [["col.IconsFoo", "_col/icons/foo.png", "", "", ""], ["col.IconsFoo", "_col/icons/foo.png", "", "", "foo"]], [["base.IconsConflict", "icons/conflict.png", "", "", ""], ["col.IconsFoo", "_col/icons/foo.png", "", "", ""], ["base.IconsFearless", "icons/fearless.png", "", "", ""]]]
+    "col.Foo": [[["base.IconsConflict", "icons/conflict.png", "", "", "fapp042", "fapp042"], ["col.IconsFoo", "_col/icons/foo.png", "", "", "", "fapp720"]], [["col.IconsFoo", "_col/icons/foo.png", "", "", "", "ffile720"], ["col.IconsFoo", "_col/icons/foo.png", "", "", "foo", "foo"]], [["base.IconsConflict", "icons/conflict.png", "", "", "", ""], ["col.IconsFoo", "_col/icons/foo.png", "", "", "", ""], ["base.IconsFearless", "icons/fearless.png", "", "", "", ""]]]
   },
   "attenuators": [],
   "dataRead": [],
@@ -2707,7 +2790,7 @@ How to fix
 We check this so that you[###]
 """, ex.getMessage());
   }
-  @Test void aRealApiPreservingEditMustNotRebuildTheDependentPackage(@TempDir Path tmp) throws Exception{
+  @Test void anApiPreservingEditCompilesAgainTheDependentPackage(@TempDir Path tmp) throws Exception{
     var root= tmp.resolve("root");
     UserError.root = root;
     FsDsl.materialize(root, """
@@ -2723,16 +2806,14 @@ use a.Greeting as Greeting;
 Hello:Main{s->base.Debug#(Greeting.hi)}
 """);
     var c= coordinator(root);
-    c.main(root, stLib);
+    utils.Err.strCmp("hi\n", c.main(root, stLib));
     var out= root.resolve(Coordinator.outDir);
-    var aBuilt= Fs.lastModified(out.resolve("a.built"));
-    var aJson= Fs.lastModified(out.resolve("a.json"));
-    var bBuilt= Fs.lastModified(out.resolve("b.built"));
+    var aJar= Fs.lastModified(out.resolve("a.jar"));
+    var bJar= Fs.lastModified(out.resolve("b.jar"));
     editAndTouch(root.resolve("_a/_rank_core.fear"), "\"hi\"", "\"ho\"");
-    c.main(root, stLib);
-    assertNotEquals(aBuilt, Fs.lastModified(out.resolve("a.built")));
-    assertEquals(aJson, Fs.lastModified(out.resolve("a.json")));
-    assertEquals(bBuilt, Fs.lastModified(out.resolve("b.built")));
+    utils.Err.strCmp("ho\n", c.main(root, stLib));
+    assertNotEquals(aJar, Fs.lastModified(out.resolve("a.jar")));
+    assertNotEquals(bJar, Fs.lastModified(out.resolve("b.jar")));
   }
   // Confirms expected behaviour: only the packages at the highest rank number get their Main run.
   @Test void onlyTheHighestRankPackageMainRuns(@TempDir Path tmp) throws InterruptedException{
@@ -2778,7 +2859,7 @@ Hello:Main{s->base.Debug#("from z")}
   @Test void flowFirstDoesNotWaitForDivergingElements() throws InterruptedException{
     var project= freshIntegrationRoot("testFlowTermination");
     var c= coordinator(project);
-    c.compile(project, stLib);
+    compile(c, project);
     var out= new StringBuilder();
     var child= Coordinator.startMain(project, ResolveResource.stLibPath, "term.FirstDoesNotWaitForTheRest", Optional.empty(), Map.of(), Map.of(), List.of(), List.of(), c.sharedClasspath(), out::append);
     var waiter= new Thread(() -> {
@@ -2950,7 +3031,7 @@ Grow:Main{s -> base.Block#
   .return{base.Debug#(l.removeIf{e -> base.Block#(l.add e, base.True)}.list.size)}
   }
 """);
-    var ex= assertThrows(UserError.class, () -> coordinator(root).compile(root, stLib));
+    var ex= assertThrows(UserError.class, () -> compile(coordinator(root), root));
     utils.Err.strCmp("""
 [###]
 005|   .return{base.Debug#(l.removeIf{e -> base.Block#(l.add e, base.True)}.list.size)}
@@ -2975,7 +3056,7 @@ Grow:Main{s -> base.Block#
   .return{base.Debug#(l.mapInPlace{e -> base.Block#(l.add e, e)}.list.size)}
   }
 """);
-    var ex= assertThrows(UserError.class, () -> coordinator(root).compile(root, stLib));
+    var ex= assertThrows(UserError.class, () -> compile(coordinator(root), root));
     utils.Err.strCmp("""
 [###]
 005|   .return{base.Debug#(l.mapInPlace{e -> base.Block#(l.add e, e)}.list.size)}
@@ -2997,7 +3078,7 @@ use base.Nat as Nat;
 use base.CacheF as CacheF;
 Both:CacheF[Nat],CacheF[Nat,Nat]{ # -> 1; #(a) -> a.get + 1 }
 """);
-    var ex= assertThrows(UserError.class, () -> coordinator(root).compile(root, stLib));
+    var ex= assertThrows(UserError.class, () -> compile(coordinator(root), root));
     utils.Err.strCmp("[###]Ambiguous implementation for method \"._uniqueCache\" with 0 parameters.[###]", ex.getMessage());
   }
   @Test void aSubtypeOfACacheHasACacheOfItsOwn(@TempDir Path tmp) throws InterruptedException{
@@ -3109,7 +3190,7 @@ boom
 imm A.main(_) error line: 2 in file _col/_rank_app.fear
 b
 """, c.main(root, stLib));
-    var cp= Push.of(Coordinator.genJava(root.resolve(Coordinator.outDir)), c.sharedClasspath());
+    var cp= Push.of(root.resolve(Coordinator.outDir), c.sharedClasspath());
     var out= new StringBuilder();
     assertEquals(1, Coordinator.startProgram(Coordinator.runData(root, c.stdLibBase()), cp, "_col.Main", out::append).await(), out::toString);
     assertEquals(1, Coordinator.startMain(root, c.stdLibBase(), "col.A", Optional.empty(), Map.of(), Map.of(), List.of(), List.of(), c.sharedClasspath(), out::append).await(), out::toString);
@@ -4473,7 +4554,7 @@ map bb as _base in _app;
 use base.Str as Str;
 App:bb.Main{s->bb.Debug#("hi")}
 """);
-    assertEquals(Optional.empty(), coordinator(root).mains(root, stLib));
+    assertFalse(compiled(root));
     var ex= assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib));
     utils.Err.strCmp("""
 In file: fear:/_app/_rank_app.fear
@@ -4879,5 +4960,174 @@ Hello:Main{s->base.Debug#("hi")}
         "-DfearlessDataRead.leak.Zips="+PathClassLoader.argOf(zips),
         "-DfearlessManager.launcher="+tmp.resolve("missing_launcher")));
     }
+  }
+  static Path helloProject(Path tmp){
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_p/_rank_app999.fear
+iii
+use base.Main as Main;
+A:Main{s->base.Debug#(`hi`)}
+""");
+    return root;
+  }
+  static Path out(Path root, String file){ return root.resolve(Coordinator.outDir).resolve(file); }
+  static Optional<UserError> compileWith(Coordinator c, Path root, Coordinator.TakeFreeExtension take){ return c.compile(root, stLib, "root", take); }
+  static MainsInfo.Main onlyMain(MainsInfo info){ return OneOr.of("one main", info.mains().values().stream()); }
+  @Test void aCompileLeavesItsUnfinishedFileUntilFinish(@TempDir Path tmp){
+    var root= helloProject(tmp);
+    var c= coordinator(root);
+    assertEquals(Optional.empty(), compileWith(c, root, cs -> cs.stream().findFirst()));
+    assertTrue(Fs.exists(out(root, "_unfinished.txt")));
+    assertTrue(c.check(root) instanceof Coordinator.State.OutOfDate);
+    Coordinator.finish(root);
+    assertFalse(Fs.exists(out(root, "_unfinished.txt")));
+    assertTrue(compiled(root));
+  }
+  @Test void dropUnfinishedDeletesOnlyAnUnfinishedCache(@TempDir Path tmp){
+    var root= helloProject(tmp);
+    compile(coordinator(root), root);
+    Coordinator.dropUnfinished(root);
+    assertTrue(compiled(root));
+    Fs.writeUtf8(out(root, "_unfinished.txt"), "");
+    Coordinator.dropUnfinished(root);
+    assertFalse(Fs.exists(root.resolve(Coordinator.outDir)));
+  }
+  @Test void aCompileOverAnUnfinishedCacheCompilesEveryPackageAgain(@TempDir Path tmp) throws IOException{
+    var root= helloProject(tmp);
+    compile(coordinator(root), root);
+    var jar= out(root, "p.jar");
+    var time= Fs.getLastModifiedTime(jar);
+    Fs.write(jar, new byte[]{1, 2, 3});
+    Fs.setLastModifiedTime(jar, time);
+    assertTrue(compiled(root));
+    Fs.writeUtf8(out(root, "_unfinished.txt"), "");
+    compile(coordinator(root), root);
+    assertFalse(Arrays.equals(new byte[]{1, 2, 3}, Fs.readAllBytes(jar)));
+    utils.Err.strCmp("hi\n", main(root, List.of()));
+  }
+  @Test void anOtherFileOfTheCacheMakesTheProjectOutOfDateAndTheNextCompileDeletesIt(@TempDir Path tmp){
+    var root= helloProject(tmp);
+    compile(coordinator(root), root);
+    Fs.writeUtf8(out(root, "junk.txt"), "");
+    Fs.writeUtf8(out(root, "gen_java").resolve("p.txt"), "");
+    assertFalse(compiled(root));
+    compile(coordinator(root), root);
+    assertFalse(Fs.exists(out(root, "junk.txt")));
+    assertFalse(Fs.exists(out(root, "gen_java")));
+    assertTrue(compiled(root));
+  }
+  @Test void aFailedCompileWritesTheErrorFileAndASuccessfulCompileDeletesIt(@TempDir Path tmp){
+    var root= helloProject(tmp);
+    var file= root.resolve("_p", "_rank_app999.fear");
+    var good= Fs.readUtf8(file);
+    Fs.writeUtf8(file, good.replace("`hi`", "Undefined"));
+    var error= compileWith(coordinator(root), root, cs -> cs.stream().findFirst()).orElseThrow();
+    assertEquals(error.getMessage(), Fs.readUtf8(out(root, "_error.txt")));
+    Coordinator.finish(root);
+    Fs.writeUtf8(file, good);
+    compile(coordinator(root), root);
+    assertFalse(Fs.exists(out(root, "_error.txt")));
+  }
+  @Test void anInvalidProjectIsInvalidAndItsCompileWritesTheProblem(@TempDir Path tmp){
+    var root= helloProject(tmp);
+    Fs.writeUtf8(root.resolve("top.fear"), "");
+    var problem= ((Coordinator.State.Invalid)coordinator(root).check(root)).problem();
+    utils.Err.strCmp("[###]top.fear[###]", problem);
+    var error= compileWith(coordinator(root), root, cs -> cs.stream().findFirst()).orElseThrow();
+    assertEquals(problem, error.getMessage());
+    assertEquals(problem, Fs.readUtf8(out(root, "_error.txt")));
+  }
+  @Test void aCorruptedJsonFoundByACompileIsTheErrorOfTheCompile(@TempDir Path tmp){
+    var root= helloProject(tmp);
+    compile(coordinator(root), root);
+    Fs.writeUtf8(out(root, "p.json"), "{");
+    var error= compileWith(coordinator(root), root, cs -> cs.stream().findFirst()).orElseThrow();
+    assertTrue(UserError.cacheCorrupted(error.getMessage()));
+    assertEquals(error.getMessage(), Fs.readUtf8(out(root, "_error.txt")));
+  }
+  @Test void deleteCacheRemovesTheCacheFolder(@TempDir Path tmp){
+    var root= helloProject(tmp);
+    compile(coordinator(root), root);
+    Coordinator.deleteCache(root);
+    assertFalse(Fs.exists(root.resolve(Coordinator.outDir)));
+    assertFalse(compiled(root));
+  }
+  @Test void aFileEditedWhileTheProjectCompilesFailsTheCompile(@TempDir Path tmp) throws IOException{
+    var root= claimsProject(tmp, """
+Foo:Main, OpenWith[IconsFoo]{s->base.Debug#(`foo`)}
+""");
+    var error= compileWith(coordinator(root), root, cs -> { Fs.writeUtf8(root.resolve("_col", "extra.fear"), ""); return cs.stream().findFirst(); }).orElseThrow();
+    utils.Err.strCmp("Some files inside the project [###]root[###] were updated while the project was compiling.", error.getMessage());
+    assertEquals(error.getMessage(), Fs.readUtf8(out(root, "_error.txt")));
+  }
+  @Test void eachAutoselectedExtensionIsTakenFromTheCandidatesAndTheNextCompileKeepsIt(@TempDir Path tmp) throws IOException{
+    var root= claimsProject(tmp, """
+Foo:Main, OpenWith[IconsFoo], Shortcut[IconsFoo], Shortcut[base.IconsConflict,`fapp042`]{s->base.Debug#(`foo`)}
+""");
+    var asked= new ArrayList<List<String>>();
+    var c= coordinator(root);
+    assertEquals(Optional.empty(), compileWith(c, root, cs -> { asked.add(cs); return Optional.of(cs.getLast()); }));
+    Coordinator.finish(root);
+    assertEquals(List.of(999, 1000), asked.stream().map(List::size).toList());
+    assertTrue(asked.get(0).stream().allMatch(e -> e.matches("fapp[0-9]{3}")) && !asked.get(0).contains("fapp042"));
+    assertTrue(asked.get(1).stream().allMatch(e -> e.matches("ffile[0-9]{3}")));
+    var main= onlyMain(mains(c, root));
+    var chosen= List.of(main.shortcuts().stream().filter(s -> s.named().isEmpty()).findFirst().orElseThrow().extension(), main.openWiths().getFirst().extension());
+    assertEquals(List.of(asked.get(0).getLast(), asked.get(1).getLast()), chosen);
+    var rank= root.resolve("_col", "_rank_app.fear");
+    Fs.writeUtf8(rank, Fs.readUtf8(rank)+"\n");
+    asked.clear();
+    assertEquals(Optional.empty(), compileWith(c, root, cs -> { asked.add(cs); return Optional.empty(); }));
+    Coordinator.finish(root);
+    assertEquals(List.of(), asked);
+    var again= onlyMain(mains(c, root));
+    assertEquals(chosen, List.of(again.shortcuts().stream().filter(s -> s.named().isEmpty()).findFirst().orElseThrow().extension(), again.openWiths().getFirst().extension()));
+  }
+  @Test void noFreeExtensionFailsTheCompile(@TempDir Path tmp) throws IOException{
+    var root= claimsProject(tmp, """
+Foo:Main, OpenWith[IconsFoo]{s->base.Debug#(`foo`)}
+""");
+    var error= compileWith(coordinator(root), root, cs -> Optional.empty()).orElseThrow();
+    utils.Err.strCmp("No free extension is left for [###] of main [###]: all the 1000 extensions \"ffile000\" to \"ffile999\" are used by the projects of this manager.[###]", error.getMessage());
+  }
+  void anIconIsRefused(Path tmp, byte[] icon, String expected) throws IOException{
+    var root= claimsProject(tmp, """
+Foo:Main, OpenWith[IconsFoo]{s->base.Debug#(`foo`)}
+""");
+    Fs.write(root.resolve("_col", "icons", "foo.png"), icon);
+    var error= compileWith(coordinator(root), root, cs -> cs.stream().findFirst()).orElseThrow();
+    utils.Err.strCmp(expected, error.getMessage());
+  }
+  static byte[] png(int w, int h) throws IOException{
+    var bout= new ByteArrayOutputStream();
+    ImageIO.write(new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB), "png", bout);
+    return bout.toByteArray();
+  }
+  static final String iconRule= " (from [###]foo.png[###]): an icon must be a square PNG image with a side from 64 to 1024 pixels.";
+  @Test void theIconErrorNamesTheClaimAsTheSourceWritesIt(@TempDir Path tmp) throws IOException{
+    var root= claimsProject(tmp, """
+Foo:Main, Shortcut[IconsFoo, "fapp123"]{s->base.Debug#(`foo`)}
+""");
+    Fs.write(root.resolve("_col", "icons", "foo.png"), png(64, 65));
+    var error= compileWith(coordinator(root), root, cs -> cs.stream().findFirst()).orElseThrow();
+    utils.Err.strCmp("The icon \"col.IconsFoo\" in \"base.Shortcut[col.IconsFoo,\\\"fapp123\\\"]\" of main \"col.Foo\" is 64x65 pixels"+iconRule, error.getMessage());
+  }
+  @Test void aNonSquareIconIsRefused(@TempDir Path tmp) throws IOException{ anIconIsRefused(tmp, png(64, 65), "The icon [###] of main [###] is 64x65 pixels"+iconRule); }
+  @Test void anIconSmallerThan64PixelsIsRefused(@TempDir Path tmp) throws IOException{ anIconIsRefused(tmp, png(63, 63), "The icon [###] of main [###] is 63x63 pixels"+iconRule); }
+  @Test void anIconLargerThan1024PixelsIsRefused(@TempDir Path tmp) throws IOException{ anIconIsRefused(tmp, png(1025, 1025), "The icon [###] of main [###] is 1025x1025 pixels"+iconRule); }
+  @Test void anIconThatIsNotAPngIsRefused(@TempDir Path tmp) throws IOException{ anIconIsRefused(tmp, "not an image".getBytes(UTF_8), "The icon [###] of main [###] is not a PNG image"+iconRule); }
+  @Test void finishDeletesTheIconsNoClaimUses(@TempDir Path tmp) throws IOException{
+    var root= claimsProject(tmp, """
+Foo:Main, OpenWith[IconsFoo]{s->base.Debug#(`foo`)}
+""");
+    compile(coordinator(root), root);
+    var icons= out(root, "icons");
+    var kept= Fs.walk(icons, s -> s.filter(Fs::isRegularFile).sorted().toList());
+    assertFalse(kept.isEmpty());
+    Fs.writeUtf8(icons.resolve("gone.png"), "");
+    Coordinator.finish(root);
+    assertEquals(kept, Fs.walk(icons, s -> s.filter(Fs::isRegularFile).sorted().toList()));
   }
 }

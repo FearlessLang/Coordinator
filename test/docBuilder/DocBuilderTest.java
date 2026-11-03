@@ -823,7 +823,7 @@ Holder
     var oracle= SourceOracle.debugBuilder().putURI(file, "Holder:{}\n").putURI(rank, "use base.Nat as Nat;\n/// stray\n").build();
     var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(owner), Optional.empty(), "pkg", tmp.resolve("pkg.html"), true);
     builder.visitLiteral(owner);
-    var ex= assertThrows(UserError.class, () -> builder.complete(TName::s, true));
+    var ex= assertThrows(UserError.class, () -> builder.complete(TName::s, true, Runnable::run));
     utils.Err.strCmp("""
 Broken reference in a doc comment.
 
@@ -844,7 +844,7 @@ This documentation is attached to nothing.
     var oracle= SourceOracle.debugBuilder().putURI(file, ".zzz->1;  .aaa->2 /// trailing note\n").build();
     var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(owner), Optional.empty(), "pkg", tmp.resolve("pkg.html"), true);
     builder.visitLiteral(owner);
-    var ex= assertThrows(UserError.class, () -> builder.complete(TName::s, true));
+    var ex= assertThrows(UserError.class, () -> builder.complete(TName::s, true, Runnable::run));
     utils.Err.strCmp("[###]more than one declaration on the same line[###]", ex.getMessage());
   }
   @Test void aTrailingDocSharedByThreeDeclarationsOnOneLineIsStillAnAmbiguousReferenceError(@TempDir Path tmp){
@@ -856,7 +856,7 @@ This documentation is attached to nothing.
     var oracle= SourceOracle.debugBuilder().putURI(file, ".aaa->1; .bbb->2; .ccc->3 /// note\n").build();
     var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(owner), Optional.empty(), "pkg", tmp.resolve("pkg.html"), true);
     builder.visitLiteral(owner);
-    assertThrows(UserError.class, () -> builder.complete(TName::s, true));
+    assertThrows(UserError.class, () -> builder.complete(TName::s, true, Runnable::run));
   }
   @Test void aTrailingTestOnlyLineSharedByTwoDeclarationsOnOneLineIsAnAmbiguousReferenceError(@TempDir Path tmp){
     var ownerName= new TName("pkg.Holder", 0, Pos.unknown);
@@ -866,7 +866,7 @@ This documentation is attached to nothing.
     var oracle= SourceOracle.debugBuilder().putURI(file, ".zzz->1;  .aaa->2 //- let x={1}\n").build();
     var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(owner), Optional.empty(), "pkg", tmp.resolve("pkg.html"), true);
     builder.visitLiteral(owner);
-    var ex= assertThrows(UserError.class, () -> builder.complete(TName::s, true));
+    var ex= assertThrows(UserError.class, () -> builder.complete(TName::s, true, Runnable::run));
     utils.Err.strCmp("[###]more than one declaration on the same line[###]", ex.getMessage());
   }
   @Test void aTrailingDocAfterAClosedNestedBraceOnTheSameLineIsNotAmbiguous(@TempDir Path tmp){
@@ -877,7 +877,7 @@ This documentation is attached to nothing.
     var oracle= SourceOracle.debugBuilder().putURI(file, ".hash->{.then->1};/// hash via str\n").build();
     var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(owner), Optional.empty(), "pkg", tmp.resolve("pkg.html"), true);
     builder.visitLiteral(owner);
-    builder.complete(TName::s, true);
+    builder.complete(TName::s, true, Runnable::run);
   }
   @Test void aTrailingDocRightAfterAnOpeningBraceIsAmbiguousBetweenTheOuterDeclarationAndTheNestedOne(@TempDir Path tmp){
     var ownerName= new TName("pkg.Holder", 0, Pos.unknown);
@@ -887,7 +887,7 @@ This documentation is attached to nothing.
     var oracle= SourceOracle.debugBuilder().putURI(file, ".outer->{///doc\n}\n").build();
     var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(owner), Optional.empty(), "pkg", tmp.resolve("pkg.html"), true);
     builder.visitLiteral(owner);
-    assertThrows(UserError.class, () -> builder.complete(TName::s, true));
+    assertThrows(UserError.class, () -> builder.complete(TName::s, true, Runnable::run));
   }
   @Test void aTrailingDocAfterTheLastOfTwoDeclarationsOnSeparateLinesIsNotAmbiguous(@TempDir Path tmp){
     var ownerName= new TName("pkg.Holder", 0, Pos.unknown);
@@ -897,7 +897,7 @@ This documentation is attached to nothing.
     var oracle= SourceOracle.debugBuilder().putURI(file, ".zzz->1\n.aaa->2 /// trailing note\n").build();
     var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(owner), Optional.empty(), "pkg", tmp.resolve("pkg.html"), true);
     builder.visitLiteral(owner);
-    builder.complete(TName::s, true);
+    builder.complete(TName::s, true, Runnable::run);
   }
   @Test void twoDeclarationsSharingALineWithNoTrailingDocAtAllIsNotAmbiguous(@TempDir Path tmp){
     var ownerName= new TName("pkg.Holder", 0, Pos.unknown);
@@ -907,7 +907,7 @@ This documentation is attached to nothing.
     var oracle= SourceOracle.debugBuilder().putURI(file, ".zzz->1;  .aaa->2\n").build();
     var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(owner), Optional.empty(), "pkg", tmp.resolve("pkg.html"), true);
     builder.visitLiteral(owner);
-    builder.complete(TName::s, true);
+    builder.complete(TName::s, true, Runnable::run);
   }
   @Test void aFromLinkToAnyReceiverCapabilityOfAMethodReachesAnAnchor(){
     var subName= new TName("pkg.Sub", 0, Pos.unknown);
