@@ -276,7 +276,7 @@ Foo: Bar {
     var subMut= fooMethod(RC.mut, subName);
     var sub= namedType("pkg.Sub", List.of(new T.C(supName, List.of())), List.of(subMut));
     SourceOracle oracle= List::of;
-    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(sup, sub), Optional.empty());
+    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(sup, sub), Optional.empty(), "pkg", Path.of("pkg.html"), true);
     var refs= builder.inheritedMethods(sub, subMut);
     assertEquals(1, refs.size());
     assertTrue(refs.getFirst().method() == supMut);
@@ -291,7 +291,7 @@ Foo: Bar {
     var top= namedType("pkg.Top",
       List.of(new T.C(midName, List.of()), new T.C(baseName, List.of())), List.of());
     SourceOracle oracle= List::of;
-    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(base, mid, top), Optional.empty());
+    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(base, mid, top), Optional.empty(), "pkg", Path.of("pkg.html"), true);
     var refs= builder.inheritedMethods(top, midSame);
     assertEquals(2, refs.size());
     assertTrue(refs.stream().anyMatch(r -> r.method() == midSame));
@@ -307,7 +307,7 @@ Foo: Bar {
     var subImm= fooMethod(RC.imm, subName);
     var sub= namedType("pkg.Sub", List.of(new T.C(supName, List.of())), List.of(subMut, subImm));
     SourceOracle oracle= List::of;
-    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(sup, sub), Optional.empty());
+    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(sup, sub), Optional.empty(), "pkg", Path.of("pkg.html"), true);
     builder.visitLiteral(sup);
     builder.visitLiteral(sub);
     var doc= builder.type(sub).methods.getFirst();
@@ -321,7 +321,7 @@ Foo: Bar {
     var one= namedType("pkg.Pair", List.of(), List.of());
     var two= new Literal(RC.imm, new TName("pkg.Pair", 2, Pos.unknown), twoBounds(), List.of(), "this", List.of(), freshSrc(), false);
     SourceOracle oracle= List::of;
-    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(one, two), Optional.empty());
+    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(one, two), Optional.empty(), "pkg", Path.of("pkg.html"), true);
     builder.visitLiteral(one);
     builder.visitLiteral(two);
     var resolver= new DocResolver("pkg", builder.types, OtherPackages.empty());
@@ -334,7 +334,7 @@ Foo: Bar {
     var one= namedType("pkg.Pair", List.of(), List.of());
     var two= new Literal(RC.imm, new TName("pkg.Pair", 2, Pos.unknown), twoBounds(), List.of(), "this", List.of(), freshSrc(), false);
     SourceOracle oracle= List::of;
-    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(one, two), Optional.empty());
+    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(one, two), Optional.empty(), "pkg", Path.of("pkg.html"), true);
     builder.visitLiteral(one);
     builder.visitLiteral(two);
     var resolver= new DocResolver("pkg", builder.types, OtherPackages.empty());
@@ -348,7 +348,7 @@ Foo: Bar {
     var a= namedType("pkg.A", List.of(), List.of(namedMethod(".bar", aName)));
     var b= namedType("pkg.B", List.of(), List.of(namedMethod(".bar", bName)));
     SourceOracle oracle= List::of;
-    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(a, b), Optional.empty());
+    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(a, b), Optional.empty(), "pkg", Path.of("pkg.html"), true);
     builder.visitLiteral(a);
     builder.visitLiteral(b);
     var resolver= new DocResolver("pkg", builder.types, OtherPackages.empty());
@@ -362,7 +362,7 @@ Foo: Bar {
     var mut= fooMethodAt(RC.mut, name, TSpan.fromPos(Pos.of(file, 0, 2), 1));
     var foo= namedType("pkg.Foo", List.of(), List.of(imm, mut));
     SourceOracle oracle= List::of;
-    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(foo), Optional.empty());
+    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(foo), Optional.empty(), "pkg", Path.of("pkg.html"), true);
     builder.visitLiteral(foo);
     var resolver= new DocResolver("pkg", builder.types, OtherPackages.empty());
     var ref= new DocRef.MethodName(Optional.of(new DocRef.TypeName(Optional.empty(), "Foo", OptionalInt.empty())), ".foo", OptionalInt.empty());
@@ -376,7 +376,7 @@ Foo: Bar {
     var a= namedType("pkg.A", List.of(), List.of(namedMethod(".bar", aName), methodTaking(".bar", aName, "x", aName)));
     var b= namedType("pkg.B", List.of(), List.of(methodTaking(".bar", bName, "x", bName)));
     SourceOracle oracle= List::of;
-    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(a, b), Optional.empty());
+    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(a, b), Optional.empty(), "pkg", Path.of("pkg.html"), true);
     builder.visitLiteral(a);
     builder.visitLiteral(b);
     var renderer= new HtmlDocRenderer("pkg", Map.of(), builder.types, OtherPackages.empty(), Map.of(), Optional.empty());
@@ -402,7 +402,7 @@ Foo: Bar {
     var sup= namedType("pkg.Sup", List.of(), List.of(bar));
     var sub= namedType("pkg.Sub", List.of(new T.C(supName, List.of())), List.of(bar));
     SourceOracle oracle= List::of;
-    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(sup, sub), Optional.empty());
+    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(sup, sub), Optional.empty(), "pkg", Path.of("pkg.html"), true);
     builder.visitLiteral(sup);
     builder.visitLiteral(sub);
     var resolver= new DocResolver("pkg", builder.types, OtherPackages.empty());
@@ -470,7 +470,7 @@ Foo: Bar {
     var bar= namedMethod(".bar", ownerName);
     var owner= namedType("pkg.Holder", List.of(), List.of(bar));
     SourceOracle oracle= List::of;
-    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(owner), Optional.empty());
+    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(owner), Optional.empty(), "pkg", Path.of("pkg.html"), true);
     builder.visitLiteral(owner);
     var resolver= new DocResolver("pkg", builder.types, OtherPackages.empty());
     var ref= new DocRef.MethodName(Optional.of(new DocRef.LocalName("this")), ".bar", OptionalInt.empty());
@@ -480,7 +480,7 @@ Foo: Bar {
   @Test void aMethodThatTheDocumentedTypeDoesNotHaveIsUnresolved(){
     var owner= namedType("pkg.Holder", List.of(), List.of());
     SourceOracle oracle= List::of;
-    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(owner), Optional.empty());
+    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(owner), Optional.empty(), "pkg", Path.of("pkg.html"), true);
     builder.visitLiteral(owner);
     var resolver= new DocResolver("pkg", builder.types, OtherPackages.empty());
     var ref= new DocRef.MethodName(Optional.of(new DocRef.LocalName("this")), ".nope", OptionalInt.empty());
@@ -500,7 +500,7 @@ Foo: Bar {
     var local= namedType("pkg.Widget", List.of(), List.of());
     var other= OtherPackages.start(Map.of(), List.of(namedType("third.Widget", List.of(), List.of())), 0L);
     SourceOracle oracle= List::of;
-    var builder= new HtmlDocBuilder(oracle, other, List.of(local), Optional.empty());
+    var builder= new HtmlDocBuilder(oracle, other, List.of(local), Optional.empty(), "pkg", Path.of("pkg.html"), true);
     builder.visitLiteral(local);
     var resolver= new DocResolver("pkg", builder.types, other);
     var link= resolver.resolveType(new DocRef.TypeName(Optional.empty(), "Widget", OptionalInt.empty()));
@@ -515,7 +515,7 @@ Foo: Bar {
     var holder= namedType("pkg.Holder", List.of(), List.of(toBase));
     var other= OtherPackages.start(Map.of(), List.of(namedType("base.List", List.of(), List.of())), 0L);
     SourceOracle oracle= List::of;
-    var builder= new HtmlDocBuilder(oracle, other, List.of(local, holder), Optional.empty());
+    var builder= new HtmlDocBuilder(oracle, other, List.of(local, holder), Optional.empty(), "pkg", Path.of("pkg.html"), true);
     builder.visitLiteral(local);
     builder.visitLiteral(holder);
     var html= new HtmlDocRenderer("pkg", DocNames.uses("pkg", List.of(local, holder)), builder.types, other, Map.of(), Optional.empty()).render();
@@ -553,7 +553,7 @@ Foo: Bar {
     });
     var anon= new Literal(RC.imm, new TName("pkg.Anon", 0, at), List.of(), List.of(), "this", List.of(), src, true);
     var oracle= SourceOracle.debugBuilder().putURI(file, "\nx /// the anonymous one\n").build();
-    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(anon), Optional.empty());
+    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(anon), Optional.empty(), "pkg", Path.of("pkg.html"), true);
     builder.visitLiteral(anon);
     var html= new HtmlDocRenderer("pkg", Map.of(), builder.types, OtherPackages.empty(), Map.of(), Optional.empty()).render();
     utils.Err.strCmp("[###]>Anon@a:2<[###]", html);
@@ -564,7 +564,7 @@ Foo: Bar {
     var bar= namedMethod(".bar", ownerName);
     var owner= namedType("pkg.Holder", List.of(), List.of(bar));
     SourceOracle oracle= List::of;
-    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(owner), Optional.empty());
+    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(owner), Optional.empty(), "pkg", Path.of("pkg.html"), true);
     builder.visitLiteral(owner);
     var text= new HtmlDocRenderer("pkg", Map.of(), builder.types, OtherPackages.empty(), Map.of(), Optional.empty()).renderText();
     assertEquals("""
@@ -770,13 +770,12 @@ Holder
     var holder= namedType("pkg.Holder", List.of(), List.of());
     var suppressor= namedType("pkg.AllAutoTests_pkg", List.of(), List.of());
     SourceOracle oracle= List::of;
-    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(holder, suppressor), Optional.empty());
+    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(holder, suppressor), Optional.empty(), "pkg", tmp.resolve("pkg.html"), true);
     builder.visitLiteral(holder);
     builder.visitLiteral(suppressor);
     builder.type(holder).declared(Pos.of(file, 9, 1), bar, List.of(
       new DocOcc(file, 9, 1, 4, ".check{bar.assertOk}", true, true, false)
     ), List.of());
-    builder.packageLocation("pkg", tmp.resolve("pkg.html"), true);
     var renderer= new HtmlDocRenderer("pkg", Map.of(), builder.types, OtherPackages.empty(), Map.of(), Optional.empty());
     assertEquals(List.of(), builder.tests(renderer, TName::s));
   }
@@ -792,13 +791,12 @@ Holder
     var colliding= new Literal(RC.imm, new TName("pkg._Holder_Examples", 0, collidingPos),
       List.of(), List.of(), "this", List.of(), collidingSrc, false);
     var oracle= SourceOracle.debugBuilder().putURI(file, "l1\nl2\nl3\nl4\n_Holder_Examples: Test {}\n").build();
-    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(holder, colliding), Optional.empty());
+    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(holder, colliding), Optional.empty(), "pkg", tmp.resolve("pkg.html"), true);
     builder.visitLiteral(holder);
     builder.visitLiteral(colliding);
     builder.type(holder).declared(Pos.of(file, 9, 1), bar, List.of(
       new DocOcc(file, 9, 1, 4, ".check{bar.assertOk}", true, true, false)
     ), List.of());
-    builder.packageLocation("pkg", tmp.resolve("pkg.html"), true);
     var renderer= new HtmlDocRenderer("pkg", Map.of(), builder.types, OtherPackages.empty(), Map.of(), Optional.empty());
     var ex= assertThrows(UserError.class, () -> builder.tests(renderer, TName::s));
     utils.Err.strCmp("[###]_Holder_Examples[###]", ex.getMessage());
@@ -812,7 +810,7 @@ Holder
     var subMut= fooMethod(RC.mut, subName);
     var sub= namedType("pkg.Sub", List.of(new T.C(supName, List.of())), List.of(subMut));
     SourceOracle oracle= List::of;
-    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(sup, sub), Optional.empty());
+    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(sup, sub), Optional.empty(), "pkg", Path.of("pkg.html"), true);
     builder.visitLiteral(sup);
     builder.visitLiteral(sub);
     var text= new HtmlDocRenderer("pkg", Map.of(), builder.types, OtherPackages.empty(), Map.of(), Optional.empty()).renderText();
@@ -825,9 +823,8 @@ Holder
     var aaa= namedMethodAt(".aaa", ownerName, Pos.of(file, 1, 11));
     var owner= namedType("pkg.Holder", List.of(), List.of(zzz, aaa));
     var oracle= SourceOracle.debugBuilder().putURI(file, ".zzz->1;  .aaa->2 /// trailing note\n").build();
-    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(owner), Optional.empty());
+    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(owner), Optional.empty(), "pkg", tmp.resolve("pkg.html"), true);
     builder.visitLiteral(owner);
-    builder.packageLocation("pkg", tmp.resolve("pkg.html"), true);
     var ex= assertThrows(UserError.class, () -> builder.complete(TName::s, true));
     utils.Err.strCmp("[###]more than one declaration on the same line[###]", ex.getMessage());
   }
@@ -838,9 +835,8 @@ Holder
     var ccc= namedMethodAt(".ccc", ownerName, Pos.of(file, 1, 19));
     var owner= namedType("pkg.Holder", List.of(), List.of(aaa, bbb, ccc));
     var oracle= SourceOracle.debugBuilder().putURI(file, ".aaa->1; .bbb->2; .ccc->3 /// note\n").build();
-    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(owner), Optional.empty());
+    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(owner), Optional.empty(), "pkg", tmp.resolve("pkg.html"), true);
     builder.visitLiteral(owner);
-    builder.packageLocation("pkg", tmp.resolve("pkg.html"), true);
     assertThrows(UserError.class, () -> builder.complete(TName::s, true));
   }
   @Test void aTrailingTestOnlyLineSharedByTwoDeclarationsOnOneLineIsAnAmbiguousReferenceError(@TempDir Path tmp){
@@ -849,9 +845,8 @@ Holder
     var aaa= namedMethodAt(".aaa", ownerName, Pos.of(file, 1, 11));
     var owner= namedType("pkg.Holder", List.of(), List.of(zzz, aaa));
     var oracle= SourceOracle.debugBuilder().putURI(file, ".zzz->1;  .aaa->2 //- let x={1}\n").build();
-    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(owner), Optional.empty());
+    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(owner), Optional.empty(), "pkg", tmp.resolve("pkg.html"), true);
     builder.visitLiteral(owner);
-    builder.packageLocation("pkg", tmp.resolve("pkg.html"), true);
     var ex= assertThrows(UserError.class, () -> builder.complete(TName::s, true));
     utils.Err.strCmp("[###]more than one declaration on the same line[###]", ex.getMessage());
   }
@@ -861,9 +856,8 @@ Holder
     var inner= namedMethodAt(".then", ownerName, Pos.of(file, 1, 9));
     var owner= namedType("pkg.Holder", List.of(), List.of(outer, inner));
     var oracle= SourceOracle.debugBuilder().putURI(file, ".hash->{.then->1};/// hash via str\n").build();
-    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(owner), Optional.empty());
+    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(owner), Optional.empty(), "pkg", tmp.resolve("pkg.html"), true);
     builder.visitLiteral(owner);
-    builder.packageLocation("pkg", tmp.resolve("pkg.html"), true);
     builder.complete(TName::s, true);
   }
   @Test void aTrailingDocRightAfterAnOpeningBraceIsAmbiguousBetweenTheOuterDeclarationAndTheNestedOne(@TempDir Path tmp){
@@ -872,9 +866,8 @@ Holder
     var inner= namedMethodAt(".inner", ownerName, Pos.of(file, 1, 9));
     var owner= namedType("pkg.Holder", List.of(), List.of(outer, inner));
     var oracle= SourceOracle.debugBuilder().putURI(file, ".outer->{///doc\n}\n").build();
-    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(owner), Optional.empty());
+    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(owner), Optional.empty(), "pkg", tmp.resolve("pkg.html"), true);
     builder.visitLiteral(owner);
-    builder.packageLocation("pkg", tmp.resolve("pkg.html"), true);
     assertThrows(UserError.class, () -> builder.complete(TName::s, true));
   }
   @Test void aTrailingDocAfterTheLastOfTwoDeclarationsOnSeparateLinesIsNotAmbiguous(@TempDir Path tmp){
@@ -883,9 +876,8 @@ Holder
     var aaa= namedMethodAt(".aaa", ownerName, Pos.of(file, 2, 1));
     var owner= namedType("pkg.Holder", List.of(), List.of(zzz, aaa));
     var oracle= SourceOracle.debugBuilder().putURI(file, ".zzz->1\n.aaa->2 /// trailing note\n").build();
-    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(owner), Optional.empty());
+    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(owner), Optional.empty(), "pkg", tmp.resolve("pkg.html"), true);
     builder.visitLiteral(owner);
-    builder.packageLocation("pkg", tmp.resolve("pkg.html"), true);
     builder.complete(TName::s, true);
   }
   @Test void twoDeclarationsSharingALineWithNoTrailingDocAtAllIsNotAmbiguous(@TempDir Path tmp){
@@ -894,9 +886,8 @@ Holder
     var aaa= namedMethodAt(".aaa", ownerName, Pos.of(file, 1, 11));
     var owner= namedType("pkg.Holder", List.of(), List.of(zzz, aaa));
     var oracle= SourceOracle.debugBuilder().putURI(file, ".zzz->1;  .aaa->2\n").build();
-    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(owner), Optional.empty());
+    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(owner), Optional.empty(), "pkg", tmp.resolve("pkg.html"), true);
     builder.visitLiteral(owner);
-    builder.packageLocation("pkg", tmp.resolve("pkg.html"), true);
     builder.complete(TName::s, true);
   }
   @Test void aFromLinkToAnyReceiverCapabilityOfAMethodReachesAnAnchor(){
@@ -906,7 +897,7 @@ Holder
     var sub= namedType("pkg.Sub", List.of(), List.of(subMut, subImm));
     var top= namedType("pkg.Top", List.of(new T.C(subName, List.of())), List.of(subImm));
     SourceOracle oracle= List::of;
-    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(sub, top), Optional.empty());
+    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(sub, top), Optional.empty(), "pkg", Path.of("pkg.html"), true);
     builder.visitLiteral(sub);
     builder.visitLiteral(top);
     var html= new HtmlDocRenderer("pkg", Map.of(), builder.types, OtherPackages.empty(), Map.of(), Optional.empty()).render();
@@ -919,7 +910,7 @@ Holder
     var one= namedType("pkg.Pair", List.of(), List.of(namedMethod(".bar", oneName)));
     var two= new Literal(RC.imm, twoName, twoBounds(), List.of(), "this", List.of(namedMethod(".bar", twoName)), freshSrc(), false);
     SourceOracle oracle= List::of;
-    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(one, two), Optional.empty());
+    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(one, two), Optional.empty(), "pkg", Path.of("pkg.html"), true);
     builder.visitLiteral(one);
     builder.visitLiteral(two);
     var html= new HtmlDocRenderer("pkg", Map.of(), builder.types, OtherPackages.empty(), Map.of(), Optional.empty()).render();
@@ -935,7 +926,7 @@ Holder
     var hidden= new Literal(RC.imm, hiddenName, List.of(), List.of(), "this",
       List.of(namedMethod(".bar", hiddenName)), freshSrc(), true);
     SourceOracle oracle= List::of;
-    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(a, b, hidden), Optional.empty());
+    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(a, b, hidden), Optional.empty(), "pkg", Path.of("pkg.html"), true);
     builder.visitLiteral(a);
     builder.visitLiteral(b);
     builder.visitLiteral(hidden);
@@ -955,7 +946,7 @@ Holder
     var mut= fooMethodAt(RC.mut, name, TSpan.fromPos(Pos.of(file, 0, 2), 1));
     var foo= namedType("pkg.Foo", List.of(), List.of(imm, mut));
     SourceOracle oracle= List::of;
-    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(foo), Optional.empty());
+    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(foo), Optional.empty(), "pkg", Path.of("pkg.html"), true);
     builder.visitLiteral(foo);
     var renderer= new HtmlDocRenderer("pkg", Map.of(), builder.types, OtherPackages.empty(), Map.of(), Optional.empty());
     var page= (DocLink.Ambiguous)renderer.resolver.resolve(new DocRef.MethodName(Optional.empty(), ".foo", OptionalInt.empty()), Scope.of(foo)).get();
