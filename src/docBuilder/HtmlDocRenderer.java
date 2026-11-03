@@ -321,7 +321,8 @@ code{
   List<TypeDoc> visibleTypes(){
     return types.stream()
       .filter(TypeDoc::visible)
-      .sorted(Comparator.comparing(t -> (t.main().infName() ? "1:" : "0:")+typeTitle(t)))
+      .sorted(Comparator.comparing((TypeDoc t) -> t.main().infName() ? "1:"+typeTitle(t) : "0:"+toStr.typeName(t.main().name()))
+        .thenComparingInt(t -> t.main().name().arity()))
       .toList();
   }
   List<MethodDoc> visibleMethods(TypeDoc t){
