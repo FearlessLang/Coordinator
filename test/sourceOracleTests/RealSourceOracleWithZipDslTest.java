@@ -26,6 +26,7 @@ import org.opentest4j.AssertionFailedError;
 import core.TName;
 import realSourceOracle.RealSourceOracleWithZip;
 import realSourceOracle.SourceOracleWithAutoload;
+import realSourceOracle.Since;
 import testHelperFs.FsDsl;
 import tools.Fs;
 import tools.SourceOracle.Ref;
@@ -1602,5 +1603,73 @@ The first invalid byte sequence is on line 1, at byte offset 0 (counting from ze
 This file is not valid UTF-8 text.
 The first invalid byte sequence is on line 1, at byte offset 0 (counting from zero).
 [###]""", assertThrows(UserError.class, zipRef::loadString).getMessage());
+  }
+  @Test void aFileNewerThanSinceIsRefusedWhenRead(@TempDir Path tmp) throws Exception{
+    var root= tmp.resolve("root").toAbsolutePath().normalize();
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_pkg/a.fear
+iii
+A:{}
+jjj
+_pkg/z.zip/b.fear
+iii
+B:{}
+""");
+    var t= System.currentTimeMillis()+60_000;
+    var oracle= new RealSourceOracleWithZip(root, new Since(t, "hello"));
+    Fs.setLastModifiedTime(root.resolve("_pkg/a.fear"), FileTime.fromMillis(t));
+    Fs.setLastModifiedTime(root.resolve("_pkg/z.zip"), FileTime.fromMillis(t));
+    for (var r : oracle.allFiles()){ r.loadString(); }
+    for (var f : List.of("_pkg/a.fear", "_pkg/z.zip")){ Fs.setLastModifiedTime(root.resolve(f), FileTime.fromMillis(t+1)); }
+    for (var r : oracle.allFiles()){
+      utils.Err.strCmp("Some files inside the project \"hello\" were updated while the project was compiling.", assertThrows(UserError.class, r::loadString).getMessage());
+    }
+  }
+  @Test void aZipBrokenAfterSinceIsRefusedAsUpdated(@TempDir Path tmp) throws Exception{
+    var root= tmp.resolve("root").toAbsolutePath().normalize();
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_pkg/z.zip/b.fear
+iii
+B:{}
+""");
+    var t= System.currentTimeMillis()+60_000;
+    var zipRef= OneOr.of("one zip entry", new RealSourceOracleWithZip(root, new Since(t, "hello")).allFiles().stream());
+    Fs.writeUtf8(root.resolve("_pkg/z.zip"), "not a zip");
+    Fs.setLastModifiedTime(root.resolve("_pkg/z.zip"), FileTime.fromMillis(t+1));
+    utils.Err.strCmp("Some files inside the project \"hello\" were updated while the project was compiling.", assertThrows(UserError.class, zipRef::loadString).getMessage());
+  }
+  @Test void aZipNewerThanSinceIsRefusedWhenListed(@TempDir Path tmp){
+    var root= tmp.resolve("root").toAbsolutePath().normalize();
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_pkg/z.zip/b.fear
+iii
+B:{}
+""");
+    var since= new Since(System.currentTimeMillis()-60_000, "hello");
+    utils.Err.strCmp("Some files inside the project \"hello\" were updated while the project was compiling.", assertThrows(UserError.class, () -> new RealSourceOracleWithZip(root, since)).getMessage());
+  }
+  @Test void aFileGoneAfterSinceIsRefusedWhenRead(@TempDir Path tmp){
+    var root= tmp.resolve("root").toAbsolutePath().normalize();
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_pkg/a.fear
+iii
+A:{}
+""");
+    var ref= OneOr.of("one file", new RealSourceOracleWithZip(root, new Since(System.currentTimeMillis()+60_000, "hello")).allFiles().stream());
+    Fs.ofV(() -> Fs.delete(root.resolve("_pkg/a.fear")));
+    utils.Err.strCmp("Some files inside the project \"hello\" were updated while the project was compiling.", assertThrows(UserError.class, ref::loadString).getMessage());
+  }
+  @Test void aHiddenPathMayHave250Characters(@TempDir Path tmp){
+    var root= tmp.resolve("root").toAbsolutePath().normalize();
+    UserError.root = root;
+    Fs.writeUtf8(root.resolve("_pkg").resolve("_rank_app.fear"), "");
+    Fs.writeUtf8(root.resolve(".x").resolve("a".repeat(240)+".txt"), "");
+    assertEquals(1, new RealSourceOracleWithZip(root).allFiles().size());
+    Fs.writeUtf8(root.resolve(".x").resolve("b".repeat(250)+".txt"), "");
+    utils.Err.strCmp("[###]The path is longer than 250 characters.[###]", assertThrows(UserError.class, () -> new RealSourceOracleWithZip(root)).getMessage());
   }
 }

@@ -1,5 +1,6 @@
 package treeErrorTests;
 
+import realSourceOracle.Since;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import java.net.URI;
@@ -33,7 +34,7 @@ final class ProjectTreeErrorTest{
     }
     var oracle= b.build();
     var c= new Coordinator(){
-      @Override public SourceOracle sourceOracle(Path path){ return oracle; }
+      @Override public SourceOracle sourceOracle(Path path, Since since){ return oracle; }
     };
     if (c.check(fakeRoot) instanceof Coordinator.State.Invalid(var problem)){ return problem; }
     return fail("Expected an error, but the project was accepted");

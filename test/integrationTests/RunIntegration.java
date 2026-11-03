@@ -232,7 +232,7 @@ log2: == invoice 42 ==
     UserError.root = root;
     Fs.copyTree(freshIntegrationRoot("map_billing"), root);
     var app= root.resolve("_billing", "_rank_app.fear");
-    editAndTouch(app, " instead of _log_v1", "");
+    edit(app, " instead of _log_v1", "");
     utils.Err.strCmp("""
 The "instead of" list of a map must name exactly the folders chosen by the maps of lower rank that the map overrides:
 - "map log as _log_v2 in _invoice;"; written in fear:/_billing/_rank_app.fear
@@ -241,8 +241,8 @@ These maps of lower rank choose other folders:
 Expected: "map log as _log_v2 in _invoice instead of _log_v1;".
 Error 7 WellFormedness
 """, assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib)).getMessage());
-    editAndTouch(app, "in _invoice;", "in _invoice instead of _log_v1;");
-    editAndTouch(root.resolve("_invoice", "_rank_worker200.fear"), "_log_v1", "_log_v2");
+    edit(app, "in _invoice;", "in _invoice instead of _log_v1;");
+    edit(root.resolve("_invoice", "_rank_worker200.fear"), "_log_v1", "_log_v2");
     utils.Err.strCmp("""
 The "instead of" list of a map must name exactly the folders chosen by the maps of lower rank that the map overrides:
 - "map log as _log_v2 in _invoice instead of _log_v1;"; written in fear:/_billing/_rank_app.fear
@@ -250,7 +250,7 @@ No map of lower rank chooses another folder.
 Expected: "map log as _log_v2 in _invoice;".
 Error 7 WellFormedness
 """, assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib)).getMessage());
-    editAndTouch(app, " instead of _log_v1", "");
+    edit(app, " instead of _log_v1", "");
     utils.Err.strCmp("""
 log2: # billing
 log2: # monthly report
@@ -383,7 +383,7 @@ hi
     var frontends= new ArrayList<String>();
     var c= counting(root, frontends);
     compile(c, root);
-    editAndTouch(root.resolve("_p", "_rank_app.fear"), "Calc.twice(2) .assertEq 5", "Calc.twice(2) .assertEq 4");
+    edit(root.resolve("_p", "_rank_app.fear"), "Calc.twice(2) .assertEq 5", "Calc.twice(2) .assertEq 4");
     utils.Err.strCmp("hi\n", c.main(root, stLib));
     assertTrue(compiled(root));
     assertEquals(List.of("p", "p"), frontends);
@@ -391,7 +391,7 @@ hi
   @Test void aBrokenExampleIsReportedAtItsDocCommentAtEveryCompile(@TempDir Path tmp) throws IOException{
     var root= docExamplesProject(tmp);
     compile(coordinator(root), root);
-    editAndTouch(root.resolve("_p", "_rank_app.fear"), "Calc.twice(2)", "Calc.thrice(2)");
+    edit(root.resolve("_p", "_rank_app.fear"), "Calc.twice(2)", "Calc.thrice(2)");
     for (var _ : List.of(1, 2)){
       var ex= assertThrows(UserError.class, () -> compile(coordinator(root), root));
       utils.Err.strCmp("""
@@ -406,7 +406,7 @@ In file: fear:/_p/_rank_app.fear
   }
   @Test void aUserWrittenAllAutoTestsSuppressesGeneration(@TempDir Path tmp) throws IOException{
     var root= docExamplesProject(tmp);
-    editAndTouch(root.resolve("_p", "_rank_app.fear"), "App:Main", "AllAutoTests_p: base.UnitTests{t->t}\nApp:Main");
+    edit(root.resolve("_p", "_rank_app.fear"), "App:Main", "AllAutoTests_p: base.UnitTests{t->t}\nApp:Main");
     utils.Err.strCmp("hi\n", main(root, List.of()));
   }
   @Test void aZippedPackageGetsNoGeneratedTests(@TempDir Path tmp){
@@ -700,6 +700,7 @@ Cases:{
       }
       @Override public void backend(String pkgName, List<Literal> core, SourceOracle oracle, OtherPackages other, CapabilityEnvironment capabilities){
         new Backend(genJava, base.backendTools(pkgName, oracle, other, core, capabilities)).produceJavaCode();
+        Fs.writeUtf8(root.resolve(Coordinator.outDir).resolve(pkgName+".jar"), "");
       }
     }, root);
     var got= Fs.walk(genJava, s -> s.filter(Fs::isRegularFile).sorted().map(p -> p.getFileName()+(Fs.readUtf8(p).contains("_base.OnlyImmCapture") ? " only imm" : "")).toList());
@@ -745,6 +746,7 @@ Applog: FileLog{}
       }
       @Override public void backend(String pkgName, List<Literal> core, SourceOracle oracle, OtherPackages other, CapabilityEnvironment capabilities){
         new Backend(genJava, base.backendTools(pkgName, oracle, other, core, capabilities)).produceJavaCode();
+        Fs.writeUtf8(root.resolve(Coordinator.outDir).resolve(pkgName+".jar"), "");
       }
     }, root);
     var logFiles= Fs.walk(genJava, s -> s.filter(Fs::isRegularFile)
@@ -2268,10 +2270,7 @@ While inspecting type declaration "col.Foo"
 Type declaration "col.Foo" implements `base.OpenWith[col.Fake,"foo"]`.
 The icon "col.Fake" is not the type generated for an image file.
 An icon is the type generated for an image file, like "IconsFoo" for "_pkg/icons/foo.png", or "base.IconsConflict"."""); }
-  static void editAndTouch(Path file, String from, String to) throws IOException{
-    Fs.writeUtf8(file, Fs.readUtf8(file).replace(from, to));
-    Fs.setLastModifiedTime(file, FileTime.fromMillis(System.currentTimeMillis()+500));
-  }
+  static void edit(Path file, String from, String to){ Fs.writeUtf8(file, Fs.readUtf8(file).replace(from, to)); }
   @Test void aClaimReadBackFromTheApiJsonOfALowerRankPackageIsChecked(@TempDir Path tmp) throws Exception{
     var root= claimsProject(tmp, """
 Conflict:lib.Lib, Shortcut[base.IconsConflict]{s->base.Debug#(`conflict`)}
@@ -2281,7 +2280,7 @@ iii
 Lib:base.Main, base.OpenWith[base.IconsConflict,"fear"]{s->base.Debug#(`lib`)}
 """);
     utils.Err.strCmp("conflict\n", coordinator(root).main(root, stLib));
-    editAndTouch(root.resolve("_col", "_rank_app.fear"), "{s->base.Debug#(`conflict`)}", """
+    edit(root.resolve("_col", "_rank_app.fear"), "{s->base.Debug#(`conflict`)}", """
 {s->base.Debug#(`conflict`)}
 Clash:lib.Lib, OpenWith[IconsFoo,"fear"]{s->base.Debug#(`clash`)}""");
     var ex= assertThrows(UserError.class, () -> coordinator(root).main(root, stLib));
@@ -2372,7 +2371,7 @@ B:Main{s->base.Debug#(`b`)}
 """);
     realIcons(root);
     compile(coordinator(root), root);
-    editAndTouch(root.resolve("_b", "_rank_app.fear"), "B:Main", "C:Main{s->base.Debug#(`c`)}\nB:Main");
+    edit(root.resolve("_b", "_rank_app.fear"), "B:Main", "C:Main{s->base.Debug#(`c`)}\nB:Main");
     compile(coordinator(root), root);
     utils.Err.strCmp("""
 --- a.json
@@ -2546,7 +2545,7 @@ map a as _pkc in _pkb;
 A:Main{s->base.Debug#(pkb.B.text)}
 """);
     utils.Err.strCmp("c\n", main(root, List.of()));
-    editAndTouch(root.resolve("_pka", "_rank_app999.fear"), "map a as _pkc", "map a as _pkd");
+    edit(root.resolve("_pka", "_rank_app999.fear"), "map a as _pkc", "map a as _pkd");
     assertFalse(compiled(root));
     utils.Err.strCmp("d\n", main(root, List.of()));
   }
@@ -2704,7 +2703,7 @@ App:Main{s->base.Debug#(`app`)}
     utils.Err.strCmp("app\n", main(root, List.of()));
     var html= root.resolve(Coordinator.outDir).resolve("app.html");
     var clean= Fs.readUtf8(html);
-    editAndTouch(root.resolve("_app", "_rank_app.fear"), "Calls", "Calls");
+    edit(root.resolve("_app", "_rank_app.fear"), "Calls", "Calls");
     utils.Err.strCmp("app\n", main(root, List.of()));
     assertEquals(clean, Fs.readUtf8(html));
   }
@@ -2754,7 +2753,7 @@ iii
 Hello:base.Main{s->base.Debug#((lib.Lit.m("a\\"))+(lib.Lit.n(`b"c`))+(lib.Lit.k.str))}
 """);
     utils.Err.strCmp("a\\b\"c5\n", coordinator(root).main(root, stLib));
-    editAndTouch(root.resolve("_col", "_rank_app.fear"), "(lib.Lit.k.str)", "(lib.Lit.k.str)+`!`");
+    edit(root.resolve("_col", "_rank_app.fear"), "(lib.Lit.k.str)", "(lib.Lit.k.str)+`!`");
     utils.Err.strCmp("a\\b\"c5!\n", coordinator(root).main(root, stLib));
   }
   @Test void anAssetWhoseNameForgesNoValidTypeIsReportedAgainstTheRealFile(@TempDir Path tmp){
@@ -2810,7 +2809,7 @@ Hello:Main{s->base.Debug#(Greeting.hi)}
     var out= root.resolve(Coordinator.outDir);
     var aJar= Fs.lastModified(out.resolve("a.jar"));
     var bJar= Fs.lastModified(out.resolve("b.jar"));
-    editAndTouch(root.resolve("_a/_rank_core.fear"), "\"hi\"", "\"ho\"");
+    edit(root.resolve("_a/_rank_core.fear"), "\"hi\"", "\"ho\"");
     utils.Err.strCmp("ho\n", c.main(root, stLib));
     assertNotEquals(aJar, Fs.lastModified(out.resolve("a.jar")));
     assertNotEquals(bJar, Fs.lastModified(out.resolve("b.jar")));
@@ -3818,7 +3817,7 @@ Error 7 WellFormedness
     utils.Err.strCmp("lib uses v5\n", mapsRun(tmp, foos
       +fooLib("map foo as _foo_v4 in _lib;\n")
       +fooApp("map foo as _foo_v5 in _lib instead of _foo_v4;\n")));
-    editAndTouch(root.resolve("_lib", "_rank_driver.fear"), "_foo_v4", "_foo_v3");
+    edit(root.resolve("_lib", "_rank_driver.fear"), "_foo_v4", "_foo_v3");
     var ex= assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib));
     utils.Err.strCmp("""
 The "instead of" list of a map must name exactly the folders chosen by the maps of lower rank that the map overrides:
@@ -3834,7 +3833,7 @@ Error 7 WellFormedness
     utils.Err.strCmp("lib uses v5\n", mapsRun(tmp, foos
       +fooLib("map foo as _foo_v4 in _lib;\n")
       +fooApp("map foo as _foo_v5 in _lib instead of _foo_v4;\n")));
-    editAndTouch(root.resolve("_app", "_rank_app.fear"), "map foo as _foo_v5 in _lib instead of _foo_v4;\n", "");
+    edit(root.resolve("_app", "_rank_app.fear"), "map foo as _foo_v5 in _lib instead of _foo_v4;\n", "");
     utils.Err.strCmp("lib uses v4\n", coordinator(root).main(root, stLib));
   }
   @Test void twoMapsOfTheSameRankChoosingDifferentFoldersConflict(@TempDir Path tmp){
@@ -4034,17 +4033,17 @@ use foo.Foo as Foo;
 Lib:{ .foo: Str -> Foo.version }
 jjj
 """+fooApp("map foo as _foo_v3 in _lib;\n")));
-    editAndTouch(lib, "use foo.Foo as Foo;\n", "map foo as _foo_v4 in _lib;\nuse foo.Foo as Foo;\n");
+    edit(lib, "use foo.Foo as Foo;\n", "map foo as _foo_v4 in _lib;\nuse foo.Foo as Foo;\n");
     utils.Err.strCmp(insteadOfError("map foo as _foo_v3 in _lib", "map foo as _foo_v4 in _lib", "map foo as _foo_v3 in _lib instead of _foo_v4"),
       assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib)).getMessage());
-    editAndTouch(app, "map foo as _foo_v3 in _lib;", "map foo as _foo_v5 in _lib instead of _foo_v4;");
+    edit(app, "map foo as _foo_v3 in _lib;", "map foo as _foo_v5 in _lib instead of _foo_v4;");
     utils.Err.strCmp("lib uses v5\n", coordinator(root).main(root, stLib));
-    editAndTouch(lib, "_foo_v4", "_foo_v6");
+    edit(lib, "_foo_v4", "_foo_v6");
     utils.Err.strCmp(insteadOfError("map foo as _foo_v5 in _lib instead of _foo_v4", "map foo as _foo_v6 in _lib", "map foo as _foo_v5 in _lib instead of _foo_v6"),
       assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib)).getMessage());
-    editAndTouch(app, "instead of _foo_v4", "instead of _foo_v6");
+    edit(app, "instead of _foo_v4", "instead of _foo_v6");
     utils.Err.strCmp("lib uses v5\n", coordinator(root).main(root, stLib));
-    editAndTouch(app, "map foo as _foo_v5 in _lib instead of _foo_v6;\n", "");
+    edit(app, "map foo as _foo_v5 in _lib instead of _foo_v6;\n", "");
     utils.Err.strCmp("lib uses v6\n", coordinator(root).main(root, stLib));
   }
   static String describeLib(String libMaps){ return "_lib/_rank_driver.fear\niii\nuse base.Str as Str;\n"+libMaps+"use foo.Foo as Foo;\nLib:{ .describe(f: Foo): Str -> f.version }\njjj\n"; }
@@ -4052,16 +4051,16 @@ jjj
   @Test void aNewPinOfTheLibraryBreaksTheApplicationUntilItsInsteadOfFollows(@TempDir Path tmp) throws IOException, InterruptedException{
     var root= tmp.resolve("root");
     utils.Err.strCmp("v5\n", mapsRun(tmp, foos+describeLib("map foo as _foo_v4 in _lib;\n")+describeApp));
-    editAndTouch(root.resolve("_lib", "_rank_driver.fear"), "_foo_v4", "_foo_v3");
+    edit(root.resolve("_lib", "_rank_driver.fear"), "_foo_v4", "_foo_v3");
     utils.Err.strCmp(insteadOfError("map foo as _foo_v5 in _lib instead of _foo_v4", "map foo as _foo_v3 in _lib", "map foo as _foo_v5 in _lib instead of _foo_v3"),
       assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib)).getMessage());
-    editAndTouch(root.resolve("_app", "_rank_app.fear"), "instead of _foo_v4", "instead of _foo_v3");
+    edit(root.resolve("_app", "_rank_app.fear"), "instead of _foo_v4", "instead of _foo_v3");
     utils.Err.strCmp("v5\n", coordinator(root).main(root, stLib));
   }
   @Test void droppingTheOverrideMakesTheLibraryRejectTheFooOfTheApplication(@TempDir Path tmp) throws IOException, InterruptedException{
     var root= tmp.resolve("root");
     utils.Err.strCmp("v5\n", mapsRun(tmp, foos+describeLib("map foo as _foo_v4 in _lib;\n")+describeApp));
-    editAndTouch(root.resolve("_app", "_rank_app.fear"), "map foo as _foo_v5 in _lib instead of _foo_v4;\n", "");
+    edit(root.resolve("_app", "_rank_app.fear"), "map foo as _foo_v5 in _lib instead of _foo_v4;\n", "");
     var msg= assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib)).getMessage();
     utils.Err.strCmp("""
 In file: fear:/_app/_rank_app.fear
@@ -4573,10 +4572,10 @@ Error 7 WellFormedness
   @Test void movingAPinFromTheLibraryToTheApplicationKeepsTheVersionAndTheNoteCitesTheApplication(@TempDir Path tmp) throws IOException, InterruptedException{
     var root= tmp.resolve("root");
     utils.Err.strCmp("lib uses v4\n", mapsRun(tmp, foos+fooLib("map foo as _foo_v4 in _lib;\n")+fooApp("")));
-    editAndTouch(root.resolve("_lib", "_rank_driver.fear"), "map foo as _foo_v4 in _lib;\n", "");
-    editAndTouch(root.resolve("_app", "_rank_app.fear"), "use base.Main as Main;\n", "use base.Main as Main;\nmap foo as _foo_v4 in _lib;\n");
+    edit(root.resolve("_lib", "_rank_driver.fear"), "map foo as _foo_v4 in _lib;\n", "");
+    edit(root.resolve("_app", "_rank_app.fear"), "use base.Main as Main;\n", "use base.Main as Main;\nmap foo as _foo_v4 in _lib;\n");
     utils.Err.strCmp("lib uses v4\n", coordinator(root).main(root, stLib));
-    editAndTouch(root.resolve("_lib", "_rank_driver.fear"), "foo.Foo.version", "foo.Foo.legacy");
+    edit(root.resolve("_lib", "_rank_driver.fear"), "foo.Foo.version", "foo.Foo.legacy");
     utils.Err.strCmp("""
 In file: fear:/_lib/_rank_driver.fear
 [###]
@@ -4589,10 +4588,10 @@ Source code inside folders named "_lib" uses package name "foo" to refer to the 
       +fooLib("map foo as _foo_v4 in _lib;\n")
       +fooUser("mid", "worker", "map foo as _foo_v7 in _lib instead of _foo_v4;\n")
       +fooApp("")));
-    editAndTouch(root.resolve("_mid", "_rank_worker.fear"), "map foo as _foo_v7 in _lib instead of _foo_v4;\n", "");
-    editAndTouch(root.resolve("_app", "_rank_app.fear"), "use base.Main as Main;\n", "use base.Main as Main;\nmap foo as _foo_v7 in _lib instead of _foo_v4;\n");
+    edit(root.resolve("_mid", "_rank_worker.fear"), "map foo as _foo_v7 in _lib instead of _foo_v4;\n", "");
+    edit(root.resolve("_app", "_rank_app.fear"), "use base.Main as Main;\n", "use base.Main as Main;\nmap foo as _foo_v7 in _lib instead of _foo_v4;\n");
     utils.Err.strCmp("lib uses v7\n", coordinator(root).main(root, stLib));
-    editAndTouch(root.resolve("_lib", "_rank_driver.fear"), "foo.Foo.version", "foo.Foo.missing");
+    edit(root.resolve("_lib", "_rank_driver.fear"), "foo.Foo.version", "foo.Foo.missing");
     utils.Err.strCmp("""
 In file: fear:/_lib/_rank_driver.fear
 [###]
@@ -4606,9 +4605,9 @@ Source code inside folders named "_lib" uses package name "foo" to refer to the 
       +fooLib("map foo as _foo_v4 in _lib;\n")
       +fooUser("mid", "worker", "map foo as _foo_v5 in _lib instead of _foo_v4;\n")
       +fooApp("map foo as _foo_v6 in _lib instead of _foo_v4, _foo_v5;\n")));
-    editAndTouch(app, "instead of _foo_v4, _foo_v5", "instead of _foo_v5, _foo_v4");
+    edit(app, "instead of _foo_v4, _foo_v5", "instead of _foo_v5, _foo_v4");
     utils.Err.strCmp("lib uses v6\n", coordinator(root).main(root, stLib));
-    editAndTouch(app, "instead of _foo_v5, _foo_v4", "instead of _foo_v5");
+    edit(app, "instead of _foo_v5, _foo_v4", "instead of _foo_v5");
     utils.Err.strCmp("""
 The "instead of" list of a map must name exactly the folders chosen by the maps of lower rank that the map overrides:
 - "map foo as _foo_v6 in _lib instead of _foo_v5;"; written in fear:/_app/_rank_app.fear
@@ -4618,7 +4617,7 @@ These maps of lower rank choose other folders:
 Expected: "map foo as _foo_v6 in _lib instead of _foo_v4, _foo_v5;".
 Error 7 WellFormedness
 """, assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib)).getMessage());
-    editAndTouch(app, "instead of _foo_v5", "instead of _foo_v4, _foo_v5");
+    edit(app, "instead of _foo_v5", "instead of _foo_v4, _foo_v5");
     utils.Err.strCmp("lib uses v6\n", coordinator(root).main(root, stLib));
   }
   @Test void removingAMapOfTheApplicationMakesItsPackageNameUnknown(@TempDir Path tmp) throws IOException, InterruptedException{
@@ -4630,7 +4629,7 @@ use base.Main as Main;
 map f as _foo_v5 in _app;
 Hello:Main{s->base.Debug#(f.Foo.version)}
 """));
-    editAndTouch(root.resolve("_app", "_rank_app.fear"), "map f as _foo_v5 in _app;\n", "");
+    edit(root.resolve("_app", "_rank_app.fear"), "map f as _foo_v5 in _app;\n", "");
     utils.Err.strCmp("""
 In file: fear:/_app/_rank_app.fear
 [###]
@@ -4643,7 +4642,7 @@ Source code inside folders named "_app" can not use package name "f".
     Fs.ensureDir(root.resolve("_foo_v7"));
     Fs.writeUtf8(root.resolve("_foo_v7", "_rank_core700.fear"), "use base.Str as Str;\nFoo:{ .version: Str -> \"v7\" }\n");
     utils.Err.strCmp("lib uses v4\n", coordinator(root).main(root, stLib));
-    editAndTouch(root.resolve("_app", "_rank_app.fear"), "use base.Main as Main;\n", "use base.Main as Main;\nmap foo as _foo_v7 in _lib instead of _foo_v4;\n");
+    edit(root.resolve("_app", "_rank_app.fear"), "use base.Main as Main;\n", "use base.Main as Main;\nmap foo as _foo_v7 in _lib instead of _foo_v4;\n");
     utils.Err.strCmp("lib uses v7\n", coordinator(root).main(root, stLib));
   }
   @Test void aMapOfTheSameRankAddedOnARebuildConflictsUntilAHigherRankMapDecides(@TempDir Path tmp) throws IOException, InterruptedException{
@@ -4653,7 +4652,7 @@ Source code inside folders named "_app" can not use package name "f".
       +fooUser("w1", "worker", "map foo as _foo_v5 in _lib instead of _foo_v4;\n")
       +fooUser("w2", "worker", "")
       +fooApp("")));
-    editAndTouch(root.resolve("_w2", "_rank_worker.fear"), "Userw2", "map foo as _foo_v6 in _lib instead of _foo_v4;\nUserw2");
+    edit(root.resolve("_w2", "_rank_worker.fear"), "Userw2", "map foo as _foo_v6 in _lib instead of _foo_v4;\nUserw2");
     utils.Err.strCmp("""
 Maps of the same rank give package name "foo" different folders, for source code inside folders named "_lib":
 - "map foo as _foo_v5 in _lib instead of _foo_v4;"; written in fear:/_w1/_rank_worker.fear
@@ -4669,7 +4668,7 @@ How to fix it:
 - Add one map in a rank file of higher rank (typically the rank file of your application), with "instead of" listing every folder chosen by the maps of lower rank.
 Error 7 WellFormedness
 """, assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib)).getMessage());
-    editAndTouch(root.resolve("_app", "_rank_app.fear"), "use base.Main as Main;\n", "use base.Main as Main;\nmap foo as _foo_v6 in _lib instead of _foo_v4, _foo_v5;\n");
+    edit(root.resolve("_app", "_rank_app.fear"), "use base.Main as Main;\n", "use base.Main as Main;\nmap foo as _foo_v6 in _lib instead of _foo_v4, _foo_v5;\n");
     utils.Err.strCmp("lib uses v6\n", coordinator(root).main(root, stLib));
   }
   @Test void useOfATypeMissingFromThePinnedVersion(@TempDir Path tmp){
@@ -4985,6 +4984,36 @@ A:Main{s->base.Debug#(`hi`)}
     assertFalse(Fs.exists(out(root, "_unfinished.txt")));
     assertTrue(compiled(root));
   }
+  @Test void aCompileWritesItsStartBeforeTheJars(@TempDir Path tmp){
+    var root= helloProject(tmp);
+    assertEquals(Optional.empty(), compileWith(coordinator(root), root, cs -> cs.stream().findFirst()));
+    assertTrue(Fs.lastModified(out(root, "_compile_start.txt")) < Fs.lastModified(out(root, "p.jar")));
+  }
+  @Test void aPackageNamedIconsKeepsTheIconsOfTheCache(@TempDir Path tmp){
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_icons/_rank_app999.fear
+iii
+use base.Main as Main;
+A:Main{s->base.Debug#(`hi`)}
+""");
+    compile(coordinator(root), root);
+    assertTrue(Fs.isRegularFile(out(root, "icons").resolve("_base").resolve("icons").resolve("fearless.png")));
+    utils.Err.strCmp("hi\n", main(root, List.of()));
+  }
+  @Test void aFileNewerThanTheStartOfTheCompileIsRefused(@TempDir Path tmp) throws IOException{
+    var root= helloProject(tmp);
+    Fs.setLastModifiedTime(root.resolve("_p", "_rank_app999.fear"), FileTime.fromMillis(System.currentTimeMillis()+3000));
+    var error= compileWith(coordinator(root), root, cs -> cs.stream().findFirst()).orElseThrow();
+    utils.Err.strCmp("Some files inside the project \"root\" were updated while the project was compiling.", error.getMessage());
+  }
+  @Test void aHiddenFileOfTheCacheIsNoOtherFile(@TempDir Path tmp){
+    var root= helloProject(tmp);
+    compile(coordinator(root), root);
+    Fs.writeUtf8(out(root, ".p.html.swp"), "");
+    assertTrue(compiled(root));
+  }
   @Test void dropUnfinishedDeletesOnlyAnUnfinishedCache(@TempDir Path tmp){
     var root= helloProject(tmp);
     compile(coordinator(root), root);
@@ -5054,13 +5083,21 @@ A:Main{s->base.Debug#(`hi`)}
     assertFalse(Fs.exists(root.resolve(Coordinator.outDir)));
     assertFalse(compiled(root));
   }
-  @Test void aFileEditedWhileTheProjectCompilesFailsTheCompile(@TempDir Path tmp) throws IOException{
+  @Test void aFileAddedWhileTheProjectCompilesLeavesItOutOfDate(@TempDir Path tmp) throws IOException{
     var root= claimsProject(tmp, """
 Foo:Main, OpenWith[IconsFoo]{s->base.Debug#(`foo`)}
 """);
-    var error= compileWith(coordinator(root), root, cs -> { Fs.writeUtf8(root.resolve("_col", "extra.fear"), ""); return cs.stream().findFirst(); }).orElseThrow();
-    utils.Err.strCmp("Some files inside the project [###]root[###] were updated while the project was compiling.", error.getMessage());
-    assertEquals(error.getMessage(), Fs.readUtf8(out(root, "_error.txt")));
+    assertEquals(Optional.empty(), compileWith(coordinator(root), root, cs -> { Fs.writeUtf8(root.resolve("_col", "extra.fear"), ""); return cs.stream().findFirst(); }));
+    Coordinator.finish(root);
+    assertTrue(coordinator(root).check(root) instanceof Coordinator.State.OutOfDate);
+  }
+  @Test void aFileEditedAfterTheCompileReadItLeavesTheProjectOutOfDate(@TempDir Path tmp) throws IOException{
+    var root= claimsProject(tmp, """
+Foo:Main, OpenWith[IconsFoo]{s->base.Debug#(`foo`)}
+""");
+    assertEquals(Optional.empty(), compileWith(coordinator(root), root, cs -> { edit(root.resolve("_col", "_rank_app.fear"), "`foo`", "`bar`"); return cs.stream().findFirst(); }));
+    Coordinator.finish(root);
+    assertTrue(coordinator(root).check(root) instanceof Coordinator.State.OutOfDate);
   }
   @Test void eachAutoselectedExtensionIsTakenFromTheCandidatesAndTheNextCompileKeepsIt(@TempDir Path tmp) throws IOException{
     var root= claimsProject(tmp, """
@@ -5099,6 +5136,25 @@ Foo:Main, OpenWith[IconsFoo]{s->base.Debug#(`foo`)}
     Fs.write(root.resolve("_col", "icons", "foo.png"), icon);
     var error= compileWith(coordinator(root), root, cs -> cs.stream().findFirst()).orElseThrow();
     utils.Err.strCmp(expected, error.getMessage());
+  }
+  @Test void theIconsOfTheCacheAreNamedByThePathsOfTheirImages(@TempDir Path tmp) throws IOException{
+    var root= claimsProject(tmp, """
+Foo:Main, OpenWith[IconsBarX], Shortcut[IconsBarx]{s->base.Debug#(`foo`)}
+""");
+    Fs.write(root.resolve("_col", "icons", "bar_x.png"), png(64, 64));
+    Fs.write(root.resolve("_col", "icons", "barx.png"), png(64, 64));
+    compile(coordinator(root), root);
+    var icons= out(root, "icons");
+    assertEquals(List.of("_base/icons/fearless.png", "_col/icons/bar_x.png", "_col/icons/barx.png"), Fs.walk(icons, s -> s.filter(f -> f.toString().endsWith(".png")).map(f -> icons.relativize(f).toString().replace('\\', '/')).sorted().toList()));
+    assertTrue(compiled(root));
+  }
+  @Test void anIconNewerThanTheStartOfTheCompileIsRefused(@TempDir Path tmp) throws IOException{
+    var root= claimsProject(tmp, """
+Foo:Main, OpenWith[IconsFoo]{s->base.Debug#(`foo`)}
+""");
+    Fs.setLastModifiedTime(root.resolve("_col", "icons", "foo.png"), FileTime.fromMillis(System.currentTimeMillis()+3000));
+    var error= compileWith(coordinator(root), root, cs -> cs.stream().findFirst()).orElseThrow();
+    utils.Err.strCmp("Some files inside the project \"root\" were updated while the project was compiling.", error.getMessage());
   }
   static byte[] png(int w, int h) throws IOException{
     var bout= new ByteArrayOutputStream();
