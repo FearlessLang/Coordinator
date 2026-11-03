@@ -995,6 +995,25 @@ Holder
     var html= new HtmlDocRenderer("pkg", Map.of(), List.of(holder), OtherPackages.empty(), Map.of(), Optional.empty()).render();
     utils.Err.strCmp("[###]<div class=\"doc\">\n<p>Example:</p>\n<pre class=\"fenced\">Foo: Bar {\n  `x`\n\n  }</pre>\n<p>After <code>x</code>.</p>\n</div>[###]", html);
   }
+  @Test void aRunnableExampleOnAMethodOfAnAnonymousLiteralIsRun(){
+    var anonName= new TName("pkg._AFoo", 0, Pos.unknown);
+    var bar= namedMethod(".bar", anonName);
+    var anon= new TypeDoc(anonymousAt(Pos.of(file, 2, 1), List.of(bar)), List.of());
+    anon.declared(Pos.of(file, 3, 1), bar, List.of(new DocOcc(file, 3, 1, 4, ".check{bar.assertOk}", true, true, false)), List.of());
+    var test= new HtmlDocRenderer("pkg", Map.of(), List.of(anon), OtherPackages.empty(), Map.of(), Optional.empty()).renderTests(TName::s);
+    assertEquals("""
+--- fear:/_pkg/a.fear
+3:4| __AFoo_Examples: base.Test {::
+3:4|   .test base.Test{::
+3:4+| .check{bar.assertOk}
+3:24|   }
+3:24|   }
+--- fear:/_pkg/a.fear
+3:4| AllAutoTests_pkg: base.UnitTests {::
+3:4|   .test __AFoo_Examples
+3:4|   }
+""", show(test));
+  }
   private static List<String> idsIn(String html, String prefix){
     var res= new ArrayList<String>();
     for (int i= html.indexOf(prefix); i >= 0; i = html.indexOf(prefix, i+1)){

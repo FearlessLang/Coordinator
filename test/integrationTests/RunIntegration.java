@@ -443,6 +443,29 @@ Test failure _Calc_Examples at line: 5 in file: _p/_rank_app.fear
 hi
 """, main(root, List.of()));
   }
+  @Test void aDocExampleOfAMethodOfAnAnonymousLiteralRuns(@TempDir Path tmp){
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_p/_rank_app.fear
+iii
+use base.Main as Main;
+use base.Nat as Nat;
+use base.Debug as Debug;
+Calc:{
+  .make: Calc -> Calc{
+    //> .check{2 .assertEq 5}
+    .two: Nat -> 2;
+    };
+  }
+App:Main{s->Debug#("hi")}
+""");
+    utils.Err.strCmp("""
+Test failure __ACalc_Examples at line: 6 in file: _p/_rank_app.fear
+[###]
+hi
+""", main(root, List.of()));
+  }
   @Test void docExamplesOfTwoTypesSharingASimpleNameWithDifferentAritiesRun(@TempDir Path tmp){
     var root= tmp.resolve("root");
     UserError.root = root;

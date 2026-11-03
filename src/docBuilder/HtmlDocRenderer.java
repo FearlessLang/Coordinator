@@ -76,7 +76,6 @@ final class HtmlDocRenderer{
   record GeneratedTestNames(String top, List<String> perType){}
   List<TypeDoc> testableTypes(){
     return visibleTypes().stream()
-      .filter(t -> !t.main().infName())
       .filter(t -> !testGroups(t).isEmpty())
       .toList();
   }
