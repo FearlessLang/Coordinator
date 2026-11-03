@@ -424,7 +424,7 @@ Foo: Bar {
     var supName= new TName("other.Sup", 0, Pos.unknown);
     var subName= new TName("other.Sub", 0, Pos.unknown);
     var sup= namedType("other.Sup", List.of(), List.of(namedMethod(".bar", supName)));
-    var sub= namedType("other.Sub", List.of(new T.C(supName, List.of())), List.of());
+    var sub= namedType("other.Sub", List.of(new T.C(supName, List.of())), List.of(namedMethod(".bar", supName)));
     var other= OtherPackages.start(Map.of(), List.of(sup, sub), 0L);
     var resolver= new DocResolver("pkg", List.of(), other);
     var link= resolver.resolve(new DocRef.MethodName(Optional.of(new DocRef.TypeName(Optional.of("other"), "Sub", OptionalInt.empty())), ".bar", OptionalInt.empty()), Scope.of(sub));
