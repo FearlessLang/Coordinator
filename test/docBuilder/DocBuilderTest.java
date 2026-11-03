@@ -1014,6 +1014,12 @@ Holder
 3:4|   }
 """, show(test));
   }
+  @Test void typesAreListedByNameThenByArity(){
+    var action= new TypeDoc(new Literal(RC.imm, new TName("pkg.Action", 2, Pos.unknown), twoBounds(), List.of(), "this", List.of(), freshSrc(), false), List.of());
+    var actionMatch= new TypeDoc(namedType("pkg.ActionMatch", List.of(), List.of()), List.of());
+    var renderer= new HtmlDocRenderer("pkg", Map.of(), List.of(actionMatch, action), OtherPackages.empty(), Map.of(), Optional.empty());
+    assertEquals(List.of("pkg.Action", "pkg.ActionMatch"), renderer.visibleTypes().stream().map(t -> t.main().name().s()).toList());
+  }
   private static List<String> idsIn(String html, String prefix){
     var res= new ArrayList<String>();
     for (int i= html.indexOf(prefix); i >= 0; i = html.indexOf(prefix, i+1)){
