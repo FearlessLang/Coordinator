@@ -1128,10 +1128,10 @@ imm A09Nested.main(_) error line: 27 in file _p/_rank_app.fear
 boomNat
 imm Foo.nat error line: 10 in file _p/_rank_app.fear
 imm A10Flow.main(_) error line: 28 in file _p/_rank_app.fear
-mut Flow[_].map(_) error line: 70 in file datatypes/collections/flows/flow.fear
-mut Flow[_].flatMapMut(_) error line: 69 in file datatypes/collections/flows/flow.fear
-mut Flow[_].eList error line: 101 in file datatypes/collections/flows/flow.fear
-mut Flow[_].list error line: 102 in file datatypes/collections/flows/flow.fear
+mut Flow[_].map(_) error line: [###] in file datatypes/collections/flows/flow.fear
+mut Flow[_].flatMapMut(_) error line: [###] in file datatypes/collections/flows/flow.fear
+mut Flow[_].eList error line: [###] in file datatypes/collections/flows/flow.fear
+mut Flow[_].list error line: [###] in file datatypes/collections/flows/flow.fear
 imm A10Flow.main(_) error line: 28 in file _p/_rank_app.fear
 boom
 imm Foo.go error line: 10 in file _p/_rank_app.fear
@@ -1141,11 +1141,11 @@ one
 boom
 imm Foo.go error line: 10 in file _p/_rank_app.fear
 imm A12Block.main(_) error line: 32 in file _p/_rank_app.fear
-mut Block[_].do(_) error line: 20 in file blocks.fear
+mut Block[_].do(_) error line: [###] in file blocks.fear
 imm A12Block.main(_) error line: 32 in file _p/_rank_app.fear
 boomNat
 imm Foo.nat error line: 10 in file _p/_rank_app.fear
-imm Cache#(_) error line: 47 in file caching.fear
+imm Cache#(_) error line: [###] in file caching.fear
 imm A13CacheFunction.main(_) error line: 36 in file _p/_rank_app.fear
 """, coordinator(root).main(root, stLib));
   }
@@ -2906,31 +2906,31 @@ Hello:Main{s->base.Debug#("from z")}
     utils.Err.strCmp("""
 deep boom
 imm Fail#(_) error line: 18 in file _rec/_rank_app.fear
-imm True.if(_) error line: 56 in file datatypes/bools.fear
+imm True.if(_) error line: [###] in file datatypes/bools.fear
 imm Fail#(_) error line: 18 in file _rec/_rank_app.fear
 imm Fail#(_) error line: 18 in file _rec/_rank_app.fear
-imm _RunRecursion#(_,_) error line: 16 in file run_recursion.fear
-imm RunRecursion#(_) error line: 9 in file run_recursion.fear
+imm _RunRecursion#(_,_) error line: [###] in file run_recursion.fear
+imm RunRecursion#(_) error line: [###] in file run_recursion.fear
 imm Fail#(_) error line: 18 in file _rec/_rank_app.fear
-imm False.if(_) error line: 67 in file datatypes/bools.fear
-imm Fail#(_) error line: 18 in file _rec/_rank_app.fear
-imm Fail#(_) error line: 18 in file _rec/_rank_app.fear
-imm _RunRecursion#(_,_) error line: 16 in file run_recursion.fear
-imm RunRecursion#(_) error line: 9 in file run_recursion.fear
-imm Fail#(_) error line: 18 in file _rec/_rank_app.fear
-imm False.if(_) error line: 67 in file datatypes/bools.fear
+imm False.if(_) error line: [###] in file datatypes/bools.fear
 imm Fail#(_) error line: 18 in file _rec/_rank_app.fear
 imm Fail#(_) error line: 18 in file _rec/_rank_app.fear
-imm _RunRecursion#(_,_) error line: 16 in file run_recursion.fear
-imm RunRecursion#(_) error line: 9 in file run_recursion.fear
+imm _RunRecursion#(_,_) error line: [###] in file run_recursion.fear
+imm RunRecursion#(_) error line: [###] in file run_recursion.fear
 imm Fail#(_) error line: 18 in file _rec/_rank_app.fear
-imm False.if(_) error line: 67 in file datatypes/bools.fear
+imm False.if(_) error line: [###] in file datatypes/bools.fear
 imm Fail#(_) error line: 18 in file _rec/_rank_app.fear
 imm Fail#(_) error line: 18 in file _rec/_rank_app.fear
-imm _RunRecursion#(_,_) error line: 16 in file run_recursion.fear
-imm RunRecursion#(_) error line: 9 in file run_recursion.fear
+imm _RunRecursion#(_,_) error line: [###] in file run_recursion.fear
+imm RunRecursion#(_) error line: [###] in file run_recursion.fear
 imm Fail#(_) error line: 18 in file _rec/_rank_app.fear
-imm False.if(_) error line: 67 in file datatypes/bools.fear
+imm False.if(_) error line: [###] in file datatypes/bools.fear
+imm Fail#(_) error line: 18 in file _rec/_rank_app.fear
+imm Fail#(_) error line: 18 in file _rec/_rank_app.fear
+imm _RunRecursion#(_,_) error line: [###] in file run_recursion.fear
+imm RunRecursion#(_) error line: [###] in file run_recursion.fear
+imm Fail#(_) error line: 18 in file _rec/_rank_app.fear
+imm False.if(_) error line: [###] in file datatypes/bools.fear
 imm Fail#(_) error line: 18 in file _rec/_rank_app.fear
 imm GluedTrace.main(_) error line: 27 in file _rec/_rank_app.fear
 """, runRecursionMain("rec.GluedTrace"));
