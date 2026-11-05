@@ -1459,7 +1459,7 @@ REAL ASSET CONTENT
     unitTestsOk(name, root, List.of("-DfearlessDataRead.open.Pub="+PathClassLoader.argOf(pub), "-DfearlessInput.file="+PathClassLoader.argOf(file)));
   }
   @Test void testOpenedFile(@TempDir Path tmp){ openedFileOk("testOpenedFile", tmp); }
-  @Test void aProjectInAFolderWhoseNameIsNotUtf8CompilesAndRuns(@TempDir Path tmp){ openedFileOk("testOpenedFileNotUtf8", Fs.isLinux() ? Path.of(URI.create(tmp.toUri()+"caf%E9")) : tmp.resolve("caf\u00e9")); }
+  @Test void aProjectInAFolderWhoseNameIsNotUtf8CompilesAndRuns(@TempDir Path tmp){ openedFileOk("testOpenedFileNotUtf8", Fs.isLinux() ? Path.of(URI.create(tmp.toUri()+"caf%E9")) : tmp.resolve("caf\u00e9 \ud83d\ude00 \u4e2d")); }
   @Test void testNoOpenedFile(){ testOk("testNoOpenedFile"); }
   @Test void aProjectOfSeveralPackagesInAFolderWhoseNameIsNotUtf8PassesItsTests(@TempDir Path tmp){
     var odd= Fs.isLinux() ? Path.of(URI.create(tmp.toUri()+"caf%E9")) : tmp.resolve("caf\u00e9");
