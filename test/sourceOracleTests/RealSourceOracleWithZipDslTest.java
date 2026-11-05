@@ -18,7 +18,6 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.opentest4j.AssertionFailedError;
@@ -1226,16 +1225,23 @@ hide what is nested under it, others expand it as a folder and hide the file.
 
 We check this so that you[###]
 """);}
-  private static void createSymbolicLinkOrSkip(Path link, Path target) throws Exception{
+  private static void createLink(Path link, Path target) throws Exception{
     try{ Files.createSymbolicLink(link, target); }
-    catch (AccessDeniedException _){ Assumptions.abort("OS denies creating symbolic links here"); }
+    catch (AccessDeniedException e){
+      if (!Fs.isWindows()){ throw e; }
+      var p= new ProcessBuilder("cmd", "/c", "mklink", "/J", link.toString(), target.toString()).redirectErrorStream(true).redirectOutput(ProcessBuilder.Redirect.DISCARD).start();
+      assertEquals(0, p.waitFor());
+    }
+  }
+  private static void checkedByHandOnWindows(){
+    assert !Fs.isWindows(): "This test was written on Linux, where a Windows junction can not be made: on this Windows desk check by hand that createLink made a symbolic link or a junction (dir shows <SYMLINK> or <JUNCTION>) and that the project was refused with the text above; then remove this assert.";
   }
   @Test void errVisibleSymlinkForbidden(@TempDir Path tmp) throws Exception{
     var root= tmp.resolve("root").toAbsolutePath().normalize();
     UserError.root = root;
     Fs.onSymbolicLink = Report::symlinkForbidden;
     Fs.createDirectories(root.resolve("_pkg"));
-    createSymbolicLinkOrSkip(root.resolve("_pkg/link.fear"), root.resolve("_pkg/missing.fear"));
+    createLink(root.resolve("_pkg/link.fear"), root.resolve("_pkg/missing.fear"));
     var ex= assertThrows(UserError.class, () -> new RealSourceOracleWithZip(root));
     utils.Err.strCmp("""
 Invalid path in this project folder.
@@ -1253,6 +1259,7 @@ How to fix
 
 We check this so that you[###]
 """, FsDsl.dumpErr(root, ex));
+    checkedByHandOnWindows();
   }
   @Test void errInvisibleSymlinkForbidden(@TempDir Path tmp) throws Exception{
     var root= tmp.resolve("root").toAbsolutePath().normalize();
@@ -1260,7 +1267,7 @@ We check this so that you[###]
     Fs.onSymbolicLink = Report::symlinkForbidden;
     Fs.createDirectories(root.resolve("_pkg/.d"));
     Fs.writeString(root.resolve("_pkg/a.fear"), "A");
-    createSymbolicLinkOrSkip(root.resolve("_pkg/.d/link"), root.resolve("_pkg/.d/missing"));
+    createLink(root.resolve("_pkg/.d/link"), root.resolve("_pkg/.d/missing"));
     var ex= assertThrows(UserError.class, () -> new RealSourceOracleWithZip(root));
     utils.Err.strCmp("""
 Invalid path in this project folder.
@@ -1278,6 +1285,7 @@ How to fix
 
 We check this so that you[###]
 """, FsDsl.dumpErr(root, ex));
+    checkedByHandOnWindows();
   }
   @Test void errExtensionlessMasksExtension(@TempDir Path tmp){ runErrIOE(tmp, """
 _pkg/readme
