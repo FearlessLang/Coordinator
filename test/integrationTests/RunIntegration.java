@@ -1459,11 +1459,15 @@ REAL ASSET CONTENT
     unitTestsOk(name, root, List.of("-DfearlessDataRead.open.Pub="+PathClassLoader.argOf(pub), "-DfearlessInput.file="+PathClassLoader.argOf(file)));
   }
   @Test void testOpenedFile(@TempDir Path tmp){ openedFileOk("testOpenedFile", tmp); }
-  @Test void aProjectInAFolderWhoseNameIsNotUtf8CompilesAndRuns(@TempDir Path tmp){ openedFileOk("testOpenedFileNotUtf8", Fs.isLinux() ? Path.of(URI.create(tmp.toUri()+"caf%E9")) : tmp.resolve("caf\u00e9 \ud83d\ude00 \u4e2d")); }
+  static Path notUnicode(Path tmp){
+    if (Fs.isLinux()){ return Path.of(URI.create(tmp.toUri()+"caf%E9")); }
+    if (Fs.isWindows()){ return tmp.resolve("caf\u00e9 \ud83d\ude00 \u4e2d \ud800"); }
+    return tmp.resolve("caf\u00e9 \ud83d\ude00 \u4e2d");
+  }
+  @Test void aProjectInAFolderWhoseNameIsNotUtf8CompilesAndRuns(@TempDir Path tmp){ openedFileOk("testOpenedFileNotUtf8", notUnicode(tmp)); }
   @Test void testNoOpenedFile(){ testOk("testNoOpenedFile"); }
   @Test void aProjectOfSeveralPackagesInAFolderWhoseNameIsNotUtf8PassesItsTests(@TempDir Path tmp){
-    var odd= Fs.isLinux() ? Path.of(URI.create(tmp.toUri()+"caf%E9")) : tmp.resolve("caf\u00e9");
-    var root= odd.resolve("testAssets");
+    var root= notUnicode(tmp).resolve("testAssets");
     Fs.copyTree(freshIntegrationRoot("testAssets"), root);
     unitTestsOk("testAssetsNotUtf8", root, List.of());
   }
