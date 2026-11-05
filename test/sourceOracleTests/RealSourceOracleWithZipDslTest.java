@@ -1225,67 +1225,59 @@ hide what is nested under it, others expand it as a folder and hide the file.
 
 We check this so that you[###]
 """);}
-  private static void createLink(Path link, Path target) throws Exception{
+  private static void refusesJunction(Path root, Path link, Path target, String shown) throws Exception{
+    if (!Fs.isWindows()){ return; }
+    Fs.createDirectories(target);
+    var p= new ProcessBuilder("cmd", "/c", "mklink", "/J", link.toString(), target.toString()).redirectErrorStream(true).redirectOutput(ProcessBuilder.Redirect.DISCARD).start();
+    assertEquals(0, p.waitFor());
+    linkForbidden(root, shown);
+    Files.delete(link);
+  }
+  private static void refusesSymbolicLink(Path root, Path link, Path target, String shown) throws Exception{
     try{ Files.createSymbolicLink(link, target); }
     catch (AccessDeniedException e){
       if (!Fs.isWindows()){ throw e; }
-      var p= new ProcessBuilder("cmd", "/c", "mklink", "/J", link.toString(), target.toString()).redirectErrorStream(true).redirectOutput(ProcessBuilder.Redirect.DISCARD).start();
-      assertEquals(0, p.waitFor());
+      return;
     }
+    linkForbidden(root, shown);
   }
-  private static void checkedByHandOnWindows(){
-    assert !Fs.isWindows(): "This test was written on Linux, where a Windows junction can not be made: on this Windows desk check by hand that createLink made a symbolic link or a junction (dir shows <SYMLINK> or <JUNCTION>) and that the project was refused with the text above; then remove this assert.";
+  private static Path linkRoot(Path tmp){
+    var root= tmp.resolve("root").toAbsolutePath().normalize();
+    UserError.root = root;
+    Fs.onSymbolicLink = Report::symlinkForbidden;
+    return root;
+  }
+  private static void linkForbidden(Path root, String shown){
+    var ex= assertThrows(UserError.class, () -> new RealSourceOracleWithZip(root));
+    utils.Err.strCmp("""
+Invalid path in this project folder.
+
+Root: [###]
+Path: "<root>/%s"
+
+What went wrong
+- This path is a symbolic link/junction.
+  Symbolic links/junctions behave differently across systems and tools, so we forbid them.
+
+How to fix
+- Replace the symbolic link/junction with a real file/folder.
+- If you need the linked content, copy it into the repository.
+
+We check this so that you[###]
+""".formatted(shown), FsDsl.dumpErr(root, ex));
   }
   @Test void errVisibleSymlinkForbidden(@TempDir Path tmp) throws Exception{
-    var root= tmp.resolve("root").toAbsolutePath().normalize();
-    UserError.root = root;
-    Fs.onSymbolicLink = Report::symlinkForbidden;
+    var root= linkRoot(tmp);
     Fs.createDirectories(root.resolve("_pkg"));
-    createLink(root.resolve("_pkg/link.fear"), root.resolve("_pkg/missing.fear"));
-    var ex= assertThrows(UserError.class, () -> new RealSourceOracleWithZip(root));
-    utils.Err.strCmp("""
-Invalid path in this project folder.
-
-Root: [###]
-Path: "<root>/_pkg/link.fear"
-
-What went wrong
-- This path is a symbolic link/junction.
-  Symbolic links/junctions behave differently across systems and tools, so we forbid them.
-
-How to fix
-- Replace the symbolic link/junction with a real file/folder.
-- If you need the linked content, copy it into the repository.
-
-We check this so that you[###]
-""", FsDsl.dumpErr(root, ex));
-    checkedByHandOnWindows();
+    refusesJunction(root, root.resolve("_pkg/link"), tmp.resolve("outside"), "_pkg/link");
+    refusesSymbolicLink(root, root.resolve("_pkg/link.fear"), root.resolve("_pkg/missing.fear"), "_pkg/link.fear");
   }
   @Test void errInvisibleSymlinkForbidden(@TempDir Path tmp) throws Exception{
-    var root= tmp.resolve("root").toAbsolutePath().normalize();
-    UserError.root = root;
-    Fs.onSymbolicLink = Report::symlinkForbidden;
+    var root= linkRoot(tmp);
     Fs.createDirectories(root.resolve("_pkg/.d"));
     Fs.writeString(root.resolve("_pkg/a.fear"), "A");
-    createLink(root.resolve("_pkg/.d/link"), root.resolve("_pkg/.d/missing"));
-    var ex= assertThrows(UserError.class, () -> new RealSourceOracleWithZip(root));
-    utils.Err.strCmp("""
-Invalid path in this project folder.
-
-Root: [###]
-Path: "<root>/_pkg/.d/link"
-
-What went wrong
-- This path is a symbolic link/junction.
-  Symbolic links/junctions behave differently across systems and tools, so we forbid them.
-
-How to fix
-- Replace the symbolic link/junction with a real file/folder.
-- If you need the linked content, copy it into the repository.
-
-We check this so that you[###]
-""", FsDsl.dumpErr(root, ex));
-    checkedByHandOnWindows();
+    refusesJunction(root, root.resolve("_pkg/.d/link"), tmp.resolve("outside"), "_pkg/.d/link");
+    refusesSymbolicLink(root, root.resolve("_pkg/.d/link"), root.resolve("_pkg/.d/missing"), "_pkg/.d/link");
   }
   @Test void errExtensionlessMasksExtension(@TempDir Path tmp){ runErrIOE(tmp, """
 _pkg/readme
