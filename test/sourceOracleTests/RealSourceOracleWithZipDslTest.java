@@ -1250,11 +1250,11 @@ Root: [###]
 Path: "<root>/_pkg/link.fear"
 
 What went wrong
-- This path is a symbolic link.
-  Symbolic links behave differently across systems and tools, so we forbid them.
+- This path is a symbolic link/junction.
+  Symbolic links/junctions behave differently across systems and tools, so we forbid them.
 
 How to fix
-- Replace the symbolic link with a real file/folder.
+- Replace the symbolic link/junction with a real file/folder.
 - If you need the linked content, copy it into the repository.
 
 We check this so that you[###]
@@ -1276,11 +1276,11 @@ Root: [###]
 Path: "<root>/_pkg/.d/link"
 
 What went wrong
-- This path is a symbolic link.
-  Symbolic links behave differently across systems and tools, so we forbid them.
+- This path is a symbolic link/junction.
+  Symbolic links/junctions behave differently across systems and tools, so we forbid them.
 
 How to fix
-- Replace the symbolic link with a real file/folder.
+- Replace the symbolic link/junction with a real file/folder.
 - If you need the linked content, copy it into the repository.
 
 We check this so that you[###]
