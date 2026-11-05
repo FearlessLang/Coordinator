@@ -4,8 +4,6 @@ import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.function.Consumer;
-import java.util.stream.Stream;
 
 import tools.Fs;
 import tools.JavacTool;
@@ -14,7 +12,7 @@ public final class NaiveBackendLogicMain{
   public void of(BackendTools tools, List<Path> extraClasspathDirs){
     var out= tools.rootDir();
     var outPath= out.resolve("_java");
-    var fixers= new Backend(outPath, tools).produceJavaCode();
+    var fix= new Backend(outPath, tools).produceJavaCode();
     var classes= out.resolve("_classes");
     Fs.cleanDir(classes);
     var pkgPath= classes.resolve("_"+tools.pkgName());
@@ -23,14 +21,10 @@ public final class NaiveBackendLogicMain{
       Fs.copyTreeFlat(tools.rtPath().resolveSibling("fonts"), pkgPath);
     }
     assert foldDistinct(outPath);
-    Runnable post= () -> fix(fixers, pkgPath);
+    Runnable post= () -> fix.accept(pkgPath);
     var javacOut= Fs.of(() -> JavacTool.compileTree(outPath, classes, post, out.resolve(tools.pkgName()+".jar"), extraClasspathDirs));
     assert javacOut.isEmpty() : javacOut;
     Fs.rmTree(outPath); Fs.rmTree(classes);//comment out this line to keep the generated .java and .class files for debugging
-  }
-  private static void fix(List<Consumer<List<Path>>> fixers, Path pkgPath){
-    var files= Fs.walk(pkgPath, Stream::toList);
-    fixers.forEach(f -> f.accept(files));
   }
   private static boolean foldDistinct(Path dir){
     var seen= new HashMap<String,String>();

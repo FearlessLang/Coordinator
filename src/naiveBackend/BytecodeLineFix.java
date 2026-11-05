@@ -8,27 +8,20 @@ import java.lang.classfile.attribute.SourceFileAttribute;
 import java.lang.classfile.instruction.LineNumber;
 import java.net.URI;
 import java.nio.file.Path;
-import java.util.List;
+import java.util.Objects;
 import java.util.TreeMap;
-import java.util.function.Consumer;
 
-import offensiveUtils.Require;
 import tools.Fs;
 import tools.SourceOracle;
 import utils.Pos;
 
-final class BytecodeLineFix implements Consumer<List<Path>>{
+final class BytecodeLineFix{
   final StringBuilder sb= new StringBuilder(8_000);
-  private final String base;
   private final String sourceFile;
   private final TreeMap<Integer,Integer> lineMap= new TreeMap<>();
   private int javaLine= 1;
-  BytecodeLineFix(String base, URI sourceFile){ this(base, sourceFile.toString().substring(SourceOracle.root.length())); }
-  BytecodeLineFix(String base, String sourceFile){
-    assert Require.nonNull(base, sourceFile);
-    this.base= base;
-    this.sourceFile= sourceFile;
-  }
+  BytecodeLineFix(URI sourceFile){ this(sourceFile.toString().substring(SourceOracle.root.length())); }
+  BytecodeLineFix(String sourceFile){ this.sourceFile= Objects.requireNonNull(sourceFile); }
   @Override public String toString(){ return sb.toString(); }
   BytecodeLineFix a(String s){ //this call == s does not contain any method call
     sb.append(s);
@@ -44,16 +37,7 @@ final class BytecodeLineFix implements Consumer<List<Path>>{
       +sb.toString();
     return a(s);
   }
-  @Override public void accept(List<Path> classFiles){
-    var cf= ClassFile.of();
-    classFiles.stream()
-      .filter(p -> matches(p.getFileName().toString()))
-      .forEach(p -> patchOne(cf, p));
-  }
-  private boolean matches(String n){
-    return n.equals(base+".class") || (n.endsWith(".class") && n.startsWith(base+"$")); // anon/inner: Foo$1.class etc
-  }
-  private void patchOne(ClassFile cf, Path classFile){
+  void patchOne(ClassFile cf, Path classFile){
     var xform= ClassTransform
       .dropping(e -> e instanceof SourceFileAttribute)
       .andThen(ClassTransform.endHandler(b -> b.with(SourceFileAttribute.of(sourceFile))))
