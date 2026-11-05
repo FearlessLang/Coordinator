@@ -74,7 +74,7 @@ public interface Coordinator{
   ///as the bytes naming the installation, and the program decodes them as UTF-8, so they must be valid UTF-8.
   static ChildJvm startProgram(List<String> jvmArgs, List<Path> codeDirs, String mainClass, Consumer<String> out, String... mainArgs){
     var boot= PathClassLoader.jar();
-    Stream.of(boot, Path.of(System.getProperty("java.home"))).filter(p -> !namedInUtf8(p)).findFirst().ifPresent(p -> { throw Report.installationNotUtf8(p); });
+    Stream.of(boot, Path.of(System.getProperty("java.home"))).filter(p -> !Fs.isWindows() && !namedInUtf8(p)).findFirst().ifPresent(p -> { throw Report.installationNotUtf8(p); });
     var args= Push.of(List.of(jvmArgs, PathClassLoader.codeArgs(codeDirs), List.of("-cp", boot.toString(), PathClassLoader.class.getName(), mainClass), List.of(mainArgs)));
     return ChildJvm.start(args, Fs.isLinux() ? Map.of("LC_ALL", "C.UTF-8") : Map.of(), out);
   }
