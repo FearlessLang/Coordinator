@@ -1,11 +1,13 @@
 package naiveBackend;
 
+import java.lang.classfile.ClassFile;
 import java.math.BigInteger;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.TreeMap;
 import java.util.function.Consumer;
 import java.util.stream.IntStream;
@@ -29,7 +31,7 @@ import utils.Pos;
 public final class Backend{
   final Path out;
   final BackendTools tools;
-  final ArrayList<Consumer<List<Path>>> fixers= new ArrayList<>();
+  final HashMap<String,BytecodeLineFix> fixers= new HashMap<>();
   final TreeMap<String,String> mains= new TreeMap<>();
   final TreeMap<String,String> preloaded= new TreeMap<>();
   final Map<TName,Literal> local;
@@ -40,15 +42,25 @@ public final class Backend{
     local= AllLs.of(tools.decs());
   }
   boolean isRepr(Literal l){ return l.name().equals(new TName("base.Repr", 1, Pos.unknown)); }
-  public List<Consumer<List<Path>>> produceJavaCode(){
+  public Consumer<Path> produceJavaCode(){
     Fs.cleanDir(out);
     for (var d : tools.decs()){ generateInterface(d, false); tools.checks().checkFileReplacement(d, decTypeName(d.name())); }
     writeMainJava();
-    return List.copyOf(fixers);
+    return this::fix;
+  }
+  void fix(Path classesDir){
+    var cf= ClassFile.of();
+    for (var p : Fs.walk(classesDir, s -> s.filter(f -> f.toString().endsWith(".class")).toList())){ owner(p).ifPresent(f -> f.patchOne(cf, p)); }
+  }
+  Optional<BytecodeLineFix> owner(Path classFile){
+    var f= classFile.getFileName().toString();
+    var n= f.substring(0, f.length() - ".class".length());
+    while (!fixers.containsKey(n) && n.contains("$")){ n = n.substring(0, n.lastIndexOf('$')); } // anon/inner: Foo$1.class etc
+    return Optional.ofNullable(fixers.get(n));
   }
   void generateInterface(Literal l, boolean abstractOnly){
     var iface= decTypeName(l.name());
-    var sb= new BytecodeLineFix(iface, l.pos().fileName())
+    var sb= new BytecodeLineFix(l.pos().fileName())
       .a("package _"+tools.pkgName()+";\n")
       .a("public interface "+iface+extendsClause(l)+"{\n");
     for (var m : l.ms()){ emitTopMethod(sb, l, m, abstractOnly); }
@@ -65,7 +77,7 @@ public final class Backend{
     if (hasInstance){ sb.a("  "+iface+" instance= new _Instance();\n  final class _Instance implements "+iface+selfNorm(l)+"}\n"+cacheField(l)); }
     Fs.writeUtf8(out.resolve(iface+".java"), sb.a("}").toString());
     if (hasInstance && MainsInfo.isMain(l)){ mains.put(l.name().s(), iface); preloaded.put(l.name().s(), preloaded(l)); }
-    fixers.add(sb);
+    fixers.put(iface, sb);
   }
   private String preloaded(Literal l){ return Join.of(MainsInfo.icons(l.cs()).stream().map(n -> javaStrLit(n.s())+", "+typeName(n)+".instance"), "", ", ", ""); }
   String nameMethod(Literal l, String modifier){

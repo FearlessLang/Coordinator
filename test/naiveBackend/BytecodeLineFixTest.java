@@ -3,13 +3,13 @@ package naiveBackend;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import java.lang.classfile.ClassFile;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URI;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -20,7 +20,7 @@ import utils.Pos;
 final class BytecodeLineFixTest{
   @Test void aCastOnALineNeverGivenAPosIsBlamedOnItsEnclosingCallsLine(@TempDir Path tmp) throws Exception{
     var pos= Pos.of(URI.create("fear:/_app/greet.fear"), 42, 3);
-    var fix= new BytecodeLineFix("Greet", "fear:/_app/greet.fear")
+    var fix= new BytecodeLineFix("fear:/_app/greet.fear")
       .a("package generated;\n")
       .a("public interface Greet{\n")
       .a("  default Object run(Object p0){\n")
@@ -35,7 +35,7 @@ final class BytecodeLineFixTest{
     assertEquals(42, castLine);
   }
   @Test void aCastInAFileWithNoRegisteredLineAtAllFallsBackToTheSentinelLine(@TempDir Path tmp) throws Exception{
-    var fix= new BytecodeLineFix("Greet", "fear:/_app/greet.fear")
+    var fix= new BytecodeLineFix("fear:/_app/greet.fear")
       .a("package generated;\n")
       .a("public interface Greet{\n")
       .a("  default Object run(Object p0){\n")
@@ -52,7 +52,8 @@ final class BytecodeLineFixTest{
     Fs.writeUtf8(srcFile, fix.toString());
     Fs.ensureDir(classesDir);
     Fs.runTool("javac", List.of("-d", classesDir.toString(), srcFile.toString()));
-    fix.accept(Fs.walk(classesDir, Stream::toList));
+    var cf= ClassFile.of();
+    Fs.walk(classesDir, s -> s.filter(p -> p.toString().endsWith(".class")).toList()).forEach(p -> fix.patchOne(cf, p));
     try (var loader= new URLClassLoader(new URL[]{classesDir.toUri().toURL()})){
       var cls= Class.forName("generated.Greet", true, loader);
       var instance= cls.getField("instance").get(null);
