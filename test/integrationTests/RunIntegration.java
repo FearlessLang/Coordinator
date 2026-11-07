@@ -1690,6 +1690,15 @@ milk
     var srgb= reds(ImageIO.read(notes.resolve("srgb.png").toFile()), 0);
     assertTrue(srgb.stream().allMatch(r -> Math.abs(r - 188) <= 6), () -> "A linear gray of 128 is the sRGB gray 188, not "+srgb);
   }
+  @Test void anImagePaintedPastItsEdgesPrintsNoWarning(@TempDir Path tmp){
+    var root= unitTestsProject(tmp, """
+use base.UnitTests as UnitTests;
+MyTests: UnitTests {::
+  .check{base.Images#(base.WidthNat#4, base.HeightNat#4, base.Color.rgb(0, 0, 0)).paint{g -> g.position(base.XInt#(-2), base.YInt#(+0)).rect(base.WidthNat#8, base.HeightNat#8)}.width.assertEq(base.WidthNat#4)}
+  }
+""");
+    utils.Err.strCmp("", main(root, List.of()));
+  }
   static byte[] pngHeader(int w, int h){
     var res= ByteBuffer.allocate(8+25+12+12).put(new byte[]{(byte)0x89, 'P', 'N', 'G', '\r', '\n', 0x1A, '\n'});
     for (var c : List.of(ByteBuffer.allocate(17).put("IHDR".getBytes(UTF_8)).putInt(w).putInt(h).put(new byte[]{8, 2, 0, 0, 0}).array(), "IDAT".getBytes(UTF_8), "IEND".getBytes(UTF_8))){
