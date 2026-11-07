@@ -1682,6 +1682,8 @@ milk
     utils.Err.strCmp("ff000000 ffffffff ff000000 ffff0000 ff000000", row(ImageIO.read(notes.resolve("same.png").toFile()), 0));
     var thin= reds(ImageIO.read(notes.resolve("thin.png").toFile()), 8);
     assertTrue(thin.stream().allMatch(r -> Math.abs(r - 32) <= 4), () -> "Each pixel covers 128 columns, 16 of them white, so its red is near 32, not "+thin);
+    var small= reds(ImageIO.read(notes.resolve("small.png").toFile()), 30);
+    assertTrue(small.stream().allMatch(r -> Math.abs(r - 128) <= 12), () -> "Each pixel covers more than 8 columns, half of them white, so its red is near 128, not "+small);
     var upright= ImageIO.read(notes.resolve("upright.png").toFile());
     var column= Join.of(IntStream.range(0, upright.getHeight()).mapToObj(y -> (upright.getRGB(8, y)>>16 & 255) > 128 ? "R" : "B"), "", "", "");
     utils.Err.strCmp("16 x 32 "+"R".repeat(16)+"B".repeat(16), upright.getWidth()+" x "+upright.getHeight()+" "+column);
