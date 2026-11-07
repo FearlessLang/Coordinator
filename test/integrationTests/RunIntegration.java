@@ -1737,6 +1737,7 @@ FearlessCommandSelectMains hello hello.B hello.A
 FearlessCommandSelectMains hello
 FearlessCommandRun hello
 FearlessCommandCompile hello
+FearlessCommandCheck hello
 FearlessCommandKind hello dataRead
 FearlessCommandMount hello hello.Notes notes
 FearlessCommandUnmount hello hello.Pub
