@@ -4,6 +4,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
@@ -12,6 +13,7 @@ import java.util.function.Function;
 import java.util.function.LongFunction;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
+import java.util.zip.ZipException;
 import java.util.zip.ZipInputStream;
 
 import tools.Fs;
@@ -23,6 +25,14 @@ import utils.Range;
 
 public final class ZipLocator{
   private static Map<String,byte[]> readHere(Path diskZip, List<String> steps, byte[] bytes){
+    try{ return readZip(diskZip, steps, bytes); }
+    catch (UncheckedIOException e){
+      var notUtf8= e.getCause() instanceof ZipException z && z.getCause() instanceof IllegalArgumentException;
+      if (notUtf8){ throw Report.zipEntryNameNotUtf8(diskZip, steps); }
+      throw e;
+    }
+  }
+  private static Map<String,byte[]> readZip(Path diskZip, List<String> steps, byte[] bytes){
     return new ReadZip(
       n -> Report.zipBadEntryName(diskZip, steps, n),
       a -> Report.zipDuplicateEntryName(diskZip, steps, a),

@@ -1,5 +1,6 @@
 package sourceOracleTests;
 
+import static java.nio.charset.StandardCharsets.ISO_8859_1;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -448,6 +449,30 @@ A zip file starts with its first entry, or with the zip end record if it has no 
 Other kinds of files renamed to ".zip", files saved from a web page, and self extracting
 archives with a program in front of the zip are not zip files.
 Fearless expands each zip file into a folder: rename this file if it is not meant to be a zip.
+
+
+We check this so that you[###]
+""", FsDsl.dumpErr(root, ex));
+  }
+  @Test void errZipEntryNameNotUtf8(@TempDir Path tmp) throws Exception{
+    var root= tmp.resolve("root").toAbsolutePath().normalize();
+    UserError.root = root;
+    Fs.createDirectories(root.resolve("_pkg"));
+    Fs.writeString(root.resolve("_pkg/a.fear"), "A");
+    var bytes= new ByteArrayOutputStream();
+    try (var zos= new ZipOutputStream(bytes, ISO_8859_1)){
+      zos.putNextEntry(new ZipEntry("café.fear"));
+      zos.write("B".getBytes(UTF_8));
+      zos.closeEntry();
+    }
+    Fs.write(root.resolve("_pkg/o.zip"), bytes.toByteArray());
+    var ex= assertThrows(UserError.class, () -> new RealSourceOracleWithZip(root));
+    utils.Err.strCmp("""
+Root: [###]
+Path: "_pkg/o.zip"
+
+An entry name of this zip is not UTF-8 text.
+Tools read such a name in different encodings, so the same entry may get a different name on each system.
 
 
 We check this so that you[###]
