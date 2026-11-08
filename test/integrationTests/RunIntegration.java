@@ -4960,6 +4960,7 @@ Hello:Main{s->base.Debug#("hi")}
         case "/toAccent" -> redirect(ex, "/caf%C3%A9");
         case "/twoLocations" -> { ex.getResponseHeaders().add("Location", "/ok"); redirect(ex, "/final"); }
         case "/noLocation" -> { ex.sendResponseHeaders(302, -1); ex.close(); }
+        case "/agent" -> reply(ex, 200, ex.getRequestHeaders().getFirst("User-Agent").getBytes(UTF_8));
         case "/accent" -> reply(ex, 200, accent);
         case "/img.png" -> reply(ex, 200, png);
         default -> reply(ex, 404, "nope".getBytes(UTF_8));
