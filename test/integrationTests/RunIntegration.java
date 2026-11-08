@@ -1715,6 +1715,7 @@ MyTests: UnitTests {::
     Fs.writeUtf8(pub.resolve("data.fearless"), "");
     Fs.of(() -> Fs.write(pub.resolve("path.bin"), tmp.toAbsolutePath().toString().getBytes(encoding)));
     Fs.of(() -> Fs.write(pub.resolve("relative.bin"), "relative".getBytes(encoding)));
+    Fs.of(() -> Fs.write(pub.resolve("root.bin"), tmp.toAbsolutePath().getRoot().resolve("..").toString().getBytes(encoding)));
     return pub;
   }
   @Test void testManagerMessages(@TempDir Path tmp){
