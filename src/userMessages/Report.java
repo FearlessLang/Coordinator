@@ -447,6 +447,11 @@ A zip entry can be much bigger unpacked than it looks inside the zip,
 sometimes thousands of times bigger, and we can only check content we can hold.
 Remove this entry from the zip, or store its content as normal files instead.
 """);}
+  public static UserError zipEntryNameNotUtf8(Path diskZip, List<String> steps){
+    return directFail(showZip(diskZip, steps), """
+An entry name of this zip is not UTF-8 text.
+Tools read such a name in different encodings, so the same entry may get a different name on each system.
+""");}
   public static UserError zipNoEntries(Path diskZip, List<String> steps){
     return directFail(showZip(diskZip, steps), """
 This zip file contains no entries.
