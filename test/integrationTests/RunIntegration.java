@@ -1129,8 +1129,6 @@ one
 boom
 imm Foo.go error line: 10 in file _p/_rank_app.fear
 imm A12Block.main(_) error line: 32 in file _p/_rank_app.fear
-mut Block[_].do(_) error line: [###] in file blocks.fear
-imm A12Block.main(_) error line: 32 in file _p/_rank_app.fear
 boomNat
 imm Foo.nat error line: 10 in file _p/_rank_app.fear
 imm Cache#(_) error line: [###] in file caching.fear
