@@ -299,6 +299,47 @@ failing terminated: the failing main throws
 starter ends
 """, main(freshIntegrationRoot("testProcessAttenuation"), List.of("-DfearlessAttenuators=base.NoManager")));
   }
+  @Test void aProcessWhoseCapRunningMainIsDroppedEnds(@TempDir Path tmp) throws InterruptedException{
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_drop/_rank_app.fear
+iii
+use base.Main as Main;
+use base.Block as Block;
+use base.Void as Void;
+use base.Nat as Nat;
+use base.Lists as Lists;
+use base.Continue as Continue;
+Forever: Main{sys -> Block#
+  .var[Nat] i = {0}
+  .loop(i, {c -> Block#(c.set((c.get) + 1), Continue#)})
+  .return{ Void }
+  }
+Dropper: Main{sys -> Block#
+  .do{ Block#(sys.process.start(Forever, {}), Void) }
+  .do{ sys.out.println "dropped" }
+  .var[Nat] i = {0}
+  .loop(i, {c -> Block#(c.set((c.get) + 1), Block#(Lists#(c.get, c.get), Continue#))})
+  .return{ Void }
+  }
+""");
+    var c= coordinator(root);
+    compile(c, root);
+    var out= new StringBuffer();
+    var dropper= Coordinator.startMain(root, ResolveResource.stLibPath, "drop.Dropper", Optional.empty(), Map.of(), Map.of(), List.of(), List.of(), c.sharedClasspath(), out::append);
+    try{
+      var end= System.currentTimeMillis()+60_000;
+      while (!out.toString().contains("dropped") && System.currentTimeMillis() < end){ Thread.sleep(100); }
+      while (jvmsBelow(dropper.p()) && System.currentTimeMillis() < end){ Thread.sleep(100); }
+      utils.Err.strCmp("dropped\n", out.toString());
+      assertFalse(jvmsBelow(dropper.p()), "the process of Forever still runs 60 seconds after its CapRunningMain was dropped");
+    }
+    finally{ dropper.kill(); }
+  }
+  static boolean jvmsBelow(Process p){
+    return p.descendants().filter(ProcessHandle::isAlive).anyMatch(h -> h.info().command().map(c -> Path.of(c).getFileName().toString().startsWith("java")).orElse(false));
+  }
   @Test void baseGeneratedExamples(@TempDir Path tmp) throws InterruptedException{
     var out= Coordinator.runMains(Coordinator.runData(tmp, ResolveResource.stLibPath), List.of(ResolveResource.coordinatorJars, baseCache), "_base.Main");
     writeJUnitReport("baseGeneratedExamples", tmp);
