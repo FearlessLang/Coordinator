@@ -153,6 +153,7 @@ AAAAh
 imm Bar.bar error line: 16 in file _hello/_rank_app.fear
 imm Foo.foo error line: 15 in file _hello/_rank_app.fear
 imm Hello6.main(_) error line: 14 in file _hello/_rank_app.fear
+printU printlnU café
 """, run("helloWorld"));
   }
   //testUnitTests is the project that checks the failure report itself, so it must fail
