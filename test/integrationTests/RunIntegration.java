@@ -4907,7 +4907,10 @@ Hello:Main{s->base.Debug#("hi")}
         case "/file" -> redirect(ex, "file:///etc/passwd");
         case "/back" -> redirect(ex, "/missing");
         case "/space" -> redirect(ex, "/a b");
-        case "/ftp" -> redirect(ex, "ftp://127.0.0.1/caf"+new String(Character.toChars(0xE9)));
+        case "/accentLocation" -> redirect(ex, "/caf"+new String(Character.toChars(0xE9)));
+        case "/toAccent" -> redirect(ex, "/caf%C3%A9");
+        case "/twoLocations" -> { ex.getResponseHeaders().add("Location", "/ok"); redirect(ex, "/final"); }
+        case "/noLocation" -> { ex.sendResponseHeaders(302, -1); ex.close(); }
         case "/accent" -> reply(ex, 200, accent);
         case "/img.png" -> reply(ex, 200, png);
         default -> reply(ex, 404, "nope".getBytes(UTF_8));
