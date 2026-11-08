@@ -1762,6 +1762,55 @@ FearlessCommandForget nope
   @Test void testNoManager(@TempDir Path tmp){
     unitTestsOk("testNoManager", freshIntegrationRoot("testNoManager"), List.of("-DfearlessDataRead.nomgr.Pub="+PathClassLoader.argOf(managerData(tmp))));
   }
+  String afterAppliedManager(Path tmp, String main){
+    var manager= tmp.resolve("Manager.java");
+    Fs.writeUtf8(manager, """
+import java.net.*;
+void main(String[] args) throws Exception{
+  var words= args[0].split(" ");
+  try (var s= new Socket(InetAddress.getLoopbackAddress(), Integer.parseInt(words[words.length-1].substring("Port:".length())))){ s.getOutputStream().write("Applied\\n".getBytes()); }
+}
+""");
+    var java= Path.of(System.getProperty("java.home"), "bin", "java");
+    var launcher= tmp.resolve(Fs.isWindows() ? "launcher.cmd" : "launcher");
+    Fs.writeUtf8(launcher, Fs.isWindows() ? "@\""+java+"\" \""+manager+"\" %*\n" : "#!/bin/sh\nexec '"+java+"' '"+manager+"' \"$@\"\n");
+    assertTrue(launcher.toFile().setExecutable(true));
+    var root= unitTestsProject(tmp, """
+use base.Main as Main;
+use base.Block as Block;
+"""+main);
+    return main(root, List.of("-DfearlessManager.launcher="+launcher));
+  }
+  @Test void quitEndsTheCallingMain(@TempDir Path tmp){
+    utils.Err.strCmp("before\n", afterAppliedManager(tmp, """
+A: Main{sys -> Block#
+  .do{ sys.out.println "before" }
+  .do{ sys.manager.quit }
+  .return{ sys.out.println "after quit" }
+  }
+"""));
+  }
+  @Test void resetEndsTheCallingMain(@TempDir Path tmp){
+    utils.Err.strCmp("before\n", afterAppliedManager(tmp, """
+A: Main{sys -> Block#
+  .do{ sys.out.println "before" }
+  .do{ sys.manager.reset }
+  .return{ sys.out.println "after reset" }
+  }
+"""));
+  }
+  @Test void quitInsideATryEndsTheCallingMain(@TempDir Path tmp){
+    utils.Err.strCmp("before\n", afterAppliedManager(tmp, """
+A: Main{sys -> Block#
+  .do{ sys.out.println "before" }
+  .do{ sys.try#(sys.iso.close, {s -> s.manager.quit}).run{
+    .ok _ -> sys.out.println "quit returned";
+    .info _ -> sys.out.println "quit caught";
+    }}
+  .return{ sys.out.println "after quit" }
+  }
+"""));
+  }
   @Test void aBaseAssetIsReadFromTheStdLibBase(@TempDir Path tmp) throws InterruptedException{
     var root= tmp.resolve("root");
     UserError.root = root;
