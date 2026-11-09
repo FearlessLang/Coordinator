@@ -67,7 +67,7 @@ public final class ModularBuild{
   static void runJUnit(String[] scriptArgs, Path testClasses, String... extraArgs) throws InterruptedException{
     var compact= List.of(scriptArgs).equals(List.of("compact"));
     if (!compact && scriptArgs.length != 0){ throw new IllegalArgumentException("Expected no arguments or the single argument compact, got "+List.of(scriptArgs)); }
-    var jvmArgs= compact ? List.of("-ea", "-Dcompact=true") : List.of("-ea");
+    var jvmArgs= Push.<String>of(List.of("-ea", "-DstandardLibrary="+ResolveResource.stLibPath.getParent()), compact ? List.of("-Dcompact=true") : List.of());
     var args= Push.<String>of(List.of("execute",
       "--class-path", testClasses.toString(), "--scan-class-path="+testClasses,
       "--include-classname=.*", "--details=summary", "--disable-ansi-colors"), List.of(extraArgs));
