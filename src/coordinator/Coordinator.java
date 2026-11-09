@@ -168,11 +168,12 @@ public interface Coordinator{
       throw UserError.cacheCorruptedOrCrash(e);
     }
   }
-  static ChildJvm startMain(Path project, Path base, String main, Optional<Path> input, Map<String,Path> reads, Map<String,Path> edits, List<String> attenuators, List<String> desk, List<Path> sharedClasspath, Consumer<String> out){
+  static ChildJvm startMain(Path project, Path base, String main, Optional<Path> input, Map<String,Path> reads, Map<String,Path> edits, Map<String,Path> locks, List<String> attenuators, List<String> desk, List<Path> sharedClasspath, Consumer<String> out){
     var jvmArgs= new ArrayList<>(runData(project, base));
     input.ifPresent(i -> jvmArgs.add("-DfearlessInput.file="+PathClassLoader.argOf(i)));
     reads.forEach((k,v) -> jvmArgs.add("-DfearlessDataRead."+k+"="+PathClassLoader.argOf(v)));
     edits.forEach((k,v) -> jvmArgs.add("-DfearlessDataEdit."+k+"="+PathClassLoader.argOf(v)));
+    locks.forEach((k,v) -> jvmArgs.add("-DfearlessDataLock."+k+"="+PathClassLoader.argOf(v)));
     if (!attenuators.isEmpty()){ jvmArgs.add("-DfearlessAttenuators="+String.join(",", attenuators)); }
     jvmArgs.addAll(desk);
     return startProgram(jvmArgs, Push.of(project.resolve(outDir), sharedClasspath), "_"+main.substring(0, main.indexOf('.'))+".Main", out, main);
