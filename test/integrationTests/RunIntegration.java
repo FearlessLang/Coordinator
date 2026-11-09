@@ -207,6 +207,33 @@ MyTests: UnitTests {::
 """);
     utils.Err.strCmp("", main(root, List.of()));
   }
+  @Test void aTestDeclaredInsideASuiteIsReportedByItsName(@TempDir Path tmp){
+    var root= unitTestsProject(tmp, """
+use base.UnitTests as UnitTests;
+use base.Test as Test;
+MyTests: UnitTests {::
+  .test TestCars
+  .check{1.assertEq 2}
+  }
+TestCars: Test {::
+  .test TestCarsCanMove: Test {::
+    .check{2.assertEq 3}
+    .test _Helper: Test {:: .check{3.assertEq 4}}
+    }
+  .test Test {:: .check{4.assertEq 5}}
+  }
+""");
+    utils.Err.strCmp("""
+Test failure TestCarsCanMove at line: 9 in file: _p/_rank_app.fear
+[###]
+Test failure TestCarsCanMove at line: 10 in file: _p/_rank_app.fear
+[###]
+Test failure TestCars at line: 12 in file: _p/_rank_app.fear
+[###]
+Test failure MyTests at line: 5 in file: _p/_rank_app.fear
+[###]
+""", main(root, List.of()));
+  }
   @Test void anErrorWhileRegisteringTheChecksIsAFailureInTheReport(@TempDir Path tmp){
     var root= unitTestsProject(tmp, """
 use base.UnitTests as UnitTests;
