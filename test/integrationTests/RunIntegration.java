@@ -392,7 +392,7 @@ Dropper: Main{sys -> Block#
     var c= coordinator(root);
     compile(c, root);
     var out= new StringBuffer();
-    var dropper= Coordinator.startMain(root, ResolveResource.stLibPath, "drop.Dropper", Optional.empty(), Map.of(), Map.of(), List.of(), List.of(), c.sharedClasspath(), out::append);
+    var dropper= Coordinator.startMain(root, ResolveResource.stLibPath, "drop.Dropper", Optional.empty(), Map.of(), Map.of(), Map.of(), List.of(), List.of(), c.sharedClasspath(), out::append);
     try{
       var end= System.currentTimeMillis()+60_000;
       while (!out.toString().contains("dropped") && System.currentTimeMillis() < end){ Thread.sleep(100); }
@@ -1594,7 +1594,7 @@ REAL ASSET CONTENT
     Fs.of(() -> Fs.write(pub.resolve("mixed.bin"), new byte[]{'a', '\r', '\n', 'b', '\r', 'c', (byte)0xE2, (byte)0x80, (byte)0xA8, 'd', (byte)0xEF, (byte)0xBB, (byte)0xBF, 'e', (byte)0xCC, (byte)0x81, (byte)0xFF, '\n'}));
     var file= folder.resolve("not"+(Fs.isWindows() ? "é" : "\t")+"s.txt");
     Fs.writeUtf8(file, "caf\u00e9 time");
-    unitTestsOk(name, root, List.of("-DfearlessDataRead.open.Pub="+PathClassLoader.argOf(pub), "-DfearlessInput.file="+PathClassLoader.argOf(file)));
+    unitTestsOk(name, root, List.of("-DfearlessDataRead.open.Pub="+PathClassLoader.argOf(pub), lock("open.Pub", pub), "-DfearlessInput.file="+PathClassLoader.argOf(file)));
   }
   @Test void testOpenedFile(@TempDir Path tmp){ openedFileOk("testOpenedFile", tmp); }
   static Path notUnicode(Path tmp){
@@ -1764,15 +1764,16 @@ milk
     var broken= tmp.resolve("broken");
     Fs.writeUtf8(broken.resolve("data.fearless"), "");
     Fs.writeUtf8(broken.resolve("notes").resolve("Bad.txt"), "bad");
+    Fs.writeUtf8(notes.resolve(".00000000-0000-0000-0000-000000000000.tmp").resolve("left.txt"), "left");
     unitTestsOk("testDataProjects", freshIntegrationRoot("testDataProjects"), List.of(
-      "-DfearlessDataRead.data.Pub="+PathClassLoader.argOf(pub),
-      "-DfearlessDataEdit.data.Notes="+PathClassLoader.argOf(notes),
-      "-DfearlessDataRead.data.Broken="+PathClassLoader.argOf(broken),
-      "-DfearlessDataRead.data.Gone="+PathClassLoader.argOf(tmp.resolve("gone"))));
+      "-DfearlessDataRead.data.Pub="+PathClassLoader.argOf(pub), lock("data.Pub", pub),
+      "-DfearlessDataEdit.data.Notes="+PathClassLoader.argOf(notes), lock("data.Notes", notes),
+      "-DfearlessDataRead.data.Broken="+PathClassLoader.argOf(broken), lock("data.Broken", broken),
+      "-DfearlessDataRead.data.Gone="+PathClassLoader.argOf(tmp.resolve("gone")), lock("data.Gone", tmp.resolve("gone"))));
     assertEquals(List.of("fear:/ascii.txt", "fear:/d1/keep.txt", "fear:/d2/two.txt", "fear:/data.fearless", "fear:/fresh/deeper/c.txt", "fear:/latin1.txt", "fear:/mv/one.txt", "fear:/of/keep.txt",
       "fear:/raw.bin", "fear:/readme", "fear:/todo/item.txt", "fear:/u16.txt", "fear:/u32.txt", "fear:/w1/b.txt",
       "fear:/wf/new/five.txt", "fear:/wf/one.txt", "fear:/wn/inner/three.txt", "fear:/wz/deep/four.txt", "fear:/wz/deep/two.txt", "fear:/zf/keep.txt", "fear:/zn/keep.txt"), fearPaths(notes));
-    assertEquals(List.of(true, true, true, true, true, false, false, false, false, false, false, false, false, false, false), Stream.of("wz.zip", "wn.zip", "wf.zip", "zf.zip", "zn.zip", "wz", "wn", "wf", "d3.zip", "d4", "ow", "zw.zip", "op", "zp.zip", "of/sub").map(n -> Fs.exists(notes.resolve(n))).toList());
+    assertEquals(List.of(true, true, true, true, true, false, false, false, false, false, false, false, false, false, false, false), Stream.of("wz.zip", "wn.zip", "wf.zip", "zf.zip", "zn.zip", "wz", "wn", "wf", "d3.zip", "d4", "ow", "zw.zip", "op", "zp.zip", "of/sub", ".00000000-0000-0000-0000-000000000000.tmp").map(n -> Fs.exists(notes.resolve(n))).toList());
   }
   static String row(BufferedImage png, int y){ return Join.of(IntStream.range(0, png.getWidth()).mapToObj(x -> "%08x".formatted(png.getRGB(x, y))).toList(), "", " ", ""); }
   static List<Integer> reds(BufferedImage png, int y){ return IntStream.range(0, png.getWidth()).mapToObj(x -> png.getRGB(x, y)>>16 & 255).toList(); }
@@ -1824,9 +1825,9 @@ milk
     try{
       Fs.writeUtf8(pub.resolve("url.txt"), url(server, "/x.png"));
       unitTestsOk("testResourceReads", root, List.of(
-        "-DfearlessDataRead.img.Pub="+PathClassLoader.argOf(pub),
-        "-DfearlessDataEdit.img.Notes="+PathClassLoader.argOf(notes),
-        "-DfearlessDataEdit.img.Self="+PathClassLoader.argOf(root),
+        "-DfearlessDataRead.img.Pub="+PathClassLoader.argOf(pub), lock("img.Pub", pub),
+        "-DfearlessDataEdit.img.Notes="+PathClassLoader.argOf(notes), lock("img.Notes", notes),
+        "-DfearlessDataEdit.img.Self="+PathClassLoader.argOf(root), lock("img.Self", root),
         "-DfearlessInput.file="+PathClassLoader.argOf(in)));
     }
     finally{ server.stop(0); }
@@ -1864,6 +1865,7 @@ MyTests: UnitTests {::
     return res.array();
   }
   static Set<String> files(MainsInfo info){ return info.mains().keySet(); }
+  static String lock(String type, Path data){ return "-DfearlessDataLock."+type+"="+PathClassLoader.argOf(data.toAbsolutePath().resolveSibling(type+".lock")); }
   static Path managerData(Path tmp){
     var pub= tmp.resolve("pub");
     var encoding= Fs.isWindows() ? UTF_16LE : UTF_8;
@@ -1894,7 +1896,7 @@ void main(String[] args) throws Exception{
     assertTrue(launcher.toFile().setExecutable(true));
     var base16= "Base16:"+HexFormat.of().withUpperCase().formatHex(tmp.toAbsolutePath().toString().getBytes(Fs.isWindows() ? UTF_16LE : UTF_8));
     unitTestsOk("testManagerMessages", freshIntegrationRoot("testManagerMessages"), List.of(
-      "-DfearlessDataRead.mgr.Pub="+PathClassLoader.argOf(managerData(tmp)),
+      "-DfearlessDataRead.mgr.Pub="+PathClassLoader.argOf(managerData(tmp)), lock("mgr.Pub", managerData(tmp)),
       "-DfearlessManager.launcher="+launcher));
     utils.Err.strCmp("""
 FearlessCommandRegister %1$s
@@ -1915,7 +1917,7 @@ FearlessCommandForget nope
 """.formatted(base16), Fs.readUtf8(log).replace("\r\n", "\n"));
   }
   @Test void testNoManager(@TempDir Path tmp){
-    unitTestsOk("testNoManager", freshIntegrationRoot("testNoManager"), List.of("-DfearlessDataRead.nomgr.Pub="+PathClassLoader.argOf(managerData(tmp))));
+    unitTestsOk("testNoManager", freshIntegrationRoot("testNoManager"), List.of("-DfearlessDataRead.nomgr.Pub="+PathClassLoader.argOf(managerData(tmp)), lock("nomgr.Pub", managerData(tmp))));
   }
   String afterAppliedManager(Path tmp, String main){
     var manager= tmp.resolve("Manager.java");
@@ -3068,7 +3070,7 @@ Hello:Main{s->base.Debug#("from z")}
     var c= coordinator(project);
     compile(c, project);
     var out= new StringBuilder();
-    var child= Coordinator.startMain(project, ResolveResource.stLibPath, "term.FirstDoesNotWaitForTheRest", Optional.empty(), Map.of(), Map.of(), List.of(), List.of(), c.sharedClasspath(), out::append);
+    var child= Coordinator.startMain(project, ResolveResource.stLibPath, "term.FirstDoesNotWaitForTheRest", Optional.empty(), Map.of(), Map.of(), Map.of(), List.of(), List.of(), c.sharedClasspath(), out::append);
     var waiter= new Thread(() -> {
       try{ child.await(); }
       catch (InterruptedException _){ child.kill(); }
@@ -3083,7 +3085,7 @@ Hello:Main{s->base.Debug#("from z")}
     var root= ResolveResource.integrationTests.resolve("runRecursion");
     if (!recursionCompiled){ compileOk("runRecursion"); recursionCompiled = true; }
     var out= new StringBuilder();
-    Coordinator.startMain(root, ResolveResource.stLibPath, main, Optional.empty(), Map.of(), Map.of(), List.of(), List.of(), coordinator(root).sharedClasspath(), out::append).await();
+    Coordinator.startMain(root, ResolveResource.stLibPath, main, Optional.empty(), Map.of(), Map.of(), Map.of(), List.of(), List.of(), coordinator(root).sharedClasspath(), out::append).await();
     return out.toString();
   }
   @Test void aDeepRecursionOverflowsTheStackOfMain() throws InterruptedException{
@@ -3400,14 +3402,14 @@ b
     var cp= Push.of(root.resolve(Coordinator.outDir), c.sharedClasspath());
     var out= new StringBuilder();
     assertEquals(1, Coordinator.startProgram(Coordinator.runData(root, c.stdLibBase()), cp, "_col.Main", out::append).await(), out::toString);
-    assertEquals(1, Coordinator.startMain(root, c.stdLibBase(), "col.A", Optional.empty(), Map.of(), Map.of(), List.of(), List.of(), c.sharedClasspath(), out::append).await(), out::toString);
-    assertEquals(0, Coordinator.startMain(root, c.stdLibBase(), "col.B", Optional.empty(), Map.of(), Map.of(), List.of(), List.of(), c.sharedClasspath(), out::append).await(), out::toString);
+    assertEquals(1, Coordinator.startMain(root, c.stdLibBase(), "col.A", Optional.empty(), Map.of(), Map.of(), Map.of(), List.of(), List.of(), c.sharedClasspath(), out::append).await(), out::toString);
+    assertEquals(0, Coordinator.startMain(root, c.stdLibBase(), "col.B", Optional.empty(), Map.of(), Map.of(), Map.of(), List.of(), List.of(), c.sharedClasspath(), out::append).await(), out::toString);
   }
   @Test void aMainEndingWithAJavaErrorExitsWith1() throws InterruptedException{
     var root= ResolveResource.integrationTests.resolve("runRecursion");
     if (!recursionCompiled){ compileOk("runRecursion"); recursionCompiled = true; }
     var out= new StringBuilder();
-    assertEquals(1, Coordinator.startMain(root, ResolveResource.stLibPath, "rec.NaiveSum", Optional.empty(), Map.of(), Map.of(), List.of(), List.of(), coordinator(root).sharedClasspath(), out::append).await(), out::toString);
+    assertEquals(1, Coordinator.startMain(root, ResolveResource.stLibPath, "rec.NaiveSum", Optional.empty(), Map.of(), Map.of(), Map.of(), List.of(), List.of(), coordinator(root).sharedClasspath(), out::append).await(), out::toString);
     utils.Err.strCmp("[###]The program ran out of stack space[###]", out.toString());
   }
   @Test void aMapMentionsAPackageThatDoesNotExist(@TempDir Path tmp) throws InterruptedException{
@@ -5125,7 +5127,7 @@ Hello:Main{s->base.Debug#("hi")}
       var pub= tmp.resolve("pub");
       Fs.writeUtf8(pub.resolve("data.fearless"), "");
       Fs.writeUtf8(pub.resolve("base.txt"), url(server, ""));
-      unitTestsOk("testDownloads", freshIntegrationRoot("testDownloads"), List.of("-DfearlessDataRead.dl.Pub="+PathClassLoader.argOf(pub)));
+      unitTestsOk("testDownloads", freshIntegrationRoot("testDownloads"), List.of("-DfearlessDataRead.dl.Pub="+PathClassLoader.argOf(pub), lock("dl.Pub", pub)));
     }
     finally{ server.stop(0); }
   }
@@ -5167,8 +5169,8 @@ Hello:Main{s->base.Debug#("hi")}
       Fs.writeUtf8(pub.resolve("base.txt"), "http://127.0.0.1:"+server.getLocalPort());
       Fs.writeUtf8(pub.resolve("refused.txt"), "http://127.0.0.1:"+refused);
       unitTestsOk("testJavaLeaks", root, List.of(
-        "-DfearlessDataRead.leak.Pub="+PathClassLoader.argOf(pub),
-        "-DfearlessDataRead.leak.Zips="+PathClassLoader.argOf(zips),
+        "-DfearlessDataRead.leak.Pub="+PathClassLoader.argOf(pub), lock("leak.Pub", pub),
+        "-DfearlessDataRead.leak.Zips="+PathClassLoader.argOf(zips), lock("leak.Zips", zips),
         "-DfearlessManager.launcher="+tmp.resolve("missing_launcher")));
     }
   }
