@@ -237,6 +237,24 @@ Test failure MyTests at line: 5 in file: _p/_rank_app.fear
 [###]
 """, main(root, List.of()));
   }
+  @Test void aProcessArgumentHoldingACharacterOutsideStrIsAnError(@TempDir Path tmp) throws Exception{
+    var root= unitTestsProject(tmp, """
+use base.InfoMain as InfoMain;
+Child: InfoMain{ sys, arg -> arg }
+""");
+    compile(coordinator(root), root);
+    var java= Path.of(System.getProperty("java.home"), "bin", "java").toString();
+    var code= Push.of(root.resolve(Coordinator.outDir), coordinator(root).sharedClasspath());
+    var cmd= Push.of(List.of(List.of(java, "-ea"), Coordinator.runData(root, stLib), PathClassLoader.codeArgs(code), List.of("-cp", PathClassLoader.jar().toString(), PathClassLoader.class.getName(), "_base._CapProcess$18g$0", "p.Child")));
+    var pb= new ProcessBuilder(cmd).redirectErrorStream(true);
+    if (Fs.isLinux()){ pb.environment().put("LC_ALL", "C.UTF-8"); }
+    var p= pb.start();
+    p.getOutputStream().write("\"é\"\n".getBytes(UTF_8));
+    p.getOutputStream().flush();
+    var out= new String(p.getInputStream().readAllBytes(), UTF_8);
+    assertEquals(1, p.waitFor(), out);
+    utils.Err.strCmp("The argument of the main p.Child holds the character U+00E9, which a Str can not hold.", out.strip());
+  }
   @Test void anErrorWhileRegisteringTheChecksIsAFailureInTheReport(@TempDir Path tmp){
     var root= unitTestsProject(tmp, """
 use base.UnitTests as UnitTests;
