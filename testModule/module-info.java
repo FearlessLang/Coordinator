@@ -4,5 +4,6 @@ module Coordinator{
   requires FearlessFrontend;
   requires java.desktop;
   requires jdk.httpserver;
+  requires java.management;
   exports mainCoordinator;
 }

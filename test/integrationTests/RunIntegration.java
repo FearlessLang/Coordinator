@@ -37,6 +37,9 @@ import java.util.Set;
 import java.util.Optional;
 import java.util.Random;
 import java.util.function.Consumer;
+import java.util.jar.Attributes;
+import java.util.jar.JarOutputStream;
+import java.util.jar.Manifest;
 import java.util.function.IntBinaryOperator;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -900,9 +903,55 @@ zeroMemo
 7
 """, run("testingNorms"));
   }
+  static Path probeJar(Path tmp) throws IOException{
+    var jar= tmp.resolve("gui_probe.jar");
+    var m= new Manifest();
+    m.getMainAttributes().put(Attributes.Name.MANIFEST_VERSION, "1.0");
+    m.getMainAttributes().putValue("Premain-Class", GuiProbe.class.getName());
+    try (var out= new JarOutputStream(Files.newOutputStream(jar), m)){
+      for (var c : List.of(GuiProbe.class, GuiProbe.Step.class)){
+        var name= c.getName().replace('.', '/')+".class";
+        out.putNextEntry(new ZipEntry(name));
+        try (var in= c.getClassLoader().getResourceAsStream(name)){ in.transferTo(out); }
+      }
+    }
+    return jar;
+  }
+  List<String> probe(Path tmp, String project, String mode) throws IOException{
+    var out= main(freshIntegrationRoot(project), List.of("-XX:-DoEscapeAnalysis", "-javaagent:"+probeJar(tmp)+"="+mode));
+    return out.lines().filter(l -> l.startsWith("GuiProbe ")).map(l -> l.substring("GuiProbe ".length())).toList();
+  }
+  void stillFrameAllocates(Path tmp, String project, String expected) throws IOException{
+    var title= "The objects of Skija and the strings that a frame of the still window of "+project+" allocates:\n";
+    var objects= probe(tmp, project, "alloc").stream().filter(l -> l.startsWith("io.github.humbleui.") || l.startsWith("java.lang.String ")).map(l -> l+"\n");
+    utils.Err.strCmp(title+expected, title+objects.collect(Collectors.joining()));
+  }
+  @Test void aStillLabelAndButtonAllocateNothingPerFrame(@TempDir Path tmp) throws IOException{
+    stillFrameAllocates(tmp, "testGuiStill", "io.github.humbleui.skija.Matrix33 1\n");
+  }
+  @Test void stillWidgetsAllocateNoSkijaObjectPerFrame(@TempDir Path tmp) throws IOException{
+    stillFrameAllocates(tmp, "testGuiStillWidgets", "io.github.humbleui.skija.Matrix33 1\nio.github.humbleui.types.Rect 4\n");
+  }
+  @Test void stillClippedWidgetsBuildNoWarningPerFrame(@TempDir Path tmp) throws IOException{
+    stillFrameAllocates(tmp, "testGuiStillClipped", "io.github.humbleui.skija.Matrix33 1\n");
+  }
+  @Test void theStillCornerOfAnUndecoratedWindowAllocatesNothingPerFrame(@TempDir Path tmp) throws IOException{
+    stillFrameAllocates(tmp, "testGuiStillUndecorated", "io.github.humbleui.skija.Matrix33 1\n");
+  }
+  @Test void typingInALongLineTakesTimeProportionalToTheLineAndRenderingItDoesNot(@TempDir Path tmp) throws IOException{
+    var nanos= probe(tmp, "testGuiLongLine", "type").stream().collect(Collectors.toMap(l -> l.substring(0, l.lastIndexOf(' ')), l -> Long.parseLong(l.substring(l.lastIndexOf(' ') + 1))));
+    var areas= List.of("the text area that does not wrap", "the text area that wraps");
+    for (int i= 0; i < areas.size(); i += 1){
+      double typing= nanos.get("key "+i+" 81920") / (double) nanos.get("key "+i+" 10240");
+      var area= areas.get(i);
+      assertTrue(typing < 20, () -> "In testGuiLongLine, typing a character at the start of a line of 81920 characters in "+area+" takes "+typing+" times as long as in a line of 10240 characters.\nTyping takes time proportional to the length of the line: about 8 times as long; the test fails at 20 times.");
+    }
+    double rendering= nanos.get("render 81920") / (double) nanos.get("render 10240");
+    assertTrue(rendering < 2, () -> "Rendering a frame of testGuiLongLine takes "+rendering+" times as long when its text areas hold a line of 81920 characters as when they hold a line of 10240 characters.\nA text area draws only the glyphs it shows: about as long; the test fails at 2 times.");
+  }
   void compileOk(String name){ var project= freshIntegrationRoot(name); compile(coordinator(project), project); }
   @Test void theInteractiveProjectsStillCompile(){
-    for (var name : List.of("testGui1", "testGui2", "testGuiImg", "testGuiLive", "testGuiInput", "testGuiText", "testGuiTiles", "testGuiStill", "testGuiLongLine", "testGuiStillWidgets", "testGuiStillClipped", "testGuiTextLines", "testGuiBusyPaste", "testGuiTabOrder", "testBasketball", "testTicTacToe")){ compileOk(name); }
+    for (var name : List.of("testGui1", "testGui2", "testGuiImg", "testGuiLive", "testGuiInput", "testGuiText", "testGuiTiles", "testGuiTextLines", "testGuiBusyPaste", "testGuiTabOrder", "testBasketball", "testTicTacToe")){ compileOk(name); }
   }
   // Two assets that generate the same auto-loaded type name (here "foo.txt" and "foo.png",
   // both auto-loading as "Foo") must be rejected end-to-end, before the frontend ever sees
