@@ -62,7 +62,7 @@ public interface Coordinator{
       "--enable-native-access=ALL-UNNAMED",
       "--add-opens=java.desktop/java.awt=ALL-UNNAMED",
       "--add-exports=java.desktop/sun.awt=ALL-UNNAMED",
-      Fs.isWindows() ? "--add-opens=java.desktop/sun.awt.windows=ALL-UNNAMED" : "--add-opens=java.desktop/sun.awt.X11=ALL-UNNAMED",
+      "--add-opens=java.desktop/"+(Fs.isWindows() ? "sun.awt.windows" : Fs.isMac() ? "sun.lwawt.macosx" : "sun.awt.X11")+"=ALL-UNNAMED",
       "-Dsun.java2d.d3d=false",
       "-DfearlessUser.dir="+PathClassLoader.argOf(project),
       "-DfearlessBase.dir="+PathClassLoader.argOf(base));
