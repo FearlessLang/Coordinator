@@ -207,6 +207,23 @@ MyTests: UnitTests {::
 """);
     utils.Err.strCmp("", main(root, List.of()));
   }
+  @Test void anErrorWhileRegisteringTheChecksIsAFailureInTheReport(@TempDir Path tmp){
+    var root= unitTestsProject(tmp, """
+use base.UnitTests as UnitTests;
+use base.Nat as Nat;
+use base.Error as Error;
+MyTests: UnitTests {::
+  .check{1.assertEq 1}
+  .let[Nat]({Error.msg "let fails"}, {x, t -> t.check{x.assertEq 1}})
+  }
+""");
+    utils.Err.strCmp("""
+Test failure MyTests at line: 6 in file: _p/_rank_app.fear
+let fails
+imm MyTests.tests(_) error line: 6 in file _p/_rank_app.fear
+""", main(root, List.of()));
+    utils.Err.strCmp("[###]failures=\"1\"[###]let fails[###]", JUnitReport.suite("p", root));
+  }
   @Test void mapAToPkc(){ utils.Err.strCmp("CTEXT\n", run("map_a_to_pkc"));}
   @Test void mapBilling(){
     utils.Err.strCmp("""
