@@ -317,6 +317,30 @@ Foo: Bar {
     assertTrue(doc.inheritedFrom.stream().anyMatch(r -> r.method() == supMut));
     assertTrue(doc.inheritedFrom.stream().anyMatch(r -> r.method() == supImm));
   }
+  @Test void noTwoEntriesOfAFromListReadTheSame(){
+    var supName= new TName("pkg.Sup", 0, Pos.unknown);
+    var subName= new TName("pkg.Sub", 0, Pos.unknown);
+    var sup= namedType("pkg.Sup", List.of(), List.of(fooMethod(RC.mut, supName), fooMethod(RC.imm, supName)));
+    var sub= namedType("pkg.Sub", List.of(new T.C(supName, List.of())), List.of(fooMethod(RC.mut, subName), fooMethod(RC.imm, subName)));
+    SourceOracle oracle= List::of;
+    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(sup, sub), Optional.empty(), "pkg", Path.of("pkg.html"), true);
+    builder.visitLiteral(sup);
+    builder.visitLiteral(sub);
+    var html= new HtmlDocRenderer(Map.of(), new DocResolver("pkg", builder.types, OtherPackages.empty()), Map.of(), Optional.empty()).render();
+    var from= html.substring(html.indexOf("<p class=\"doc from\">From: ")+"<p class=\"doc from\">From: ".length());
+    var shown= List.of(from.substring(0, from.indexOf(".</p>")).replaceAll("<[^>]*>", "").split(", "));
+    assertEquals(shown.stream().distinct().toList(), shown);
+  }
+  @Test void aSignatureShowsTheNamesOfItsParametersThatTheDocumentationTalksAbout(){
+    var ownerName= new TName("pkg.Holder", 0, Pos.unknown);
+    var take= methodTaking(".take", ownerName, "elem", new TName("pkg.Thing", 0, Pos.unknown));
+    var typeDoc= new TypeDoc(namedType("pkg.Holder", List.of(), List.of()), List.of());
+    typeDoc.declared(Pos.of(file, 9, 1), take, List.of(
+      new DocOcc(file, 8, 1, 4, "Stores `elem` in this holder.", true, false, false)
+    ), List.of());
+    var text= new HtmlDocRenderer(Map.of(), new DocResolver("pkg", List.of(typeDoc), OtherPackages.empty()), Map.of(), Optional.empty()).renderText();
+    utils.Err.strCmp("[###]\t.take([###]elem[###]Thing):base.Void\n    Stores `elem` in this holder.\n[###]", text);
+  }
   @Test void aBareTypeNameThatMatchesTwoLocalArityVariantsIsAmbiguous(){
     var one= namedType("pkg.Pair", List.of(), List.of());
     var two= new Literal(RC.imm, new TName("pkg.Pair", 2, Pos.unknown), twoBounds(), List.of(), "this", List.of(), freshSrc(), false);
