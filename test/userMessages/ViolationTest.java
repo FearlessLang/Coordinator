@@ -91,40 +91,41 @@ What is registered:
 C:\\Program Files\\FearlessManaged0_006\\fearlessManaged0_006w.exe
 C:\\Users\\ada\\Downloads\\fearlessManaged0_007\\fearlessManaged0_007w.exe""", Violation.associationsAmbiguous(registered).getMessage());
   }
-  @Test void associationUserLocked(){
-    utils.Err.strCmp("""
-Fearless cannot become the program that opens the kinds of file listed
-below.
+  private static final String chosenByHand= """
+Fearless cannot become the program that opens Fearless projects and the
+other kinds of file it registers.
 
-Your system remembers a choice made by hand for these kinds of file,
-with "Open with" and "Always". Fearless never removes a choice of yours
-on its own, and stopped before touching anything: your system is
-exactly as it was.
+Your system remembers the choices listed below. Each one is a choice
+made by hand of the program that opens a kind of file, for example with
+"Open with" and "Always". Fearless never removes a choice of yours on
+its own, and stopped before touching anything: your system is exactly
+as it was.
 
-Removing these choices clears the way. Each choice is the registry key
-HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts\\<kind of file>\\UserChoice,
-together with the key UserChoiceLatest next to it.
+Removing these choices clears the way. Each choice is listed under the
+place holding the choice: a file, or a kind of file standing for the
+registry key
+HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts\\<kind of file>\\UserChoice
+and the key UserChoiceLatest next to it.
 
-What is locked:
-.fearless -> SomeApp.fearless""", Violation.associationUserLocked(Map.of(".fearless", List.of("SomeApp.fearless")), e -> "").getMessage());
+The choices:
+""";
+  @Test void associationChosenByHandForKindsOfFile(){
+    utils.Err.strCmp(chosenByHand+"""
+.foo claimed by "hello.Foo" of project "demo"
+  SomeApp.foo
+.fapp042 claimed by "hello.Bar" of project "demo"
+  SomeApp.fapp042""", Violation.associationChosenByHand(ordered(".foo", "SomeApp.foo", ".fapp042", "SomeApp.fapp042"), ViolationTest::claimedBy).getMessage());
   }
-  @Test void associationUserLockedSeveralClaimed(){
-    utils.Err.strCmp("""
-Fearless cannot become the program that opens the kinds of file listed
-below.
-
-Your system remembers a choice made by hand for these kinds of file,
-with "Open with" and "Always". Fearless never removes a choice of yours
-on its own, and stopped before touching anything: your system is
-exactly as it was.
-
-Removing these choices clears the way. Each choice is the registry key
-HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts\\<kind of file>\\UserChoice,
-together with the key UserChoiceLatest next to it.
-
-What is locked:
-.foo claimed by "hello.Foo" of project "demo" -> SomeApp.foo
-.fapp042 claimed by "hello.Bar" of project "demo" -> SomeApp.fapp042""", Violation.associationUserLocked(ordered(".foo", "SomeApp.foo", ".fapp042", "SomeApp.fapp042"), ViolationTest::claimedBy).getMessage());
+  @Test void associationChosenByHandInFiles(){
+    var choices= new LinkedHashMap<String,List<String>>();
+    choices.put("/home/me/.config/mimeapps.list", List.of("application/x-fearless-htm=firefox.desktop", "application/x-fearless=editor.desktop;"));
+    choices.put("/etc/xdg/mimeapps.list", List.of("text/plain=fearlessBin0_001.desktop"));
+    utils.Err.strCmp(chosenByHand+"""
+/home/me/.config/mimeapps.list
+  application/x-fearless-htm=firefox.desktop
+  application/x-fearless=editor.desktop;
+/etc/xdg/mimeapps.list
+  text/plain=fearlessBin0_001.desktop""", Violation.associationChosenByHand(choices, e -> "").getMessage());
   }
   private static Map<String,List<String>> ordered(String e1, String p1, String e2, String p2){
     var res= new java.util.LinkedHashMap<String,List<String>>();
@@ -176,27 +177,6 @@ What stood in the way:
 .fapp042 claimed by "hello.Bar" of project "demo" -> OtherApp.fapp042""", Violation.associationNotOurs(held, ViolationTest::claimedBy).getMessage());
   }
   private static String claimedBy(String ext){ return " claimed by \"hello."+(List.of(".foo", ".ffile001").contains(ext) ? "Foo" : "Bar")+"\" of project \"demo\""; }
-  @Test void associationBrokenDesk(){
-    var choices= new LinkedHashMap<String,List<String>>();
-    choices.put("/home/me/.config/mimeapps.list", List.of("application/x-fearless-htm=firefox.desktop", "application/x-fearless=editor.desktop;"));
-    choices.put("/etc/xdg/mimeapps.list", List.of("text/plain=fearlessBin0_001.desktop"));
-    utils.Err.strCmp("""
-Fearless cannot become the program that opens Fearless projects and the
-other kinds of file it registers.
-
-The files below hold lines naming Fearless. Only Fearless sets up what
-your desktop knows of Fearless, so these lines come from a choice made
-by hand, for example "Always use for this file type" in a file manager.
-Fearless stopped before touching anything: your system is exactly as it
-was.
-
-Removing these lines from these files clears the choice:
-/home/me/.config/mimeapps.list
-  application/x-fearless-htm=firefox.desktop
-  application/x-fearless=editor.desktop;
-/etc/xdg/mimeapps.list
-  text/plain=fearlessBin0_001.desktop""", Violation.associationBrokenDesk(choices).getMessage());
-  }
   @Test void associationNotWritable(){
     var registered= "HKEY_CLASSES_ROOT\\.fearless (write denied: not running as the owning user)";
     utils.Err.strCmp("""

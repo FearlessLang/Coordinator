@@ -94,23 +94,26 @@ was.
 What is registered:
 %s""".formatted(reported));
   }
-  public static UserError associationUserLocked(Map<String,List<String>> locked, Function<String,String> claimedBy){
+  public static UserError associationChosenByHand(Map<String,List<String>> choices, Function<String,String> claimedBy){
     var lines= new ArrayList<String>();
-    locked.forEach((e,ps) -> ps.forEach(p -> lines.add(e+claimedBy.apply(e)+" -> "+p)));
+    choices.forEach((k,cs) -> lines.add(k+claimedBy.apply(k)+Join.of(cs, "\n  ", "\n  ", "")));
     return new UserError("""
-Fearless cannot become the program that opens the kinds of file listed
-below.
+Fearless cannot become the program that opens Fearless projects and the
+other kinds of file it registers.
 
-Your system remembers a choice made by hand for these kinds of file,
-with "Open with" and "Always". Fearless never removes a choice of yours
-on its own, and stopped before touching anything: your system is
-exactly as it was.
+Your system remembers the choices listed below. Each one is a choice
+made by hand of the program that opens a kind of file, for example with
+"Open with" and "Always". Fearless never removes a choice of yours on
+its own, and stopped before touching anything: your system is exactly
+as it was.
 
-Removing these choices clears the way. Each choice is the registry key
-HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts\\<kind of file>\\UserChoice,
-together with the key UserChoiceLatest next to it.
+Removing these choices clears the way. Each choice is listed under the
+place holding the choice: a file, or a kind of file standing for the
+registry key
+HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts\\<kind of file>\\UserChoice
+and the key UserChoiceLatest next to it.
 
-What is locked:
+The choices:
 %s""".formatted(Join.of(lines, "", "\n", "")));
   }
   public static UserError associationNotOurs(Map<String,List<String>> held, Function<String,String> claimedBy){
@@ -124,22 +127,6 @@ Another program already answers for these kinds of file. Fearless
 stopped before touching anything: your system is exactly as it was.
 
 What stood in the way:
-%s""".formatted(Join.of(lines, "", "\n", "")));
-  }
-  public static UserError associationBrokenDesk(Map<String,List<String>> choices){
-    var lines= new ArrayList<String>();
-    choices.forEach((f,ls) -> lines.add(f+Join.of(ls, "\n  ", "\n  ", "")));
-    return new UserError("""
-Fearless cannot become the program that opens Fearless projects and the
-other kinds of file it registers.
-
-The files below hold lines naming Fearless. Only Fearless sets up what
-your desktop knows of Fearless, so these lines come from a choice made
-by hand, for example "Always use for this file type" in a file manager.
-Fearless stopped before touching anything: your system is exactly as it
-was.
-
-Removing these lines from these files clears the choice:
 %s""".formatted(Join.of(lines, "", "\n", "")));
   }
   public static UserError associationNotWritable(String reported){
