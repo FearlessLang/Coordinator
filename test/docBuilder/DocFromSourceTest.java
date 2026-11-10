@@ -1,6 +1,7 @@
 package docBuilder;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.net.URI;
@@ -9,6 +10,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Assertions;
@@ -254,6 +257,81 @@ Maker:{
 B:{ .m: A -> A; }
 """);
     utils.Err.strCmp("[###]<p>See <code><a href=\"#type-p_2e_A-0\">A</a></code>.</p>[###]", docs.html());
+  }
+  @Test void methodsOfOneNameAreListedByArityAsANumber(@TempDir Path tmp){
+    var docs= docs(tmp, a+"""
+B:{
+  .f(a1: A, a2: A): A -> a1;
+  .f(a1: A, a2: A, a3: A, a4: A, a5: A, a6: A, a7: A, a8: A, a9: A, a10: A): A -> a1;
+  }
+""");
+    utils.Err.strCmp("[###]B\n\t.f(a1:A,a2:A):A\n\t.f(a1:A,a2:A,a3:A,a4:A,a5:A,a6:A,a7:A,a8:A,a9:A,a10:A):A", docs.text());
+  }
+  @Test void anonymousLiteralsOfOneFileAreListedByLineAsANumber(@TempDir Path tmp){
+    var docs= docs(tmp, a+"""
+Maker:{
+  .early: A -> A{
+    ///Early.
+    .m -> A;
+    };
+  //
+  //
+  //
+  //
+  .late: A -> A{
+    ///Late.
+    .m -> A;
+    };
+  }
+""");
+    utils.Err.strCmp("[###]anonymous literal at fear:/_p/_rank_app.fear:3:[###]Early.[###]anonymous literal at fear:/_p/_rank_app.fear:11:[###]Late.[###]", docs.text());
+  }
+  @Test void aNumberWrittenAsAReferenceIsReportedAsNotAName(@TempDir Path tmp){
+    var ex= assertThrows(UserError.class, () -> docs(tmp, a+"""
+///Counts from `0`.
+B:{ .m: A -> A; }
+"""));
+    utils.Err.strCmp("Broken reference in a doc comment.[###]`0`[###]This is written as a reference, but it is not a name.[###]", ex.getMessage());
+  }
+  @Test void aReferenceToTheSelfNameOfAnUndocumentedEnclosingLiteralLinksToSomethingOnThePage(@TempDir Path tmp){
+    var html= docs(tmp, """
+A:{ .m: A -> this; .n: A -> this; }
+Maker:{
+  .make: A -> A{'outer
+    .m -> A{
+      ///Same as `outer.n`.
+      .m -> outer.n;
+      };
+    .n -> A;
+    };
+  }
+""").html();
+    var ids= Pattern.compile(" id=\"([^\"]*)\"").matcher(html).results().map(m -> m.group(1)).collect(Collectors.toSet());
+    var linked= Pattern.compile("href=\"#([^\"]*)\"").matcher(html).results().map(m -> m.group(1)).distinct().toList();
+    assertEquals(List.of(), linked.stream().filter(l -> !ids.contains(l)).toList());
+  }
+  @Test void aDocAboveALineThatDeclaresNothingDoesNotBlameAPlainCommentLine(@TempDir Path tmp){
+    var ex= assertThrows(UserError.class, () -> docs(tmp, a+"""
+B:{
+  .m: A ->
+    ///Calls m on an A.
+    A.m;
+  }
+"""));
+    utils.Err.strCmp("Misplaced doc comment.[###]This documentation is attached to nothing.[###]", ex.getMessage());
+    assertFalse(ex.getMessage().contains("A line starting with // ends the block"), ex.getMessage());
+  }
+  @Test void aDisambiguationPageOnAnAnonymousLiteralIsTitledByTheNameTheListShows(@TempDir Path tmp){
+    var html= docs(tmp, """
+A:{ .m: A -> this; .m(a: A): A -> a; }
+Maker:{
+  .make: A -> A{'self
+    ///Same as `self.m`.
+    .m -> self.m(A);
+    };
+  }
+""").html();
+    utils.Err.strCmp("[###]<h2>Several match Anon@_rank_app:3.m</h2>[###]", html);
   }
   @Test void aTypeInTheListOfTypesMayWrapAfterEachComma(@TempDir Path tmp){
     var docs= docs(tmp, "Pair[X:imm,Y:imm]:{}\n");
