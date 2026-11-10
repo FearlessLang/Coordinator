@@ -327,6 +327,87 @@ A
 A
 
 """);}
+  @Test void errEmptyProtectedFolder(@TempDir Path tmp){ runErrIOE(tmp, """
+.cache/
+iii
+jjj
+_pkg/a.fear
+iii
+A
+""", """
+Root: [###]
+Path: ".cache"
+
+This folder is empty.
+Different systems handle empty folders differently,
+and they may not be supported by compression tools (zip)
+or version control systems (git).
+
+
+We check this so that you[###]
+""");}
+  @Test void errEmptyProtectedFolderInsideAVisibleFolder(@TempDir Path tmp){ runErrIOE(tmp, """
+_pkg/.cache/
+iii
+jjj
+_pkg/a.fear
+iii
+A
+""", """
+Root: [###]
+Path: "_pkg/.cache"
+
+This folder is empty.
+Different systems handle empty folders differently,
+and they may not be supported by compression tools (zip)
+or version control systems (git).
+
+
+We check this so that you[###]
+""");}
+  @Test void errEmptyProtectedFolderInsideAZip(@TempDir Path tmp){ runErrIOE(tmp, """
+_pkg/e.zip/a.fear
+iii
+A
+jjj
+_pkg/e.zip/.cache/
+iii
+""", """
+Root: [###]
+Path: "_pkg/e.zip"
+Entry: ".cache"
+
+This zip contains a folder entry called ".cache",
+but it is empty.
+Different systems handle empty folders differently, and they may not be
+supported by compression tools (zip) or version control systems (git).
+
+We check this so that you[###]
+""");}
+  @Test void okProtectedFolderInsideAZipMayHoldEmptyDirectories(@TempDir Path tmp){ testOk(tmp, """
+_pkg/e.zip/.git/refs/tags/
+iii
+jjj
+_pkg/e.zip/a.fear
+iii
+A
+""", """
+--- fear:/_pkg/e/a.fear
+A
+
+""");}
+  @Test void okZipMayHoldOnlyEmptyDirectoriesOfAProtectedFolder(@TempDir Path tmp){ testOk(tmp, """
+_pkg/e.zip/.git/refs/
+iii
+jjj
+_pkg/a.fear
+iii
+A
+""", """
+--- fear:/_pkg/a.fear
+A
+
+""");}
   @Test void okProtectedFolderMayHoldAnEmptyZip(@TempDir Path tmp){ testOk(tmp, """
 .tool_cache/e.zip
 iii

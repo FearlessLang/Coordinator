@@ -80,7 +80,7 @@ public final class BuildWithZip{
     Fs.walkV(root, s -> s.filter(p -> !p.equals(root)).forEach(abs -> {
       var rel= root.relativize(abs);
       nonEmpty.add(rel.resolveSibling(""));
-      if (isInvisible(new PathEntry(root, rel))){ return; }
+      if (isInvisible(new PathEntry(root, rel.resolveSibling("")))){ return; }
       if (Fs.isDirectory(abs)){ dirs.add(rel); }
     }));
     for (var d : dirs){ if (!nonEmpty.contains(d)){ throw Report.emptyDirectory(d); } }

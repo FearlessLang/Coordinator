@@ -1,12 +1,12 @@
 package realSourceOracle;
 
+import static java.nio.charset.StandardCharsets.ISO_8859_1;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Path;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -46,11 +46,10 @@ public final class ZipLocator{
   }
   private static List<String> reqEntries(Path diskZip, List<String> steps, byte[] bytes, List<String> names){
     if (!names.isEmpty()){ return names; }
-    var head= bytes!=null ? bytes : Fs.of(() -> { try (var in= Fs.newInputStream(diskZip)){ return in.readNBytes(4); } });
-    var empty= head.length>=4 && Arrays.equals(head, 0, 4, emptyZipSignature, 0, 4);
-    throw empty ? Report.zipNoEntries(diskZip, steps) : Report.zipNotAZip(diskZip, steps);
+    var head= new String(bytes!=null ? bytes : Fs.of(() -> { try (var in= Fs.newInputStream(diskZip)){ return in.readNBytes(4); } }), ISO_8859_1);
+    if (head.startsWith("PK\3\4")){ return names; }
+    throw head.startsWith("PK\5\6") ? Report.zipNoEntries(diskZip, steps) : Report.zipNotAZip(diskZip, steps);
   }
-  private static final byte[] emptyZipSignature= {'P', 'K', 5, 6};
   public static byte[] entryBytes(Path diskZip, List<String> steps, String entryName){
     var res= fetch(diskZip, steps, bytes -> readHere(diskZip, steps, bytes).get(entryName));
     if (res == null){ throw Bug.of("The entry "+entryName+" of "+diskZip+" "+steps+" is gone"); }

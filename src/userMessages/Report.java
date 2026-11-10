@@ -94,8 +94,8 @@ But we still require them to be safe to check out using a relaxed set of checks:
   - not using Windows reserved device names
   - no two items in the same folder that differ only by case or by Unicode-equivalent spellings
   - a total path length of 200 characters
-Nothing else about a protected path is checked: it may be empty, and a zip
-inside it is never opened.
+  - a protected folder is not empty, unless it is inside another protected folder
+Nothing else about a protected path is checked: a zip inside it is never opened.
 
 Other rules (everywhere)
 - Symbolic links/junctions are not allowed.
