@@ -3,14 +3,14 @@ package docBuilder;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 import utils.Pos;
 
@@ -19,9 +19,7 @@ final class SourceDocs{
   final List<String> lines;
   final HashMap<Integer,List<DocOcc>> docsByLine= new HashMap<>();
   final HashMap<Integer,int[]> depthByLine= new HashMap<>();
-  final HashSet<DocOcc> attached= new HashSet<>();
-  final HashMap<DocOcc,Integer> inlineClaimedFromColumn= new HashMap<>();
-  final LinkedHashSet<DocOcc> ambiguousInline= new LinkedHashSet<>();
+  final HashMap<DocOcc,HashSet<Integer>> claimColumns= new HashMap<>();
   final HashSet<Integer> visitedLines= new HashSet<>();
   SourceDocs(URI uri, String text){
     this.uri= uri;
@@ -32,18 +30,14 @@ final class SourceDocs{
     assert pos.line()>0 && pos.line()<=lines.size() : pos;
     var first= visitedLines.add(pos.line());
     if (literal && !first){ return List.of(); }
-    var res= new ArrayList<DocOcc>();
-    if (first){ collectBefore(pos.line(), res); }
-    inlineAfter(pos.line(), pos.column())
+    var before= first ? collectBefore(pos.line()) : List.<DocOcc>of();
+    var inline= inlineAfter(pos.line(), pos.column())
       .filter(occ -> Math.max(depthAt(occ.line(), occ.column()), depthAt(pos.line(), 0)) >= depthAt(pos.line(), pos.column()))
-      .ifPresent(occ -> {
-        var firstColumn= inlineClaimedFromColumn.putIfAbsent(occ, pos.column());
-        var shown= dedent(List.of(occ)).getFirst();
-        if (firstColumn!=null && firstColumn!=pos.column()){ ambiguousInline.add(shown); }
-        attached.add(occ);
-        res.add(shown);
-      });
-    return fences(res);
+      .stream().toList();
+    //everything collected is attached, including an empty line trimmed off the end:
+    //trimming is about what to show, not about what the block reached.
+    Stream.concat(before.stream(), inline.stream()).forEach(d -> claimColumns.computeIfAbsent(d, _ -> new HashSet<>()).add(pos.column()));
+    return fences(Stream.concat(dedent(trimBlanks(before)).stream(), dedent(inline).stream()).toList());
   }
   static List<DocOcc> fences(List<DocOcc> ds){
     var res= new ArrayList<DocOcc>();
@@ -65,8 +59,8 @@ final class SourceDocs{
   List<List<DocOcc>> orphanRuns(){
     var lost= docsByLine.values().stream()
       .flatMap(List::stream)
-      .filter(d -> !attached.contains(d))
-      .sorted(Comparator.comparingInt(DocOcc::line).thenComparingInt(DocOcc::column))
+      .filter(d -> !claimColumns.containsKey(d))
+      .sorted(bySource)
       .toList();
     var res= new ArrayList<ArrayList<DocOcc>>();
     for (var d : lost){
@@ -76,11 +70,20 @@ final class SourceDocs{
     }
     return List.copyOf(res);
   }
+  List<DocOcc> ambiguousInline(){
+    return claimColumns.entrySet().stream()
+      .filter(e -> e.getValue().size()>1)
+      .map(Map.Entry::getKey)
+      .sorted(bySource)
+      .map(d -> dedent(List.of(d)).getFirst())
+      .toList();
+  }
+  private static final Comparator<DocOcc> bySource= Comparator.comparingInt(DocOcc::line).thenComparingInt(DocOcc::column);
   //An empty line inside a block reads as an empty doc line of whatever kind surrounds
   //it, so it ends a paragraph without ending the block. The ones at either end of the
   //block separate nothing and are dropped. Anything else ends the block, and whatever
   //documentation is left above it is then attached to nothing, which is an error.
-  void collectBefore(int line, ArrayList<DocOcc> res){
+  List<DocOcc> collectBefore(int line){
     var before= new ArrayList<DocOcc>();
     for (int l= line-1; l >= 1; l -= 1){
       var pure= pureDocs(l);
@@ -90,11 +93,7 @@ final class SourceDocs{
       var below= !before.isEmpty();
       before.add(new DocOcc(uri, l, 1, 1, "", true, below ? before.getLast().kind() : DocKind.Prose));
     }
-    Collections.reverse(before);
-    //everything collected is attached, including an empty line trimmed off the end:
-    //trimming is about what to show, not about what the block reached.
-    attached.addAll(before);
-    res.addAll(dedent(trimBlanks(before)));
+    return before.reversed();
   }
   static List<DocOcc> dedent(List<DocOcc> ds){
     return ds.stream().map(d -> d.drop(indent(ds, d))).toList();

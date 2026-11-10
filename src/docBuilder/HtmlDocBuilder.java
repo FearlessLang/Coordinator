@@ -80,7 +80,7 @@ public final class HtmlDocBuilder{
     var spans= new HashMap<DocOcc,Map<Integer,DocLink>>();
     oracle.allFiles().forEach(f -> sources.computeIfAbsent(f.fearURI(), u -> new SourceDocs(u, f.loadString())));
     var orphans= sources.values().stream().flatMap(s -> s.orphanRuns().stream()).map(this::orphan);
-    var misplaced= Stream.concat(orphans, sources.values().stream().flatMap(s -> s.ambiguousInline.stream()).map(this::ambiguousInline)).toList();
+    var misplaced= Stream.concat(orphans, sources.values().stream().flatMap(s -> s.ambiguousInline().stream()).map(this::ambiguousInline)).toList();
     if (!misplaced.isEmpty()){ throw Report.docMisplaced(misplaced); }
     var problems= new ArrayList<String>();
     types.forEach(t -> linkType(resolver, t, spans, problems));
