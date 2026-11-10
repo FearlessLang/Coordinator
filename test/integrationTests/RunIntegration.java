@@ -1887,7 +1887,10 @@ void main(String[] args) throws Exception{
   var words= List.of(args[1].split(" "));
   Files.writeString(Path.of(args[0]), String.join(" ", words.subList(0, words.size()-1))+"\\n", StandardOpenOption.CREATE, StandardOpenOption.APPEND);
   var out= words.get(0).equals("FearlessCommandForget") ? "Refused\\nThe manager refuses to forget "+words.get(1)+"." : "Applied\\nOutput of "+words.get(0);
-  try (var s= new Socket(InetAddress.getLoopbackAddress(), Integer.parseInt(words.getLast().substring("Port:".length())))){ s.getOutputStream().write(out.getBytes()); }
+  try (var s= new Socket(InetAddress.getLoopbackAddress(), Integer.parseInt(words.getLast().substring("Port:".length())))){
+    if (words.get(0).equals("FearlessCommandTerminate")){ s.setSoLinger(true, 0); return; }
+    s.getOutputStream().write(out.getBytes());
+  }
 }
 """);
     var java= Path.of(System.getProperty("java.home"), "bin", "java");
@@ -1914,6 +1917,7 @@ FearlessCommandAttenuate hello hello.A base.NoManagerQuit hello.NoGui
 FearlessCommandAttenuate hello hello.B
 FearlessCommandOpenWithOrShortcut %1$s hello hello.A
 FearlessCommandForget nope
+FearlessCommandTerminate hello
 """.formatted(base16), Fs.readUtf8(log).replace("\r\n", "\n"));
   }
   @Test void testNoManager(@TempDir Path tmp){
