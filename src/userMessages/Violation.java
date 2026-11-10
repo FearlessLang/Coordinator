@@ -125,6 +125,22 @@ stopped before touching anything: your system is exactly as it was.
 What stood in the way:
 %s""".formatted(Join.of(lines, "", "\n", "")));
   }
+  public static UserError associationBrokenDesk(Map<String,List<String>> choices){
+    var lines= new ArrayList<String>();
+    choices.forEach((f,ls) -> lines.add(f+Join.of(ls, "\n  ", "\n  ", "")));
+    return new UserError("""
+Fearless cannot become the program that opens Fearless projects and the
+other kinds of file it registers.
+
+The files below hold lines naming Fearless. Only Fearless sets up what
+your desktop knows of Fearless, so these lines come from a choice made
+by hand, for example "Always use for this file type" in a file manager.
+Fearless stopped before touching anything: your system is exactly as it
+was.
+
+Removing these lines from these files clears the choice:
+%s""".formatted(Join.of(lines, "", "\n", "")));
+  }
   public static UserError associationNotWritable(String reported){
     return new UserError("""
 Fearless cannot become the program that opens Fearless projects and the
