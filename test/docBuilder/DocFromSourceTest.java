@@ -42,7 +42,7 @@ final class DocFromSourceTest{
         var builder= new HtmlDocBuilder(oracle, other, core, Optional.empty(), "p", html, true);
         core.forEach(builder::visitAll);
         builder.complete(new FrontendLogicMain().names("p", Map.of(), oracle.allFiles(), other), false, Runnable::run);
-        var renderer= new HtmlDocRenderer(DocNames.uses("p", core), new DocResolver("p", builder.types, other, TName::s), Map.of(), Optional.empty());
+        var renderer= new HtmlDocRenderer(Map.of(), new DocResolver("p", builder.types, other, TName::s), Map.of(), Optional.empty());
         if (!renderer.testableTypes().isEmpty()){ tests.addAll(renderer.renderTests(TName::s)); }
         return List.of();
       });
@@ -440,6 +440,6 @@ use q.Map as Map;
 ///Holds a `Map`.
 User:{ .mine: Map; .theirs: base.Map; }
 """);
-    utils.Err.strCmp("[###]\t.theirs:base.Map\n[###]", docs.text());
+    utils.Err.strCmp("[###]\t.theirs:base.Map", docs.text());
   }
 }

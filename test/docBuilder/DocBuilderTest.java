@@ -15,6 +15,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -23,6 +24,7 @@ import org.opentest4j.AssertionFailedError;
 
 import core.B;
 import core.E.Literal;
+import core.ExportedToStr;
 import core.M;
 import core.MName;
 import core.OtherPackages;
@@ -187,13 +189,13 @@ Foo: Bar {
   }
   @Test void aLocalTypeThatSharesABaseNameShadowsIt(){
     var core= List.of(literal("mypkg.List", RC.imm));
-    var uses= DocNames.uses("mypkg", core);
+    var uses= DocNames.uses(core.stream().map(Literal::name), new ExportedToStr("mypkg", Map.of())::typeName);
     assertFalse(uses.containsKey("base.List"), "a package-local List must shadow base.List, not alias it");
     assertTrue(uses.containsKey("base.Str"), "unshadowed base names must still be offered for shortening");
   }
   @Test void aSameNamedTypeInADifferentPackageDoesNotShadowABaseName(){
     var core= List.of(literal("otherpkg.List", RC.imm));
-    var uses= DocNames.uses("mypkg", core);
+    var uses= DocNames.uses(core.stream().map(Literal::name), new ExportedToStr("mypkg", Map.of())::typeName);
     assertTrue(uses.containsKey("base.List"), "a same-named type declared in a DIFFERENT package must not shadow base.List");
   }
   @Test void hEscapesEveryHtmlSpecialCharacterUsedInThisRenderer(){
@@ -542,7 +544,7 @@ Foo: Bar {
     var builder= new HtmlDocBuilder(oracle, other, List.of(local, holder), Optional.empty(), "pkg", Path.of("pkg.html"), true);
     builder.visitLiteral(local, Optional.empty());
     builder.visitLiteral(holder, Optional.empty());
-    var html= new HtmlDocRenderer(DocNames.uses("pkg", List.of(local, holder)), new DocResolver("pkg", builder.types, other, TName::s), Map.of(), Optional.empty()).render();
+    var html= new HtmlDocRenderer(DocNames.uses(Stream.of(local.name(), holder.name()), new ExportedToStr("pkg", Map.of())::typeName), new DocResolver("pkg", builder.types, other, TName::s), Map.of(), Optional.empty()).render();
     utils.Err.strCmp("[###]<span class=\"sig\">[###]href=\"base.html#type-base_2e_List-0\"[###]", html);
   }
   @Test void aSignatureTypeOfAMappedPackageLinksToItsType(){
@@ -554,7 +556,7 @@ Foo: Bar {
     SourceOracle oracle= List::of;
     var builder= new HtmlDocBuilder(oracle, other, List.of(holder), Optional.empty(), "pkg", Path.of("pkg.html"), true);
     builder.visitLiteral(holder, Optional.empty());
-    var html= new HtmlDocRenderer(DocNames.uses("pkg", List.of(holder)), new DocResolver("pkg", builder.types, other, TName::s), Map.of(), Optional.empty()).render();
+    var html= new HtmlDocRenderer(DocNames.uses(Stream.of(holder.name()), new ExportedToStr("pkg", Map.of())::typeName), new DocResolver("pkg", builder.types, other, TName::s), Map.of(), Optional.empty()).render();
     utils.Err.strCmp("[###]<span class=\"sig\">.get:<a href=\"q.html#type-q_2e_Thing-0\">[###]", html);
   }
 

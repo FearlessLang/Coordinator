@@ -1,14 +1,14 @@
 package docBuilder;
 
-import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
-import core.E.Literal;
-import offensiveUtils.Require;
+import core.TName;
 
 public final class DocNames{
   static final List<String> baseNames= List.of(
@@ -62,15 +62,14 @@ public final class DocNames{
     "Void",
     "WidenTo"
   );
-  public static Map<String,String> uses(String pkgName, Collection<Literal> core){
-    assert Require.nonNull(pkgName, core);
-    var local= core.stream()
-      .filter(l -> l.name().pkgName().equals(pkgName))
-      .map(l -> l.name().simpleName())
+  public static Map<String,String> uses(Stream<TName> types, Function<TName,String> names){
+    var taken= types
+      .filter(n -> !n.s().equals("base."+names.apply(n)))
+      .map(names)
       .collect(Collectors.toSet());
     var res= new LinkedHashMap<String,String>();
     baseNames.stream()
-      .filter(n -> !local.contains(n))
+      .filter(n -> !taken.contains(n))
       .forEach(n -> res.put("base."+n, n));
     return Collections.unmodifiableMap(res);
   }

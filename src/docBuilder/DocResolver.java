@@ -113,13 +113,18 @@ record DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other, Fun
   private boolean onPage(TName n){ return localTypeDoc(n).map(TypeDoc::visible).orElse(true); }
   Optional<TypeDoc> localTypeDoc(TName n){ return Optional.ofNullable(byName.get(n)); }
   private Optional<DocLink> resolveBareSelector(String selector, OptionalInt arity){
-    var localCands= declared.getOrDefault(selector, List.of()).stream()
+    var local= declared.getOrDefault(selector, List.of()).stream()
       .filter(m -> named(m.main(), selector, arity))
-      .map(m -> Candidate.ofLocalMethod(m.owner.main().name(), m));
-    var foreignCands= foreign.stream()
+      .map(m -> Candidate.ofLocalMethod(m.owner.main().name(), m))
+      .toList();
+    var cands= !local.isEmpty() ? local : foreign.stream()
       .filter(TName::isPublic)
-      .flatMap(n -> foreignCandidates(n, other.__of(n).ms().stream().filter(m -> m.sig().origin().equals(n)).toList(), selector, arity));
-    return pack(selector+shape(arity, "(", ")"), Stream.concat(localCands, foreignCands).toList());
+      .flatMap(n -> foreignCandidates(n, other.__of(n).ms().stream().filter(m -> offers(n, m.sig().origin())).toList(), selector, arity))
+      .toList();
+    return pack(selector+shape(arity, "(", ")"), cands);
+  }
+  private static boolean offers(TName n, TName origin){
+    return origin.equals(n) || !origin.isPublic() && origin.pkgName().equals(n.pkgName());
   }
   private Stream<Candidate> foreignCandidates(TName owner, List<M> ms, String selector, OptionalInt arity){
     return ms.stream()

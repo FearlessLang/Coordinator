@@ -85,7 +85,7 @@ public final class HtmlDocBuilder{
     var problems= new ArrayList<String>();
     types.forEach(t -> linkType(resolver, t, spans, problems));
     if (!problems.isEmpty()){ throw Report.docReferences(problems); }
-    var renderer= new HtmlDocRenderer(DocNames.uses(pkgName, currentByName.values()), resolver, spans, baseDocLocation);
+    var renderer= new HtmlDocRenderer(DocNames.uses(Stream.concat(currentByName.keySet().stream(), other.dom().stream()), pkgNames), resolver, spans, baseDocLocation);
     var html= renderer.render();
     var txt= renderer.renderText();
     writes.accept(() -> { Fs.writeUtf8(htmlPath, html); Fs.writeUtf8(htmlPath.resolveSibling(pkgName+".txt"), txt); });
