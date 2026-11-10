@@ -109,9 +109,8 @@ public final class Main{
       Violation::associationNotWritable,
       Violation::associationLeftHalfDone);
   }
-  private static UserError chosen(Map<String,List<String>> locked){
-    var error= Fs.isWindows() ? Violation.associationUserLocked(locked, e -> "") : Violation.associationBrokenDesk(locked);
-    return error.withRecovery("Remove these choices", () -> FileAssociations.forgetChoices(locked, Violation::associationNotWritable));
+  private static UserError chosen(Map<String,List<String>> choices){
+    return Violation.associationChosenByHand(choices, e -> "").withRecovery("Remove these choices", () -> FileAssociations.forgetChoices(choices, Violation::associationNotWritable));
   }
   private static void spawnMac(Path appDir, Path file){
     var bundle= appDir.getParent().getParent();
