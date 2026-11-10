@@ -176,6 +176,7 @@ public interface Coordinator{
     locks.forEach((k,v) -> jvmArgs.add("-DfearlessDataLock."+k+"="+PathClassLoader.argOf(v)));
     if (!attenuators.isEmpty()){ jvmArgs.add("-DfearlessAttenuators="+String.join(",", attenuators)); }
     jvmArgs.addAll(desk);
+    jvmArgs.add("-Dapple.awt.application.name="+main.substring(main.indexOf('.') + 1));
     return startProgram(jvmArgs, Push.of(project.resolve(outDir), sharedClasspath), "_"+main.substring(0, main.indexOf('.'))+".Main", out, main);
   }
   String outDir= ".fearless_out";
