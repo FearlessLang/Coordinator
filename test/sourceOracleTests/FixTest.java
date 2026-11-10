@@ -820,6 +820,17 @@ A:{}""");
     assertEquals("", fix(root));
     assertArrayEquals(bytes.toByteArray(), Fs.readAllBytes(root.resolve("x.zip")));
   }
+  @Test void leavesAsItIsAZipStoringANameThatIsNotUtf8(@TempDir Path tmp) throws IOException{
+    var root= root(tmp);
+    var bytes= new ByteArrayOutputStream();
+    try (var zip= new ZipOutputStream(bytes, ISO_8859_1)){
+      put(zip, ".DS_Store", 0, "x");
+      put(zip, "caf\u00E9.txt", 0, "b");
+    }
+    Fs.write(root.resolve("x.zip"), bytes.toByteArray());
+    assertEquals("", fix(root));
+    assertArrayEquals(bytes.toByteArray(), Fs.readAllBytes(root.resolve("x.zip")));
+  }
   @Test void theProjectFolderIsWellShapedAfterFix(@TempDir Path tmp){
     var root= root(tmp, """
 _pkg/a.fear

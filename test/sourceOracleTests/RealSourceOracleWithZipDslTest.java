@@ -396,6 +396,45 @@ A
 A
 
 """);}
+  @Test void errNameOfAnEmptyDirectoryInsideAProtectedFolderOfAZip(@TempDir Path tmp){ runErrIOE(tmp, """
+_pkg/e.zip/.git/a:b/
+iii
+jjj
+_pkg/e.zip/a.fear
+iii
+A
+""", """
+Invalid path in this project folder.
+
+Root: [###]
+Path: "_pkg/e/.git/a:b"
+
+What went wrong
+- A protected name segment contains a character that Windows forbids.
+  Bad char: `:`
+  Segment: "a:b"
+[###]
+""");}
+  @Test void errEmptyDirectoryCollidesWithASiblingInsideAProtectedFolderOfAZip(@TempDir Path tmp){ runErrIOE(tmp, """
+_pkg/e.zip/.git/Refs/
+iii
+jjj
+_pkg/e.zip/.git/refs/a.txt
+iii
+A
+""", """
+Invalid path in this project folder.
+
+Root: [###]
+Path: "_pkg/e/.git/refs"
+
+What went wrong
+- Two protected names in the same folder collide.
+  Name 1: "Refs"
+  Name 2: "refs"
+  Reason: Names differ only by case.
+[###]
+""");}
   @Test void okZipMayHoldOnlyEmptyDirectoriesOfAProtectedFolder(@TempDir Path tmp){ testOk(tmp, """
 _pkg/e.zip/.git/refs/
 iii
@@ -1787,6 +1826,15 @@ A:{}
     var ref= OneOr.of("one file", new RealSourceOracleWithZip(root, new Since(System.currentTimeMillis()+60_000, "hello")).allFiles().stream());
     Fs.ofV(() -> Fs.delete(root.resolve("_pkg/a.fear")));
     utils.Err.strCmp("Some files inside the project \"hello\" were updated while the project was compiling.", assertThrows(UserError.class, ref::loadString).getMessage());
+  }
+  @Test void theNameOfAnEmptyFolderInsideAHiddenFolderIsChecked(@TempDir Path tmp){
+    var root= tmp.resolve("root").toAbsolutePath().normalize();
+    UserError.root = root;
+    Fs.writeUtf8(root.resolve("_pkg").resolve("_rank_app.fear"), "");
+    Fs.ensureDir(root.resolve(".x").resolve("a".repeat(240)));
+    assertEquals(1, new RealSourceOracleWithZip(root).allFiles().size());
+    Fs.ensureDir(root.resolve(".x").resolve("b".repeat(250)));
+    utils.Err.strCmp("[###]The path is longer than 250 characters.[###]", assertThrows(UserError.class, () -> new RealSourceOracleWithZip(root)).getMessage());
   }
   @Test void aHiddenPathMayHave250Characters(@TempDir Path tmp){
     var root= tmp.resolve("root").toAbsolutePath().normalize();
