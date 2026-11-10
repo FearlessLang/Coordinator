@@ -1015,7 +1015,7 @@ zeroMemo
   }
   void compileOk(String name){ var project= freshIntegrationRoot(name); compile(coordinator(project), project); }
   @Test void theInteractiveProjectsStillCompile(){
-    for (var name : List.of("testGui1", "testGui2", "testGuiImg", "testGuiLive", "testGuiInput", "testGuiText", "testGuiTiles", "testGuiTextLines", "testGuiBusyPaste", "testGuiTabOrder", "testBasketball", "testTicTacToe")){ compileOk(name); }
+    for (var name : List.of("testGui1", "testGui2", "testGuiImg", "testGuiLive", "testGuiInput", "testGuiText", "testGuiTiles", "testGuiTextLines", "testGuiBusyPaste", "testGuiTabOrder", "testGuiStillFullScreen", "testBasketball", "testTicTacToe")){ compileOk(name); }
   }
   // Two assets that generate the same auto-loaded type name (here "foo.txt" and "foo.png",
   // both auto-loading as "Foo") must be rejected end-to-end, before the frontend ever sees
