@@ -660,7 +660,7 @@ hi
     var root= docExamplesInFiles(tmp, "///A stray note.", "Box:{}");
     var ex= assertThrows(UserError.class, () -> compile(coordinator(root), root));
     utils.Err.strCmp("""
-Broken reference in a doc comment.
+Misplaced doc comment.
 
 In file: fear:/_p/calc.fear
 

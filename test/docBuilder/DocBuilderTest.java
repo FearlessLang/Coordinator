@@ -825,7 +825,7 @@ Holder
     builder.visitLiteral(owner);
     var ex= assertThrows(UserError.class, () -> builder.complete(TName::s, true, Runnable::run));
     utils.Err.strCmp("""
-Broken reference in a doc comment.
+Misplaced doc comment.
 
 In file: fear:/_pkg/_rank_pkg.fear
 
@@ -834,7 +834,9 @@ In file: fear:/_pkg/_rank_pkg.fear
 
 While inspecting the documentation of package pkg
 This documentation is attached to nothing.
-[###]""", ex.getMessage());
+A /// or //> block documents the declaration right below it, and nothing else
+may come between them. A line starting with // ends the block, so check whether
+one of these was meant to start with /// instead.""", ex.getMessage());
   }
   @Test void aTrailingDocSharedByTwoDeclarationsOnOneLineIsAnAmbiguousReferenceError(@TempDir Path tmp){
     var ownerName= new TName("pkg.Holder", 0, Pos.unknown);
