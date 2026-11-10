@@ -114,4 +114,8 @@ final class DocRefScannerTest{
               new DocRef.TypeName(Optional.empty(), "Bar", OptionalInt.empty())),
       spans.stream().map(sp -> DocRefScanner.wholeRef(text, sp).get()).toList());
   }
+  @Test void anArityMarkerMayHaveASpaceAfterEachComma(){
+    var owner= new DocRef.TypeName(Optional.empty(), "Foo", OptionalInt.of(2));
+    assertEquals(Optional.of(new DocRef.MethodName(Optional.of(owner), ".bar", OptionalInt.of(2))), only("`Foo[_, _].bar(_, _)`"));
+  }
 }

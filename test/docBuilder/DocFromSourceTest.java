@@ -2,6 +2,7 @@ package docBuilder;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.net.URI;
 import java.nio.file.Path;
@@ -24,6 +25,10 @@ import core.OtherPackages;
 import core.TName;
 import main.FrontendLogicMain;
 import main.FrontendLogicMain.TestSource;
+import realSourceOracle.RealSourceOracleWithZip;
+import realSourceOracle.Since;
+import realSourceOracle.SourceOracleWithAutoload;
+import resources.ResolveResource;
 import tools.Fs;
 import tools.SourceOracle;
 import userMessages.UserError;
@@ -394,5 +399,39 @@ B:{
   .j: A -> A; } /// the j
 """);
     utils.Err.strCmp("[###]B\n\t.j:A\n    the j\n\t.k:A[###]", docs.text());
+  }
+  @Test void aBareSelectorNeverOffersAPrivateTypeOfAnotherPackage(@TempDir Path tmp){
+    var q= compiled("q", """
+Thing:{ .orValue(a: Thing): Thing -> a; }
+_Hidden:{ .orValue(a: _Hidden): _Hidden -> a; }
+""", OtherPackages.empty());
+    var docs= docs(tmp, OtherPackages.start(Map.of(), q, 0L), """
+///Same as `.orValue`.
+User:{ .m: User -> this; }
+""");
+    utils.Err.strCmp("[###]<p>Same as <code><a href=\"q.html#method-q_2e_Thing-0-imm-_2e_orValue-1\">.orValue</a></code>.</p>[###]", docs.html());
+  }
+  @Test void aLongSignatureMayWrapAfterEachComma(@TempDir Path tmp){
+    var docs= docs(tmp, a+"""
+B:{ .f[X:imm,Y:imm](a1: A, a2: A): A -> a1; }
+""");
+    utils.Err.strCmp("[###]<span class=\"sig\">.f[X:imm,<wbr>Y:imm](a1:<a href=\"#type-p_2e_A-0\">A</a>,<wbr>a2:<a href=\"#type-p_2e_A-0\">A</a>):<a href=\"#type-p_2e_A-0\">A</a></span>[###]", docs.html());
+  }
+  @Test void documentingBaseTakesLessTimeThanCompilingIt(@TempDir Path tmp){
+    var base= new RealSourceOracleWithZip(ResolveResource.stLibPath, Since.anyTime);
+    var files= SourceOracleWithAutoload.ofBase(base).sources(base.allFiles());
+    var times= new long[3];
+    times[0]= System.nanoTime();
+    new FrontendLogicMain().of("base", Map.of(), files, OtherPackages.empty(), core -> {
+      times[1]= System.nanoTime();
+      var builder= new HtmlDocBuilder(() -> files, OtherPackages.empty(), core, Optional.empty(), "base", tmp.resolve("base.html"), true);
+      core.forEach(builder::visitAll);
+      builder.complete(new FrontendLogicMain().names("base", Map.of(), files, OtherPackages.empty()), true, Runnable::run);
+      times[2]= System.nanoTime();
+      return List.of();
+    });
+    var compiling= (times[1]-times[0])/1_000_000;
+    var documenting= (times[2]-times[1])/1_000_000;
+    assertTrue(documenting < compiling, "documenting base took "+documenting+" ms, compiling it took "+compiling+" ms");
   }
 }
