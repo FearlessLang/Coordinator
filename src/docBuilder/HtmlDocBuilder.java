@@ -63,8 +63,7 @@ public final class HtmlDocBuilder{
     assert Require.nonNull(l, outer);
     var t= typeBySrc.get(l.src());
     if (t == null){
-      t = new TypeDoc(l, docsAt(l.pos(), true));
-      t.outer= outer;
+      t = new TypeDoc(l, outer, docsAt(l.pos(), true));
       typeBySrc.put(l.src(), t);
       types.add(t);
     }
@@ -83,7 +82,7 @@ public final class HtmlDocBuilder{
     var misplaced= Stream.concat(orphans, sources.values().stream().flatMap(s -> s.ambiguousInline().stream()).map(this::ambiguousInline)).toList();
     if (!misplaced.isEmpty()){ throw Report.docMisplaced(misplaced); }
     var problems= new ArrayList<String>();
-    types.forEach(t -> linkType(resolver, t, spans, problems));
+    types.stream().flatMap(t -> Stream.<DeclarationDoc>concat(Stream.of(t), t.methods.stream())).forEach(d -> linkDeclaration(resolver, d, spans, problems));
     if (!problems.isEmpty()){ throw Report.docReferences(problems); }
     var renderer= new HtmlDocRenderer(DocNames.uses(Stream.concat(currentByName.keySet().stream(), other.dom().stream()), pkgNames), resolver, spans, baseDocLocation);
     var html= renderer.render();
@@ -107,17 +106,12 @@ public final class HtmlDocBuilder{
   String message(Span span, String msg){
     return Message.of(oracle::loadString, List.of(new Frame("the documentation of package "+pkgName, span)), msg);
   }
-  void linkType(DocResolver resolver, TypeDoc t, HashMap<DocOcc,Map<Integer,DocLink>> spans, ArrayList<String> problems){
-    linkGroup(resolver, new Scope(t.main(), Optional.empty(), t.outer), t.docs, spans, problems);
-    t.methods.forEach(m -> linkGroup(resolver, new Scope(t.main(), Optional.of(m.main()), t.outer), m.docs, spans, problems));
-  }
-  void linkGroup(DocResolver resolver, Scope scope, List<DocOcc> docs, HashMap<DocOcc,Map<Integer,DocLink>> spans,
-      ArrayList<String> problems){
-    for (var occ : docs){
+  void linkDeclaration(DocResolver resolver, DeclarationDoc d, HashMap<DocOcc,Map<Integer,DocLink>> spans, ArrayList<String> problems){
+    for (var occ : d.docs){
       //a //> line is real Fearless code, not prose: any backtick in it is a genuine
       //raw string literal, never doc-comment markup, so it is never reference-checked.
       if (occ.kind()!=DocKind.Prose){ continue; }
-      link(resolver, occ, scope, spans, problems);
+      link(resolver, occ, d.scope(), spans, problems);
     }
   }
   void link(DocResolver resolver, DocOcc occ, Scope scope,

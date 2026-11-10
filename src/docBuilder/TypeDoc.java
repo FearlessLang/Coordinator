@@ -20,17 +20,20 @@ sealed abstract class DeclarationDoc permits TypeDoc, MethodDoc{
   final List<DocOcc> docs;
   DeclarationDoc(List<DocOcc> docs){ this.docs= docs; }
   boolean hasDocs(){ return !docs.isEmpty(); }
+  abstract Scope scope();
 }
 final class TypeDoc extends DeclarationDoc{
   final ArrayList<Literal> variants= new ArrayList<>();
-  Optional<Scope> outer= Optional.empty();
+  final Optional<Scope> outer;
   final LinkedHashMap<Object,MethodDoc> byKey= new LinkedHashMap<>();
   final SequencedCollection<MethodDoc> methods= byKey.sequencedValues();
-  TypeDoc(Literal l, List<DocOcc> docs){
+  TypeDoc(Literal l, Optional<Scope> outer, List<DocOcc> docs){
     super(docs);
+    this.outer= outer;
     variants.add(l);
   }
   Literal main(){ return variants.getFirst(); }
+  Scope scope(){ return new Scope(main(), Optional.empty(), outer); }
   boolean visible(){ return !main().infName() || hasDocs() || methods.stream().anyMatch(MethodDoc::hasDocs); }
   void addVariant(Literal l){
     assert variants.stream().noneMatch(v -> v.name().equals(l.name())) :
@@ -61,6 +64,7 @@ final class MethodDoc extends DeclarationDoc{
     this.declared= declared;
   }
   M main(){ return variants.getFirst(); }
+  Scope scope(){ return new Scope(owner.main(), Optional.of(main()), owner.outer); }
   boolean visible(){ return declared || !owner.main().infName() || hasDocs(); }
   void add(M m){ variants.add(m); }
   void addInheritedFrom(List<MethodRef> refs){

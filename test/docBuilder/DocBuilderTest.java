@@ -336,7 +336,7 @@ Foo: Bar {
   @Test void aSignatureShowsTheNamesOfItsParametersThatTheDocumentationTalksAbout(){
     var ownerName= new TName("pkg.Holder", 0, Pos.unknown);
     var take= methodTaking(".take", ownerName, "elem", new TName("pkg.Thing", 0, Pos.unknown));
-    var typeDoc= new TypeDoc(namedType("pkg.Holder", List.of(), List.of()), List.of());
+    var typeDoc= new TypeDoc(namedType("pkg.Holder", List.of(), List.of()), Optional.empty(), List.of());
     typeDoc.declared(Pos.of(file, 9, 1), take, List.of(
       new DocOcc(file, 8, 1, 4, "Stores `elem` in this holder.", true, DocKind.Prose)
     ), List.of());
@@ -617,7 +617,7 @@ Holder
     var ownerName= new TName("pkg.Holder", 0, Pos.unknown);
     var bar= namedMethod(".bar", ownerName);
     var owner= namedType("pkg.Holder", List.of(), List.of());
-    var typeDoc= new TypeDoc(owner, List.of());
+    var typeDoc= new TypeDoc(owner, Optional.empty(), List.of());
     typeDoc.declared(Pos.of(file, 9, 1), bar, List.of(
       new DocOcc(file, 9, 1, 4, "does the bar thing", true, DocKind.Prose),
       new DocOcc(file, 9, 1, 4, ".check{bar.assertOk}", true, DocKind.Example)
@@ -638,7 +638,7 @@ Holder
     var ownerName= new TName("pkg.Holder", 0, Pos.unknown);
     var bar= namedMethod(".bar", ownerName);
     var owner= namedType("pkg.Holder", List.of(), List.of());
-    var typeDoc= new TypeDoc(owner, List.of(
+    var typeDoc= new TypeDoc(owner, Optional.empty(), List.of(
       new DocOcc(file, 8, 1, 2, ".bar is drawn at this very indent", true, DocKind.Prose)
     ));
     typeDoc.declared(Pos.of(file, 9, 1), bar, List.of(), List.of());
@@ -656,7 +656,7 @@ Holder
     var ownerName= new TName("pkg.Holder", 0, Pos.unknown);
     var bar= namedMethod(".bar", ownerName);
     var owner= namedType("pkg.Holder", List.of(), List.of());
-    var typeDoc= new TypeDoc(owner, List.of());
+    var typeDoc= new TypeDoc(owner, Optional.empty(), List.of());
     typeDoc.declared(Pos.of(file, 9, 1), bar, List.of(
       new DocOcc(file, 9, 1, 4, ".check{bar.assertOk}", true, DocKind.Example)
     ), List.of());
@@ -679,7 +679,7 @@ Holder
     var bar= namedMethod(".bar", visibleName);
     var baz= namedMethod(".baz", visibleName);
     var visible= namedType("pkg.Visible", List.of(), List.of());
-    var visibleDoc= new TypeDoc(visible, List.of());
+    var visibleDoc= new TypeDoc(visible, Optional.empty(), List.of());
     visibleDoc.declared(Pos.of(file, 9, 1), bar, List.of(
       new DocOcc(file, 9, 1, 4, ".check{bar.assertOk}", true, DocKind.Example)
     ), List.of());
@@ -689,7 +689,7 @@ Holder
     var hiddenName= new TName("pkg._Hidden", 0, Pos.unknown);
     var qux= namedMethod(".qux", hiddenName);
     var hidden= namedType("pkg._Hidden", List.of(), List.of());
-    var hiddenDoc= new TypeDoc(hidden, List.of());
+    var hiddenDoc= new TypeDoc(hidden, Optional.empty(), List.of());
     hiddenDoc.declared(Pos.of(file, 20, 1), qux, List.of(
       new DocOcc(file, 20, 1, 4, ".check{qux.assertOk}", true, DocKind.Example)
     ), List.of());
@@ -718,7 +718,7 @@ Holder
     var ownerName= new TName("pkg.Holder", 0, Pos.unknown);
     var bar= namedMethod(".bar", ownerName);
     var owner= namedType("pkg.Holder", List.of(), List.of());
-    var typeDoc= new TypeDoc(owner, List.of());
+    var typeDoc= new TypeDoc(owner, Optional.empty(), List.of());
     typeDoc.declared(Pos.of(file, 9, 1), bar, List.of(
       new DocOcc(file, 7, 1, 4, ".let x={1}", true, DocKind.TestOnly),
       new DocOcc(file, 8, 1, 4, ".check{x.assertEq 1}", true, DocKind.Example)
@@ -753,7 +753,7 @@ Holder
     var late= namedMethod(".late", ownerName);
     var early= namedMethod(".early", ownerName);
     var owner= namedType("pkg.Holder", List.of(), List.of());
-    var typeDoc= new TypeDoc(owner, List.of(
+    var typeDoc= new TypeDoc(owner, Optional.empty(), List.of(
       new DocOcc(file, 2, 1, 4, "Holder.ok", true, DocKind.Example)
     ));
     typeDoc.declared(Pos.of(file, 21, 3), late, List.of(
@@ -785,7 +785,7 @@ Holder
   }
   private static TypeDoc exampleOf(TName name, List<B> bs){
     var bar= namedMethod(".bar", name);
-    var typeDoc= new TypeDoc(new Literal(RC.imm, name, bs, List.of(), "this", List.of(), freshSrc(), false), List.of());
+    var typeDoc= new TypeDoc(new Literal(RC.imm, name, bs, List.of(), "this", List.of(), freshSrc(), false), Optional.empty(), List.of());
     typeDoc.declared(Pos.of(file, 9, 1), bar, List.of(
       new DocOcc(file, 9, 1, 4, ".check{bar.assertOk}", true, DocKind.Example)
     ), List.of());
@@ -965,7 +965,7 @@ documents, or turn it into a plain // comment.""", ex.getMessage());
   }
   @Test void renderTextShowsEveryTypedVariantOfAMethod(){
     var ownerName= new TName("pkg.Holder", 0, Pos.unknown);
-    var typeDoc= new TypeDoc(namedType("pkg.Holder", List.of(), List.of()), List.of());
+    var typeDoc= new TypeDoc(namedType("pkg.Holder", List.of(), List.of()), Optional.empty(), List.of());
     typeDoc.declared(Pos.of(file, 9, 1), fooMethod(RC.imm, ownerName), List.of(), List.of());
     typeDoc.declared(Pos.of(file, 9, 1), fooMethod(RC.mut, ownerName), List.of(), List.of());
     var text= new HtmlDocRenderer(Map.of(), new DocResolver("pkg", List.of(typeDoc), OtherPackages.empty(), TName::s), Map.of(), Optional.empty()).renderText();
@@ -1052,10 +1052,10 @@ documents, or turn it into a plain // comment.""", ex.getMessage());
   @Test void aDisambiguationOptionOnAnAnonymousLiteralShowsTheNameTheListShows(){
     var anonName= new TName("pkg._AFoo", 0, Pos.unknown);
     var anonBar= namedMethod(".bar", anonName);
-    var anon= new TypeDoc(anonymousAt(Pos.of(file, 2, 1), List.of(anonBar)), List.of());
+    var anon= new TypeDoc(anonymousAt(Pos.of(file, 2, 1), List.of(anonBar)), Optional.empty(), List.of());
     anon.declared(Pos.of(file, 3, 1), anonBar, List.of(new DocOcc(file, 3, 1, 4, "the anonymous bar", true, DocKind.Prose)), List.of());
     var namedName= new TName("pkg.Named", 0, Pos.unknown);
-    var named= new TypeDoc(namedType("pkg.Named", List.of(), List.of()), List.of());
+    var named= new TypeDoc(namedType("pkg.Named", List.of(), List.of()), Optional.empty(), List.of());
     named.declared(Pos.of(file, 9, 1), namedMethod(".bar", namedName), List.of(), List.of());
     var renderer= new HtmlDocRenderer(Map.of(), new DocResolver("pkg", List.of(anon, named), OtherPackages.empty(), TName::s), Map.of(), Optional.empty());
     var page= (DocLink.Ambiguous)renderer.resolver.resolve(new DocRef.MethodName(Optional.empty(), ".bar", OptionalInt.empty()), Scope.of(named.main())).get();
@@ -1064,7 +1064,7 @@ documents, or turn it into a plain // comment.""", ex.getMessage());
     assertEquals(List.of("Named", "Anon@a:2"), renderer.visibleTypes().stream().map(renderer::shortTitle).toList());
   }
   @Test void aFencedBlockIsShownAsOneBlockOfCode(){
-    var holder= new TypeDoc(namedType("pkg.Holder", List.of(), List.of()), List.of(
+    var holder= new TypeDoc(namedType("pkg.Holder", List.of(), List.of()), Optional.empty(), List.of(
       new DocOcc(file, 1, 1, 4, "Example:", true, DocKind.Prose),
       new DocOcc(file, 2, 1, 4, "```", true, DocKind.Fence),
       new DocOcc(file, 3, 1, 4, "Foo: Bar {", true, DocKind.Fenced),
@@ -1079,7 +1079,7 @@ documents, or turn it into a plain // comment.""", ex.getMessage());
   @Test void aRunnableExampleOnAMethodOfAnAnonymousLiteralIsRun(){
     var anonName= new TName("pkg._AFoo", 0, Pos.unknown);
     var bar= namedMethod(".bar", anonName);
-    var anon= new TypeDoc(anonymousAt(Pos.of(file, 2, 1), List.of(bar)), List.of());
+    var anon= new TypeDoc(anonymousAt(Pos.of(file, 2, 1), List.of(bar)), Optional.empty(), List.of());
     anon.declared(Pos.of(file, 3, 1), bar, List.of(new DocOcc(file, 3, 1, 4, ".check{bar.assertOk}", true, DocKind.Example)), List.of());
     var test= new HtmlDocRenderer(Map.of(), new DocResolver("pkg", List.of(anon), OtherPackages.empty(), TName::s), Map.of(), Optional.empty()).renderTests(TName::s);
     assertEquals("""
@@ -1096,14 +1096,14 @@ documents, or turn it into a plain // comment.""", ex.getMessage());
 """, show(test));
   }
   @Test void typesAreListedByNameThenByArity(){
-    var action= new TypeDoc(new Literal(RC.imm, new TName("pkg.Action", 2, Pos.unknown), twoBounds(), List.of(), "this", List.of(), freshSrc(), false), List.of());
-    var actionMatch= new TypeDoc(namedType("pkg.ActionMatch", List.of(), List.of()), List.of());
+    var action= new TypeDoc(new Literal(RC.imm, new TName("pkg.Action", 2, Pos.unknown), twoBounds(), List.of(), "this", List.of(), freshSrc(), false), Optional.empty(), List.of());
+    var actionMatch= new TypeDoc(namedType("pkg.ActionMatch", List.of(), List.of()), Optional.empty(), List.of());
     var renderer= new HtmlDocRenderer(Map.of(), new DocResolver("pkg", List.of(actionMatch, action), OtherPackages.empty(), TName::s), Map.of(), Optional.empty());
     assertEquals(List.of("pkg.Action", "pkg.ActionMatch"), renderer.visibleTypes().stream().map(t -> t.main().name().s()).toList());
   }
   @Test void typesOfOneNameAreListedByArityAsANumber(){
-    var ten= new TypeDoc(new Literal(RC.imm, new TName("pkg.F", 10, Pos.unknown), IntStream.range(0, 10).mapToObj(i -> new B("X"+i, EnumSet.of(RC.imm))).toList(), List.of(), "this", List.of(), freshSrc(), false), List.of());
-    var two= new TypeDoc(new Literal(RC.imm, new TName("pkg.F", 2, Pos.unknown), twoBounds(), List.of(), "this", List.of(), freshSrc(), false), List.of());
+    var ten= new TypeDoc(new Literal(RC.imm, new TName("pkg.F", 10, Pos.unknown), IntStream.range(0, 10).mapToObj(i -> new B("X"+i, EnumSet.of(RC.imm))).toList(), List.of(), "this", List.of(), freshSrc(), false), Optional.empty(), List.of());
+    var two= new TypeDoc(new Literal(RC.imm, new TName("pkg.F", 2, Pos.unknown), twoBounds(), List.of(), "this", List.of(), freshSrc(), false), Optional.empty(), List.of());
     var renderer= new HtmlDocRenderer(Map.of(), new DocResolver("pkg", List.of(ten, two), OtherPackages.empty(), TName::s), Map.of(), Optional.empty());
     assertEquals(List.of(2, 10), renderer.visibleTypes().stream().map(t -> t.main().name().arity()).toList());
   }
