@@ -32,7 +32,7 @@ record DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other, Fun
   }
   private Optional<DocLink> resolveLocal(DocRef.LocalName ref, Scope scope){
     if (!inScope(ref.name(), scope)){ return Optional.empty(); }
-    return Optional.of(localType(ref.name(), scope)
+    return Optional.of(localType(ref.name(), scope).filter(this::onPage)
       .<DocLink>map(n -> new DocLink.Resolved(Candidate.ofType(n)))
       .orElseGet(DocLink.NoLink::new));
   }
@@ -87,7 +87,10 @@ record DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other, Fun
   }
   private Optional<DocLink> onLocal(DocRef.LocalName l, DocRef.MethodName ref, Scope scope){
     if (!inScope(l.name(), scope)){ return Optional.empty(); }
-    return localType(l.name(), scope).flatMap(o -> onOwners(o.simpleName(), List.of(o), ref.selector(), ref.arity()));
+    return localType(l.name(), scope).flatMap(o -> onOwners(title(o), List.of(o), ref.selector(), ref.arity()));
+  }
+  private String title(TName n){
+    return localTypeDoc(n).map(TypeDoc::main).filter(Literal::infName).map(HtmlDocRenderer::anonTitle).orElse(n.simpleName());
   }
   private Optional<DocLink> onOwners(String shown, List<TName> owners, String selector, OptionalInt arity){
     var cands= owners.stream().flatMap(o -> methodCandidatesOn(o, selector, arity).stream()).toList();
@@ -104,6 +107,7 @@ record DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other, Fun
     }
     return foreignCandidates(owner, other.__of(owner).ms(), selector, arity).toList();
   }
+  private boolean onPage(TName n){ return localTypeDoc(n).map(TypeDoc::visible).orElse(true); }
   private Optional<TypeDoc> localTypeDoc(TName n){
     return OneOr.opt("type "+n, types.stream().filter(t -> t.main().name().equals(n)));
   }
@@ -132,6 +136,7 @@ record DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other, Fun
   }
   private Optional<DocLink> pack(String title, List<Candidate> cands){
     if (cands.isEmpty()){ return Optional.empty(); }
+    if (!cands.stream().map(Candidate::owner).allMatch(this::onPage)){ return Optional.of(new DocLink.NoLink()); }
     if (cands.size() == 1){ return Optional.of(new DocLink.Resolved(cands.getFirst())); }
     return Optional.of(new DocLink.Ambiguous(title, cands));
   }

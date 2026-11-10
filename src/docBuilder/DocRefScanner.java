@@ -64,8 +64,9 @@ final class DocRefScanner{
       i += first.length();
       if (TName.isTypeName(first)){ return Optional.of(new DocRef.TypeName(Optional.empty(), first, arity(typeArity))); }
       var second= s.startsWith(".", i) ? word(i+1) : "";
+      var named= TName.isTypeName(second) ? TName.isPkgName(first) : MName.isMethodName("."+first);
+      if (!named){ ok = false; return Optional.empty(); }
       if (!TName.isTypeName(second)){ return Optional.of(new DocRef.LocalName(first)); }
-      if (!TName.isPkgName(first)){ ok = false; return Optional.empty(); }
       i += 1+second.length();
       return Optional.of(new DocRef.TypeName(Optional.of(first), second, arity(typeArity)));
     }

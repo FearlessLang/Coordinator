@@ -870,9 +870,9 @@ In file: fear:/_pkg/_rank_pkg.fear
 
 While inspecting the documentation of package pkg
 This documentation is attached to nothing.
-A /// or //> block documents the declaration right below it, and nothing else
-may come between them. A line starting with // ends the block, so check whether
-one of these was meant to start with /// instead.""", ex.getMessage());
+A /// or //> block documents the declaration right below it, but no declaration
+starts right below this block. Move this block right above the declaration it
+documents, or turn it into a plain // comment.""", ex.getMessage());
   }
   @Test void aTrailingDocSharedByTwoDeclarationsOnOneLineIsAnAmbiguousReferenceError(@TempDir Path tmp){
     var ownerName= new TName("pkg.Holder", 0, Pos.unknown);

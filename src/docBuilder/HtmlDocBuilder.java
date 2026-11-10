@@ -142,8 +142,10 @@ public final class HtmlDocBuilder{
   String orphan(List<DocOcc> run){
     var first= run.getFirst();
     var last= run.getLast();
+    var below= sources.get(last.file()).lines.stream().skip(last.line()).filter(l -> !l.isBlank()).findFirst().orElse("");
+    var msg= first.inline() ? trailingNotAttached : below.strip().startsWith("//") ? notAttached : nothingDeclaredBelow;
     return message(new Span(first.file(), first.line(), first.column(),
-      last.line(), last.textColumn()+last.text().length()), first.inline() ? trailingNotAttached : notAttached);
+      last.line(), last.textColumn()+last.text().length()), msg);
   }
   String ambiguousInline(DocOcc occ){
     return message(new Span(occ.file(), occ.line(), occ.textColumn(), occ.line(), occ.textColumn()+occ.text().length()), ambiguousTrailingDoc);
@@ -153,6 +155,11 @@ public final class HtmlDocBuilder{
    +"A /// or //> block documents the declaration right below it, and nothing else\n"
    +"may come between them. A line starting with // ends the block, so check whether\n"
    +"one of these was meant to start with /// instead.";
+  static final String nothingDeclaredBelow=
+    "This documentation is attached to nothing.\n"
+   +"A /// or //> block documents the declaration right below it, but no declaration\n"
+   +"starts right below this block. Move this block right above the declaration it\n"
+   +"documents, or turn it into a plain // comment.";
   static final String trailingNotAttached=
     "This documentation is attached to nothing.\n"
    +"A /// or //> written after code documents the declaration that starts earlier\n"

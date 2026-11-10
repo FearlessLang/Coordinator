@@ -1,7 +1,6 @@
 package docBuilder;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.net.URI;
@@ -318,8 +317,20 @@ B:{
     A.m;
   }
 """));
-    utils.Err.strCmp("Misplaced doc comment.[###]This documentation is attached to nothing.[###]", ex.getMessage());
-    assertFalse(ex.getMessage().contains("A line starting with // ends the block"), ex.getMessage());
+    utils.Err.strCmp("""
+Misplaced doc comment.[###]
+This documentation is attached to nothing.
+A /// or //> block documents the declaration right below it, but no declaration
+starts right below this block. Move this block right above the declaration it
+documents, or turn it into a plain // comment.""", ex.getMessage());
+  }
+  @Test void aDocAboveAPlainCommentLineIsToldThatThePlainCommentEndsTheBlock(@TempDir Path tmp){
+    var ex= assertThrows(UserError.class, () -> docs(tmp, a+"""
+///Gives an A.
+// a plain comment
+B:{ .m: A -> A; }
+"""));
+    utils.Err.strCmp("Misplaced doc comment.[###]A line starting with // ends the block, so check whether[###]", ex.getMessage());
   }
   @Test void aDisambiguationPageOnAnAnonymousLiteralIsTitledByTheNameTheListShows(@TempDir Path tmp){
     var html= docs(tmp, """

@@ -14,6 +14,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import core.B;
+import core.E.Literal;
 import core.ExportedToStr;
 import core.M;
 import core.Sig;
@@ -342,19 +343,18 @@ code{
   List<TypeDoc> visibleTypes(){
     return types.stream()
       .filter(TypeDoc::visible)
-      .sorted(Comparator.comparing((TypeDoc t) -> t.main().infName() ? "1:"+typeTitle(t) : "0:"+toStr.typeName(t.main().name()))
-        .thenComparingInt(t -> t.main().name().arity()))
+      .sorted(Comparator.comparing((TypeDoc t) -> t.main().infName() ? "1:"+t.main().pos().fileName() : "0:"+toStr.typeName(t.main().name()))
+        .thenComparingInt(t -> t.main().infName() ? t.main().pos().line() : t.main().name().arity())
+        .thenComparingInt(t -> t.main().pos().column()))
       .toList();
   }
   List<MethodDoc> visibleMethods(TypeDoc t){
     return t.methods.stream()
       .filter(MethodDoc::visible)
-      .sorted(Comparator.comparing(this::methodSortKey))
+      .sorted(Comparator.comparing((MethodDoc m) -> m.main().sig().m().s())
+        .thenComparingInt(m -> m.main().sig().m().arity())
+        .thenComparing(m -> m.main().sig().rc()+"/"+toStr.sig(m.main().sig())))
       .toList();
-  }
-  String methodSortKey(MethodDoc m){
-    var s= m.main().sig();
-    return s.m().s()+"/"+s.m().arity()+"/"+s.rc()+"/"+toStr.sig(s);
   }
   Map<DocOcc,Object> inlineClaims(List<TypeDoc> shown){
     var res= new HashMap<DocOcc,Object>();
@@ -537,8 +537,10 @@ code{
     return toStr.typeName(l.name())+Join.of(l.bs().stream().map(B::compactToString), "[", ",", "]", "");
   }
   String shortTitle(TypeDoc t){
-    if (!t.main().infName()){ return typeTitle(t); }
-    var p= t.main().pos();
+    return t.main().infName() ? anonTitle(t.main()) : typeTitle(t);
+  }
+  static String anonTitle(Literal l){
+    var p= l.pos();
     return "Anon@"+Fs.fileNameWithoutExtension(p.fileName().toString())+":"+p.line();
   }
   String typeLink(T.C c){
