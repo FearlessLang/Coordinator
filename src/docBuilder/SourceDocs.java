@@ -34,7 +34,7 @@ final class SourceDocs{
     var res= new ArrayList<DocOcc>();
     if (first){ collectBefore(pos.line(), res); }
     inlineAfter(pos.line(), pos.column())
-      .filter(occ -> depthAt(occ.line(), occ.column()) >= depthAt(pos.line(), pos.column()))
+      .filter(occ -> Math.max(depthAt(occ.line(), occ.column()), depthAt(pos.line(), 0)) >= depthAt(pos.line(), pos.column()))
       .ifPresent(occ -> {
         var firstColumn= inlineClaimedFromColumn.putIfAbsent(occ, pos.column());
         var shown= dedent(List.of(occ)).getFirst();
@@ -46,9 +46,9 @@ final class SourceDocs{
   }
   int depthAt(int line, int column){
     var arr= depthByLine.get(line);
-    return (arr==null || column>arr.length) ? 0 : arr[column-1];
+    return (arr==null || column>=arr.length) ? 0 : arr[column];
   }
-  //every /// and //> that no declaration took, as runs of consecutive lines
+  //every /// and //> that no declaration took, as runs of lines with only empty lines between them
   List<List<DocOcc>> orphanRuns(){
     var lost= docsByLine.values().stream()
       .flatMap(List::stream)
@@ -58,7 +58,7 @@ final class SourceDocs{
     var res= new ArrayList<ArrayList<DocOcc>>();
     for (var d : lost){
       var last= res.isEmpty() ? null : res.getLast().getLast();
-      if (last!=null && d.line()-last.line()<=1 && d.inline()==last.inline()){ res.getLast().add(d); continue; }
+      if (last!=null && lines.subList(last.line(), d.line()-1).stream().allMatch(String::isBlank) && d.inline()==last.inline()){ res.getLast().add(d); continue; }
       res.add(new ArrayList<>(List.of(d)));
     }
     return List.copyOf(res);
@@ -114,7 +114,8 @@ final class SourceDocs{
     var depth= 0;
     for (int l= 1; l <= lines.size(); l += 1){
       var s= lines.get(l-1);
-      var arr= new int[s.length()];
+      var arr= new int[s.length()+1];
+      arr[0]= depth;
       for (int i= 0; i < s.length();){
         var start= i;
         if (!closer.isEmpty()){
@@ -130,7 +131,7 @@ final class SourceDocs{
         else if (s.startsWith("/*", i)){ closer = "*/"; i += 2; }
         else if (s.charAt(i)=='"' || s.charAt(i)=='`'){ closer = s.substring(i, i+1); i += 1; }
         else{ depth += s.charAt(i)=='{' ? 1 : s.charAt(i)=='}' ? -1 : 0; i += 1; }
-        Arrays.fill(arr, start, i, depth);
+        Arrays.fill(arr, start+1, i+1, depth);
       }
       depthByLine.put(l, arr);
     }

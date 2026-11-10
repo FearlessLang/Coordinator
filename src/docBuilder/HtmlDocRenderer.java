@@ -327,7 +327,7 @@ code{
   filter.addEventListener('input', function(){
     var q= filter.value.toLowerCase();
     items.forEach(function(li){
-      li.style.display= li.textContent.toLowerCase().indexOf(q) < 0 ? 'none' : '';
+      li.style.display= li.textContent.split('[')[0].toLowerCase().indexOf(q) < 0 ? 'none' : '';
     });
     document.getElementById('toclist').scrollTop= 0;
     showSel();
@@ -497,7 +497,10 @@ code{
   void renderPage(StringBuilder sb, DocLink.Ambiguous p, String anchor){
     sb.append("<section class=\"type disambig\" id=\"").append(anchor).append("\">\n")
       .append("<h2>Several match ").append(h(p.title())).append("</h2>\n<ul class=\"options\">\n");
-    p.options().forEach(c -> sb.append("<li>").append(renderCandidate(c)).append("</li>\n"));
+    p.options().stream()
+      .sorted(Comparator.comparing((Candidate c) -> c.owner().s()).thenComparingInt(c -> c.owner().arity())
+        .thenComparingInt(c -> c.sig().map(s -> s.m().arity()).orElse(0)))
+      .forEach(c -> sb.append("<li>").append(renderCandidate(c)).append("</li>\n"));
     sb.append("</ul>\n</section>\n");
   }
   String renderCandidate(Candidate c){
