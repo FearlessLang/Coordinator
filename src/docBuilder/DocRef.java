@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.OptionalInt;
 
+import core.Sig;
 import core.TName;
 
 /// What a backtick reference names, before resolution. A receiver is a type, or a name
@@ -17,15 +18,13 @@ sealed interface DocRef{
   record MethodName(Optional<Receiver> owner, String selector, OptionalInt arity) implements DocRef{}
 }
 /// One thing a reference could mean. localMethod is set only for a method of a type
-/// rendered on this page, and carries the MethodDoc so the link reaches its anchor;
-/// a method of another package can only link to its owner type's page.
-record Candidate(TName owner, Optional<String> selector, OptionalInt arity, Optional<MethodDoc> localMethod){
+/// rendered on this page, and carries the MethodDoc so the option can show its documentation.
+record Candidate(TName owner, Optional<Sig> sig, Optional<MethodDoc> localMethod){
   static Candidate ofType(TName owner){
-    return new Candidate(owner, Optional.empty(), OptionalInt.empty(), Optional.empty());
+    return new Candidate(owner, Optional.empty(), Optional.empty());
   }
   static Candidate ofLocalMethod(TName owner, MethodDoc method){
-    var m= method.main().sig().m();
-    return new Candidate(owner, Optional.of(m.s()), OptionalInt.of(m.arity()), Optional.of(method));
+    return new Candidate(owner, Optional.of(method.main().sig()), Optional.of(method));
   }
 }
 sealed interface DocLink{

@@ -18,9 +18,9 @@ import utils.DistinctBy;
 import utils.Join;
 import utils.OneOr;
 
-record Scope(Literal owner, Optional<M> method){
-  static Scope of(Literal owner){ return new Scope(owner, Optional.empty()); }
-  static Scope of(Literal owner, M method){ return new Scope(owner, Optional.of(method)); }
+record Scope(Literal owner, Optional<M> method, Optional<Scope> outer){
+  static Scope of(Literal owner){ return new Scope(owner, Optional.empty(), Optional.empty()); }
+  static Scope of(Literal owner, M method){ return new Scope(owner, Optional.of(method), Optional.empty()); }
 }
 record DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other, Function<TName,String> names){
   Optional<DocLink> resolve(DocRef ref, Scope scope){
@@ -41,13 +41,14 @@ record DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other, Fun
     return t.pkg().isEmpty() && t.arity().isEmpty() && bs.anyMatch(b -> b.x().equals(t.simpleName()));
   }
   private boolean inScope(String name, Scope scope){
-    if (name.equals(scope.owner().thisName())){ return true; }
-    return scope.method().map(m -> m.xs().contains(name)).orElse(false);
+    if (name.equals(scope.owner().thisName()) || scope.method().filter(m -> m.xs().contains(name)).isPresent()){ return true; }
+    return scope.outer().filter(o -> inScope(name, o)).isPresent();
   }
   private Optional<TName> localType(String name, Scope scope){
     if (name.equals(scope.owner().thisName())){ return Optional.of(scope.owner().name()); }
-    var m= scope.method().get();
-    return m.sig().ts().get(m.xs().indexOf(name)) instanceof T.RCC rcc ? Optional.of(rcc.c().name()) : Optional.empty();
+    var m= scope.method().filter(mi -> mi.xs().contains(name));
+    if (m.isEmpty()){ return localType(name, scope.outer().get()); }
+    return m.get().sig().ts().get(m.get().xs().indexOf(name)) instanceof T.RCC rcc ? Optional.of(rcc.c().name()) : Optional.empty();
   }
   Optional<DocLink> resolveType(DocRef.TypeName ref){
     var cands= typeCandidates(ref).stream().map(Candidate::ofType).toList();
@@ -99,7 +100,7 @@ record DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other, Fun
       return local.get().methods.stream()
         .filter(MethodDoc::visible)
         .filter(m -> named(m.main(), selector, arity))
-        .gather(DistinctBy.<MethodDoc,String>of(m -> HtmlDocRenderer.methodId(owner, m.main())))
+        .gather(DistinctBy.<MethodDoc,String>of(m -> HtmlDocRenderer.methodId(owner, m.main().sig())))
         .map(m -> Candidate.ofLocalMethod(owner, m))
         .toList();
     }
@@ -123,7 +124,7 @@ record DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other, Fun
     return ms.stream()
       .filter(m -> named(m, selector, arity))
       .gather(DistinctBy.<M,Integer>of(m -> m.sig().m().arity()))
-      .map(m -> new Candidate(owner, Optional.of(selector), OptionalInt.of(m.sig().m().arity()), Optional.empty()));
+      .map(m -> new Candidate(owner, Optional.of(m.sig()), Optional.empty()));
   }
   private static boolean named(M m, String selector, OptionalInt arity){
     return m.sig().m().s().equals(selector) && (arity.isEmpty() || m.sig().m().arity()==arity.getAsInt());

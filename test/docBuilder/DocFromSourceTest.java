@@ -148,7 +148,7 @@ B:{ .m: A -> A.m
   //---------- then once more
   .m; }
 """);
-    utils.Err.strCmp("[###]B\n\t.m:A\n[###]", docs.text());
+    utils.Err.strCmp("[###]\n\nB\n\t.m:A", docs.text());
     assertEquals(List.of(), docs.tests());
   }
   @Test void aFencedBlockWrittenWithNoSpaceAfterTheSlashesKeepsItsIndentation(@TempDir Path tmp){
@@ -211,5 +211,9 @@ B:{
 B:{ .m: A -> A; }
 """);
     utils.Err.strCmp("[###]<p>Sorting:</p>[###].sorted[###]<p>Reversing:</p>[###].reversed[###]", docs.html());
+  }
+  @Test void aTypeInTheListOfTypesMayWrapAfterEachComma(@TempDir Path tmp){
+    var docs= docs(tmp, "Pair[X:imm,Y:imm]:{}\n");
+    utils.Err.strCmp("[###]<li><a href=\"#type-p_2e_Pair-2\">Pair[X:imm,<wbr>Y:imm]</a></li>[###]", docs.html());
   }
 }

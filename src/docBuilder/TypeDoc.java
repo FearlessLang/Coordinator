@@ -7,6 +7,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Optional;
 import java.util.SequencedCollection;
+import java.util.regex.Pattern;
 
 import core.E.Literal;
 import core.M;
@@ -19,6 +20,7 @@ import utils.Pos;
 final class TypeDoc{
   final ArrayList<Literal> variants= new ArrayList<>();
   final List<DocOcc> docs;
+  Optional<Scope> outer= Optional.empty();
   final LinkedHashMap<Object,MethodDoc> byKey= new LinkedHashMap<>();
   final SequencedCollection<MethodDoc> methods= byKey.sequencedValues();
   TypeDoc(Literal l, List<DocOcc> docs){
@@ -79,4 +81,10 @@ record MethodRefKey(String provider, RC rc, MName m){
 record ImportedKey(TName origin, RC rc, MName m){}
 record DocOcc(URI file, int line, int column, int textColumn, String text, boolean pureLine, boolean example, boolean testOnly){
   boolean inline(){ return !pureLine; }
+  boolean fence(){ return fenceLine.matcher(text).matches(); }
+  private static final Pattern fenceLine= Pattern.compile(" *```[^`]*");
+  DocOcc drop(int n){
+    var k= Math.min(n, text.length());
+    return new DocOcc(file, line, column, textColumn+k, text.substring(k), pureLine, example, testOnly);
+  }
 }

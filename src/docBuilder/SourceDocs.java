@@ -37,10 +37,11 @@ final class SourceDocs{
       .filter(occ -> depthAt(occ.line(), occ.column()) >= depthAt(pos.line(), pos.column()))
       .ifPresent(occ -> {
         var firstColumn= inlineClaimedFromColumn.putIfAbsent(occ, pos.column());
-        if (firstColumn!=null && firstColumn!=pos.column()){ ambiguousInline.add(occ); }
-        res.add(occ);
+        var shown= dedent(List.of(occ)).getFirst();
+        if (firstColumn!=null && firstColumn!=pos.column()){ ambiguousInline.add(shown); }
+        attached.add(occ);
+        res.add(shown);
       });
-    attached.addAll(res);
     return res;
   }
   int depthAt(int line, int column){
@@ -57,7 +58,7 @@ final class SourceDocs{
     var res= new ArrayList<ArrayList<DocOcc>>();
     for (var d : lost){
       var last= res.isEmpty() ? null : res.getLast().getLast();
-      if (last!=null && d.line()-last.line()<=1){ res.getLast().add(d); continue; }
+      if (last!=null && d.line()-last.line()<=1 && d.inline()==last.inline()){ res.getLast().add(d); continue; }
       res.add(new ArrayList<>(List.of(d)));
     }
     return List.copyOf(res);
@@ -80,7 +81,16 @@ final class SourceDocs{
     //everything collected is attached, including an empty line trimmed off the end:
     //trimming is about what to show, not about what the block reached.
     attached.addAll(before);
-    res.addAll(trimBlanks(before));
+    res.addAll(dedent(trimBlanks(before)));
+  }
+  static List<DocOcc> dedent(List<DocOcc> ds){
+    return ds.stream().map(d -> d.drop(indent(ds, d))).toList();
+  }
+  static int indent(List<DocOcc> ds, DocOcc d){
+    return ds.stream()
+      .filter(o -> o.example()==d.example() && o.testOnly()==d.testOnly() && !o.text().isBlank())
+      .mapToInt(o -> o.text().length()-o.text().stripLeading().length())
+      .min().orElse(0);
   }
   static List<DocOcc> trimBlanks(List<DocOcc> ds){
     var from= 0;
@@ -113,7 +123,8 @@ final class SourceDocs{
         }
         else if (s.startsWith("//", i)){
           var k= s.length()>i+2 ? s.charAt(i+2) : ' ';
-          if (k=='/' || k=='>' || k=='-'){ add(l, i+1, s.substring(i+3), s.substring(0, i).isBlank(), k == '>', k == '-'); }
+          var repeated= s.length()>i+3 && s.charAt(i+3)==k;
+          if (!repeated && (k=='/' || k=='>' || k=='-')){ add(l, i+1, s.substring(i+3), s.substring(0, i).isBlank(), k == '>', k == '-'); }
           i = s.length();
         }
         else if (s.startsWith("/*", i)){ closer = "*/"; i += 2; }
@@ -125,10 +136,9 @@ final class SourceDocs{
     }
   }
   //textColumn is where the stored text really starts in the line, so an error can put
-  //its carets under the offending characters: past the "///" and the space clean drops.
+  //its carets under the offending characters: past the "///" and the indentation dedent drops.
   void add(int line, int column, String text, boolean pureLine, boolean example, boolean testOnly){
-    var clean= text.startsWith(" ") ? text.substring(1) : text;
     docsByLine.computeIfAbsent(line, _ -> new ArrayList<>())
-      .add(new DocOcc(uri, line, column, column+3+(text.length()-clean.length()), clean, pureLine, example, testOnly));
+      .add(new DocOcc(uri, line, column, column+3, text, pureLine, example, testOnly));
   }
 }
