@@ -67,21 +67,27 @@ public final class ModularBuild{
   static void runJUnit(String[] scriptArgs, Path testClasses, String... extraArgs) throws InterruptedException{
     var compact= List.of(scriptArgs).equals(List.of("compact"));
     if (!compact && scriptArgs.length != 0){ throw new IllegalArgumentException("Expected no arguments or the single argument compact, got "+List.of(scriptArgs)); }
-    var jvmArgs= Push.<String>of(List.of("-ea", "-DstandardLibrary="+ResolveResource.stLibPath.getParent()), compact ? List.of("-Dcompact=true") : List.of());
+    var tmp= Fs.of(() -> Path.of(System.getProperty("java.io.tmpdir")).toRealPath());
+    var jvmArgs= Push.<String>of(List.of("-ea", "--enable-native-access=ALL-UNNAMED", "-Djava.io.tmpdir="+tmp, "-DstandardLibrary="+ResolveResource.stLibPath.getParent()), compact ? List.of("-Dcompact=true") : List.of());
     var args= Push.<String>of(List.of("execute",
       "--class-path", testClasses.toString(), "--scan-class-path="+testClasses,
       "--include-classname=.*", "--details=summary", "--disable-ansi-colors"), List.of(extraArgs));
     JavaTool.runMain(jvmArgs, testClasses, mods, "org.junit.platform.console.ConsoleLauncher", args.toArray(String[]::new));
   }
   static void deploy(Path folderOut, List<List<Path>> srcs, String binName, String mainClass, boolean eclipsePlugin) throws InterruptedException{
-    var appRoot= folderOut.resolve(binName);
+    var appRoot= folderOut.resolve(binName+(Fs.isMac() ? ".app" : ""));
     new PortableApp(ResolveResource.packaging, folderOut, srcs, ResolveResource.stLibPath, ResolveResource.stLibRTPath,
       ResolveResource.coordinatorJars, binName, ResolveResource.versionId, mainClass).build();
     commons();
     frontendMain();
     JavaTool.runMain(List.of("-ea"), coordinatorTest(), mods, "testBuildBase.BaseCacheBuilder", appRoot.toString());
     if (eclipsePlugin){ deployEclipsePlugin(appRoot); }
+    if (Fs.isMac()){ sign(appRoot); }
     System.out.println("Deployed to "+appRoot);
+  }
+  static void sign(Path appRoot) throws InterruptedException{
+    var code= Fs.of(() -> Fs.processBuilder(List.of("codesign", "--force", "--deep", "--sign", "-", appRoot.toString())).inheritIO().start()).waitFor();
+    assert code == 0;
   }
   static void deployEclipsePlugin(Path appRoot){
     var found= Fs.walk(appRoot, s -> s.filter(Fs::isDirectory).filter(p -> p.getFileName().toString().equals("mods")).toList());
