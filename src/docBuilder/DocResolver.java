@@ -37,8 +37,9 @@ record DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other, Fun
       .orElseGet(DocLink.NoLink::new));
   }
   private boolean typeParameter(DocRef.TypeName t, Scope scope){
+    if (t.pkg().isPresent() || t.arity().isPresent()){ return false; }
     var bs= Stream.concat(scope.owner().bs().stream(), scope.method().stream().flatMap(m -> m.sig().bs().stream()));
-    return t.pkg().isEmpty() && t.arity().isEmpty() && bs.anyMatch(b -> b.x().equals(t.simpleName()));
+    return bs.anyMatch(b -> b.x().equals(t.simpleName())) || scope.outer().filter(o -> typeParameter(t, o)).isPresent();
   }
   private boolean inScope(String name, Scope scope){
     if (name.equals(scope.owner().thisName()) || scope.method().filter(m -> m.xs().contains(name)).isPresent()){ return true; }
@@ -64,7 +65,7 @@ record DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other, Fun
     }
     return matching(foreign().filter(n -> pkg.isEmpty() || written(n.pkgName()).equals(pkg.get())), TName::simpleName, ref);
   }
-  private String written(String pkg){
+  String written(String pkg){
     return OneOr.opt("two names for "+pkg, other.virtualizationMap().getOrDefault(pkgName, Map.of()).entrySet().stream()
       .filter(e -> e.getValue().split(" ")[0].equals(pkg)).map(Map.Entry::getKey)).orElse(pkg);
   }
@@ -86,9 +87,7 @@ record DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other, Fun
   }
   private Optional<DocLink> onLocal(DocRef.LocalName l, DocRef.MethodName ref, Scope scope){
     if (!inScope(l.name(), scope)){ return Optional.empty(); }
-    var owner= localType(l.name(), scope);
-    if (owner.isEmpty()){ return Optional.of(new DocLink.NoLink()); }
-    return onOwners(owner.get().simpleName(), List.of(owner.get()), ref.selector(), ref.arity());
+    return localType(l.name(), scope).flatMap(o -> onOwners(o.simpleName(), List.of(o), ref.selector(), ref.arity()));
   }
   private Optional<DocLink> onOwners(String shown, List<TName> owners, String selector, OptionalInt arity){
     var cands= owners.stream().flatMap(o -> methodCandidatesOn(o, selector, arity).stream()).toList();
@@ -98,10 +97,9 @@ record DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other, Fun
     var local= localTypeDoc(owner);
     if (local.isPresent()){
       return local.get().methods.stream()
-        .filter(MethodDoc::visible)
         .filter(m -> named(m.main(), selector, arity))
         .gather(DistinctBy.<MethodDoc,String>of(m -> HtmlDocRenderer.methodId(owner, m.main().sig())))
-        .map(m -> Candidate.ofLocalMethod(owner, m))
+        .map(m -> m.visible() ? Candidate.ofLocalMethod(owner, m) : new Candidate(m.main().sig().origin(), Optional.of(m.main().sig()), Optional.empty()))
         .toList();
     }
     return foreignCandidates(owner, other.__of(owner).ms(), selector, arity).toList();

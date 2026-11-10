@@ -309,13 +309,18 @@ code{
     welcome.style.display= active ? 'none' : '';
     var opened= target && target.closest('details');
     if (opened){ opened.open= true; }
-    if (active && target!==active){ target.scrollIntoView(); }
+    if (history.state){ window.scrollTo(0, history.state.y); }
+    else if (active && target!==active){ target.scrollIntoView(); }
     else { window.scrollTo(0,0); }
   }
   function showSel(){
     var sel= document.querySelector('#toclist a.sel');
-    if (sel){ sel.scrollIntoView({block:'center'}); }
+    var list= document.getElementById('toclist');
+    if (sel){ list.scrollTop= sel.offsetTop-list.offsetTop-list.clientHeight/2; }
   }
+  document.addEventListener('click', function(e){
+    if (e.target.closest('a')){ history.replaceState({y:window.scrollY}, ''); }
+  }, true);
   window.addEventListener('hashchange', route);
   route();
   filter.addEventListener('input', function(){
@@ -328,7 +333,7 @@ code{
   });
   document.querySelectorAll('.method>summary').forEach(function(s){
     s.addEventListener('click', function(e){
-      if (!e.target.closest('.disclosure') && !e.target.closest('a')){ e.preventDefault(); }
+      if (e.detail && !e.target.closest('.disclosure') && !e.target.closest('a')){ e.preventDefault(); }
     });
   });
 })();
@@ -421,7 +426,7 @@ code{
       var found= at.find(from);
       assert found;
       from = at.end();
-      var link= resolver.resolveType(new DocRef.TypeName(Optional.of(n.pkgName()), n.simpleName(), OptionalInt.of(n.arity())));
+      var link= resolver.resolveType(new DocRef.TypeName(Optional.of(resolver.written(n.pkgName())), n.simpleName(), OptionalInt.of(n.arity())));
       if (link.isEmpty()){ continue; }
       sb.append(h(text.substring(i, at.start())));
       sb.append("<a href=\"").append(h(href(link.get()))).append("\">").append(h(printed)).append("</a>");
@@ -440,10 +445,11 @@ code{
       sb.append("<p class=\"doc missing\">No documentation yet.</p>\n");
       return;
     }
+    var inFence= false;
     for (var run : runs(visible)){
       if (run.getFirst().example()){ renderExamples(sb, run.stream().map(DocOcc::text).toList()); continue; }
       sb.append("<div class=\"doc\">\n");
-      renderProse(sb, run);
+      inFence = renderProse(sb, run, inFence);
       sb.append("</div>\n");
     }
   }
@@ -453,9 +459,8 @@ code{
   //an empty doc line is where the author put a paragraph break; the lines between two
   //of them are one paragraph, kept on their own lines so that a list stays a list and
   //an indented line stays indented (the doc block is rendered with pre-wrap).
-  void renderProse(StringBuilder sb, List<DocOcc> prose){
+  boolean renderProse(StringBuilder sb, List<DocOcc> prose, boolean inFence){
     var block= new ArrayList<DocOcc>();
-    var inFence= false;
     for (var o : prose){
       if (!o.fence()){ block.add(o); continue; }
       renderBlock(sb, block, inFence);
@@ -463,9 +468,10 @@ code{
       inFence = !inFence;
     }
     renderBlock(sb, block, inFence);
+    return inFence;
   }
   void renderBlock(StringBuilder sb, List<DocOcc> block, boolean fenced){
-    if (fenced){ sb.append("<pre class=\"fenced\">").append(Join.of(block.stream().map(o -> h(o.text())), "", "\n", "", "")).append("</pre>\n"); return; }
+    if (fenced && !block.isEmpty()){ sb.append("<pre class=\"fenced\">").append(Join.of(block.stream().map(o -> h(o.text())), "", "\n", "", "")).append("</pre>\n"); return; }
     var lines= Join.of(block.stream().map(o -> o.text().isBlank() ? "" : renderLine(o)), "", "\n", "", "");
     paragraph.matcher(lines).results().forEach(p -> sb.append("<p>").append(p.group()).append("</p>\n"));
   }
