@@ -481,9 +481,11 @@ code{
       .append(h(anonymous.map(this::shortTitle).orElseGet(() -> toStr.typeNameWithArity(c.owner()))));
     c.selector().ifPresent(s -> sb.append(h(s+DocResolver.shape(c.arity(), "(", ")"))));
     sb.append("</a>");
-    c.localMethod().ifPresent(m -> m.docs.stream().filter(d -> !d.example() && !d.testOnly()).findFirst()
-      .ifPresent(d -> sb.append(" <span class=\"opt-doc\">\u2014 ").append(h(d.text())).append("</span>")));
+    c.localMethod().ifPresent(m -> sb.append(Join.of(firstParagraph(m).map(this::renderLine), " <span class=\"opt-doc\">\u2014 ", " ", "</span>", "")));
     return sb.toString();
+  }
+  Stream<DocOcc> firstParagraph(MethodDoc m){
+    return m.docs.stream().filter(d -> !d.example() && !d.testOnly()).takeWhile(d -> !d.text().isBlank() && !d.text().strip().equals("```"));
   }
   String href(DocLink link){
     return switch (link){

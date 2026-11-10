@@ -979,6 +979,20 @@ This documentation is attached to nothing.
     });
     return new Literal(RC.imm, new TName("pkg._AFoo", 0, at), List.of(), List.of(), "self", ms, src, true);
   }
+  @Test void aDisambiguationOptionShowsTheFirstParagraphOfTheDocRendered(){
+    var name= new TName("pkg.Foo", 0, Pos.unknown);
+    var imm= fooMethodAt(RC.imm, name, TSpan.fromPos(Pos.of(file, 5, 1), 1));
+    var mut= fooMethodAt(RC.mut, name, TSpan.fromPos(Pos.of(file, 7, 1), 1));
+    var foo= namedType("pkg.Foo", List.of(), List.of(imm, mut));
+    var oracle= SourceOracle.debugBuilder().putURI(file, "/// Gives `this` back,\n/// with one line more.\n///\n/// Not in the option.\n.foo->{}\n/// ```\n.foo->{}\n").build();
+    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(foo), Optional.empty(), "pkg", Path.of("pkg.html"), true);
+    builder.visitLiteral(foo);
+    var renderer= new HtmlDocRenderer(Map.of(), new DocResolver("pkg", builder.types, OtherPackages.empty()), Map.of(), Optional.empty());
+    var page= (DocLink.Ambiguous)renderer.resolver.resolve(new DocRef.MethodName(Optional.empty(), ".foo", OptionalInt.empty()), Scope.of(foo)).get();
+    var shown= page.options().stream().map(renderer::renderCandidate).toList();
+    utils.Err.strCmp("[###]<span class=\"opt-doc\">\u2014 Gives <code>[###]this[###]</code> back, with one line more.</span>", shown.getFirst());
+    assertEquals(List.of("Foo.foo() \u2014 Gives this back, with one line more.", "mut Foo.foo()"), shown.stream().map(s -> s.replaceAll("<[^>]*>", "")).toList());
+  }
   @Test void aDisambiguationOptionOnAnAnonymousLiteralShowsTheNameTheListShows(){
     var anonName= new TName("pkg._AFoo", 0, Pos.unknown);
     var anonBar= namedMethod(".bar", anonName);
