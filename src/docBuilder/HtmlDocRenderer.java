@@ -297,6 +297,8 @@ code{
       a.classList.toggle('sel', !!active && a.getAttribute('href')==='#'+active.id);
     });
     welcome.style.display= active ? 'none' : '';
+    var opened= target && target.closest('details');
+    if (opened){ opened.open= true; }
     if (active && target!==active){ target.scrollIntoView(); }
     else { window.scrollTo(0,0); }
   }
