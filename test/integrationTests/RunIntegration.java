@@ -1770,7 +1770,7 @@ milk
       "-DfearlessDataEdit.data.Notes="+PathClassLoader.argOf(notes), lock("data.Notes", notes),
       "-DfearlessDataRead.data.Broken="+PathClassLoader.argOf(broken), lock("data.Broken", broken),
       "-DfearlessDataRead.data.Gone="+PathClassLoader.argOf(tmp.resolve("gone")), lock("data.Gone", tmp.resolve("gone"))));
-    assertEquals(List.of("fear:/ascii.txt", "fear:/d1/keep.txt", "fear:/d2/two.txt", "fear:/data.fearless", "fear:/fresh/deeper/c.txt", "fear:/latin1.txt", "fear:/mv/one.txt", "fear:/of/keep.txt",
+    assertEquals(List.of("fear:/ascii.txt", "fear:/d1/keep.txt", "fear:/d2/two.txt", "fear:/data.fearless", "fear:/fresh/deeper/c.txt", "fear:/latin1.txt", "fear:/lk/a.txt", "fear:/mv/one.txt", "fear:/of/keep.txt",
       "fear:/raw.bin", "fear:/readme", "fear:/todo/item.txt", "fear:/u16.txt", "fear:/u32.txt", "fear:/w1/b.txt",
       "fear:/wf/new/five.txt", "fear:/wf/one.txt", "fear:/wn/inner/three.txt", "fear:/wz/deep/four.txt", "fear:/wz/deep/two.txt", "fear:/zf/keep.txt", "fear:/zn/keep.txt"), fearPaths(notes));
     assertEquals(List.of(true, true, true, true, true, false, false, false, false, false, false, false, false, false, false, false), Stream.of("wz.zip", "wn.zip", "wf.zip", "zf.zip", "zn.zip", "wz", "wn", "wf", "d3.zip", "d4", "ow", "zw.zip", "op", "zp.zip", "of/sub", ".00000000-0000-0000-0000-000000000000.tmp").map(n -> Fs.exists(notes.resolve(n))).toList());
