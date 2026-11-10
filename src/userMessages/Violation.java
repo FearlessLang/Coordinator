@@ -13,7 +13,6 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
-import fileAssociations.LinuxAssociations;
 import utils.Join;
 
 /// Violation: Fearless can no longer do its safe job.
@@ -96,6 +95,8 @@ What is registered:
 %s""".formatted(reported));
   }
   public static UserError associationUserLocked(Map<String,List<String>> locked, Function<String,String> claimedBy){
+    var lines= new ArrayList<String>();
+    locked.forEach((e,ps) -> ps.forEach(p -> lines.add(e+claimedBy.apply(e)+" -> "+p)));
     return new UserError("""
 Fearless cannot become the program that opens the kinds of file listed
 below.
@@ -109,12 +110,7 @@ The only way to clear it is Settings, Apps, Default apps, Reset - which
 resets every app default on your machine, not only this one.
 
 What is locked:
-%s""".formatted(lockedLines(locked, claimedBy, e -> "")));
-  }
-  private static String lockedLines(Map<String,List<String>> locked, Function<String,String> claimedBy, Function<String,String> type){
-    var lines= new ArrayList<String>();
-    locked.forEach((e,ps) -> ps.forEach(p -> lines.add(e+claimedBy.apply(e)+type.apply(e)+" -> "+p)));
-    return Join.of(lines, "", "\n", "");
+%s""".formatted(Join.of(lines, "", "\n", "")));
   }
   public static UserError associationNotOurs(Map<String,List<String>> held, Function<String,String> claimedBy){
     var lines= new ArrayList<String>();
@@ -128,22 +124,6 @@ stopped before touching anything: your system is exactly as it was.
 
 What stood in the way:
 %s""".formatted(Join.of(lines, "", "\n", "")));
-  }
-  public static UserError associationChosenDefault(Map<String,List<String>> locked, Function<String,String> claimedBy){
-    return new UserError("""
-Fearless cannot become the program that opens the kinds of file listed
-below.
-
-Your system remembers a choice you made by hand for these kinds of file:
-the [Default Applications] section of a mimeapps.list file names another
-program for their type. Fearless does not undo a choice of yours, and
-stopped before touching anything: your system is exactly as it was.
-
-Removing the line of that type from the section, or choosing Fearless
-for these files, clears the choice.
-
-What is locked:
-%s""".formatted(lockedLines(locked, claimedBy, e -> " ("+LinuxAssociations.typeOf(e)+")")));
   }
   public static UserError associationNotWritable(String reported){
     return new UserError("""

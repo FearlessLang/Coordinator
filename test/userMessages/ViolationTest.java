@@ -173,39 +173,6 @@ What stood in the way:
 .ffile001 claimed by "hello.Foo" of project "demo" -> vim
 .fapp042 claimed by "hello.Bar" of project "demo" -> OtherApp.fapp042""", Violation.associationNotOurs(held, ViolationTest::claimedBy).getMessage());
   }
-  @Test void associationChosenDefault(){
-    utils.Err.strCmp("""
-Fearless cannot become the program that opens the kinds of file listed
-below.
-
-Your system remembers a choice you made by hand for these kinds of file:
-the [Default Applications] section of a mimeapps.list file names another
-program for their type. Fearless does not undo a choice of yours, and
-stopped before touching anything: your system is exactly as it was.
-
-Removing the line of that type from the section, or choosing Fearless
-for these files, clears the choice.
-
-What is locked:
-.htm (application/x-fearless-htm) -> browser.desktop""", Violation.associationChosenDefault(Map.of(".htm", List.of("browser.desktop")), e -> "").getMessage());
-  }
-  @Test void associationChosenDefaultSeveralClaimed(){
-    utils.Err.strCmp("""
-Fearless cannot become the program that opens the kinds of file listed
-below.
-
-Your system remembers a choice you made by hand for these kinds of file:
-the [Default Applications] section of a mimeapps.list file names another
-program for their type. Fearless does not undo a choice of yours, and
-stopped before touching anything: your system is exactly as it was.
-
-Removing the line of that type from the section, or choosing Fearless
-for these files, clears the choice.
-
-What is locked:
-.foo claimed by "hello.Foo" of project "demo" (application/x-fearless-foo) -> editor.desktop
-.pdf claimed by "hello.Bar" of project "demo" (application/x-fearless-pdf) -> viewer.desktop""", Violation.associationChosenDefault(ordered(".foo", "editor.desktop", ".pdf", "viewer.desktop"), ViolationTest::claimedBy).getMessage());
-  }
   private static String claimedBy(String ext){ return " claimed by \"hello."+(List.of(".foo", ".ffile001").contains(ext) ? "Foo" : "Bar")+"\" of project \"demo\""; }
   @Test void associationNotWritable(){
     var registered= "HKEY_CLASSES_ROOT\\.fearless (write denied: not running as the owning user)";
