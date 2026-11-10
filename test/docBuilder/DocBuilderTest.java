@@ -545,6 +545,18 @@ Foo: Bar {
     var html= new HtmlDocRenderer(DocNames.uses("pkg", List.of(local, holder)), new DocResolver("pkg", builder.types, other, TName::s), Map.of(), Optional.empty()).render();
     utils.Err.strCmp("[###]<span class=\"sig\">[###]href=\"base.html#type-base_2e_List-0\"[###]", html);
   }
+  @Test void aSignatureTypeOfAMappedPackageLinksToItsType(){
+    var holderName= new TName("pkg.Holder", 0, Pos.unknown);
+    var thing= new T.RCC(RC.imm, new T.C(new TName("q.Thing", 0, Pos.unknown), List.of()), TSpan.fromPos(Pos.unknown, 1));
+    var get= new M(new Sig(RC.imm, new MName(".get", 0), List.of(), List.of(), thing, holderName, false, TSpan.fromPos(Pos.unknown, 1)), List.of(), Optional.empty());
+    var holder= namedType("pkg.Holder", List.of(), List.of(get));
+    var other= OtherPackages.start(Map.of("pkg", Map.of("v", "q fear:/_pkg/_rank_pkg.fear")), List.of(namedType("q.Thing", List.of(), List.of())), 0L);
+    SourceOracle oracle= List::of;
+    var builder= new HtmlDocBuilder(oracle, other, List.of(holder), Optional.empty(), "pkg", Path.of("pkg.html"), true);
+    builder.visitLiteral(holder, Optional.empty());
+    var html= new HtmlDocRenderer(DocNames.uses("pkg", List.of(holder)), new DocResolver("pkg", builder.types, other, TName::s), Map.of(), Optional.empty()).render();
+    utils.Err.strCmp("[###]<span class=\"sig\">.get:<a href=\"q.html#type-q_2e_Thing-0\">[###]", html);
+  }
 
   //Two ways a link can point at nothing: its disambiguation section was never emitted,
   //or it names a type/method the renderer skips as not visible. Both look identical to

@@ -212,6 +212,49 @@ B:{ .m: A -> A; }
 """);
     utils.Err.strCmp("[###]<p>Sorting:</p>[###].sorted[###]<p>Reversing:</p>[###].reversed[###]", docs.html());
   }
+  @Test void aTypeParameterOfTheEnclosingTypeIsANameInScopeInTheDocOfAnAnonymousLiteralMethod(@TempDir Path tmp){
+    var docs= docs(tmp, a+"""
+Box[X:imm]:{
+  .wrap(x: X): A -> A{
+    ///Ignores the `X`.
+    .m -> A;
+    };
+  }
+""");
+    utils.Err.strCmp("[###]\t.m:A\n    Ignores the `X`.[###]", docs.text());
+  }
+  @Test void aMethodOfAParameterWhoseTypeIsATypeParameterNamesNothing(@TempDir Path tmp){
+    var ex= assertThrows(UserError.class, () -> docs(tmp, a+"""
+B:{
+  ///Calls `x.nonexistent` on its argument.
+  .f[X:imm](x: X): A -> A;
+  }
+"""));
+    utils.Err.strCmp("Broken reference in a doc comment.[###]`x.nonexistent`[###]This names no type, no method, and nothing in scope where it is written.[###]", ex.getMessage());
+  }
+  @Test void aMethodAnAnonymousLiteralInheritsIsANameInScopeThroughItsSelfName(@TempDir Path tmp){
+    var docs= docs(tmp, """
+A:{ .m: A -> this; .n: A -> this; }
+Maker:{
+  .make: A -> A{'self
+    ///Same as `self.m`.
+    .n -> self.m;
+    };
+  }
+""");
+    utils.Err.strCmp("[###]\t.n:A\n    Same as `self.m`.[###]", docs.text());
+  }
+  @Test void aFenceAroundAnExampleDoesNotTurnTheProseAfterItIntoCode(@TempDir Path tmp){
+    var docs= docs(tmp, a+"""
+///Usage:
+///```
+//> .check{ A.m }
+///```
+///See `A`.
+B:{ .m: A -> A; }
+""");
+    utils.Err.strCmp("[###]<p>See <code><a href=\"#type-p_2e_A-0\">A</a></code>.</p>[###]", docs.html());
+  }
   @Test void aTypeInTheListOfTypesMayWrapAfterEachComma(@TempDir Path tmp){
     var docs= docs(tmp, "Pair[X:imm,Y:imm]:{}\n");
     utils.Err.strCmp("[###]<li><a href=\"#type-p_2e_Pair-2\">Pair[X:imm,<wbr>Y:imm]</a></li>[###]", docs.html());
