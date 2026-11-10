@@ -42,7 +42,7 @@ final class HtmlDocRenderer{
   final DocResolver resolver;
   final HashMap<String,Pattern> namePatterns= new HashMap<>();
   final List<TypeDoc> shown;
-  final Map<DocOcc,Object> claims;
+  final Map<DocOcc,DeclarationDoc> claims;
   HtmlDocRenderer(Map<String,String> uses, DocResolver resolver, Map<DocOcc,Map<Integer,DocLink>> spans, Optional<Path> baseDocLocation){
     assert Require.nonNull(uses, resolver, spans, baseDocLocation);
     pkgName= resolver.pkgName();
@@ -80,10 +80,10 @@ final class HtmlDocRenderer{
       .filter(t -> !testGroups(t).isEmpty())
       .toList();
   }
-  Stream<List<DocOcc>> docGroups(TypeDoc t){ return Stream.concat(Stream.of(t.docs), visibleMethods(t).stream().map(m -> m.docs)); }
+  Stream<DeclarationDoc> declarations(TypeDoc t){ return Stream.concat(Stream.of(t), visibleMethods(t).stream()); }
   List<List<DocOcc>> testGroups(TypeDoc t){
-    return docGroups(t)
-      .map(ds -> ds.stream().filter(d -> d.kind().tested()).toList())
+    return declarations(t)
+      .map(d -> d.docs.stream().filter(o -> o.kind().tested()).toList())
       .filter(g -> !g.isEmpty())
       .sorted(Comparator.comparingInt((List<DocOcc> g) -> g.getFirst().line()))
       .toList();
@@ -130,7 +130,7 @@ final class HtmlDocRenderer{
   }
   void renderTypeText(StringBuilder sb, TypeDoc t){
     sb.append(typeTitle(t)).append(Join.of(t.main().cs().stream().map(toStr::typeName), " : ", ", ", "", "")).append('\n');
-    renderDocText(sb, "  ", t, t.docs);
+    renderDocText(sb, "  ", t);
     visibleMethods(t).forEach(m -> renderMethodText(sb, m));
     sb.append('\n');
   }
@@ -139,14 +139,14 @@ final class HtmlDocRenderer{
   //whitelist (Fs.allowed) has no tab, so neither a signature nor a doc comment can carry one.
   void renderMethodText(StringBuilder sb, MethodDoc m){
     m.variants.stream().map(this::sig).distinct().forEach(s -> sb.append('\t').append(s).append('\n'));
-    if (m.declared){ renderDocText(sb, "    ", m, m.docs); }
+    if (m.declared){ renderDocText(sb, "    ", m); }
     sb.append(Join.of(fromRefs(m).stream().map(this::fromName), "    from: ", ", ", "\n", ""));
   }
-  List<DocOcc> visibleDocs(Object owner, List<DocOcc> docs){
-    return docs.stream().filter(c -> !c.inline() || claims.get(c)==owner).filter(c -> c.kind()!=DocKind.TestOnly).toList();
+  List<DocOcc> visibleDocs(DeclarationDoc d){
+    return d.docs.stream().filter(c -> !c.inline() || claims.get(c)==d).filter(c -> c.kind()!=DocKind.TestOnly).toList();
   }
-  void renderDocText(StringBuilder sb, String indent, Object owner, List<DocOcc> docs){
-    for (var run : runs(visibleDocs(owner, docs), d -> d.kind()==DocKind.Example)){
+  void renderDocText(StringBuilder sb, String indent, DeclarationDoc d){
+    for (var run : runs(visibleDocs(d), o -> o.kind()==DocKind.Example)){
       var example= run.getFirst().kind()==DocKind.Example;
       if (example){ sb.append(indent).append("example:\n"); }
       run.forEach(c -> appendIndented(sb, example ? indent+"  " : indent, c.text()));
@@ -356,13 +356,9 @@ code{
         .thenComparing(m -> m.main().sig().rc()+"/"+toStr.sig(m.main().sig())))
       .toList();
   }
-  Map<DocOcc,Object> inlineClaims(){
-    var res= new HashMap<DocOcc,Object>();
-    for (var t : shown){
-      t.docs.stream().filter(DocOcc::inline).forEach(c -> res.put(c, t));
-      visibleMethods(t).forEach(m ->
-        m.docs.stream().filter(DocOcc::inline).forEach(c -> res.put(c, m)));
-    }
+  Map<DocOcc,DeclarationDoc> inlineClaims(){
+    var res= new HashMap<DocOcc,DeclarationDoc>();
+    shown.stream().flatMap(this::declarations).forEach(d -> d.docs.stream().filter(DocOcc::inline).forEach(c -> res.put(c, d)));
     return res;
   }
   void renderToc(StringBuilder sb){
@@ -377,7 +373,7 @@ code{
   void renderType(StringBuilder sb, TypeDoc t){
     sb.append("<section class=\"type\" id=\"").append(typeId(t)).append("\">\n")
       .append("<h2>").append(wrap(typeTitle(t))).append("</h2>\n");
-    renderDoc(sb, t, t.docs);
+    renderDoc(sb, t);
     sb.append(Join.of(t.main().cs().stream().map(this::typeLink), "<p class=\"extends\"><b>Extends:</b> ", ", ", "</p>\n", ""));
     renderVariants(sb, "Typed literal variants", t.variants, toStr::lit);
     sb.append("<h3>Methods</h3>\n");
@@ -390,7 +386,7 @@ code{
       .append("<summary><span class=\"disclosure\">&#9656;</span>");
     ids.stream().skip(1).forEach(id -> sb.append("<span id=\"").append(id).append("\"></span>"));
     sb.append("<span class=\"sig\">").append(renderSig(m)).append("</span></summary>\n");
-    if (m.declared){ renderDoc(sb, m, m.docs); }
+    if (m.declared){ renderDoc(sb, m); }
     sb.append(Join.of(fromRefs(m).stream().map(this::fromLink), "<p class=\"doc from\">From: ", ", ", ".</p>\n", ""));
     renderVariants(sb, "Typed method variants", m.variants, this::sig);
     sb.append("</details>\n");
@@ -438,13 +434,13 @@ code{
     if (!(t instanceof T.RCC rcc)){ return Stream.of(); }
     return Stream.concat(Stream.of(rcc.c().name()), rcc.c().ts().stream().flatMap(HtmlDocRenderer::typeNames));
   }
-  void renderDoc(StringBuilder sb, Object owner, List<DocOcc> docs){
-    var visible= visibleDocs(owner, docs);
+  void renderDoc(StringBuilder sb, DeclarationDoc d){
+    var visible= visibleDocs(d);
     if (visible.isEmpty()){
       sb.append("<p class=\"doc missing\">No documentation yet.</p>\n");
       return;
     }
-    for (var run : runs(visible, d -> d.kind()==DocKind.Example)){
+    for (var run : runs(visible, o -> o.kind()==DocKind.Example)){
       if (run.getFirst().kind()==DocKind.Example){ renderExamples(sb, run.stream().map(DocOcc::text).toList()); continue; }
       sb.append("<div class=\"doc\">\n");
       runs(run, DocOcc::kind).forEach(b -> renderBlock(sb, b));

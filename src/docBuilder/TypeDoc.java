@@ -16,18 +16,22 @@ import core.T;
 import core.TName;
 import utils.Pos;
 
-final class TypeDoc{
-  final ArrayList<Literal> variants= new ArrayList<>();
+sealed abstract class DeclarationDoc permits TypeDoc, MethodDoc{
   final List<DocOcc> docs;
+  DeclarationDoc(List<DocOcc> docs){ this.docs= docs; }
+  boolean hasDocs(){ return !docs.isEmpty(); }
+}
+final class TypeDoc extends DeclarationDoc{
+  final ArrayList<Literal> variants= new ArrayList<>();
   Optional<Scope> outer= Optional.empty();
   final LinkedHashMap<Object,MethodDoc> byKey= new LinkedHashMap<>();
   final SequencedCollection<MethodDoc> methods= byKey.sequencedValues();
   TypeDoc(Literal l, List<DocOcc> docs){
-    this.docs= docs;
+    super(docs);
     variants.add(l);
   }
   Literal main(){ return variants.getFirst(); }
-  boolean visible(){ return !main().infName() || !docs.isEmpty() || methods.stream().anyMatch(MethodDoc::hasDocs); }
+  boolean visible(){ return !main().infName() || hasDocs() || methods.stream().anyMatch(MethodDoc::hasDocs); }
   void addVariant(Literal l){
     assert variants.stream().noneMatch(v -> v.name().equals(l.name())) :
       "Repeated literal source with same name: "+l.pos()+" "+l.name();
@@ -45,20 +49,18 @@ final class TypeDoc{
     return d;
   }
 }
-final class MethodDoc{
+final class MethodDoc extends DeclarationDoc{
   final TypeDoc owner;
   final boolean declared;
-  final List<DocOcc> docs;
   final ArrayList<M> variants= new ArrayList<>();
   final LinkedHashMap<MethodRefKey,MethodRef> inheritedByKey= new LinkedHashMap<>();
   final Collection<MethodRef> inheritedFrom= inheritedByKey.values();
   MethodDoc(TypeDoc owner, boolean declared, List<DocOcc> docs){
+    super(docs);
     this.owner= owner;
     this.declared= declared;
-    this.docs= docs;
   }
   M main(){ return variants.getFirst(); }
-  boolean hasDocs(){ return !docs.isEmpty(); }
   boolean visible(){ return declared || !owner.main().infName() || hasDocs(); }
   void add(M m){ variants.add(m); }
   void addInheritedFrom(List<MethodRef> refs){
