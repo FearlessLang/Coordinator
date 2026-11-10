@@ -348,4 +348,51 @@ Maker:{
     var docs= docs(tmp, "Pair[X:imm,Y:imm]:{}\n");
     utils.Err.strCmp("[###]<li><a href=\"#type-p_2e_Pair-2\">Pair[X:imm,<wbr>Y:imm]</a></li>[###]", docs.html());
   }
+  @Test void aDisambiguationPageListsItsOptionsByTypeNameThenByArity(@TempDir Path tmp){
+    var html= docs(tmp, a+"""
+Zed:{ .go: A -> A; .go(a: A): A -> a; }
+Ace:{ .go(a: A): A -> a; .go: A -> A; }
+///Calls `.go`.
+User:{ .m: A -> A; }
+""").html();
+    utils.Err.strCmp("""
+[###]<h2>Several match .go</h2>
+<ul class="options">
+<li><a href="#method-p_2e_Ace-0-imm-_2e_go-0">Ace.go()</a></li>
+<li><a href="#method-p_2e_Ace-0-imm-_2e_go-1">Ace.go(_)</a></li>
+<li><a href="#method-p_2e_Zed-0-imm-_2e_go-0">Zed.go()</a></li>
+<li><a href="#method-p_2e_Zed-0-imm-_2e_go-1">Zed.go(_)</a></li>
+</ul>[###]""", html);
+  }
+  @Test void anOrphanBlockSplitByAnEmptyLineIsReportedAsOneBlock(@TempDir Path tmp){
+    var ex= assertThrows(UserError.class, () -> docs(tmp, a+"""
+B:{
+  .m: A -> A;
+  ///First note.
+
+  ///Second note.
+  }
+"""));
+    utils.Err.strCmp("""
+Misplaced doc comment.
+
+In file: fear:/_p/_rank_app.fear
+
+004|   ///First note.
+[###]006|   ///Second note.
+
+While inspecting the documentation of package p
+This documentation is attached to nothing.
+A /// or //> block documents the declaration right below it, but no declaration
+starts right below this block. Move this block right above the declaration it
+documents, or turn it into a plain // comment.""", ex.getMessage());
+  }
+  @Test void aTrailingDocAfterTheBraceClosingItsTypeDocumentsTheMethodStartingOnItsLine(@TempDir Path tmp){
+    var docs= docs(tmp, a+"""
+B:{
+  .k: A -> A;
+  .j: A -> A; } /// the j
+""");
+    utils.Err.strCmp("[###]B\n\t.j:A\n    the j\n\t.k:A[###]", docs.text());
+  }
 }
