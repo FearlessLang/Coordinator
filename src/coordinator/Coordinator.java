@@ -168,6 +168,7 @@ public interface Coordinator{
       throw UserError.cacheCorruptedOrCrash(e);
     }
   }
+  default String drawing() throws InterruptedException{ return runMains(List.of("--enable-native-access=ALL-UNNAMED"), sharedClasspath(), "_base.Vk").strip(); }
   static ChildJvm startMain(Path project, Path base, String main, Optional<Path> input, Map<String,Path> mounts, Map<String,Path> locks, List<String> attenuators, List<String> desk, List<Path> sharedClasspath, Consumer<String> out){
     var jvmArgs= new ArrayList<>(runData(project, base));
     input.ifPresent(i -> jvmArgs.add("-DfearlessInput.file="+PathClassLoader.argOf(i)));

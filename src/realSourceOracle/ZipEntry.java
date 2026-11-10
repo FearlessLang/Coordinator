@@ -26,7 +26,7 @@ public record ZipEntry(Path root, Path local, List<String> segments, List<String
   @Override public RuntimeException notUtf8(long line, int offset){ return Report.notUtf8(this, line, offset); }
   @Override public String toString(){ return fearPath(); }
   boolean expanded(){ return lastZips.endsWith(".zip") && !BuildWithZip.isInvisible(this); }
-  private static final int maxZipNesting= 64;
+  static final int maxZipNesting= 64;
   public static List<ZipEntry> allEntryPaths(Path root, Path local, Since since){
     assert root.isAbsolute() && !local.isAbsolute();
     var res= new ArrayList<ZipEntry>();
