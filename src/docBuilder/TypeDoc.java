@@ -79,12 +79,23 @@ record MethodRefKey(String provider, RC rc, MName m){
   }
 }
 record ImportedKey(TName origin, RC rc, MName m){}
-record DocOcc(URI file, int line, int column, int textColumn, String text, boolean pureLine, boolean example, boolean testOnly){
+enum DocKind{
+  Prose, Example, TestOnly;
+  static Optional<DocKind> ofMark(char mark){
+    return switch (mark){
+      case '/' -> Optional.of(Prose);
+      case '>' -> Optional.of(Example);
+      case '-' -> Optional.of(TestOnly);
+      default -> Optional.empty();
+    };
+  }
+}
+record DocOcc(URI file, int line, int column, int textColumn, String text, boolean pureLine, DocKind kind){
   boolean inline(){ return !pureLine; }
   boolean fence(){ return fenceLine.matcher(text).matches(); }
   private static final Pattern fenceLine= Pattern.compile(" *```[^`]*");
   DocOcc drop(int n){
     var k= Math.min(n, text.length());
-    return new DocOcc(file, line, column, textColumn+k, text.substring(k), pureLine, example, testOnly);
+    return new DocOcc(file, line, column, textColumn+k, text.substring(k), pureLine, kind);
   }
 }

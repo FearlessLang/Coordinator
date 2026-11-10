@@ -83,7 +83,7 @@ final class HtmlDocRenderer{
   Stream<List<DocOcc>> docGroups(TypeDoc t){ return Stream.concat(Stream.of(t.docs), visibleMethods(t).stream().map(m -> m.docs)); }
   List<List<DocOcc>> testGroups(TypeDoc t){
     return docGroups(t)
-      .map(ds -> ds.stream().filter(d -> d.example() || d.testOnly()).toList())
+      .map(ds -> ds.stream().filter(d -> d.kind()!=DocKind.Prose).toList())
       .filter(g -> !g.isEmpty())
       .sorted(Comparator.comparingInt((List<DocOcc> g) -> g.getFirst().line()))
       .toList();
@@ -143,11 +143,11 @@ final class HtmlDocRenderer{
     sb.append(Join.of(fromRefs(m).stream().map(this::fromName), "    from: ", ", ", "\n", ""));
   }
   static List<DocOcc> visibleDocs(Object owner, List<DocOcc> docs, Map<DocOcc,Object> claims){
-    return docs.stream().filter(c -> !c.inline() || claims.get(c)==owner).filter(c -> !c.testOnly()).toList();
+    return docs.stream().filter(c -> !c.inline() || claims.get(c)==owner).filter(c -> c.kind()!=DocKind.TestOnly).toList();
   }
   void renderDocText(StringBuilder sb, String indent, Object owner, List<DocOcc> docs, Map<DocOcc,Object> claims){
     for (var run : runs(visibleDocs(owner, docs, claims))){
-      var example= run.getFirst().example();
+      var example= run.getFirst().kind()==DocKind.Example;
       if (example){ sb.append(indent).append("example:\n"); }
       run.forEach(c -> appendIndented(sb, example ? indent+"  " : indent, c.text()));
     }
@@ -155,7 +155,7 @@ final class HtmlDocRenderer{
   static List<List<DocOcc>> runs(List<DocOcc> ds){
     var res= new ArrayList<ArrayList<DocOcc>>();
     for (var d : ds){
-      if (res.isEmpty() || res.getLast().getLast().example()!=d.example()){ res.add(new ArrayList<>()); }
+      if (res.isEmpty() || res.getLast().getLast().kind()!=d.kind()){ res.add(new ArrayList<>()); }
       res.getLast().add(d);
     }
     return List.copyOf(res);
@@ -446,7 +446,7 @@ code{
     }
     var inFence= false;
     for (var run : runs(visible)){
-      if (run.getFirst().example()){ renderExamples(sb, run.stream().map(DocOcc::text).toList()); continue; }
+      if (run.getFirst().kind()==DocKind.Example){ renderExamples(sb, run.stream().map(DocOcc::text).toList()); continue; }
       sb.append("<div class=\"doc\">\n");
       inFence = renderProse(sb, run, inFence);
       sb.append("</div>\n");
@@ -513,7 +513,7 @@ code{
     return sb.toString();
   }
   Stream<DocOcc> firstParagraph(MethodDoc m){
-    return m.docs.stream().filter(d -> !d.example() && !d.testOnly()).takeWhile(d -> !d.text().isBlank() && !d.fence());
+    return m.docs.stream().filter(d -> d.kind()==DocKind.Prose).takeWhile(d -> !d.text().isBlank() && !d.fence());
   }
   String href(DocLink link){
     return switch (link){

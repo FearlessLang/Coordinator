@@ -75,7 +75,7 @@ final class SourceDocs{
       if (!lines.get(l-1).isBlank()){ break; }
       //the line just below the empty one, which is the last one collected walking up
       var below= !before.isEmpty();
-      before.add(new DocOcc(uri, l, 1, 1, "", true, below && before.getLast().example(), below && before.getLast().testOnly()));
+      before.add(new DocOcc(uri, l, 1, 1, "", true, below ? before.getLast().kind() : DocKind.Prose));
     }
     Collections.reverse(before);
     //everything collected is attached, including an empty line trimmed off the end:
@@ -88,7 +88,7 @@ final class SourceDocs{
   }
   static int indent(List<DocOcc> ds, DocOcc d){
     return ds.stream()
-      .filter(o -> o.example()==d.example() && o.testOnly()==d.testOnly() && !o.text().isBlank())
+      .filter(o -> o.kind()==d.kind() && !o.text().isBlank())
       .mapToInt(o -> o.text().length()-o.text().stripLeading().length())
       .min().orElse(0);
   }
@@ -125,7 +125,8 @@ final class SourceDocs{
         else if (s.startsWith("//", i)){
           var k= s.length()>i+2 ? s.charAt(i+2) : ' ';
           var repeated= s.length()>i+3 && s.charAt(i+3)==k;
-          if (!repeated && (k=='/' || k=='>' || k=='-')){ add(l, i+1, s.substring(i+3), s.substring(0, i).isBlank(), k == '>', k == '-'); }
+          var kind= DocKind.ofMark(k);
+          if (!repeated && kind.isPresent()){ add(l, i+1, s.substring(i+3), s.substring(0, i).isBlank(), kind.get()); }
           i = s.length();
         }
         else if (s.startsWith("/*", i)){ closer = "*/"; i += 2; }
@@ -138,8 +139,8 @@ final class SourceDocs{
   }
   //textColumn is where the stored text really starts in the line, so an error can put
   //its carets under the offending characters: past the "///" and the indentation dedent drops.
-  void add(int line, int column, String text, boolean pureLine, boolean example, boolean testOnly){
+  void add(int line, int column, String text, boolean pureLine, DocKind kind){
     docsByLine.computeIfAbsent(line, _ -> new ArrayList<>())
-      .add(new DocOcc(uri, line, column, column+3, text, pureLine, example, testOnly));
+      .add(new DocOcc(uri, line, column, column+3, text, pureLine, kind));
   }
 }

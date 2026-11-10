@@ -120,7 +120,7 @@ public final class HtmlDocBuilder{
       if (occ.fence()){ inFence = !inFence; continue; }
       //a //> line is real Fearless code, not prose: any backtick in it is a genuine
       //raw string literal, never doc-comment markup, so it is never reference-checked.
-      if (inFence || occ.example() || occ.testOnly()){ continue; }
+      if (inFence || occ.kind()!=DocKind.Prose){ continue; }
       link(resolver, occ, scope, spans, problems);
     }
   }
