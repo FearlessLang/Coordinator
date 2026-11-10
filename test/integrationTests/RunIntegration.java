@@ -255,6 +255,21 @@ Child: InfoMain{ sys, arg -> arg }
     assertEquals(1, p.waitFor(), out);
     utils.Err.strCmp("The argument of the main p.Child holds the character U+00E9, which a Str can not hold.", out.strip());
   }
+  @Test void aFailureTextLineStartingWithAPlanLineIsNotAPlanLine(@TempDir Path tmp){
+    var root= unitTestsProject(tmp, """
+use base.UnitTests as UnitTests;
+use base.Error as Error;
+MyTests: UnitTests {::
+  .check{Error.msg("x" | "PLAN|DISABLED|a|b|c|1" | "PLAN|RUN|a|b|c|1")}
+  }
+""");
+    main(root, List.of());
+    utils.Err.strCmp("""
+<testsuite name="p" tests="1" failures="1" errors="0">
+[###]PLAN|DISABLED|a|b|c|1
+PLAN|RUN|a|b|c|1
+[###]""", JUnitReport.suite("p", root));
+  }
   @Test void anErrorWhileRegisteringTheChecksIsAFailureInTheReport(@TempDir Path tmp){
     var root= unitTestsProject(tmp, """
 use base.UnitTests as UnitTests;
