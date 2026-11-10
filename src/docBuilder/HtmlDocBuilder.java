@@ -75,10 +75,11 @@ public final class HtmlDocBuilder{
   public List<TestSource> complete(Function<TName,String> pkgNames, boolean testable, Consumer<Runnable> writes){
     var resolver= new DocResolver(pkgName, types, other);
     var spans= new HashMap<DocOcc,Map<Integer,DocLink>>();
-    var problems= new ArrayList<String>();
     oracle.allFiles().forEach(f -> sources.computeIfAbsent(f.fearURI(), u -> new SourceDocs(u, f.loadString())));
-    sources.values().stream().flatMap(s -> s.orphanRuns().stream()).map(this::orphan).forEach(problems::add);
-    sources.values().stream().flatMap(s -> s.ambiguousInline.stream()).map(this::ambiguousInline).forEach(problems::add);
+    var orphans= sources.values().stream().flatMap(s -> s.orphanRuns().stream()).map(this::orphan);
+    var misplaced= Stream.concat(orphans, sources.values().stream().flatMap(s -> s.ambiguousInline.stream()).map(this::ambiguousInline)).toList();
+    if (!misplaced.isEmpty()){ throw Report.docMisplaced(misplaced); }
+    var problems= new ArrayList<String>();
     types.forEach(t -> linkType(resolver, t, spans, problems));
     if (!problems.isEmpty()){ throw Report.docReferences(problems); }
     var renderer= new HtmlDocRenderer(DocNames.uses(pkgName, currentByName.values()), resolver, spans, baseDocLocation);

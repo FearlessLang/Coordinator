@@ -628,6 +628,10 @@ File:
     +"The icon "+disp(repr(c.ts().getFirst()))+" is not the type generated for an image file.\n"
     +"An icon is the type generated for an image file, like \"IconsFoo\" for \"_pkg/icons/foo.png\", or \"base.IconsConflict\"."));
   }
+  public static UserError docMisplaced(List<String> problems){ return new UserError("""
+Misplaced doc comment.
+
+%s""".formatted(Join.of(problems, "", "\n\n", ""))); }
   public static UserError docReferences(List<String> problems){ return new UserError("""
 Broken reference in a doc comment.
 
