@@ -43,7 +43,8 @@ final class DocFromSourceTest{
         core.forEach(builder::visitAll);
         builder.complete(new FrontendLogicMain().names("p", Map.of(), oracle.allFiles(), other), false, Runnable::run);
         var renderer= new HtmlDocRenderer(Map.of(), new DocResolver("p", builder.types, other, TName::s), Map.of(), Optional.empty());
-        if (!renderer.testableTypes().isEmpty()){ tests.addAll(renderer.renderTests(TName::s)); }
+        var suites= renderer.suites();
+        if (!suites.isEmpty()){ tests.addAll(renderer.renderTests(suites, TName::s)); }
         return List.of();
       });
     }

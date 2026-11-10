@@ -92,12 +92,12 @@ public final class HtmlDocBuilder{
     return tests(renderer, pkgNames);
   }
   List<TestSource> tests(HtmlDocRenderer renderer, Function<TName,String> pkgNames){
-    var names= renderer.testNames();
+    var suites= renderer.suites();
     var declared= types.stream().map(TypeDoc::main).collect(Collectors.toMap(l -> l.name().simpleName(), l -> l, (a,_) -> a));
-    if (names.perType().isEmpty() || declared.containsKey(names.top())){ return List.of(); }
-    names.perType().stream().filter(declared::containsKey).findFirst()
-      .ifPresent(n -> { throw Report.generatedTestNameReserved(reservedNameProblem(declared.get(n)), names.top()); });
-    return renderer.renderTests(pkgNames);
+    if (suites.isEmpty() || declared.containsKey(renderer.topSuiteName())){ return List.of(); }
+    suites.stream().map(HtmlDocRenderer.Suite::name).filter(declared::containsKey).findFirst()
+      .ifPresent(n -> { throw Report.generatedTestNameReserved(reservedNameProblem(declared.get(n)), renderer.topSuiteName()); });
+    return renderer.renderTests(suites, pkgNames);
   }
   String reservedNameProblem(Literal owner){
     var p= owner.pos();

@@ -44,6 +44,7 @@ final class DocBuilderTest{
   static{ utils.Err.setUp(AssertionFailedError.class, Assertions::assertEquals, Assertions::assertTrue); }
   private static final URI file= URI.create("fear:/_pkg/a.fear");
   static String show(List<TestSource> sources){ return Join.of(sources.stream().map(DocBuilderTest::show), "", "", "", ""); }
+  static List<TestSource> tests(HtmlDocRenderer r){ return r.renderTests(r.suites(), TName::s); }
   static String show(TestSource s){
     var lines= s.text().split("\n", -1);
     var res= new StringBuilder("--- ").append(s.fileName()).append('\n');
@@ -660,7 +661,7 @@ Holder
     typeDoc.declared(Pos.of(file, 9, 1), bar, List.of(
       new DocOcc(file, 9, 1, 4, ".check{bar.assertOk}", true, DocKind.Example)
     ), List.of());
-    var test= new HtmlDocRenderer(Map.of(), new DocResolver("pkg", List.of(typeDoc), OtherPackages.empty(), TName::s), Map.of(), Optional.empty()).renderTests(TName::s);
+    var test= tests(new HtmlDocRenderer(Map.of(), new DocResolver("pkg", List.of(typeDoc), OtherPackages.empty(), TName::s), Map.of(), Optional.empty()));
     assertEquals("""
 --- fear:/_pkg/a.fear
 9:4| _Holder_Examples: base.Test {::
@@ -693,7 +694,7 @@ Holder
     hiddenDoc.declared(Pos.of(file, 20, 1), qux, List.of(
       new DocOcc(file, 20, 1, 4, ".check{qux.assertOk}", true, DocKind.Example)
     ), List.of());
-    var test= new HtmlDocRenderer(Map.of(), new DocResolver("pkg", List.of(visibleDoc, hiddenDoc), OtherPackages.empty(), TName::s), Map.of(), Optional.empty()).renderTests(TName::s);
+    var test= tests(new HtmlDocRenderer(Map.of(), new DocResolver("pkg", List.of(visibleDoc, hiddenDoc), OtherPackages.empty(), TName::s), Map.of(), Optional.empty()));
     assertEquals("""
 --- fear:/_pkg/a.fear
 9:4| _Visible_Examples: base.Test {::
@@ -723,7 +724,7 @@ Holder
       new DocOcc(file, 7, 1, 4, ".let x={1}", true, DocKind.TestOnly),
       new DocOcc(file, 8, 1, 4, ".check{x.assertEq 1}", true, DocKind.Example)
     ), List.of());
-    var test= new HtmlDocRenderer(Map.of(), new DocResolver("pkg", List.of(typeDoc), OtherPackages.empty(), TName::s), Map.of(), Optional.empty()).renderTests(TName::s);
+    var test= tests(new HtmlDocRenderer(Map.of(), new DocResolver("pkg", List.of(typeDoc), OtherPackages.empty(), TName::s), Map.of(), Optional.empty()));
     assertEquals("""
 --- fear:/_pkg/a.fear
 7:4| _Holder_Examples: base.Test {::
@@ -763,7 +764,7 @@ Holder
       new DocOcc(file, 9, 3, 7, "Holder.early", true, DocKind.Example),
       new DocOcc(file, 10, 3, 6, "about early", true, DocKind.Prose)
     ), List.of());
-    var test= new HtmlDocRenderer(Map.of(), new DocResolver("pkg", List.of(typeDoc), OtherPackages.empty(), TName::s), Map.of(), Optional.empty()).renderTests(TName::s);
+    var test= tests(new HtmlDocRenderer(Map.of(), new DocResolver("pkg", List.of(typeDoc), OtherPackages.empty(), TName::s), Map.of(), Optional.empty()));
     assertEquals("""
 --- fear:/_pkg/a.fear
 2:4| _Holder_Examples: base.Test {::
@@ -794,12 +795,12 @@ Holder
   @Test void twoTypesSharingASimpleNameWithDifferentAritiesGetDistinctGeneratedSuites(){
     var box0= exampleOf(new TName("pkg.Box", 0, Pos.unknown), List.of());
     var box2= exampleOf(new TName("pkg.Box", 2, Pos.unknown), twoBounds());
-    var names= new HtmlDocRenderer(Map.of(), new DocResolver("pkg", List.of(box0, box2), OtherPackages.empty(), TName::s), Map.of(), Optional.empty()).testNames().perType();
+    var names= new HtmlDocRenderer(Map.of(), new DocResolver("pkg", List.of(box0, box2), OtherPackages.empty(), TName::s), Map.of(), Optional.empty()).suites().stream().map(HtmlDocRenderer.Suite::name).toList();
     assertEquals(names.stream().distinct().toList(), names);
   }
   @Test void aTypeNameEndingWithAPrimeGetsAGeneratedSuiteNameThatIsATypeName(){
     var prime= exampleOf(new TName("pkg.Box'", 0, Pos.unknown), List.of());
-    var names= new HtmlDocRenderer(Map.of(), new DocResolver("pkg", List.of(prime), OtherPackages.empty(), TName::s), Map.of(), Optional.empty()).testNames().perType();
+    var names= new HtmlDocRenderer(Map.of(), new DocResolver("pkg", List.of(prime), OtherPackages.empty(), TName::s), Map.of(), Optional.empty()).suites().stream().map(HtmlDocRenderer.Suite::name).toList();
     assertEquals(List.of(true), names.stream().map(TName::isTypeName).toList(), names.toString());
   }
   @Test void aTypeNamedLikeTheTopLevelSuiteSuppressesGenerationForTheWholePackage(@TempDir Path tmp){
@@ -1081,7 +1082,7 @@ documents, or turn it into a plain // comment.""", ex.getMessage());
     var bar= namedMethod(".bar", anonName);
     var anon= new TypeDoc(anonymousAt(Pos.of(file, 2, 1), List.of(bar)), Optional.empty(), List.of());
     anon.declared(Pos.of(file, 3, 1), bar, List.of(new DocOcc(file, 3, 1, 4, ".check{bar.assertOk}", true, DocKind.Example)), List.of());
-    var test= new HtmlDocRenderer(Map.of(), new DocResolver("pkg", List.of(anon), OtherPackages.empty(), TName::s), Map.of(), Optional.empty()).renderTests(TName::s);
+    var test= tests(new HtmlDocRenderer(Map.of(), new DocResolver("pkg", List.of(anon), OtherPackages.empty(), TName::s), Map.of(), Optional.empty()));
     assertEquals("""
 --- fear:/_pkg/a.fear
 3:4| __AFoo_Examples: base.Test {::

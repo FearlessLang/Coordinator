@@ -27,7 +27,6 @@ import utils.Bug;
 import utils.DistinctBy;
 import utils.Join;
 import utils.Pos;
-import utils.Range;
 import utils.Streams;
 
 final class HtmlDocRenderer{
@@ -74,10 +73,11 @@ final class HtmlDocRenderer{
     shown.forEach(t -> renderTypeText(sb, t));
     return sb.toString();
   }
-  record GeneratedTestNames(String top, List<String> perType){}
-  List<TypeDoc> testableTypes(){
+  record Suite(String name, List<List<DocOcc>> groups){}
+  List<Suite> suites(){
     return shown.stream()
-      .filter(t -> !testGroups(t).isEmpty())
+      .map(t -> new Suite(suiteName(t.main().name()), testGroups(t)))
+      .filter(s -> !s.groups().isEmpty())
       .toList();
   }
   Stream<DeclarationDoc> declarations(TypeDoc t){ return Stream.concat(Stream.of(t), visibleMethods(t).stream()); }
@@ -88,38 +88,28 @@ final class HtmlDocRenderer{
       .sorted(Comparator.comparingInt((List<DocOcc> g) -> g.getFirst().line()))
       .toList();
   }
-  GeneratedTestNames testNames(){
-    var testable= testableTypes();
-    return new GeneratedTestNames(
-      "AllAutoTests_"+pkgName,
-      testable.stream().map(t -> suiteName(t.main().name())).toList()
-    );
-  }
+  String topSuiteName(){ return "AllAutoTests_"+pkgName; }
   static String suiteName(TName n){
     var s= n.simpleName();
     var noPrimes= s.replaceAll("'+$", "");
     return "_"+noPrimes+"_Examples"+(n.arity()==0 ? "" : "_"+n.arity())+s.substring(noPrimes.length());
   }
-  List<TestSource> renderTests(Function<TName,String> pkgNames){
-    var testable= testableTypes();
-    var names= testNames();
+  List<TestSource> renderTests(List<Suite> suites, Function<TName,String> pkgNames){
     var test= pkgNames.apply(new TName("base.Test", 0, Pos.unknown));
-    var res= new ArrayList<TestSource>();
-    for (int i : Range.of(testable)){ res.add(renderSuite(names.perType().get(i), test, testGroups(testable.get(i)))); }
-    var first= testGroups(testable.getFirst()).getFirst().getFirst();
+    var first= suites.getFirst().groups().getFirst().getFirst();
     var top= new TestLines();
-    top.wrapper(names.top()+": "+pkgNames.apply(new TName("base.UnitTests", 0, Pos.unknown))+" {::", first.line(), first.textColumn());
-    names.perType().forEach(n -> top.wrapper("  .test "+n, first.line(), first.textColumn()));
+    top.wrapper(topSuiteName()+": "+pkgNames.apply(new TName("base.UnitTests", 0, Pos.unknown))+" {::", first.line(), first.textColumn());
+    suites.forEach(s -> top.wrapper("  .test "+s.name(), first.line(), first.textColumn()));
     top.wrapper("  }", first.line(), first.textColumn());
-    res.add(top.source(first.file()));
-    return res;
+    return Stream.concat(suites.stream().map(s -> renderSuite(s, test)), Stream.of(top.source(first.file()))).toList();
   }
-  static TestSource renderSuite(String name, String test, List<List<DocOcc>> groups){
+  static TestSource renderSuite(Suite s, String test){
+    var groups= s.groups();
     var first= groups.getFirst().getFirst();
     var last= groups.getLast().getLast();
     assert groups.stream().flatMap(List::stream).allMatch(d -> d.file().equals(first.file()));
     var lines= new TestLines();
-    lines.wrapper(name+": "+test+" {::", first.line(), first.textColumn());
+    lines.wrapper(s.name()+": "+test+" {::", first.line(), first.textColumn());
     for (var g : groups){
       lines.wrapper("  .test "+test+"{::", g.getFirst().line(), g.getFirst().textColumn());
       g.forEach(lines::example);
