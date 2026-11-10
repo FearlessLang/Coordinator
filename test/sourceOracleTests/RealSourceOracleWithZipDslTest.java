@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static testHelperFs.FsDsl.runErrIOE;
 
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.nio.file.AccessDeniedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -623,6 +624,30 @@ Fearless expands each zip file into a folder: rename this file if it is not mean
 
 We check this so that you[###]
 """, FsDsl.dumpErr(root, ex));
+  }
+  private static byte[] oneEntryZip(String name) throws IOException{
+    var bytes= new ByteArrayOutputStream();
+    try (var zos= new ZipOutputStream(bytes, UTF_8)){
+      zos.putNextEntry(new ZipEntry(name));
+      zos.write("A".getBytes(UTF_8));
+      zos.closeEntry();
+    }
+    return bytes.toByteArray();
+  }
+  private static List<String> fearPaths(Path root){ return new RealSourceOracleWithZip(root).allFiles().stream().map(Ref::fearPath).toList(); }
+  @Test void aZipReplacedByAnotherOfTheSameSizeAndTimeIsListedAgain(@TempDir Path tmp) throws Exception{
+    var root= tmp.resolve("root").toAbsolutePath().normalize();
+    UserError.root = root;
+    Fs.createDirectories(root.resolve("_pkg"));
+    Fs.writeString(root.resolve("_pkg/a.fear"), "A");
+    var zip= root.resolve("_pkg/o.zip");
+    Fs.write(zip, oneEntryZip("one.txt"));
+    var time= FileTime.fromMillis(System.currentTimeMillis() - 60_000);
+    Files.setLastModifiedTime(zip, time);
+    assertEquals(List.of("fear:/_pkg/a.fear", "fear:/_pkg/o/one.txt"), fearPaths(root));
+    Fs.write(zip, oneEntryZip("two.txt"));
+    Files.setLastModifiedTime(zip, time);
+    assertEquals(List.of("fear:/_pkg/a.fear", "fear:/_pkg/o/two.txt"), fearPaths(root));
   }
   @Test void errZipEntryNameNotUtf8(@TempDir Path tmp) throws Exception{
     var root= tmp.resolve("root").toAbsolutePath().normalize();
