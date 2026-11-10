@@ -145,7 +145,7 @@ public interface Coordinator{
     return sb.toString();
   }
   default String runAllMains(Path project, Path stdLibBase, String pkgName) throws InterruptedException{
-    return runMains(runData(project, stdLibBase), Push.of(project.resolve(outDir), sharedClasspath()), "_"+pkgName+".Main");
+    return runMains(Push.of(runData(project, stdLibBase), "-Dapple.awt.application.name="+project.getFileName()), Push.of(project.resolve(outDir), sharedClasspath()), "_"+pkgName+".Main");
   }
   /// Writes base.json, base.jar, base.html and base.txt into baseCache; the backend of this Coordinator writes base into out.
   default void buildBaseCache(Path stdLibBase, Path out, Path baseCache){
