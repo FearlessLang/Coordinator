@@ -22,6 +22,16 @@ import utils.OneOr;
 record Scope(Literal owner, Optional<M> method, Optional<Scope> outer){
   static Scope of(Literal owner){ return new Scope(owner, Optional.empty(), Optional.empty()); }
   static Scope of(Literal owner, M method){ return new Scope(owner, Optional.of(method), Optional.empty()); }
+  boolean bindsTypeParameter(String x){
+    var bs= Stream.concat(owner.bs().stream(), method.stream().flatMap(m -> m.sig().bs().stream()));
+    return bs.anyMatch(b -> b.x().equals(x)) || outer.filter(o -> o.bindsTypeParameter(x)).isPresent();
+  }
+  Optional<Optional<TName>> localType(String name){
+    if (name.equals(owner.thisName())){ return Optional.of(Optional.of(owner.name())); }
+    var m= method.filter(mi -> mi.xs().contains(name));
+    if (m.isEmpty()){ return outer.flatMap(o -> o.localType(name)); }
+    return Optional.of(m.get().sig().ts().get(m.get().xs().indexOf(name)) instanceof T.RCC rcc ? Optional.of(rcc.c().name()) : Optional.empty());
+  }
 }
 record DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other, Function<TName,String> names, Map<TName,TypeDoc> byName, List<TName> foreign, Map<String,List<MethodDoc>> declared){
   DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other, Function<TName,String> names){
@@ -37,25 +47,12 @@ record DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other, Fun
     };
   }
   private Optional<DocLink> resolveLocal(DocRef.LocalName ref, Scope scope){
-    if (!inScope(ref.name(), scope)){ return Optional.empty(); }
-    return Optional.of(localType(ref.name(), scope).filter(this::onPage)
+    return scope.localType(ref.name()).map(t -> t.filter(this::onPage)
       .<DocLink>map(n -> new DocLink.Resolved(Candidate.ofType(n)))
       .orElseGet(DocLink.NoLink::new));
   }
   private boolean typeParameter(DocRef.TypeName t, Scope scope){
-    if (t.pkg().isPresent() || t.arity().isPresent()){ return false; }
-    var bs= Stream.concat(scope.owner().bs().stream(), scope.method().stream().flatMap(m -> m.sig().bs().stream()));
-    return bs.anyMatch(b -> b.x().equals(t.simpleName())) || scope.outer().filter(o -> typeParameter(t, o)).isPresent();
-  }
-  private boolean inScope(String name, Scope scope){
-    if (name.equals(scope.owner().thisName()) || scope.method().filter(m -> m.xs().contains(name)).isPresent()){ return true; }
-    return scope.outer().filter(o -> inScope(name, o)).isPresent();
-  }
-  private Optional<TName> localType(String name, Scope scope){
-    if (name.equals(scope.owner().thisName())){ return Optional.of(scope.owner().name()); }
-    var m= scope.method().filter(mi -> mi.xs().contains(name));
-    if (m.isEmpty()){ return localType(name, scope.outer().get()); }
-    return m.get().sig().ts().get(m.get().xs().indexOf(name)) instanceof T.RCC rcc ? Optional.of(rcc.c().name()) : Optional.empty();
+    return t.pkg().isEmpty() && t.arity().isEmpty() && scope.bindsTypeParameter(t.simpleName());
   }
   Optional<DocLink> resolveType(DocRef.TypeName ref){
     var cands= typeCandidates(ref).stream().map(Candidate::ofType).toList();
@@ -89,8 +86,7 @@ record DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other, Fun
     };
   }
   private Optional<DocLink> onLocal(DocRef.LocalName l, DocRef.MethodName ref, Scope scope){
-    if (!inScope(l.name(), scope)){ return Optional.empty(); }
-    return localType(l.name(), scope).flatMap(o -> onOwners(title(o), List.of(o), ref.selector(), ref.arity()));
+    return scope.localType(l.name()).flatMap(t -> t.flatMap(o -> onOwners(title(o), List.of(o), ref.selector(), ref.arity())));
   }
   private String title(TName n){
     return localTypeDoc(n).map(TypeDoc::main).filter(Literal::infName).map(HtmlDocRenderer::anonTitle).orElse(n.simpleName());
