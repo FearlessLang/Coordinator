@@ -410,6 +410,10 @@ Dropper: Main{sys -> Block#
     writeJUnitReport("baseGeneratedExamples", tmp);
     utils.Err.strCmp("", out);
   }
+  @Test void drawingIsTheDrawingLineOfThisMachine(@TempDir Path tmp) throws InterruptedException{
+    var line= coordinator(tmp).drawing();
+    utils.Err.strCmp(line.startsWith("CPU: ") ? "CPU: [###]." : "Vulkan on \"[###]\" ([###], Vulkan [###]).", line);
+  }
   @Test void testDocs(){
     utils.Err.strCmp("""
 Hello world
@@ -1907,6 +1911,7 @@ FearlessCommandSelectMains hello
 FearlessCommandRun hello
 FearlessCommandCompile hello
 FearlessCommandCheck hello
+FearlessCommandFix hello
 FearlessCommandKind hello dataRead
 FearlessCommandMount hello hello.Notes notes
 FearlessCommandUnmount hello hello.Pub
