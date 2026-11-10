@@ -103,7 +103,7 @@ other kinds of file it registers.
 
 Your system remembers the choices listed below. Each one is a choice
 made by hand of the program that opens a kind of file, for example with
-"Open with" and "Always". Fearless never removes a choice of yours on
+"Open with" and "Always". Fearless does not remove these choices on
 its own, and stopped before touching anything: your system is exactly
 as it was.
 
