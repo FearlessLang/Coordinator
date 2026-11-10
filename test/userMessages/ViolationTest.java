@@ -96,13 +96,14 @@ C:\\Users\\ada\\Downloads\\fearlessManaged0_007\\fearlessManaged0_007w.exe""", V
 Fearless cannot become the program that opens the kinds of file listed
 below.
 
-Your system remembers a choice you made by hand for these kinds of file,
-and no program can change or remove that choice, including this one.
-Fearless stopped before touching anything: your system is exactly as it
-was.
+Your system remembers a choice made by hand for these kinds of file,
+with "Open with" and "Always". Fearless never removes a choice of yours
+on its own, and stopped before touching anything: your system is
+exactly as it was.
 
-The only way to clear it is Settings, Apps, Default apps, Reset - which
-resets every app default on your machine, not only this one.
+Removing these choices clears the way. Each choice is the registry key
+HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts\\<kind of file>\\UserChoice,
+together with the key UserChoiceLatest next to it.
 
 What is locked:
 .fearless -> SomeApp.fearless""", Violation.associationUserLocked(Map.of(".fearless", List.of("SomeApp.fearless")), e -> "").getMessage());
@@ -112,13 +113,14 @@ What is locked:
 Fearless cannot become the program that opens the kinds of file listed
 below.
 
-Your system remembers a choice you made by hand for these kinds of file,
-and no program can change or remove that choice, including this one.
-Fearless stopped before touching anything: your system is exactly as it
-was.
+Your system remembers a choice made by hand for these kinds of file,
+with "Open with" and "Always". Fearless never removes a choice of yours
+on its own, and stopped before touching anything: your system is
+exactly as it was.
 
-The only way to clear it is Settings, Apps, Default apps, Reset - which
-resets every app default on your machine, not only this one.
+Removing these choices clears the way. Each choice is the registry key
+HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts\\<kind of file>\\UserChoice,
+together with the key UserChoiceLatest next to it.
 
 What is locked:
 .foo claimed by "hello.Foo" of project "demo" -> SomeApp.foo

@@ -13,6 +13,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
@@ -102,10 +103,14 @@ public final class Main{
       c -> JavacTool.managerFolderOf(c).ifPresent(Main::removeAtOnce),
       reported -> Violation.associationsAmbiguous(reported).withRecovery(
         "Remove all Fearless registrations", () -> FileAssociations.eradicateAll(belongsToFamily, Violation::associationLeftHalfDone)),
-      locked -> Fs.isWindows() ? Violation.associationUserLocked(locked, e -> "") : Violation.associationBrokenDesk(locked),
+      Main::chosen,
       held -> Violation.associationNotOurs(held, e -> ""),
       Violation::associationNotWritable,
       Violation::associationLeftHalfDone);
+  }
+  private static UserError chosen(Map<String,List<String>> locked){
+    var error= Fs.isWindows() ? Violation.associationUserLocked(locked, e -> "") : Violation.associationBrokenDesk(locked);
+    return error.withRecovery("Remove these choices", () -> FileAssociations.forgetChoices(locked, Violation::associationNotWritable));
   }
   private static void spawnMac(Path appDir, Path file){
     var bundle= appDir.getParent().getParent();
