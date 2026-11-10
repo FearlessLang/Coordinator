@@ -1328,8 +1328,8 @@ M:Main{s -> Error!(Infos.map("msg", Infos.msg "a", "code", Infos.msg "seven"))}
 first
 second
 imm L.main(_) error line: 4 in file _p/_rank_app.fear
-a
 code: "seven"
+a
 imm M.main(_) error line: 5 in file _p/_rank_app.fear
 """, coordinator(root).main(root, stLib));
   }
