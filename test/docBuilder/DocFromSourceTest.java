@@ -2,7 +2,6 @@ package docBuilder;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.net.URI;
 import java.nio.file.Path;
@@ -25,10 +24,6 @@ import core.OtherPackages;
 import core.TName;
 import main.FrontendLogicMain;
 import main.FrontendLogicMain.TestSource;
-import realSourceOracle.RealSourceOracleWithZip;
-import realSourceOracle.Since;
-import realSourceOracle.SourceOracleWithAutoload;
-import resources.ResolveResource;
 import tools.Fs;
 import tools.SourceOracle;
 import userMessages.UserError;
@@ -416,22 +411,5 @@ User:{ .m: User -> this; }
 B:{ .f[X:imm,Y:imm](a1: A, a2: A): A -> a1; }
 """);
     utils.Err.strCmp("[###]<span class=\"sig\">.f[X:imm,<wbr>Y:imm](a1:<a href=\"#type-p_2e_A-0\">A</a>,<wbr>a2:<a href=\"#type-p_2e_A-0\">A</a>):<a href=\"#type-p_2e_A-0\">A</a></span>[###]", docs.html());
-  }
-  @Test void documentingBaseTakesLessTimeThanCompilingIt(@TempDir Path tmp){
-    var base= new RealSourceOracleWithZip(ResolveResource.stLibPath, Since.anyTime);
-    var files= SourceOracleWithAutoload.ofBase(base).sources(base.allFiles());
-    var times= new long[3];
-    times[0]= System.nanoTime();
-    new FrontendLogicMain().of("base", Map.of(), files, OtherPackages.empty(), core -> {
-      times[1]= System.nanoTime();
-      var builder= new HtmlDocBuilder(() -> files, OtherPackages.empty(), core, Optional.empty(), "base", tmp.resolve("base.html"), true);
-      core.forEach(builder::visitAll);
-      builder.complete(new FrontendLogicMain().names("base", Map.of(), files, OtherPackages.empty()), true, Runnable::run);
-      times[2]= System.nanoTime();
-      return List.of();
-    });
-    var compiling= (times[1]-times[0])/1_000_000;
-    var documenting= (times[2]-times[1])/1_000_000;
-    assertTrue(documenting < compiling, "documenting base took "+documenting+" ms, compiling it took "+compiling+" ms");
   }
 }

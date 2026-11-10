@@ -27,7 +27,6 @@ import utils.Bug;
 import utils.DistinctBy;
 import utils.Join;
 import utils.Pos;
-import utils.OneOr;
 import utils.Range;
 import utils.Streams;
 
@@ -41,6 +40,7 @@ final class HtmlDocRenderer{
   final LinkedHashMap<DocLink.Ambiguous,String> pages= new LinkedHashMap<>();
   final ExportedToStr toStr;
   final DocResolver resolver;
+  final HashMap<String,Pattern> namePatterns= new HashMap<>();
   HtmlDocRenderer(Map<String,String> uses, DocResolver resolver, Map<DocOcc,Map<Integer,DocLink>> spans, Optional<Path> baseDocLocation){
     assert Require.nonNull(uses, resolver, spans, baseDocLocation);
     pkgName= resolver.pkgName();
@@ -371,12 +371,12 @@ code{
       .append("<ul id=\"toclist\">\n");
     shown.forEach(t -> sb.append("<li><a href=\"#")
       .append(typeId(t)).append("\">")
-      .append(h(shortTitle(t)).replace(",", ",<wbr>")).append("</a></li>\n"));
+      .append(wrap(shortTitle(t))).append("</a></li>\n"));
     sb.append("</ul>\n</nav>\n");
   }
   void renderType(StringBuilder sb, TypeDoc t, Map<DocOcc,Object> claims){
     sb.append("<section class=\"type\" id=\"").append(typeId(t)).append("\">\n")
-      .append("<h2>").append(h(typeTitle(t))).append("</h2>\n");
+      .append("<h2>").append(wrap(typeTitle(t))).append("</h2>\n");
     renderDoc(sb, t, t.docs, claims);
     sb.append(Join.of(t.main().cs().stream().map(this::typeLink), "<p class=\"extends\"><b>Extends:</b> ", ", ", "</p>\n", ""));
     renderVariants(sb, "Typed literal variants", t.variants, toStr::lit);
@@ -422,17 +422,16 @@ code{
     var from= 0;
     for (var n : Stream.concat(sig.ts().stream(), Stream.of(sig.ret())).flatMap(HtmlDocRenderer::typeNames).toList()){
       var printed= toStr.typeName(n);
-      var at= Pattern.compile("(?<![\\p{L}\\p{Nd}_.])"+Pattern.quote(printed)+"(?![\\p{L}\\p{Nd}_])").matcher(text);
+      var at= namePatterns.computeIfAbsent(printed, p -> Pattern.compile("(?<![\\p{L}\\p{Nd}_.])"+Pattern.quote(p)+"(?![\\p{L}\\p{Nd}_])")).matcher(text);
       var found= at.find(from);
       assert found;
       from = at.end();
-      var link= resolver.resolveType(new DocRef.TypeName(Optional.of(resolver.written(n.pkgName())), n.simpleName(), OptionalInt.of(n.arity())));
-      if (link.isEmpty()){ continue; }
-      sb.append(h(text.substring(i, at.start())));
-      sb.append("<a href=\"").append(h(href(link.get()))).append("\">").append(h(printed)).append("</a>");
+      if (!resolver.byName().containsKey(n) && !resolver.other().dom().contains(n)){ continue; }
+      sb.append(wrap(text.substring(i, at.start())));
+      sb.append("<a href=\"").append(h(linkTo(n))).append("\">").append(h(printed)).append("</a>");
       i = from;
     }
-    sb.append(h(text.substring(i)));
+    sb.append(wrap(text.substring(i)));
     return sb.toString();
   }
   private static Stream<TName> typeNames(T t){
@@ -504,7 +503,7 @@ code{
     sb.append("</ul>\n</section>\n");
   }
   String renderCandidate(Candidate c){
-    var anonymous= OneOr.opt("type "+c.owner(), types.stream().filter(t -> t.main().infName() && t.main().name().equals(c.owner())));
+    var anonymous= resolver.localTypeDoc(c.owner()).filter(t -> t.main().infName());
     var sb= new StringBuilder("<a href=\"").append(h(candidateHref(c))).append("\">")
       .append(c.localMethod().map(m -> m.main().sig().rc().toStrSpace()).orElse(""))
       .append(h(anonymous.map(this::shortTitle).orElseGet(() -> toStr.typeNameWithArity(c.owner()))));
@@ -525,7 +524,7 @@ code{
   }
   String candidateHref(Candidate c){
     if (c.sig().isPresent()){ return prefix(c.owner().pkgName())+"#"+methodId(c.owner(), c.sig().get()); }
-    return OneOr.opt("type "+c.owner(), types.stream().filter(t -> t.main().name().equals(c.owner()))).map(t -> "#"+typeId(t)).orElseGet(() -> linkTo(c.owner()));
+    return resolver.localTypeDoc(c.owner()).map(t -> "#"+typeId(t)).orElseGet(() -> linkTo(c.owner()));
   }
   <V> void renderVariants(StringBuilder sb, String title, List<V> variants, Function<V,String> show){
     if (variants.size() <= 1){ return; }
@@ -568,6 +567,7 @@ code{
   }
   private static final Pattern notPlain= Pattern.compile("[^a-zA-Z0-9]");
   static String id(String s){ return notPlain.matcher(s).replaceAll(m -> "_"+Integer.toHexString(m.group().codePointAt(0))+"_"); }
+  static String wrap(String s){ return h(s).replace(",", ",<wbr>"); }
   static String h(String s){
     return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;");
   }

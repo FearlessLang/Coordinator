@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import core.E.Literal;
@@ -22,7 +23,12 @@ record Scope(Literal owner, Optional<M> method, Optional<Scope> outer){
   static Scope of(Literal owner){ return new Scope(owner, Optional.empty(), Optional.empty()); }
   static Scope of(Literal owner, M method){ return new Scope(owner, Optional.of(method), Optional.empty()); }
 }
-record DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other, Function<TName,String> names){
+record DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other, Function<TName,String> names, Map<TName,TypeDoc> byName, List<TName> foreign, Map<String,List<MethodDoc>> declared){
+  DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other, Function<TName,String> names){
+    this(pkgName, types, other, names, types.stream().collect(Collectors.toUnmodifiableMap(t -> t.main().name(), t -> t)),
+      other.dom().stream().sorted(Comparator.comparing(TName::s).thenComparing(TName::arity)).toList(),
+      types.stream().filter(TypeDoc::visible).flatMap(t -> t.methods.stream()).filter(m -> m.declared).collect(Collectors.groupingBy(m -> m.main().sig().m().s())));
+  }
   Optional<DocLink> resolve(DocRef ref, Scope scope){
     return switch (ref){
       case DocRef.TypeName t -> typeParameter(t, scope) ? Optional.of(new DocLink.NoLink()) : resolveType(t);
@@ -60,17 +66,14 @@ record DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other, Fun
     if (pkg.isEmpty() || pkg.get().equals(pkgName)){
       var local= matching(types.stream().map(TypeDoc::main).filter(l -> !l.infName()).map(Literal::name), TName::simpleName, ref);
       if (!local.isEmpty() || pkg.isPresent()){ return local; }
-      var used= matching(foreign(), names, ref);
+      var used= matching(foreign.stream(), names, ref);
       if (!used.isEmpty()){ return used; }
     }
-    return matching(foreign().filter(n -> pkg.isEmpty() || written(n.pkgName()).equals(pkg.get())), TName::simpleName, ref);
+    return matching(foreign.stream().filter(n -> pkg.isEmpty() || written(n.pkgName()).equals(pkg.get())), TName::simpleName, ref);
   }
   String written(String pkg){
     return OneOr.opt("two names for "+pkg, other.virtualizationMap().getOrDefault(pkgName, Map.of()).entrySet().stream()
       .filter(e -> e.getValue().split(" ")[0].equals(pkg)).map(Map.Entry::getKey)).orElse(pkg);
-  }
-  private Stream<TName> foreign(){
-    return other.dom().stream().sorted(Comparator.comparing(TName::s).thenComparing(TName::arity));
   }
   private List<TName> matching(Stream<TName> ns, Function<TName,String> written, DocRef.TypeName ref){
     return ns
@@ -108,17 +111,13 @@ record DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other, Fun
     return foreignCandidates(owner, other.__of(owner).ms(), selector, arity).toList();
   }
   private boolean onPage(TName n){ return localTypeDoc(n).map(TypeDoc::visible).orElse(true); }
-  private Optional<TypeDoc> localTypeDoc(TName n){
-    return OneOr.opt("type "+n, types.stream().filter(t -> t.main().name().equals(n)));
-  }
+  Optional<TypeDoc> localTypeDoc(TName n){ return Optional.ofNullable(byName.get(n)); }
   private Optional<DocLink> resolveBareSelector(String selector, OptionalInt arity){
-    var localCands= types.stream()
-      .filter(TypeDoc::visible)
-      .flatMap(t -> t.methods.stream()
-        .filter(m -> m.declared)
-        .filter(m -> named(m.main(), selector, arity))
-        .map(m -> Candidate.ofLocalMethod(t.main().name(), m)));
-    var foreignCands= foreign()
+    var localCands= declared.getOrDefault(selector, List.of()).stream()
+      .filter(m -> named(m.main(), selector, arity))
+      .map(m -> Candidate.ofLocalMethod(m.owner.main().name(), m));
+    var foreignCands= foreign.stream()
+      .filter(TName::isPublic)
       .flatMap(n -> foreignCandidates(n, other.__of(n).ms().stream().filter(m -> m.sig().origin().equals(n)).toList(), selector, arity));
     return pack(selector+shape(arity, "(", ")"), Stream.concat(localCands, foreignCands).toList());
   }

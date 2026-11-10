@@ -80,9 +80,9 @@ final class DocRefScanner{
       var m= p.matcher(s).region(i, s.length());
       if (!m.lookingAt()){ return OptionalInt.empty(); }
       i = m.end();
-      return OptionalInt.of(m.group(1)==null ? 0 : (m.group(1).length()+1)/2);
+      return OptionalInt.of((int)m.group().chars().filter(c -> c=='_').count());
     }
-    private static final Pattern typeArity= Pattern.compile("\\[(_(,_)*)?]");
-    private static final Pattern callArity= Pattern.compile("\\((_(,_)*)?\\)");
+    private static final Pattern typeArity= Pattern.compile("\\[(_(, ?_)*)?]");
+    private static final Pattern callArity= Pattern.compile("\\((_(, ?_)*)?\\)");
   }
 }
