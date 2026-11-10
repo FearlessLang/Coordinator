@@ -1063,7 +1063,7 @@ hide what is nested under it, others expand it as a folder and hide the file.
 
 We check this so that you[###]
 """);}
-  @Test void errZipFileUsedAsDirectoryWithAllowedNoExtName(@TempDir Path tmp){ runErrIOE(tmp, """
+  @Test void errZipFileUsedAsDirectory(@TempDir Path tmp){ runErrIOE(tmp, """
 _pkg/z.zip/readme
 iii
 X
