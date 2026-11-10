@@ -54,8 +54,12 @@ public final class Main{
     NativeLocaleForcer.forceEnglish();
     JavacTool.reqAppDir(Violation::mustUseLauncher);
     try{ if (!hasConsoleFlag()){ hookStd(); } NativeLocaleForcer.requireUtf8FileNames(); run(args); }
-    catch (UserError e){ System.err.print(e.getMessage()); }
-    catch (Throwable e){ System.err.print(UserError.crash(e)); }
+    catch (UserError e){ failed(e.getMessage()); }
+    catch (Throwable e){ failed(UserError.crash(e)); }
+  }
+  private static void failed(String error){
+    System.err.print(error+"\n");
+    if (hasConsoleFlag()){ System.exit(1); }
   }
   private static void run(String[] args) throws InterruptedException{
     var appDir= JavacTool.reqAppDir(Violation::mustUseLauncher);
