@@ -104,7 +104,7 @@ public final class Main{
     var identity= l.getFileName().toString().replaceFirst("\\.[^.]*$", "");
     if (!belongsToFamily.test(identity)){ return; }
     var icon= appDir.resolve("icon.png");
-    FileAssociations.reconcile(identity, belongsToFamily, l, List.of(new Icon(".fearless", l, icon)), List.of(), l, icon,
+    FileAssociations.reconcile(identity, belongsToFamily, l, List.of(new Icon(".fearless", l, icon)), List.of(), icon,
       c -> JavacTool.managerFolderOf(c).ifPresent(Main::removeAtOnce),
       reported -> Violation.associationsAmbiguous(reported).withRecovery(
         "Remove all Fearless registrations", () -> FileAssociations.eradicateAll(belongsToFamily, Violation::associationLeftHalfDone)),
