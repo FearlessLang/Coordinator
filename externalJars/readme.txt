@@ -51,6 +51,26 @@ https://raw.githubusercontent.com/harfbuzz/harfbuzz/14.3.0/COPYING
 To make one jar, put the library and the license in a folder dir, as they are in the jar, then run
 jar --create --date 2026-08-23T00:00:00Z --file harfbuzz-windows-x64-14.3.0.jar -C dir .
 
+## MoltenVK
+MoltenVK is a native library implementing Vulkan on Metal, the graphics API of macOS.
+A running Fearless program draws with Vulkan on every system. Windows and Linux have a Vulkan loader, which comes with the graphics driver; macOS has none, so on macOS a running Fearless program loads MoltenVK in place of the Vulkan loader.
+Each jar moltenvk-macos-<arch>-<version>.jar holds one library, moltenvk/macos/<arch>/libMoltenVK.dylib, and the license of MoltenVK as META-INF/LICENSE-moltenvk.txt.
+The library comes from a natives jar of LWJGL.
+To find the latest LWJGL version, open:
+https://repo.maven.apache.org/maven2/org/lwjgl/lwjgl-vulkan/maven-metadata.xml
+and search for <versioning>...<release>????</release>
+Those are the direct download links of LWJGL 3.4.3, holding MoltenVK 1.4.2 (the commit 4b715bdcb1f108f2003fffe126c389ad0cca1c90 of https://github.com/KhronosGroup/MoltenVK):
+
+https://repo.maven.apache.org/maven2/org/lwjgl/lwjgl-vulkan/3.4.3/lwjgl-vulkan-3.4.3-natives-macos.jar
+
+https://repo.maven.apache.org/maven2/org/lwjgl/lwjgl-vulkan/3.4.3/lwjgl-vulkan-3.4.3-natives-macos-arm64.jar
+
+The jar without an arch in the name is for x64.
+The license of MoltenVK:
+https://raw.githubusercontent.com/KhronosGroup/MoltenVK/4b715bdcb1f108f2003fffe126c389ad0cca1c90/LICENSE
+
+The jars are made as the HarfBuzz jars are.
+
 ## HumbleUI Types
 Types is a small library providing common value types used by Skija.
 To find the latest version, open:
