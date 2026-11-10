@@ -1,6 +1,7 @@
 package docBuilder;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.net.URI;
 import java.nio.file.Path;
@@ -23,6 +24,7 @@ import main.FrontendLogicMain;
 import main.FrontendLogicMain.TestSource;
 import tools.Fs;
 import tools.SourceOracle;
+import userMessages.UserError;
 
 final class DocFromSourceTest{
   static{ utils.Err.setUp(AssertionFailedError.class, Assertions::assertEquals, Assertions::assertTrue); }
@@ -138,5 +140,76 @@ Maker:{
   }
 """);
     utils.Err.strCmp("[###]Maker\n\t.make:A\n    makes an A[###]", docs.text());
+  }
+  @Test void aCommentLineOfSlashesOrDashesIsAPlainComment(@TempDir Path tmp){
+    var docs= docs(tmp, a+"""
+////////////////////////////
+B:{ .m: A -> A.m
+  //---------- then once more
+  .m; }
+""");
+    utils.Err.strCmp("[###]B\n\t.m:A\n[###]", docs.text());
+    assertEquals(List.of(), docs.tests());
+  }
+  @Test void aFencedBlockWrittenWithNoSpaceAfterTheSlashesKeepsItsIndentation(@TempDir Path tmp){
+    var docs= docs(tmp, a+"""
+///Example:
+///```
+///Foo:{
+///  .m
+///  }
+///```
+B:{ .m: A -> A; }
+""");
+    utils.Err.strCmp("[###]<pre class=\"fenced\">Foo:{\n  .m\n  }</pre>[###]", docs.html());
+  }
+  @Test void aFenceNamingItsLanguageIsAFence(@TempDir Path tmp){
+    var docs= docs(tmp, a+"""
+///Example:
+///```fearless
+///B.m `raw`
+///```
+B:{ .m: A -> A; }
+""");
+    utils.Err.strCmp("[###]<pre class=\"fenced\">B.m `raw`</pre>[###]", docs.html());
+  }
+  @Test void aParameterOfTheEnclosingMethodIsANameInScopeInTheDocOfAnAnonymousLiteralMethod(@TempDir Path tmp){
+    var docs= docs(tmp, a+"""
+Maker:{
+  .make(seed: A): A -> A{
+    ///Gives back `seed`.
+    .m -> seed;
+    };
+  }
+""");
+    utils.Err.strCmp("[###]\t.m:A\n    Gives back `seed`.[###]", docs.text());
+  }
+  @Test void aParameterOfAnAbstractMethodIsANameInScope(@TempDir Path tmp){
+    var docs= docs(tmp, a+"""
+B:{
+  ///Gives back `x`.
+  .f(x: A): A;
+  }
+""");
+    utils.Err.strCmp("[###]\t.f([###]):A\n    Gives back `x`.[###]", docs.text());
+  }
+  @Test void aTrailingDocAttachedToNothingIsExplainedAsATrailingDoc(@TempDir Path tmp){
+    var ex= assertThrows(UserError.class, () -> docs(tmp, a+"""
+B:{
+  .m: A ->
+    A; /// returns an A
+  }
+"""));
+    utils.Err.strCmp("Misplaced doc comment.[###]same line[###]", ex.getMessage());
+  }
+  @Test void proseBetweenTwoExamplesStaysBetweenThem(@TempDir Path tmp){
+    var docs= docs(tmp, a+"""
+///Sorting:
+//> .sorted
+///Reversing:
+//> .reversed
+B:{ .m: A -> A; }
+""");
+    utils.Err.strCmp("[###]<p>Sorting:</p>[###].sorted[###]<p>Reversing:</p>[###].reversed[###]", docs.html());
   }
 }

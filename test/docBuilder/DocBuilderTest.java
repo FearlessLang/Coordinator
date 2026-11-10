@@ -949,6 +949,22 @@ one of these was meant to start with /// instead.""", ex.getMessage());
     assertTrue(idsIn(html, "id=\"").containsAll(idsIn(html, "href=\"#")));
     utils.Err.strCmp("[###]From: <a href=\"#method-pkg_2e_Sub-0-imm-_2e_foo-0\">Sub.foo</a>.[###]", html);
   }
+  @Test void renderTextShowsEveryTypedVariantOfAMethod(){
+    var ownerName= new TName("pkg.Holder", 0, Pos.unknown);
+    var typeDoc= new TypeDoc(namedType("pkg.Holder", List.of(), List.of()), List.of());
+    typeDoc.declared(Pos.of(file, 9, 1), fooMethod(RC.imm, ownerName), List.of(), List.of());
+    typeDoc.declared(Pos.of(file, 9, 1), fooMethod(RC.mut, ownerName), List.of(), List.of());
+    var text= new HtmlDocRenderer(Map.of(), new DocResolver("pkg", List.of(typeDoc), OtherPackages.empty(), TName::s), Map.of(), Optional.empty()).renderText();
+    utils.Err.strCmp("[###]mut .foo:base.Void[###]", text);
+  }
+  @Test void aReferenceToAMethodOfAnotherPackageLinksToThatMethod(){
+    var supName= new TName("other.Sup", 0, Pos.unknown);
+    var other= OtherPackages.start(Map.of(), List.of(namedType("other.Sup", List.of(), List.of(namedMethod(".bar", supName)))), 0L);
+    var renderer= new HtmlDocRenderer(Map.of(), new DocResolver("pkg", List.of(), other, TName::s), Map.of(), Optional.empty());
+    var ref= new DocRef.MethodName(Optional.of(new DocRef.TypeName(Optional.of("other"), "Sup", OptionalInt.empty())), ".bar", OptionalInt.empty());
+    var link= renderer.resolver.resolve(ref, Scope.of(namedType("pkg.Z", List.of(), List.of()))).get();
+    assertEquals("other.html#method-other_2e_Sup-0-imm-_2e_bar-0", renderer.href(link));
+  }
   @Test void twoArityVariantsOfATypeGiveTheirMethodsDistinctAnchors(){
     var oneName= new TName("pkg.Pair", 0, Pos.unknown);
     var twoName= new TName("pkg.Pair", 2, Pos.unknown);
