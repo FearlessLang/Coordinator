@@ -62,9 +62,7 @@ Foo: Bar {
 }
 """;
     var docs= new SourceDocs(file, text);
-    var atLine2= docs.docsByLine.getOrDefault(2, List.of());
-    assertEquals(1, atLine2.size(), "the /// doc comment on line 2 must be recognized as a doc comment");
-    assertEquals(" this is meant to be a doc comment", atLine2.getFirst().text());
+    assertEquals(" this is meant to be a doc comment", docs.docByLine.get(2).text());
   }
   @Test void plainLineCommentWithAStrayBacktickDoesNotSwallowALaterDocComment(){
     var text= """
@@ -74,9 +72,7 @@ Foo: Bar {
 }
 """;
     var docs= new SourceDocs(file, text);
-    var atLine2= docs.docsByLine.getOrDefault(2, List.of());
-    assertEquals(1, atLine2.size(), "the /// doc comment on line 2 must be recognized as a doc comment");
-    assertEquals(" this doc should still be found", atLine2.getFirst().text());
+    assertEquals(" this doc should still be found", docs.docByLine.get(2).text());
   }
   @Test void aBlockCommentIsNeverTreatedAsADocCommentEvenIfItContainsTripleSlashLookingText(){
     var text= """
@@ -85,7 +81,7 @@ Foo: Bar {
 }
 """;
     var docs= new SourceDocs(file, text);
-    assertTrue(docs.docsByLine.isEmpty(), "a block comment must never register a doc occurrence: "+docs.docsByLine);
+    assertTrue(docs.docByLine.isEmpty(), "a block comment must never register a doc occurrence: "+docs.docByLine);
   }
   @Test void consecutivePureDocLinesAboveADeclarationAreCollectedInSourceOrder(){
     var text= """
@@ -125,19 +121,19 @@ Foo: Bar {
       List.of("description of foo", ".check{foo.assertEq(1)}", ".checkDetErr({_ -> True}, {bar})"),
       before.stream().map(DocOcc::text).toList());
   }
-  @Test void aTrailingInlineDocCommentOnTheDeclarationLineIsFound(){
+  @Test void aTrailingDocCommentOnTheDeclarationLineIsFound(){
     var text= "Foo: Bar { /// trailing doc\n";
     var docs= new SourceDocs(file, text);
     var found= docs.docsAt(Pos.of(file, 1, 1), false);
     assertEquals(1, found.size());
     assertEquals("trailing doc", found.getFirst().text());
-    assertTrue(found.getFirst().inline(), "a doc comment following code on the same line must be inline, not pure");
+    assertTrue(found.getFirst().trailing(), "a doc comment following code on the same line is trailing");
   }
   @Test void trailingDocsSharedByTwoDeclarationsAreAmbiguousInSourceOrder(){
     var text= ".aaa->1;  .bbb->2 /// first note\n.ccc->3;  .ddd->4 /// second note\n";
     var docs= new SourceDocs(file, text);
     List.of(Pos.of(file, 1, 1), Pos.of(file, 1, 11), Pos.of(file, 2, 1), Pos.of(file, 2, 11)).forEach(p -> docs.docsAt(p, false));
-    assertEquals(List.of("first note", "second note"), docs.ambiguousInline().stream().map(DocOcc::text).toList());
+    assertEquals(List.of("first note", "second note"), docs.ambiguousTrailing().stream().map(DocOcc::text).toList());
   }
   //documentation that reaches no declaration is documentation nobody reads: the usual
   //cause is a /// or //> written with one mark too few, which ends the block silently.
@@ -339,7 +335,7 @@ Foo: Bar {
     var take= methodTaking(".take", ownerName, "elem", new TName("pkg.Thing", 0, Pos.unknown));
     var typeDoc= new TypeDoc(namedType("pkg.Holder", List.of(), List.of()), Optional.empty(), List.of());
     typeDoc.declared(Pos.of(file, 9, 1), take, List.of(
-      new DocOcc(file, 8, 1, 4, "Stores `elem` in this holder.", true, DocKind.Prose)
+      new DocOcc(file, 8, 1, 4, "Stores `elem` in this holder.", false, DocKind.Prose)
     ), List.of());
     var text= new HtmlDocRenderer(Map.of(), new DocResolver("pkg", List.of(typeDoc), OtherPackages.empty(), TName::s), Map.of(), Optional.empty()).renderText();
     utils.Err.strCmp("[###]\t.take([###]elem[###]Thing):base.Void\n    Stores `elem` in this holder.[###]", text);
@@ -620,8 +616,8 @@ Holder
     var owner= namedType("pkg.Holder", List.of(), List.of());
     var typeDoc= new TypeDoc(owner, Optional.empty(), List.of());
     typeDoc.declared(Pos.of(file, 9, 1), bar, List.of(
-      new DocOcc(file, 9, 1, 4, "does the bar thing", true, DocKind.Prose),
-      new DocOcc(file, 9, 1, 4, ".check{bar.assertOk}", true, DocKind.Example)
+      new DocOcc(file, 9, 1, 4, "does the bar thing", false, DocKind.Prose),
+      new DocOcc(file, 9, 1, 4, ".check{bar.assertOk}", false, DocKind.Example)
     ), List.of());
     var text= new HtmlDocRenderer(Map.of(), new DocResolver("pkg", List.of(typeDoc), OtherPackages.empty(), TName::s), Map.of(), Optional.empty()).renderText();
     assertEquals("""
@@ -640,7 +636,7 @@ Holder
     var bar= namedMethod(".bar", ownerName);
     var owner= namedType("pkg.Holder", List.of(), List.of());
     var typeDoc= new TypeDoc(owner, Optional.empty(), List.of(
-      new DocOcc(file, 8, 1, 2, ".bar is drawn at this very indent", true, DocKind.Prose)
+      new DocOcc(file, 8, 1, 2, ".bar is drawn at this very indent", false, DocKind.Prose)
     ));
     typeDoc.declared(Pos.of(file, 9, 1), bar, List.of(), List.of());
     var text= new HtmlDocRenderer(Map.of(), new DocResolver("pkg", List.of(typeDoc), OtherPackages.empty(), TName::s), Map.of(), Optional.empty()).renderText();
@@ -659,7 +655,7 @@ Holder
     var owner= namedType("pkg.Holder", List.of(), List.of());
     var typeDoc= new TypeDoc(owner, Optional.empty(), List.of());
     typeDoc.declared(Pos.of(file, 9, 1), bar, List.of(
-      new DocOcc(file, 9, 1, 4, ".check{bar.assertOk}", true, DocKind.Example)
+      new DocOcc(file, 9, 1, 4, ".check{bar.assertOk}", false, DocKind.Example)
     ), List.of());
     var test= tests(new HtmlDocRenderer(Map.of(), new DocResolver("pkg", List.of(typeDoc), OtherPackages.empty(), TName::s), Map.of(), Optional.empty()));
     assertEquals("""
@@ -682,17 +678,17 @@ Holder
     var visible= namedType("pkg.Visible", List.of(), List.of());
     var visibleDoc= new TypeDoc(visible, Optional.empty(), List.of());
     visibleDoc.declared(Pos.of(file, 9, 1), bar, List.of(
-      new DocOcc(file, 9, 1, 4, ".check{bar.assertOk}", true, DocKind.Example)
+      new DocOcc(file, 9, 1, 4, ".check{bar.assertOk}", false, DocKind.Example)
     ), List.of());
     visibleDoc.declared(Pos.of(file, 12, 1), baz, List.of(
-      new DocOcc(file, 12, 1, 4, "does the baz thing", true, DocKind.Prose)
+      new DocOcc(file, 12, 1, 4, "does the baz thing", false, DocKind.Prose)
     ), List.of());
     var hiddenName= new TName("pkg._Hidden", 0, Pos.unknown);
     var qux= namedMethod(".qux", hiddenName);
     var hidden= namedType("pkg._Hidden", List.of(), List.of());
     var hiddenDoc= new TypeDoc(hidden, Optional.empty(), List.of());
     hiddenDoc.declared(Pos.of(file, 20, 1), qux, List.of(
-      new DocOcc(file, 20, 1, 4, ".check{qux.assertOk}", true, DocKind.Example)
+      new DocOcc(file, 20, 1, 4, ".check{qux.assertOk}", false, DocKind.Example)
     ), List.of());
     var test= tests(new HtmlDocRenderer(Map.of(), new DocResolver("pkg", List.of(visibleDoc, hiddenDoc), OtherPackages.empty(), TName::s), Map.of(), Optional.empty()));
     assertEquals("""
@@ -721,8 +717,8 @@ Holder
     var owner= namedType("pkg.Holder", List.of(), List.of());
     var typeDoc= new TypeDoc(owner, Optional.empty(), List.of());
     typeDoc.declared(Pos.of(file, 9, 1), bar, List.of(
-      new DocOcc(file, 7, 1, 4, ".let x={1}", true, DocKind.TestOnly),
-      new DocOcc(file, 8, 1, 4, ".check{x.assertEq 1}", true, DocKind.Example)
+      new DocOcc(file, 7, 1, 4, ".let x={1}", false, DocKind.TestOnly),
+      new DocOcc(file, 8, 1, 4, ".check{x.assertEq 1}", false, DocKind.Example)
     ), List.of());
     var test= tests(new HtmlDocRenderer(Map.of(), new DocResolver("pkg", List.of(typeDoc), OtherPackages.empty(), TName::s), Map.of(), Optional.empty()));
     assertEquals("""
@@ -755,14 +751,14 @@ Holder
     var early= namedMethod(".early", ownerName);
     var owner= namedType("pkg.Holder", List.of(), List.of());
     var typeDoc= new TypeDoc(owner, Optional.empty(), List.of(
-      new DocOcc(file, 2, 1, 4, "Holder.ok", true, DocKind.Example)
+      new DocOcc(file, 2, 1, 4, "Holder.ok", false, DocKind.Example)
     ));
     typeDoc.declared(Pos.of(file, 21, 3), late, List.of(
-      new DocOcc(file, 20, 3, 7, "Holder.late", true, DocKind.Example)
+      new DocOcc(file, 20, 3, 7, "Holder.late", false, DocKind.Example)
     ), List.of());
     typeDoc.declared(Pos.of(file, 11, 3), early, List.of(
-      new DocOcc(file, 9, 3, 7, "Holder.early", true, DocKind.Example),
-      new DocOcc(file, 10, 3, 6, "about early", true, DocKind.Prose)
+      new DocOcc(file, 9, 3, 7, "Holder.early", false, DocKind.Example),
+      new DocOcc(file, 10, 3, 6, "about early", false, DocKind.Prose)
     ), List.of());
     var test= tests(new HtmlDocRenderer(Map.of(), new DocResolver("pkg", List.of(typeDoc), OtherPackages.empty(), TName::s), Map.of(), Optional.empty()));
     assertEquals("""
@@ -788,7 +784,7 @@ Holder
     var bar= namedMethod(".bar", name);
     var typeDoc= new TypeDoc(new Literal(RC.imm, name, bs, List.of(), "this", List.of(), freshSrc(), false), Optional.empty(), List.of());
     typeDoc.declared(Pos.of(file, 9, 1), bar, List.of(
-      new DocOcc(file, 9, 1, 4, ".check{bar.assertOk}", true, DocKind.Example)
+      new DocOcc(file, 9, 1, 4, ".check{bar.assertOk}", false, DocKind.Example)
     ), List.of());
     return typeDoc;
   }
@@ -813,7 +809,7 @@ Holder
     builder.visitLiteral(holder, Optional.empty());
     builder.visitLiteral(suppressor, Optional.empty());
     builder.type(holder).declared(Pos.of(file, 9, 1), bar, List.of(
-      new DocOcc(file, 9, 1, 4, ".check{bar.assertOk}", true, DocKind.Example)
+      new DocOcc(file, 9, 1, 4, ".check{bar.assertOk}", false, DocKind.Example)
     ), List.of());
     var renderer= new HtmlDocRenderer(Map.of(), new DocResolver("pkg", builder.types, OtherPackages.empty(), TName::s), Map.of(), Optional.empty());
     assertEquals(List.of(), builder.tests(renderer, TName::s));
@@ -834,7 +830,7 @@ Holder
     builder.visitLiteral(holder, Optional.empty());
     builder.visitLiteral(colliding, Optional.empty());
     builder.type(holder).declared(Pos.of(file, 9, 1), bar, List.of(
-      new DocOcc(file, 9, 1, 4, ".check{bar.assertOk}", true, DocKind.Example)
+      new DocOcc(file, 9, 1, 4, ".check{bar.assertOk}", false, DocKind.Example)
     ), List.of());
     var renderer= new HtmlDocRenderer(Map.of(), new DocResolver("pkg", builder.types, OtherPackages.empty(), TName::s), Map.of(), Optional.empty());
     var ex= assertThrows(UserError.class, () -> builder.tests(renderer, TName::s));
@@ -1054,7 +1050,7 @@ documents, or turn it into a plain // comment.""", ex.getMessage());
     var anonName= new TName("pkg._AFoo", 0, Pos.unknown);
     var anonBar= namedMethod(".bar", anonName);
     var anon= new TypeDoc(anonymousAt(Pos.of(file, 2, 1), List.of(anonBar)), Optional.empty(), List.of());
-    anon.declared(Pos.of(file, 3, 1), anonBar, List.of(new DocOcc(file, 3, 1, 4, "the anonymous bar", true, DocKind.Prose)), List.of());
+    anon.declared(Pos.of(file, 3, 1), anonBar, List.of(new DocOcc(file, 3, 1, 4, "the anonymous bar", false, DocKind.Prose)), List.of());
     var namedName= new TName("pkg.Named", 0, Pos.unknown);
     var named= new TypeDoc(namedType("pkg.Named", List.of(), List.of()), Optional.empty(), List.of());
     named.declared(Pos.of(file, 9, 1), namedMethod(".bar", namedName), List.of(), List.of());
@@ -1066,14 +1062,14 @@ documents, or turn it into a plain // comment.""", ex.getMessage());
   }
   @Test void aFencedBlockIsShownAsOneBlockOfCode(){
     var holder= new TypeDoc(namedType("pkg.Holder", List.of(), List.of()), Optional.empty(), List.of(
-      new DocOcc(file, 1, 1, 4, "Example:", true, DocKind.Prose),
-      new DocOcc(file, 2, 1, 4, "```", true, DocKind.Fence),
-      new DocOcc(file, 3, 1, 4, "Foo: Bar {", true, DocKind.Fenced),
-      new DocOcc(file, 4, 1, 4, "  `x`", true, DocKind.Fenced),
-      new DocOcc(file, 5, 1, 4, "", true, DocKind.Fenced),
-      new DocOcc(file, 6, 1, 4, "  }", true, DocKind.Fenced),
-      new DocOcc(file, 7, 1, 4, "```", true, DocKind.Fence),
-      new DocOcc(file, 8, 1, 4, "After `x`.", true, DocKind.Prose)));
+      new DocOcc(file, 1, 1, 4, "Example:", false, DocKind.Prose),
+      new DocOcc(file, 2, 1, 4, "```", false, DocKind.Fence),
+      new DocOcc(file, 3, 1, 4, "Foo: Bar {", false, DocKind.Fenced),
+      new DocOcc(file, 4, 1, 4, "  `x`", false, DocKind.Fenced),
+      new DocOcc(file, 5, 1, 4, "", false, DocKind.Fenced),
+      new DocOcc(file, 6, 1, 4, "  }", false, DocKind.Fenced),
+      new DocOcc(file, 7, 1, 4, "```", false, DocKind.Fence),
+      new DocOcc(file, 8, 1, 4, "After `x`.", false, DocKind.Prose)));
     var html= new HtmlDocRenderer(Map.of(), new DocResolver("pkg", List.of(holder), OtherPackages.empty(), TName::s), Map.of(), Optional.empty()).render();
     utils.Err.strCmp("[###]<div class=\"doc\">\n<p>Example:</p>\n<pre class=\"fenced\">Foo: Bar {\n  `x`\n\n  }</pre>\n<p>After <code>x</code>.</p>\n</div>[###]", html);
   }
@@ -1081,7 +1077,7 @@ documents, or turn it into a plain // comment.""", ex.getMessage());
     var anonName= new TName("pkg._AFoo", 0, Pos.unknown);
     var bar= namedMethod(".bar", anonName);
     var anon= new TypeDoc(anonymousAt(Pos.of(file, 2, 1), List.of(bar)), Optional.empty(), List.of());
-    anon.declared(Pos.of(file, 3, 1), bar, List.of(new DocOcc(file, 3, 1, 4, ".check{bar.assertOk}", true, DocKind.Example)), List.of());
+    anon.declared(Pos.of(file, 3, 1), bar, List.of(new DocOcc(file, 3, 1, 4, ".check{bar.assertOk}", false, DocKind.Example)), List.of());
     var test= tests(new HtmlDocRenderer(Map.of(), new DocResolver("pkg", List.of(anon), OtherPackages.empty(), TName::s), Map.of(), Optional.empty()));
     assertEquals("""
 --- fear:/_pkg/a.fear

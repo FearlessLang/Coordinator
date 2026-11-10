@@ -96,10 +96,9 @@ enum DocKind{
     };
   }
 }
-record DocOcc(URI file, int line, int column, int textColumn, String text, boolean pureLine, DocKind kind){
-  boolean inline(){ return !pureLine; }
+record DocOcc(URI file, int line, int column, int textColumn, String text, boolean trailing, DocKind kind){
   DocOcc drop(int n){
     var k= Math.min(n, text.length());
-    return new DocOcc(file, line, column, textColumn+k, text.substring(k), pureLine, kind);
+    return new DocOcc(file, line, column, textColumn+k, text.substring(k), trailing, kind);
   }
 }

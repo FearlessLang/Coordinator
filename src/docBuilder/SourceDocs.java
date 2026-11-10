@@ -17,7 +17,7 @@ import utils.Pos;
 final class SourceDocs{
   final URI uri;
   final List<String> lines;
-  final HashMap<Integer,List<DocOcc>> docsByLine= new HashMap<>();
+  final HashMap<Integer,DocOcc> docByLine= new HashMap<>();
   final HashMap<Integer,int[]> depthByLine= new HashMap<>();
   final HashMap<DocOcc,HashSet<Integer>> claimColumns= new HashMap<>();
   final HashSet<Integer> visitedLines= new HashSet<>();
@@ -31,13 +31,13 @@ final class SourceDocs{
     var first= visitedLines.add(pos.line());
     if (literal && !first){ return List.of(); }
     var before= first ? collectBefore(pos.line()) : List.<DocOcc>of();
-    var inline= inlineAfter(pos.line(), pos.column())
+    var trailing= trailingAfter(pos.line(), pos.column())
       .filter(occ -> Math.max(depthAt(occ.line(), occ.column()), depthAt(pos.line(), 0)) >= depthAt(pos.line(), pos.column()))
       .stream().toList();
     //everything collected is attached, including an empty line trimmed off the end:
     //trimming is about what to show, not about what the block reached.
-    Stream.concat(before.stream(), inline.stream()).forEach(d -> claimColumns.computeIfAbsent(d, _ -> new HashSet<>()).add(pos.column()));
-    return fences(Stream.concat(dedent(trimBlanks(before)).stream(), dedent(inline).stream()).toList());
+    Stream.concat(before.stream(), trailing.stream()).forEach(d -> claimColumns.computeIfAbsent(d, _ -> new HashSet<>()).add(pos.column()));
+    return fences(Stream.concat(dedent(trimBlanks(before)).stream(), dedent(trailing).stream()).toList());
   }
   static List<DocOcc> fences(List<DocOcc> ds){
     var res= new ArrayList<DocOcc>();
@@ -46,7 +46,7 @@ final class SourceDocs{
       if (d.kind()!=DocKind.Prose){ res.add(d); continue; }
       var fence= fenceLine.matcher(d.text()).matches();
       if (fence){ inFence = !inFence; }
-      res.add(new DocOcc(d.file(), d.line(), d.column(), d.textColumn(), d.text(), d.pureLine(), fence ? DocKind.Fence : inFence ? DocKind.Fenced : DocKind.Prose));
+      res.add(new DocOcc(d.file(), d.line(), d.column(), d.textColumn(), d.text(), d.trailing(), fence ? DocKind.Fence : inFence ? DocKind.Fenced : DocKind.Prose));
     }
     return List.copyOf(res);
   }
@@ -57,20 +57,19 @@ final class SourceDocs{
   }
   //every /// and //> that no declaration took, as runs of lines with only empty lines between them
   List<List<DocOcc>> orphanRuns(){
-    var lost= docsByLine.values().stream()
-      .flatMap(List::stream)
+    var lost= docByLine.values().stream()
       .filter(d -> !claimColumns.containsKey(d))
       .sorted(bySource)
       .toList();
     var res= new ArrayList<ArrayList<DocOcc>>();
     for (var d : lost){
       var last= res.isEmpty() ? null : res.getLast().getLast();
-      if (last!=null && lines.subList(last.line(), d.line()-1).stream().allMatch(String::isBlank) && d.inline()==last.inline()){ res.getLast().add(d); continue; }
+      if (last!=null && lines.subList(last.line(), d.line()-1).stream().allMatch(String::isBlank) && d.trailing()==last.trailing()){ res.getLast().add(d); continue; }
       res.add(new ArrayList<>(List.of(d)));
     }
     return List.copyOf(res);
   }
-  List<DocOcc> ambiguousInline(){
+  List<DocOcc> ambiguousTrailing(){
     return claimColumns.entrySet().stream()
       .filter(e -> e.getValue().size()>1)
       .map(Map.Entry::getKey)
@@ -78,7 +77,7 @@ final class SourceDocs{
       .map(d -> dedent(List.of(d)).getFirst())
       .toList();
   }
-  private static final Comparator<DocOcc> bySource= Comparator.comparingInt(DocOcc::line).thenComparingInt(DocOcc::column);
+  private static final Comparator<DocOcc> bySource= Comparator.comparingInt(DocOcc::line);
   //An empty line inside a block reads as an empty doc line of whatever kind surrounds
   //it, so it ends a paragraph without ending the block. The ones at either end of the
   //block separate nothing and are dropped. Anything else ends the block, and whatever
@@ -86,12 +85,12 @@ final class SourceDocs{
   List<DocOcc> collectBefore(int line){
     var before= new ArrayList<DocOcc>();
     for (int l= line-1; l >= 1; l -= 1){
-      var pure= pureDocs(l);
-      if (!pure.isEmpty()){ before.addAll(pure); continue; }
+      var own= Optional.ofNullable(docByLine.get(l)).filter(d -> !d.trailing());
+      if (own.isPresent()){ before.add(own.get()); continue; }
       if (!lines.get(l-1).isBlank()){ break; }
       //the line just below the empty one, which is the last one collected walking up
       var below= !before.isEmpty();
-      before.add(new DocOcc(uri, l, 1, 1, "", true, below ? before.getLast().kind() : DocKind.Prose));
+      before.add(new DocOcc(uri, l, 1, 1, "", false, below ? before.getLast().kind() : DocKind.Prose));
     }
     return before.reversed();
   }
@@ -111,15 +110,8 @@ final class SourceDocs{
     while (to>from && ds.get(to-1).text().isBlank()){ to -= 1; }
     return ds.subList(from, to);
   }
-  List<DocOcc> pureDocs(int line){
-    return docsByLine.getOrDefault(line, List.of()).stream()
-      .filter(DocOcc::pureLine)
-      .toList();
-  }
-  Optional<DocOcc> inlineAfter(int line, int column){
-    return docsByLine.getOrDefault(line, List.of()).stream()
-      .filter(c -> !c.pureLine() && c.column()>=column)
-      .findFirst();
+  Optional<DocOcc> trailingAfter(int line, int column){
+    return Optional.ofNullable(docByLine.get(line)).filter(d -> d.trailing() && d.column()>=column);
   }
   void scan(){
     var closer= "";
@@ -138,7 +130,7 @@ final class SourceDocs{
           var k= s.length()>i+2 ? s.charAt(i+2) : ' ';
           var repeated= s.length()>i+3 && s.charAt(i+3)==k;
           var kind= DocKind.ofMark(k);
-          if (!repeated && kind.isPresent()){ add(l, i+1, s.substring(i+3), s.substring(0, i).isBlank(), kind.get()); }
+          if (!repeated && kind.isPresent()){ add(l, i+1, s.substring(i+3), !s.substring(0, i).isBlank(), kind.get()); }
           i = s.length();
         }
         else if (s.startsWith("/*", i)){ closer = "*/"; i += 2; }
@@ -151,8 +143,8 @@ final class SourceDocs{
   }
   //textColumn is where the stored text really starts in the line, so an error can put
   //its carets under the offending characters: past the "///" and the indentation dedent drops.
-  void add(int line, int column, String text, boolean pureLine, DocKind kind){
-    docsByLine.computeIfAbsent(line, _ -> new ArrayList<>())
-      .add(new DocOcc(uri, line, column, column+3, text, pureLine, kind));
+  void add(int line, int column, String text, boolean trailing, DocKind kind){
+    var previous= docByLine.put(line, new DocOcc(uri, line, column, column+3, text, trailing, kind));
+    assert previous==null;
   }
 }

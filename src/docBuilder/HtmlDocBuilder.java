@@ -79,7 +79,7 @@ public final class HtmlDocBuilder{
     var spans= new HashMap<DocOcc,Map<Integer,DocLink>>();
     oracle.allFiles().forEach(f -> sources.computeIfAbsent(f.fearURI(), u -> new SourceDocs(u, f.loadString())));
     var orphans= sources.values().stream().flatMap(s -> s.orphanRuns().stream()).map(this::orphan);
-    var misplaced= Stream.concat(orphans, sources.values().stream().flatMap(s -> s.ambiguousInline().stream()).map(this::ambiguousInline)).toList();
+    var misplaced= Stream.concat(orphans, sources.values().stream().flatMap(s -> s.ambiguousTrailing().stream()).map(this::ambiguousTrailing)).toList();
     if (!misplaced.isEmpty()){ throw Report.docMisplaced(misplaced); }
     var problems= new ArrayList<String>();
     types.stream().flatMap(t -> Stream.<DeclarationDoc>concat(Stream.of(t), t.methods.stream())).forEach(d -> linkDeclaration(resolver, d, spans, problems));
@@ -133,11 +133,11 @@ public final class HtmlDocBuilder{
     var first= run.getFirst();
     var last= run.getLast();
     var below= sources.get(last.file()).lines.stream().skip(last.line()).filter(l -> !l.isBlank()).findFirst().orElse("");
-    var msg= first.inline() ? trailingNotAttached : below.strip().startsWith("//") ? notAttached : nothingDeclaredBelow;
+    var msg= first.trailing() ? trailingNotAttached : below.strip().startsWith("//") ? notAttached : nothingDeclaredBelow;
     return message(new Span(first.file(), first.line(), first.column(),
       last.line(), last.textColumn()+last.text().length()), msg);
   }
-  String ambiguousInline(DocOcc occ){
+  String ambiguousTrailing(DocOcc occ){
     return message(new Span(occ.file(), occ.line(), occ.textColumn(), occ.line(), occ.textColumn()+occ.text().length()), ambiguousTrailingDoc);
   }
   static final String notAttached=

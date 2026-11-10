@@ -51,7 +51,7 @@ final class HtmlDocRenderer{
     toStr= new ExportedToStr(pkgName, uses);
     this.resolver= resolver;
     shown= visibleTypes();
-    claims= inlineClaims();
+    claims= trailingClaims();
   }
   String render(){
     var sb= new StringBuilder(16_000)
@@ -133,7 +133,7 @@ final class HtmlDocRenderer{
     sb.append(Join.of(fromRefs(m).stream().map(this::fromName), "    from: ", ", ", "\n", ""));
   }
   List<DocOcc> visibleDocs(DeclarationDoc d){
-    return d.docs.stream().filter(c -> !c.inline() || claims.get(c)==d).filter(c -> c.kind()!=DocKind.TestOnly).toList();
+    return d.docs.stream().filter(c -> !c.trailing() || claims.get(c)==d).filter(c -> c.kind()!=DocKind.TestOnly).toList();
   }
   void renderDocText(StringBuilder sb, String indent, DeclarationDoc d){
     for (var run : runs(visibleDocs(d), o -> o.kind()==DocKind.Example)){
@@ -346,9 +346,9 @@ code{
         .thenComparing(m -> m.main().sig().rc()+"/"+toStr.sig(m.main().sig())))
       .toList();
   }
-  Map<DocOcc,DeclarationDoc> inlineClaims(){
+  Map<DocOcc,DeclarationDoc> trailingClaims(){
     var res= new HashMap<DocOcc,DeclarationDoc>();
-    shown.stream().flatMap(this::declarations).forEach(d -> d.docs.stream().filter(DocOcc::inline).forEach(c -> res.put(c, d)));
+    shown.stream().flatMap(this::declarations).forEach(d -> d.docs.stream().filter(DocOcc::trailing).forEach(c -> res.put(c, d)));
     return res;
   }
   void renderToc(StringBuilder sb){
