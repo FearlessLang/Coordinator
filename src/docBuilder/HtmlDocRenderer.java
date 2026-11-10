@@ -41,6 +41,8 @@ final class HtmlDocRenderer{
   final ExportedToStr toStr;
   final DocResolver resolver;
   final HashMap<String,Pattern> namePatterns= new HashMap<>();
+  final List<TypeDoc> shown;
+  final Map<DocOcc,Object> claims;
   HtmlDocRenderer(Map<String,String> uses, DocResolver resolver, Map<DocOcc,Map<Integer,DocLink>> spans, Optional<Path> baseDocLocation){
     assert Require.nonNull(uses, resolver, spans, baseDocLocation);
     pkgName= resolver.pkgName();
@@ -49,34 +51,32 @@ final class HtmlDocRenderer{
     this.baseDocLocation= baseDocLocation;
     toStr= new ExportedToStr(pkgName, uses);
     this.resolver= resolver;
+    shown= visibleTypes();
+    claims= inlineClaims();
   }
   String render(){
-    var shown= visibleTypes();
-    var claims= inlineClaims(shown);
     var sb= new StringBuilder(16_000)
       .append("<!doctype html>\n<html>\n<head>\n<meta charset=\"utf-8\">\n")
       .append("<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">\n")
       .append("<title>").append(h(pkgName)).append("</title>\n")
       .append("<style>\n").append(css).append("</style>\n")
       .append("</head>\n<body>\n<div class=\"layout\">\n");
-    renderToc(sb, shown);
+    renderToc(sb);
     sb.append("<main>\n");
-    renderHeader(sb, shown);
-    shown.forEach(t -> renderType(sb, t, claims));
+    renderHeader(sb);
+    shown.forEach(t -> renderType(sb, t));
     pages.forEach((p,id) -> renderPage(sb, p, id));
     sb.append(router);
     return sb.append("</main>\n</div>\n</body>\n</html>\n").toString();
   }
   String renderText(){
-    var shown= visibleTypes();
-    var claims= inlineClaims(shown);
     var sb= new StringBuilder(4_000).append("package ").append(pkgName).append("\n\n");
-    shown.forEach(t -> renderTypeText(sb, t, claims));
+    shown.forEach(t -> renderTypeText(sb, t));
     return sb.toString();
   }
   record GeneratedTestNames(String top, List<String> perType){}
   List<TypeDoc> testableTypes(){
-    return visibleTypes().stream()
+    return shown.stream()
       .filter(t -> !testGroups(t).isEmpty())
       .toList();
   }
@@ -89,10 +89,10 @@ final class HtmlDocRenderer{
       .toList();
   }
   GeneratedTestNames testNames(){
-    var shown= testableTypes();
+    var testable= testableTypes();
     return new GeneratedTestNames(
       "AllAutoTests_"+pkgName,
-      shown.stream().map(t -> suiteName(t.main().name())).toList()
+      testable.stream().map(t -> suiteName(t.main().name())).toList()
     );
   }
   static String suiteName(TName n){
@@ -101,12 +101,12 @@ final class HtmlDocRenderer{
     return "_"+noPrimes+"_Examples"+(n.arity()==0 ? "" : "_"+n.arity())+s.substring(noPrimes.length());
   }
   List<TestSource> renderTests(Function<TName,String> pkgNames){
-    var shown= testableTypes();
+    var testable= testableTypes();
     var names= testNames();
     var test= pkgNames.apply(new TName("base.Test", 0, Pos.unknown));
     var res= new ArrayList<TestSource>();
-    for (int i : Range.of(shown)){ res.add(renderSuite(names.perType().get(i), test, testGroups(shown.get(i)))); }
-    var first= testGroups(shown.getFirst()).getFirst().getFirst();
+    for (int i : Range.of(testable)){ res.add(renderSuite(names.perType().get(i), test, testGroups(testable.get(i)))); }
+    var first= testGroups(testable.getFirst()).getFirst().getFirst();
     var top= new TestLines();
     top.wrapper(names.top()+": "+pkgNames.apply(new TName("base.UnitTests", 0, Pos.unknown))+" {::", first.line(), first.textColumn());
     names.perType().forEach(n -> top.wrapper("  .test "+n, first.line(), first.textColumn()));
@@ -128,25 +128,25 @@ final class HtmlDocRenderer{
     lines.wrapper("  }", last.line(), last.textColumn()+last.text().length());
     return lines.source(first.file());
   }
-  void renderTypeText(StringBuilder sb, TypeDoc t, Map<DocOcc,Object> claims){
+  void renderTypeText(StringBuilder sb, TypeDoc t){
     sb.append(typeTitle(t)).append(Join.of(t.main().cs().stream().map(toStr::typeName), " : ", ", ", "", "")).append('\n');
-    renderDocText(sb, "  ", t, t.docs, claims);
-    visibleMethods(t).forEach(m -> renderMethodText(sb, m, claims));
+    renderDocText(sb, "  ", t, t.docs);
+    visibleMethods(t).forEach(m -> renderMethodText(sb, m));
     sb.append('\n');
   }
   //a tab opens every method line and nothing else, so a reader tells a signature from the
   //documentation of the type, written at the same indent, without parsing either: the source
   //whitelist (Fs.allowed) has no tab, so neither a signature nor a doc comment can carry one.
-  void renderMethodText(StringBuilder sb, MethodDoc m, Map<DocOcc,Object> claims){
+  void renderMethodText(StringBuilder sb, MethodDoc m){
     m.variants.stream().map(this::sig).distinct().forEach(s -> sb.append('\t').append(s).append('\n'));
-    if (m.declared){ renderDocText(sb, "    ", m, m.docs, claims); }
+    if (m.declared){ renderDocText(sb, "    ", m, m.docs); }
     sb.append(Join.of(fromRefs(m).stream().map(this::fromName), "    from: ", ", ", "\n", ""));
   }
-  static List<DocOcc> visibleDocs(Object owner, List<DocOcc> docs, Map<DocOcc,Object> claims){
+  List<DocOcc> visibleDocs(Object owner, List<DocOcc> docs){
     return docs.stream().filter(c -> !c.inline() || claims.get(c)==owner).filter(c -> c.kind()!=DocKind.TestOnly).toList();
   }
-  void renderDocText(StringBuilder sb, String indent, Object owner, List<DocOcc> docs, Map<DocOcc,Object> claims){
-    for (var run : runs(visibleDocs(owner, docs, claims), d -> d.kind()==DocKind.Example)){
+  void renderDocText(StringBuilder sb, String indent, Object owner, List<DocOcc> docs){
+    for (var run : runs(visibleDocs(owner, docs), d -> d.kind()==DocKind.Example)){
       var example= run.getFirst().kind()==DocKind.Example;
       if (example){ sb.append(indent).append("example:\n"); }
       run.forEach(c -> appendIndented(sb, example ? indent+"  " : indent, c.text()));
@@ -164,7 +164,7 @@ final class HtmlDocRenderer{
     if (!line.isBlank()){ sb.append(indent); }
     sb.append(line).append('\n');
   }
-  void renderHeader(StringBuilder sb, List<TypeDoc> shown){
+  void renderHeader(StringBuilder sb){
     sb.append("<header class=\"hdr\">").append(mark)
       .append("<div><p class=\"eyebrow\">package</p><h1>").append(h(pkgName)).append("</h1></div>")
       .append("</header>\n")
@@ -356,7 +356,7 @@ code{
         .thenComparing(m -> m.main().sig().rc()+"/"+toStr.sig(m.main().sig())))
       .toList();
   }
-  Map<DocOcc,Object> inlineClaims(List<TypeDoc> shown){
+  Map<DocOcc,Object> inlineClaims(){
     var res= new HashMap<DocOcc,Object>();
     for (var t : shown){
       t.docs.stream().filter(DocOcc::inline).forEach(c -> res.put(c, t));
@@ -365,7 +365,7 @@ code{
     }
     return res;
   }
-  void renderToc(StringBuilder sb, List<TypeDoc> shown){
+  void renderToc(StringBuilder sb){
     sb.append("<nav class=\"toc\">\n")
       .append("<input id=\"filter\" type=\"search\" placeholder=\"Filter types\" autocomplete=\"off\">\n")
       .append("<ul id=\"toclist\">\n");
@@ -374,23 +374,23 @@ code{
       .append(wrap(shortTitle(t))).append("</a></li>\n"));
     sb.append("</ul>\n</nav>\n");
   }
-  void renderType(StringBuilder sb, TypeDoc t, Map<DocOcc,Object> claims){
+  void renderType(StringBuilder sb, TypeDoc t){
     sb.append("<section class=\"type\" id=\"").append(typeId(t)).append("\">\n")
       .append("<h2>").append(wrap(typeTitle(t))).append("</h2>\n");
-    renderDoc(sb, t, t.docs, claims);
+    renderDoc(sb, t, t.docs);
     sb.append(Join.of(t.main().cs().stream().map(this::typeLink), "<p class=\"extends\"><b>Extends:</b> ", ", ", "</p>\n", ""));
     renderVariants(sb, "Typed literal variants", t.variants, toStr::lit);
     sb.append("<h3>Methods</h3>\n");
-    visibleMethods(t).forEach(m -> renderMethod(sb, m, claims));
+    visibleMethods(t).forEach(m -> renderMethod(sb, m));
     sb.append("</section>\n");
   }
-  void renderMethod(StringBuilder sb, MethodDoc m, Map<DocOcc,Object> claims){
+  void renderMethod(StringBuilder sb, MethodDoc m){
     var ids= m.variants.stream().map(v -> methodId(m.owner.main().name(), v.sig())).distinct().toList();
     sb.append("<details class=\"method\" id=\"").append(ids.getFirst()).append("\">\n")
       .append("<summary><span class=\"disclosure\">&#9656;</span>");
     ids.stream().skip(1).forEach(id -> sb.append("<span id=\"").append(id).append("\"></span>"));
     sb.append("<span class=\"sig\">").append(renderSig(m)).append("</span></summary>\n");
-    if (m.declared){ renderDoc(sb, m, m.docs, claims); }
+    if (m.declared){ renderDoc(sb, m, m.docs); }
     sb.append(Join.of(fromRefs(m).stream().map(this::fromLink), "<p class=\"doc from\">From: ", ", ", ".</p>\n", ""));
     renderVariants(sb, "Typed method variants", m.variants, this::sig);
     sb.append("</details>\n");
@@ -438,8 +438,8 @@ code{
     if (!(t instanceof T.RCC rcc)){ return Stream.of(); }
     return Stream.concat(Stream.of(rcc.c().name()), rcc.c().ts().stream().flatMap(HtmlDocRenderer::typeNames));
   }
-  void renderDoc(StringBuilder sb, Object owner, List<DocOcc> docs, Map<DocOcc,Object> claims){
-    var visible= visibleDocs(owner, docs, claims);
+  void renderDoc(StringBuilder sb, Object owner, List<DocOcc> docs){
+    var visible= visibleDocs(owner, docs);
     if (visible.isEmpty()){
       sb.append("<p class=\"doc missing\">No documentation yet.</p>\n");
       return;
