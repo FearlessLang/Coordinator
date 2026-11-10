@@ -6,6 +6,7 @@ import static java.nio.charset.StandardCharsets.UTF_16LE;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -13,15 +14,21 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.nio.file.AccessDeniedException;
+import java.lang.ProcessBuilder.Redirect;
+import java.net.URI;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.function.Supplier;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
 
@@ -34,6 +41,7 @@ import testHelperFs.FsDsl;
 import tools.Fs;
 import userMessages.Report;
 import userMessages.UserError;
+import utils.Join;
 
 final class FixTest{
   private static Path root(Path tmp){
@@ -206,18 +214,142 @@ lib/a.fear=A:{}
 lib/sub/
 lib/sub/b.txt=b
 """);}
-  @Test void deletesTheIconFileOfAFolder(@TempDir Path tmp){ fixes(tmp, """
-lib/Icon\r
+  @Test void deletesTheDeskFilesWithANameThatNotEveryDeskHolds(@TempDir Path tmp){
+    for (var name : List.of("Icon\r", "a.txt:Zone.Identifier")){
+      var spec= "@/"+name+"\niii\nx\njjj\n@/a.txt\niii\na";
+      var lines= "Deleted lib/"+name+"\n";
+      if (wrote(() -> tmp.resolve(name), "")){ fixes(tmp.resolve("disk"+name.length()), spec.replace("@", "lib"), lines, "lib/\nlib/a.txt=a\n"); }
+      fixes(tmp.resolve("zip"+name.length()), spec.replace("@", "lib.zip"), lines, "lib.zip[a.txt=a;]\n");
+    }
+  }
+  @Test void renamesTheNamesOfTheDiskThatAreNotValidUnicode(@TempDir Path tmp){
+    var root= root(tmp);
+    var rawByte= wrote(() -> Path.of(URI.create(root.toUri()+"caf%E9.txt")), "raw");
+    var loneSurrogate= wrote(() -> root.resolve("caf\uD800.txt"), "lone");
+    if (!rawByte || !loneSurrogate){ Fs.writeUtf8(root.resolve("caf\uFFFD.txt"), "real"); }
+    var old= names(root);
+    var texts= texts(root);
+    var fixed= Stream.of("caf_.txt", "caf_2.txt", "caf_3.txt").limit(old.size()).toList();
+    assertEquals(Join.of(IntStream.range(0, old.size()).mapToObj(i -> "Renamed "+old.get(i)+" to "+fixed.get(i)+"\n"), "", "", ""), fix(root));
+    assertEquals(fixed, names(root));
+    assertEquals(texts, texts(root));
+    assertEquals("", fix(root));
+  }
+  private static boolean wrote(Supplier<Path> file, String text){
+    try{ Files.writeString(file.get(), text); return true; }
+    catch (IOException | InvalidPathException _){ return false; }
+  }
+  private static List<String> texts(Path dir){ return Fs.walk(dir, s -> s.filter(Fs::isRegularFile).map(Fs::readUtf8).sorted().toList()); }
+  @Test void renamesTheInvisibleNamesThatAreNotValidUnicode(@TempDir Path tmp){ fixes(tmp, """
+.git/caf\uFFFD
 iii
+1
 jjj
-lib/a.txt
+.git/cafx
 iii
-a""", """
-Deleted lib/Icon\r
+2
+jjj
+.caf\uFFFD/My File
+iii
+3
+jjj
+z.zip/.git/e\u0301x
+iii
+4
+jjj
+z.zip/.git/\u00E9\uFFFD
+iii
+5
+jjj
+z.zip/.git/\uFFFD\uFFFD.b
+iii
+6""", """
+Renamed .caf\uFFFD to .cafx
+Renamed .git/caf\uFFFD to cafx2
+Renamed z/.git/\u00E9\uFFFD to \u00E9x2
+Renamed z/.git/\uFFFD\uFFFD.b to xx.b
 """, """
-lib/
-lib/a.txt=a
+.cafx/
+.cafx/My File=3
+.git/
+.git/cafx=2
+.git/cafx2=1
+z.zip[.git/e\u0301x=4;.git/\u00E9x2=5;.git/xx.b=6;]
 """);}
+  @Test void neverRenamesToTheNameOfADeskFile(@TempDir Path tmp){ fixes(tmp, """
+.Trash\uFFFD1/a
+iii
+1
+jjj
+.git/ehthumbs\uFFFDvista.db
+iii
+2
+jjj
+.\uFFFDfoo
+iii
+3
+jjj
+lib/ehthumbs vista.db
+iii
+4""", """
+Renamed .Trash\uFFFD1 to .Trashx1
+Renamed .git/ehthumbs\uFFFDvista.db to ehthumbsxvista.db
+Renamed .\uFFFDfoo to .xfoo
+Renamed lib/ehthumbs vista.db to ehthumbs_vista2.db
+""", """
+.Trashx1/
+.Trashx1/a=1
+.git/
+.git/ehthumbsxvista.db=2
+.xfoo=3
+lib/
+lib/ehthumbs_vista2.db=4
+""");}
+  @Test void neverRenamesToADeviceName(@TempDir Path tmp){ fixes(tmp, """
+.git/au�
+iii
+1
+jjj
+Com/a.txt
+iii
+2
+jjj
+com.zip/b.txt
+iii
+3""", """
+Renamed .git/au� to aux2
+Renamed Com to com10
+""", """
+.git/
+.git/aux2=1
+com.zip[b.txt=3;]
+com10/
+com10/a.txt=2
+""");}
+  @Test void theKelvinSignIsNotTheLetterKOfADeskFile(@TempDir Path tmp){ fixes(tmp, """
+lib/DESKTOP.INI
+iii
+x""", "Renamed lib/DESKTOP.INI to desktop2.ini\n", "lib/\nlib/desktop2.ini=x\n");}
+  @Test void aRenameCanBringAPathOverTheLimit(@TempDir Path tmp){
+    var name= "a".repeat(196);
+    var root= root(tmp, "x.zip/"+name+"\niii\na");
+    assertEquals("Renamed x/"+name+" to "+name+".txt\n", fix(root));
+    assertEquals("", fix(root));
+    utils.Err.strCmp("[###]- The path is longer than 200 characters.[###]", FsDsl.dumpErr(root, assertThrows(UserError.class, () -> new RealSourceOracleWithZip(root))));
+  }
+  @Test void aZipWrittenAgainLosesItsComment(@TempDir Path tmp) throws IOException{
+    var root= root(tmp);
+    var bytes= new ByteArrayOutputStream();
+    try (var zip= new ZipOutputStream(bytes, UTF_8)){
+      zip.setComment("note");
+      put(zip, ".DS_Store", fine, "x");
+      put(zip, "a.txt", fine, "a");
+    }
+    Files.write(root.resolve("x.zip"), bytes.toByteArray());
+    assertEquals("Deleted x/.DS_Store\n", fix(root));
+    assertEquals("x.zip[a.txt=a;]\n", dump(root));
+    try (var zip= new ZipFile(root.resolve("x.zip").toFile())){ assertNull(zip.getComment()); }
+  }
   @Test void keepsAFolderNamedAsADeskFileAndAFileNamedAsADeskFolder(@TempDir Path tmp){ fixes(tmp, """
 .git/Thumbs.db/a.txt
 iii
@@ -397,8 +529,11 @@ _app/notes.txt=<mark>a<cr><lf>b
     Fs.write(root.resolve("_app/utf16le.fear"), "\uFEFFA:{}\r\n".getBytes(UTF_16LE));
     Fs.write(root.resolve("_app/utf16be.fear"), "\uFEFFB:{}".getBytes(UTF_16BE));
     Fs.write(root.resolve("_app/win.fear"), "A:{ \u0093x\u0094 \u00E9 }".getBytes(ISO_8859_1));
+    Fs.write(root.resolve("_app/mark.fear"), "\u00EF\u00BB\u00BFA:{}\u0093".getBytes(ISO_8859_1));
     assertEquals("""
 Fixed the line endings of _app/lines.fear
+Removed the byte order mark of _app/mark.fear
+Cleaned 1 character of _app/mark.fear
 Cleaned 1 character of _app/one.fear
 Fixed the line endings of _app/quotes.fear
 Cleaned 11 characters of _app/quotes.fear
@@ -408,6 +543,7 @@ Fixed the line endings of _app/utf16le.fear
 Cleaned 3 characters of _app/win.fear
 """, fix(root));
     assertEquals("a\nb\nc\nd\ne", Fs.readUtf8(root.resolve("_app/lines.fear")));
+    assertEquals("A:{}\"", Fs.readUtf8(root.resolve("_app/mark.fear")));
     assertEquals("A:{} ", Fs.readUtf8(root.resolve("_app/one.fear")));
     assertEquals("\"a\" 'b' --- ce d\nef", Fs.readUtf8(root.resolve("_app/quotes.fear")));
     assertEquals("B:{}", Fs.readUtf8(root.resolve("_app/utf16be.fear")));
@@ -820,16 +956,36 @@ A:{}""");
     assertEquals("", fix(root));
     assertArrayEquals(bytes.toByteArray(), Fs.readAllBytes(root.resolve("x.zip")));
   }
-  @Test void leavesAsItIsAZipStoringANameThatIsNotUtf8(@TempDir Path tmp) throws IOException{
+  @Test void renamesTheNamesOfAZipThatAreNotUtf8(@TempDir Path tmp) throws IOException{
     var root= root(tmp);
     var bytes= new ByteArrayOutputStream();
     try (var zip= new ZipOutputStream(bytes, ISO_8859_1)){
-      put(zip, ".DS_Store", 0, "x");
-      put(zip, "caf\u00E9.txt", 0, "b");
+      put(zip, ".DS_Store", fine, "x");
+      put(zip, "caf\u00E9.txt", fine, "b");
+      put(zip, ".git/caf\u00E9", fine, "c");
     }
     Fs.write(root.resolve("x.zip"), bytes.toByteArray());
+    assertEquals("""
+Deleted x/.DS_Store
+Renamed x/.git/caf\uFFFD to cafx
+Renamed x/caf\uFFFD.txt to caf_.txt
+""", fix(root));
+    assertEquals("""
+x.zip[caf_.txt=b;.git/cafx=c;]
+""", dump(root));
     assertEquals("", fix(root));
-    assertArrayEquals(bytes.toByteArray(), Fs.readAllBytes(root.resolve("x.zip")));
+  }
+  @Test void leavesAsItIsAZipSettingTheUtf8FlagForANameThatIsNotUtf8(@TempDir Path tmp) throws IOException{
+    var root= root(tmp);
+    var bytes= new ByteArrayOutputStream();
+    try (var zip= new ZipOutputStream(bytes, UTF_8)){
+      put(zip, ".DS_Store", fine, "x");
+      put(zip, "caf\u00E9.txt", fine, "b");
+    }
+    var broken= new String(bytes.toByteArray(), ISO_8859_1).replace("caf\u00C3\u00A9", "caf\u00C3(").getBytes(ISO_8859_1);
+    Fs.write(root.resolve("x.zip"), broken);
+    assertEquals("", fix(root));
+    assertArrayEquals(broken, Fs.readAllBytes(root.resolve("x.zip")));
   }
   @Test void theProjectFolderIsWellShapedAfterFix(@TempDir Path tmp){
     var root= root(tmp, """
@@ -881,14 +1037,18 @@ B:{}
   }
   @Test void aRenameNeverReplacesAnotherFile(@TempDir Path tmp){
     var root= root(tmp);
+    Fs.writeUtf8(root.resolve(".a/.DS_Store"), "");
+    Fs.writeUtf8(root.resolve(".a/b"), "zero");
     Fs.writeUtf8(root.resolve("\u017F_.txt"), "one");
-    var oneFile= Fs.exists(root.resolve("s_.txt"));
+    var oneName= Fs.exists(root.resolve("s_.txt"));
     Fs.writeUtf8(root.resolve("S!.txt"), "two");
-    if (!oneFile){ assertEquals("Renamed S!.txt to s_.txt\nRenamed \u017F_.txt to __.txt\n", fix(root)); }
-    else{ assertEquals(FileAlreadyExistsException.class, assertThrows(UncheckedIOException.class, () -> fix(root)).getCause().getClass()); }
-    assertEquals(List.of("one", "two"), Fs.walk(root, s -> s.filter(Fs::isRegularFile).map(Fs::readUtf8).sorted().toList()));
+    var lines= new ArrayList<String>();
+    if (oneName){ assertEquals(new FileAlreadyExistsException(root.resolve("s_.txt").toString()).toString(), assertThrows(UncheckedIOException.class, () -> Fix.of(root, lines::add)).getCause().toString()); }
+    if (!oneName){ Fix.of(root, lines::add); }
+    assertEquals(oneName ? List.of("Deleted .a/.DS_Store") : List.of("Deleted .a/.DS_Store", "Renamed S!.txt to s_.txt", "Renamed \u017F_.txt to __.txt"), lines);
+    assertEquals(List.of("one", "two", "zero"), texts(root));
   }
-  @Test void endsAtASymbolicLinkAfterTheChangesBeforeThatLink(@TempDir Path tmp) throws IOException{
+  @Test void endsAtASymbolicLinkOrJunctionAfterTheChangesBeforeThatLink(@TempDir Path tmp) throws Exception{
     var root= root(tmp, """
 a/.DS_Store
 iii
@@ -905,15 +1065,25 @@ jjj
 c/c.txt
 iii
 c""");
-    try{ Files.createSymbolicLink(root.resolve("c/b"), root.resolve("a")); }
-    catch (AccessDeniedException e){
-      if (!Fs.isWindows()){ throw e; }
-      return;
-    }
+    folderLink(root.resolve("c/b"), root.resolve("a"));
+    var before= Fs.onSymbolicLink;
     Fs.onSymbolicLink = Report::symlinkForbidden;
     var lines= new ArrayList<String>();
-    assertThrows(UserError.class, () -> Fix.of(root, lines::add));
+    try{ utils.Err.strCmp("""
+Invalid path in this project folder.
+
+Root: [###]
+Path: "<root>/c/b"
+
+What went wrong
+- This path is a symbolic link/junction.
+[###]""", FsDsl.dumpErr(root, assertThrows(UserError.class, () -> Fix.of(root, lines::add)))); }
+    finally{ Fs.onSymbolicLink = before; }
     assertEquals(List.of("Deleted a/.DS_Store"), lines);
     assertTrue(Fs.exists(root.resolve("c/.DS_Store")));
+  }
+  private static void folderLink(Path link, Path target) throws Exception{
+    if (!Fs.isWindows()){ Files.createSymbolicLink(link, target); return; }
+    assertEquals(0, new ProcessBuilder("cmd", "/c", "mklink", "/J", link.toString(), target.toString()).redirectErrorStream(true).redirectOutput(Redirect.DISCARD).start().waitFor());
   }
 }

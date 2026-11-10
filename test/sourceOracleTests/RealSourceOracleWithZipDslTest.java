@@ -993,6 +993,25 @@ How to fix
 
 We check this so that you[###]
 """);}
+  @Test void errInvisibleInvalidUnicode(@TempDir Path tmp){ runErrIOE(tmp, """
+_pkg/.d/a\uFFFDb.txt
+iii
+X
+""", """
+Invalid path in this project folder.
+
+Root: [###]
+Path: "_pkg/.d/a" [U+FFFD] "b.txt"
+
+What went wrong
+- A protected name segment contains invalid Unicode.
+  Bad segment: "a" [U+FFFD] "b.txt"
+
+How to fix
+- Rename the segment to remove the invalid characters.
+
+We check this so that you[###]
+""");}
   @Test void errInvisibleWindowsReservedDeviceNameInZip(@TempDir Path tmp){ runErrIOE(tmp, """
 _pkg/z.zip/.d/con.txt
 iii

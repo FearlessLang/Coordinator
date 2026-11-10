@@ -145,7 +145,7 @@ public final class BuildWithZip{
     var name= Fs.fileNameWithExtension(kid.fearPath());
     if (name.endsWith(".") || name.endsWith(" ")){ throw Report.invisibleNoTrailingDotOrSpace(kid, name); }
     for (int cp : name.codePoints().toArray()){
-      if (0xD800<=cp && cp<=0xDFFF){ throw Report.invisibleInvalidSurrogate(kid, name); }
+      if (0xD800<=cp && cp<=0xDFFF || cp==0xFFFD){ throw Report.invisibleInvalidSurrogate(kid, name); }
       if (Character.isISOControl(cp)){ throw Report.invisibleNoControlChars(kid, cp, name); }
       if (winBadChars.indexOf(cp) >= 0){ throw Report.invisibleNoWindowsBadChars(kid, (char)cp, name); }
     }

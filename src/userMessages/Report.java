@@ -89,6 +89,7 @@ Many tools treat names starting with '.' (for example `.gitignore`) as private t
 Fearless respects this convention and ignores those files and folders.
 But we still require them to be safe to check out using a relaxed set of checks:
   - no control characters
+  - no invalid Unicode
   - no Windows-forbidden characters like < > : " / \\ | ? *
   - no name ending with '.' or a space
   - not using Windows reserved device names
