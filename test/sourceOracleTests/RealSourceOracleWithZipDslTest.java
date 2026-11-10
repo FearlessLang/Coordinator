@@ -327,6 +327,126 @@ A
 A
 
 """);}
+  @Test void errEmptyProtectedFolder(@TempDir Path tmp){ runErrIOE(tmp, """
+.cache/
+iii
+jjj
+_pkg/a.fear
+iii
+A
+""", """
+Root: [###]
+Path: ".cache"
+
+This folder is empty.
+Different systems handle empty folders differently,
+and they may not be supported by compression tools (zip)
+or version control systems (git).
+
+
+We check this so that you[###]
+""");}
+  @Test void errEmptyProtectedFolderInsideAVisibleFolder(@TempDir Path tmp){ runErrIOE(tmp, """
+_pkg/.cache/
+iii
+jjj
+_pkg/a.fear
+iii
+A
+""", """
+Root: [###]
+Path: "_pkg/.cache"
+
+This folder is empty.
+Different systems handle empty folders differently,
+and they may not be supported by compression tools (zip)
+or version control systems (git).
+
+
+We check this so that you[###]
+""");}
+  @Test void errEmptyProtectedFolderInsideAZip(@TempDir Path tmp){ runErrIOE(tmp, """
+_pkg/e.zip/a.fear
+iii
+A
+jjj
+_pkg/e.zip/.cache/
+iii
+""", """
+Root: [###]
+Path: "_pkg/e.zip"
+Entry: ".cache"
+
+This zip contains a folder entry called ".cache",
+but it is empty.
+Different systems handle empty folders differently, and they may not be
+supported by compression tools (zip) or version control systems (git).
+
+We check this so that you[###]
+""");}
+  @Test void okProtectedFolderInsideAZipMayHoldEmptyDirectories(@TempDir Path tmp){ testOk(tmp, """
+_pkg/e.zip/.git/refs/tags/
+iii
+jjj
+_pkg/e.zip/a.fear
+iii
+A
+""", """
+--- fear:/_pkg/e/a.fear
+A
+
+""");}
+  @Test void errNameOfAnEmptyDirectoryInsideAProtectedFolderOfAZip(@TempDir Path tmp){ runErrIOE(tmp, """
+_pkg/e.zip/.git/a:b/
+iii
+jjj
+_pkg/e.zip/a.fear
+iii
+A
+""", """
+Invalid path in this project folder.
+
+Root: [###]
+Path: "_pkg/e/.git/a:b"
+
+What went wrong
+- A protected name segment contains a character that Windows forbids.
+  Bad char: `:`
+  Segment: "a:b"
+[###]
+""");}
+  @Test void errEmptyDirectoryCollidesWithASiblingInsideAProtectedFolderOfAZip(@TempDir Path tmp){ runErrIOE(tmp, """
+_pkg/e.zip/.git/Refs/
+iii
+jjj
+_pkg/e.zip/.git/refs/a.txt
+iii
+A
+""", """
+Invalid path in this project folder.
+
+Root: [###]
+Path: "_pkg/e/.git/refs"
+
+What went wrong
+- Two protected names in the same folder collide.
+  Name 1: "Refs"
+  Name 2: "refs"
+  Reason: Names differ only by case.
+[###]
+""");}
+  @Test void okZipMayHoldOnlyEmptyDirectoriesOfAProtectedFolder(@TempDir Path tmp){ testOk(tmp, """
+_pkg/e.zip/.git/refs/
+iii
+jjj
+_pkg/a.fear
+iii
+A
+""", """
+--- fear:/_pkg/a.fear
+A
+
+""");}
   @Test void okProtectedFolderMayHoldAnEmptyZip(@TempDir Path tmp){ testOk(tmp, """
 .tool_cache/e.zip
 iii
@@ -1706,6 +1826,15 @@ A:{}
     var ref= OneOr.of("one file", new RealSourceOracleWithZip(root, new Since(System.currentTimeMillis()+60_000, "hello")).allFiles().stream());
     Fs.ofV(() -> Fs.delete(root.resolve("_pkg/a.fear")));
     utils.Err.strCmp("Some files inside the project \"hello\" were updated while the project was compiling.", assertThrows(UserError.class, ref::loadString).getMessage());
+  }
+  @Test void theNameOfAnEmptyFolderInsideAHiddenFolderIsChecked(@TempDir Path tmp){
+    var root= tmp.resolve("root").toAbsolutePath().normalize();
+    UserError.root = root;
+    Fs.writeUtf8(root.resolve("_pkg").resolve("_rank_app.fear"), "");
+    Fs.ensureDir(root.resolve(".x").resolve("a".repeat(240)));
+    assertEquals(1, new RealSourceOracleWithZip(root).allFiles().size());
+    Fs.ensureDir(root.resolve(".x").resolve("b".repeat(250)));
+    utils.Err.strCmp("[###]The path is longer than 250 characters.[###]", assertThrows(UserError.class, () -> new RealSourceOracleWithZip(root)).getMessage());
   }
   @Test void aHiddenPathMayHave250Characters(@TempDir Path tmp){
     var root= tmp.resolve("root").toAbsolutePath().normalize();
