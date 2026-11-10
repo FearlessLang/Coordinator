@@ -1516,13 +1516,13 @@ use base.Enum as Enum;
 use base.Enums as Enums;
 use base.Lists as Lists;
 use base.Cache as Cache;
-Suit: Enum[Suit]{ read .close->this; .close->::; .norm->Cache.normCaptureFree(this,{::});
+Suit: Enum[Suit]{ read .close->this; .id->{::};
   Suits: Enums[Suit]{Block#(Debug#("listing suits"), Lists#(
     Hearts: Suit{},
     Spades: Suit{}
     ))};
   }
-Coin: Enum[Coin]{ read .close->this; .close->::; .norm->Cache.normCaptureFree(this,{::});
+Coin: Enum[Coin]{ read .close->this; .id->{::};
   Coins: Enums[Coin]{Block#(Debug#("listing coins"), Lists#(
     Gold: Coin{},
     Silver: Coin{}
