@@ -17,8 +17,8 @@ import tools.Fs;
 final class JUnitReportTest{
   static{ utils.Err.setUp(AssertionFailedError.class, Assertions::assertEquals, Assertions::assertTrue); }
   private static final String log= """
-PLAN|RUN|_hello/_rank_app.fear|MyTests|MyTests at line: 5|5
-PLAN|DISABLED|_hello/_rank_app.fear|Later|Later at line: 9|9
+PLAN\tRUN\t_hello/_rank_app.fear\tMyTests\tMyTests at line: 5\t5
+PLAN\tDISABLED\t_hello/_rank_app.fear\tLater\tLater at line: 9\t9
 <testcase classname="MyTests" name="MyTests at line: 5" file="_hello/_rank_app.fear" line="5"></testcase>
 <testcase classname="Other" name="Other at line: 7" file="_hello/_rank_app.fear" line="7">
 <failure>
@@ -40,7 +40,7 @@ Assertion failure.
     writeLog(project, "20260904_012117_731Z", log);
     var suite= JUnitReport.suite("demo", project);
     utils.Err.strCmp("[###]<testcase classname=\"Later\" name=\"Later at line: 9\" file=\"_hello/_rank_app.fear\" line=\"9\"><skipped/></testcase>[###]", suite);
-    assertFalse(suite.contains("PLAN|"), suite);
+    assertFalse(suite.contains("PLAN\t"), suite);
   }
   @Test void theNewestLogIsTheOneReported(@TempDir Path project){
     writeLog(project, "20260901_000000_000Z", "<testcase classname=\"Old\" name=\"Old\"></testcase>\n");
