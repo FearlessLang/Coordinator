@@ -59,7 +59,8 @@ public final class Main{
   }
   private static void run(String[] args) throws InterruptedException{
     var appDir= JavacTool.reqAppDir(Violation::mustUseLauncher);
-    offerAssociation(appDir);
+    try{ offerAssociation(appDir); }
+    catch (UserError e){ e.display(); System.exit(1); }
     var launch= IntStream.range(0, args.length).filter(i -> !args[i].startsWith("-psn_")).boxed().findFirst().map(i -> normalize(args, i));
     if (Fs.isMac() && !hasConsoleFlag()){ Desktop.getDesktop().setOpenFileHandler(e -> e.getFiles().forEach(f -> spawnMac(appDir, f.toPath()))); }
     if (launch.isEmpty()){
