@@ -143,14 +143,15 @@ What stood in the way:
   }
   public static UserError associationLeftHalfDone(String reported){
     return new UserError("""
-Fearless could not put your system back as it was.
+Fearless could not finish changing which programs open the kinds of file
+it registers.
 
-A step failed, and undoing what had already been written failed too, so
-your system is left part way. Which program opens Fearless projects, and
-the other kinds of file Fearless registers, may now be wrong, and you can
-settle it by hand in your system settings.
+A step failed after the steps before it had changed your system, so your
+system is left part way: which program opens Fearless projects, and the
+other kinds of file Fearless registers, may now be wrong. The next start
+of Fearless does these changes again.
 
-Where the undoing stopped:
+What failed:
 %s""".formatted(reported));
   }
 }

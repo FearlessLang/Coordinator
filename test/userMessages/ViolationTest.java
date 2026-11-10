@@ -191,16 +191,18 @@ What stood in the way:
 HKEY_CLASSES_ROOT\\.fearless (write denied: not running as the owning user)""", Violation.associationNotWritable(registered).getMessage());
   }
   @Test void associationLeftHalfDone(){
-    var rollback= "removed HKCU\\...\\UserChoice, but restoring the previous ProgId failed";
+    var failed= "update-mime-database /home/me/.local/share/mime\nThe program could not be started.";
     utils.Err.strCmp("""
-Fearless could not put your system back as it was.
+Fearless could not finish changing which programs open the kinds of file
+it registers.
 
-A step failed, and undoing what had already been written failed too, so
-your system is left part way. Which program opens Fearless projects, and
-the other kinds of file Fearless registers, may now be wrong, and you can
-settle it by hand in your system settings.
+A step failed after the steps before it had changed your system, so your
+system is left part way: which program opens Fearless projects, and the
+other kinds of file Fearless registers, may now be wrong. The next start
+of Fearless does these changes again.
 
-Where the undoing stopped:
-removed HKCU\\...\\UserChoice, but restoring the previous ProgId failed""", Violation.associationLeftHalfDone(rollback).getMessage());
+What failed:
+update-mime-database /home/me/.local/share/mime
+The program could not be started.""", Violation.associationLeftHalfDone(failed).getMessage());
   }
 }
