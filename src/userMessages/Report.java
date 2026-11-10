@@ -44,22 +44,6 @@ public final class Report{
   private static UserError directFail(String rel, String msg){
     return new UserError(rel+"\n"+msg+"\n\n"+rulesWall);
   }
-  public static final Set<String> allowedNoExtFiles= """
-readme
-license
-copying
-notice
-authors
-contributors
-changelog
-changes
-news
-todo
-thanks
-security
-contributing
-code_of_conduct
-""".lines().collect(Collectors.toCollection(LinkedHashSet::new));
   public static final Set<String> allowedMultiDotExts= """
 tar.gz
 tar.bz2
@@ -97,8 +81,6 @@ While scanning the project, we reject any path that could cause trouble later, i
     no other file may use that prefix
 
 Exceptions (explicit allowlists)
-- A small set of well-known files are allowed to have no extension:
-  %s
 - A small set of well-known multi-part extensions are allowed:
   %s
 
@@ -118,7 +100,7 @@ inside it is never opened.
 Other rules (everywhere)
 - Symbolic links/junctions are not allowed.
 - Only normal files and folders are allowed.
-""".formatted(tickList(allowedNoExtFiles), tickList(allowedMultiDotExts));
+""".formatted(tickList(allowedMultiDotExts));
   //-- the project folder itself
   public static UserError launchPathNotFound(Path given){ return new UserError("""
 Nothing exists at the given path.
@@ -227,9 +209,9 @@ when deciding what needs compiling, so such a date cannot be trusted.
   public static UserError needsExtension(RefParent kid){
     return fail(showRel(kid),
       "- This file has no extension.\n"
-    +"  Files normally must be named like \"name.ext\" (one dot).",
-      "- Rename it to have a single extension (example: \"foo.txt\", \"source.fear\").\n"
-    +"- Rename it to a well-known extensionless file (example: \"readme\")."
+    +"  A visible file is named like \"name.ext\": a name, a dot and an extension.",
+      "- Rename it to have an extension (example: \"foo.txt\", \"source.fear\").\n"
+    +"- Or move it into a folder whose name starts with \".\", which Fearless ignores."
     );
   }
   public static UserError visibleMustStartWithLetterOrUnderscore(RefParent kid){
@@ -288,15 +270,6 @@ when deciding what needs compiling, so such a date cannot be trusted.
     );
   }
   private static String listed(String label, RefParent r){ return "  "+label+":\n  "+showRel(r).replace("\nPath:", "\n  Path:")+"\n"; }
-  public static UserError extensionlessMaskExtension(RefParent kid, RefParent noExtKid){
-    return fail(showRel(kid),
-      "- Both an allowed extensionless file and an extended file share the same base name.\n"
-    +listed("Extensionless file", noExtKid)
-    +listed("Extended file", kid)
-    +"  This is confusing in file browsers (extensions may be hidden).",
-      "- Rename one of them so they are clearly distinct."
-    );
-  }
   public static UserError zipNameClashes(RefParent zipKid, RefParent otherKid, String other){
     return fail(showRel(zipKid),
       "- A zip file and a "+other+" share the same base name.\n"
