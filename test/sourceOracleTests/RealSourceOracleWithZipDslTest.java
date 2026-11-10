@@ -8,12 +8,19 @@ import static testHelperFs.FsDsl.runErrIOE;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.file.AccessDeniedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.function.Function;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import java.util.zip.CRC32;
 import java.util.zip.ZipEntry;
@@ -28,6 +35,7 @@ import core.TName;
 import realSourceOracle.RealSourceOracleWithZip;
 import realSourceOracle.SourceOracleWithAutoload;
 import realSourceOracle.Since;
+import realSourceOracle.ZipLocator;
 import testHelperFs.FsDsl;
 import tools.Fs;
 import tools.SourceOracle.Ref;
@@ -625,12 +633,14 @@ Fearless expands each zip file into a folder: rename this file if it is not mean
 We check this so that you[###]
 """, FsDsl.dumpErr(root, ex));
   }
-  private static byte[] oneEntryZip(String name) throws IOException{
+  static byte[] zip(List<String> names) throws IOException{
     var bytes= new ByteArrayOutputStream();
     try (var zos= new ZipOutputStream(bytes, UTF_8)){
-      zos.putNextEntry(new ZipEntry(name));
-      zos.write("A".getBytes(UTF_8));
-      zos.closeEntry();
+      for (var n : names){
+        zos.putNextEntry(new ZipEntry(n));
+        if (!n.endsWith("/")){ zos.write("A".getBytes(UTF_8)); }
+        zos.closeEntry();
+      }
     }
     return bytes.toByteArray();
   }
@@ -641,13 +651,88 @@ We check this so that you[###]
     Fs.createDirectories(root.resolve("_pkg"));
     Fs.writeString(root.resolve("_pkg/a.fear"), "A");
     var zip= root.resolve("_pkg/o.zip");
-    Fs.write(zip, oneEntryZip("one.txt"));
+    Fs.write(zip, zip(List.of("one.txt")));
     var time= FileTime.fromMillis(System.currentTimeMillis() - 60_000);
     Files.setLastModifiedTime(zip, time);
     assertEquals(List.of("fear:/_pkg/a.fear", "fear:/_pkg/o/one.txt"), fearPaths(root));
-    Fs.write(zip, oneEntryZip("two.txt"));
+    Fs.write(zip, zip(List.of("two.txt")));
     Files.setLastModifiedTime(zip, time);
     assertEquals(List.of("fear:/_pkg/a.fear", "fear:/_pkg/o/two.txt"), fearPaths(root));
+  }
+  private static Path replacingRoot(Path zip, byte[] bytes){
+    var replaced= new boolean[]{false};
+    return (Path)Proxy.newProxyInstance(Path.class.getClassLoader(), new Class<?>[]{Path.class}, (self, m, args) -> replaceOnce(self, m, args, zip, bytes, replaced));
+  }
+  private static Object replaceOnce(Object self, Method m, Object[] args, Path zip, byte[] bytes, boolean[] replaced) throws IOException{
+    if (m.getName().equals("equals")){ return self == args[0]; }
+    assert m.getName().equals("hashCode");
+    if (!replaced[0]){ Fs.write(zip, bytes); }
+    replaced[0] = true;
+    return 0;
+  }
+  @Test void aZipReplacedWhileListedIsListedAgain(@TempDir Path tmp) throws Exception{
+    UserError.root = tmp;
+    var zip= tmp.resolve("o.zip");
+    var one= zip(List.of("one.txt"));
+    Fs.write(zip, one);
+    var time= FileTime.fromMillis(System.currentTimeMillis() - 60_000);
+    Files.setLastModifiedTime(zip, time);
+    var root= replacingRoot(zip, zip(List.of("two.txt")));
+    assertEquals(List.of("two.txt"), ZipLocator.entryNames(root, zip, List.of()));
+    Fs.write(zip, one);
+    Files.setLastModifiedTime(zip, time);
+    assertEquals(List.of("one.txt"), ZipLocator.entryNames(root, zip, List.of()));
+  }
+  private static byte[] withoutDirectory(String name) throws IOException{
+    var zip= zip(List.of(name));
+    var start= ByteBuffer.wrap(zip, zip.length-6, 4).order(ByteOrder.LITTLE_ENDIAN).getInt();
+    var res= Arrays.copyOf(zip, start+22);
+    ByteBuffer.wrap(res, start, 22).order(ByteOrder.LITTLE_ENDIAN).putInt(0x06054b50).putInt(0).putInt(0).putInt(0).putInt(start);
+    return res;
+  }
+  @Test void aZipWhoseDirectoryMissesItsEntriesIsListedAgain(@TempDir Path tmp) throws Exception{
+    UserError.root = tmp;
+    var zip= tmp.resolve("o.zip");
+    var time= FileTime.fromMillis(System.currentTimeMillis() - 60_000);
+    Fs.write(zip, withoutDirectory("aaa.txt"));
+    Files.setLastModifiedTime(zip, time);
+    assertEquals(List.of("aaa.txt"), ZipLocator.entryNames(tmp, zip, List.of()));
+    Fs.write(zip, withoutDirectory("bbb.txt"));
+    Files.setLastModifiedTime(zip, time);
+    assertEquals(List.of("bbb.txt"), ZipLocator.entryNames(tmp, zip, List.of()));
+  }
+  private static byte[] directoryNamingTheFirstTwice(String second) throws IOException{
+    var zip= zip(List.of("aaa.txt", second));
+    var start= ByteBuffer.wrap(zip, zip.length-6, 4).order(ByteOrder.LITTLE_ENDIAN).getInt();
+    var text= new String(zip, ISO_8859_1);
+    return (text.substring(0, start)+text.substring(start).replace(second, "aaa.txt")).getBytes(ISO_8859_1);
+  }
+  @Test void aZipWhoseDirectoryNamesOtherEntriesIsListedAgain(@TempDir Path tmp) throws Exception{
+    UserError.root = tmp;
+    var zip= tmp.resolve("o.zip");
+    var time= FileTime.fromMillis(System.currentTimeMillis() - 60_000);
+    Fs.write(zip, directoryNamingTheFirstTwice("bbb.txt"));
+    Files.setLastModifiedTime(zip, time);
+    assertEquals(List.of("aaa.txt", "bbb.txt"), ZipLocator.entryNames(tmp, zip, List.of()));
+    Fs.write(zip, directoryNamingTheFirstTwice("ccc.txt"));
+    Files.setLastModifiedTime(zip, time);
+    assertEquals(List.of("aaa.txt", "ccc.txt"), ZipLocator.entryNames(tmp, zip, List.of()));
+  }
+  @Test void aZipWithALongDirectoryReplacedByAnotherOfTheSameSizeAndTimeIsListedAgain(@TempDir Path tmp) throws Exception{
+    var root= tmp.resolve("root").toAbsolutePath().normalize();
+    UserError.root = root;
+    Fs.createDirectories(root.resolve("_pkg"));
+    Fs.writeString(root.resolve("_pkg/a.fear"), "A");
+    var zip= root.resolve("_pkg/o.zip");
+    var names= new ArrayList<>(IntStream.range(0, 3000).mapToObj(i -> "e%04d.txt".formatted(i)).toList());
+    Fs.write(zip, zip(names));
+    var time= FileTime.fromMillis(System.currentTimeMillis() - 60_000);
+    Files.setLastModifiedTime(zip, time);
+    assertEquals("fear:/_pkg/o/e2999.txt", fearPaths(root).getLast());
+    names.set(0, "f0000.txt");
+    Fs.write(zip, zip(names));
+    Files.setLastModifiedTime(zip, time);
+    assertEquals("fear:/_pkg/o/f0000.txt", fearPaths(root).getLast());
   }
   @Test void errZipEntryNameNotUtf8(@TempDir Path tmp) throws Exception{
     var root= tmp.resolve("root").toAbsolutePath().normalize();

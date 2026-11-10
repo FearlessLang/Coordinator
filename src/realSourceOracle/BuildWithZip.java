@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -30,6 +31,7 @@ public final class BuildWithZip{
   private final boolean dated;
   private final Since since;
   private final ArrayList<Ref> visibleFiles= new ArrayList<>();
+  private final HashSet<Path> zips= new HashSet<>();
   private final LinkedHashMap<RefParent,LinkedHashSet<RefParent>> visKidsByDir= new LinkedHashMap<>();
   private final LinkedHashMap<RefParent,LinkedHashSet<RefParent>> dotKidsByDir= new LinkedHashMap<>();
   BuildWithZip(Path root, boolean dated, Since since){
@@ -38,6 +40,10 @@ public final class BuildWithZip{
     this.since= since;
   }
   List<Ref> build(){
+    try{ return walk(); }
+    finally{ ZipLocator.keep(root, zips); }
+  }
+  private List<Ref> walk(){
     reqNoEmptyDirs();
     Fs.walkV(root, s -> s
       .filter(p -> !p.equals(root))
@@ -93,6 +99,7 @@ public final class BuildWithZip{
     BuildWithZip.reqTime(t, () -> Report.dateUnset(rel, t), now -> Report.dateInTheFuture(rel, t, now));
   }
   private void collectBodyDiskZip(Path rel){
+    zips.add(root.resolve(rel));
     for (var e : since.read(root.resolve(rel), () -> ZipEntry.allEntryPaths(root, rel, since))){
       if (e.expanded()){ continue; }//expanded
       addKids(e);

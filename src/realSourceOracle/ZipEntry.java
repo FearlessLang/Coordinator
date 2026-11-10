@@ -37,7 +37,7 @@ public record ZipEntry(Path root, Path local, List<String> segments, List<String
   }
   private static void reqCollect(Path diskZip, Path root, Path local, List<String> steps, Since since, ArrayList<ZipEntry> res){
     if (steps.size() > maxZipNesting){ throw Report.zipNestingTooDeep(diskZip, steps); }
-    for (var name : ZipLocator.entryNames(diskZip, steps)){
+    for (var name : ZipLocator.entryNames(root, diskZip, steps)){
       var e= new ZipEntry(root, local, zipsToSegments(steps, name), steps, name, since);
       res.add(e);
       if (e.expanded()){ reqCollect(diskZip, root, local, Push.of(steps, name), since, res); }

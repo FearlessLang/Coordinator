@@ -5,18 +5,16 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileTime;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
-import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.function.LongFunction;
@@ -51,34 +49,43 @@ public final class ZipLocator{
       (n,t) -> reqTime(n, t, () -> Report.zipEntryDateUnset(diskZip, steps, n, t), now -> Report.zipEntryDateInTheFuture(diskZip, steps, n, t, now))
     ).read(() -> zipStream(diskZip, bytes), keep);
   }
-  private record Listed(long size, FileTime time, String tail, List<String> names){}
-  private static final ConcurrentHashMap<List<Object>,Listed> listed= new ConcurrentHashMap<>();
-  public static List<String> entryNames(Path diskZip, List<String> steps){
-    var stamp= Fs.of(() -> Files.readAttributes(diskZip, BasicFileAttributes.class, LinkOption.NOFOLLOW_LINKS));
-    var tail= tail(diskZip, stamp.size());
-    var key= List.<Object>of(diskZip.toAbsolutePath(), List.copyOf(steps));
-    var known= listed.get(key);
-    if (known != null && known.size() == stamp.size() && known.time().equals(stamp.lastModifiedTime()) && known.tail().equals(tail)){ return known.names(); }
-    var res= fetch(diskZip, steps, bytes -> reqEntries(diskZip, steps, bytes, List.copyOf(readHere(diskZip, steps, bytes, _ -> false).keySet())));
-    listed.put(key, new Listed(stamp.size(), stamp.lastModifiedTime(), tail, res));
-    return res;
-  }
-  //The central directory of a zip, at the end of the file, holds the name, the size, the CRC and the time of every entry;
-  //the modification time alone misses a replaced zip: a copy keeps the time of its source on Windows.
-  private static String tail(Path zip, long size){
-    var bytes= Fs.of(() -> readTail(zip, size));
-    try{ return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes)); }
-    catch (NoSuchAlgorithmException e){ throw Bug.of(e); }
-  }
-  private static byte[] readTail(Path zip, long size) throws IOException{
-    try (var ch= Files.newByteChannel(zip)){
-      var res= ByteBuffer.allocate((int)Math.min(size, tailSize));
-      ch.position(size - res.capacity());
-      while (res.hasRemaining() && ch.read(res) >= 0){}
-      return res.array();
+  private record Stamp(long size, FileTime time, String hash){}
+  private record Seen(Stamp stamp, List<String> files){}
+  private record Listed(Stamp stamp, ConcurrentHashMap<List<String>,List<String>> names){}
+  private static final ConcurrentHashMap<Path,ConcurrentHashMap<Path,Listed>> roots= new ConcurrentHashMap<>();
+  public static List<String> entryNames(Path root, Path diskZip, List<String> steps){
+    var seen= seen(diskZip);
+    if (seen.isEmpty()){
+      Optional.ofNullable(roots.get(root)).ifPresent(z -> z.remove(diskZip));
+      return listed(diskZip, steps);
     }
+    var stamp= seen.get().stamp();
+    var zips= roots.computeIfAbsent(root, _ -> new ConcurrentHashMap<>());
+    var known= zips.compute(diskZip, (_, l) -> l != null && l.stamp().equals(stamp) ? l : new Listed(stamp, new ConcurrentHashMap<>()));
+    var names= known.names().get(steps);
+    if (names != null){ return names; }
+    names = listed(diskZip, steps);
+    var described= steps.isEmpty() ? files(seen.get().files()).equals(files(names)) : known.names().containsKey(List.of());
+    if (described && seen(diskZip).map(Seen::stamp).equals(Optional.of(stamp))){ known.names().put(List.copyOf(steps), names); }
+    return names;
   }
-  private static final int tailSize= 65_536;
+  private static List<String> files(List<String> names){ return names.stream().filter(n -> !n.endsWith("/")).sorted().toList(); }
+  public static void keep(Path root, Set<Path> zips){
+    roots.computeIfPresent(root, (_, known) -> kept(known, zips));
+  }
+  private static ConcurrentHashMap<Path,Listed> kept(ConcurrentHashMap<Path,Listed> known, Set<Path> zips){
+    known.keySet().retainAll(zips);
+    return known.isEmpty() ? null : known;
+  }
+  public static void forget(Path root){ roots.remove(root.toAbsolutePath().normalize()); }
+  private static Optional<Seen> seen(Path zip){
+    var a= Fs.of(() -> Files.readAttributes(zip, BasicFileAttributes.class, LinkOption.NOFOLLOW_LINKS));
+    if (a.isDirectory() || a.isSymbolicLink()){ return Optional.empty(); }
+    return Fs.of(() -> ZipDirectory.of(zip, a.size())).map(d -> new Seen(new Stamp(a.size(), a.lastModifiedTime(), d.hash()), d.files()));
+  }
+  private static List<String> listed(Path diskZip, List<String> steps){
+    return fetch(diskZip, steps, bytes -> reqEntries(diskZip, steps, bytes, List.copyOf(readHere(diskZip, steps, bytes, _ -> false).keySet())));
+  }
   private static List<String> reqEntries(Path diskZip, List<String> steps, byte[] bytes, List<String> names){
     if (!names.isEmpty()){ return names; }
     var head= bytes!=null ? bytes : Fs.of(() -> { try (var in= Fs.newInputStream(diskZip)){ return in.readNBytes(4); } });
