@@ -21,15 +21,18 @@ final class SourceDocs{
   final HashSet<DocOcc> attached= new HashSet<>();
   final HashMap<DocOcc,Integer> inlineClaimedFromColumn= new HashMap<>();
   final LinkedHashSet<DocOcc> ambiguousInline= new LinkedHashSet<>();
+  final HashSet<Integer> visitedLines= new HashSet<>();
   SourceDocs(URI uri, String text){
     this.uri= uri;
     lines= text.lines().toList();
     scan();
   }
-  List<DocOcc> docsAt(Pos pos, boolean includeBefore){
+  List<DocOcc> docsAt(Pos pos, boolean literal){
     assert pos.line()>0 && pos.line()<=lines.size() : pos;
+    var first= visitedLines.add(pos.line());
+    if (literal && !first){ return List.of(); }
     var res= new ArrayList<DocOcc>();
-    if (includeBefore){ collectBefore(pos.line(), res); }
+    if (first){ collectBefore(pos.line(), res); }
     inlineAfter(pos.line(), pos.column())
       .filter(occ -> depthAt(occ.line(), occ.column()) >= depthAt(pos.line(), pos.column()))
       .ifPresent(occ -> {

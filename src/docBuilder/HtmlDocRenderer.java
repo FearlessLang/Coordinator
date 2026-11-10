@@ -2,7 +2,6 @@ package docBuilder;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -23,10 +22,12 @@ import main.FrontendLogicMain.TestSource;
 import offensiveUtils.Require;
 import tools.Fs;
 import utils.Bug;
+import utils.DistinctBy;
 import utils.Join;
 import utils.Pos;
 import utils.OneOr;
 import utils.Range;
+import utils.Streams;
 
 final class HtmlDocRenderer{
   final String pkgName;
@@ -135,9 +136,9 @@ final class HtmlDocRenderer{
   //documentation of the type, written at the same indent, without parsing either: the source
   //whitelist (Fs.allowed) has no tab, so neither a signature nor a doc comment can carry one.
   void renderMethodText(StringBuilder sb, MethodDoc m, Map<DocOcc,Object> claims){
-    sb.append('\t').append(toStr.sig(m.main().sig())).append('\n');
+    sb.append('\t').append(sig(m.main())).append('\n');
     if (m.declared){ renderDocText(sb, "    ", m, m.docs, claims); }
-    sb.append(Join.of(fromRefs(m).stream().map(r -> refName(r)+r.method().sig().m()), "    from: ", ", ", "\n", ""));
+    sb.append(Join.of(fromRefs(m).stream().map(this::fromName), "    from: ", ", ", "\n", ""));
   }
   static List<DocOcc> visibleDocs(Object owner, List<DocOcc> docs, Map<DocOcc,Object> claims){
     return docs.stream().filter(c -> !c.inline() || claims.get(c)==owner).filter(c -> !c.testOnly()).toList();
@@ -371,26 +372,31 @@ code{
     sb.append("<span class=\"sig\">").append(renderSig(m)).append("</span></summary>\n");
     if (m.declared){ renderDoc(sb, m, m.docs, claims); }
     sb.append(Join.of(fromRefs(m).stream().map(this::fromLink), "<p class=\"doc from\">From: ", ", ", ".</p>\n", ""));
-    renderVariants(sb, "Typed method variants", m.variants, v -> toStr.sig(v.sig()));
+    renderVariants(sb, "Typed method variants", m.variants, this::sig);
     sb.append("</details>\n");
   }
   String fromLink(MethodRef r){
-    return "<a href=\""+h(prefix(r.owner().pkgName())+"#"+methodId(r.owner(), r.method()))+"\">"+h(refName(r))+h(r.method().sig().m().toString())+"</a>";
+    return "<a href=\""+h(prefix(r.owner().pkgName())+"#"+methodId(r.owner(), r.method()))+"\">"+h(fromName(r))+"</a>";
   }
-  Collection<MethodRef> fromRefs(MethodDoc m){
-    if (!m.inheritedFrom.isEmpty()){ return m.inheritedFrom; }
+  List<MethodRef> fromRefs(MethodDoc m){
+    if (!m.inheritedFrom.isEmpty()){ return m.inheritedFrom.stream().gather(DistinctBy.<MethodRef,String>of(this::fromName)).toList(); }
     if (m.declared){ return List.of(); }
     return List.of(new MethodRef(m.main().sig().origin(), Optional.empty(), m.main()));
   }
-  String refName(MethodRef r){
-    return r.provider().map(toStr::typeName).orElseGet(() -> toStr.typeNameWithArity(r.owner()));
+  String sig(M m){
+    var s= m.sig();
+    var ps= Streams.zip(m.xs(), s.ts()).map((x,t) -> (x.equals("_") ? "" : x+":")+toStr.type(t));
+    return s.rc().toStrSpace()+s.m().s()+Join.of(s.bs().stream().map(B::compactToString), "[", ",", "]", "")+Join.of(ps, "(", ",", ")", "")+":"+toStr.type(s.ret());
+  }
+  String fromName(MethodRef r){
+    return r.provider().map(toStr::typeName).orElseGet(() -> toStr.typeNameWithArity(r.owner()))+r.method().sig().m();
   }
   //only the types a signature mentions become links: its own selector would just point
   //back at itself. A name that fails to resolve, or that names one of this method's own
   //bound parameters (eg. "R" in ".toOpt[R:*]"), stays plain text and is never an error.
   String renderSig(MethodDoc m){
     var sig= m.main().sig();
-    var text= toStr.sig(sig);
+    var text= sig(m.main());
     var sb= new StringBuilder();
     var i= 0;
     var from= 0;

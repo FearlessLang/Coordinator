@@ -61,19 +61,19 @@ public final class HtmlDocBuilder{
     assert Require.nonNull(l);
     var t= typeBySrc.get(l.src());
     if (t == null){
-      t = new TypeDoc(l, docsAt(l.pos(), !l.infName()));
+      t = new TypeDoc(l, docsAt(l.pos(), true));
       typeBySrc.put(l.src(), t);
       types.add(t);
     }
     else{ t.addVariant(l); }
     for (var m : l.ms()){
       var p= m.sig().span().pos();
-      if (m.sig().origin().equals(l.name())){ t.declared(p, m, docsAt(p, p.line() != l.pos().line()), inheritedMethods(l, m)); }
+      if (m.sig().origin().equals(l.name())){ t.declared(p, m, docsAt(p, false), inheritedMethods(l, m)); }
       else{ t.imported(m, inheritedMethods(l, m)); }
     }
   }
   public List<TestSource> complete(Function<TName,String> pkgNames, boolean testable, Consumer<Runnable> writes){
-    var resolver= new DocResolver(pkgName, types, other);
+    var resolver= new DocResolver(pkgName, types, other, pkgNames);
     var spans= new HashMap<DocOcc,Map<Integer,DocLink>>();
     oracle.allFiles().forEach(f -> sources.computeIfAbsent(f.fearURI(), u -> new SourceDocs(u, f.loadString())));
     var orphans= sources.values().stream().flatMap(s -> s.orphanRuns().stream()).map(this::orphan);
@@ -177,8 +177,8 @@ public final class HtmlDocBuilder{
       .filter(sm -> sm.sig().rc()==m.sig().rc() && sm.sig().m().equals(m.sig().m()))
       .map(sm -> new MethodRef(provider.name(), Optional.of(provider), sm));
   }
-  List<DocOcc> docsAt(Pos p, boolean includeBefore){
+  List<DocOcc> docsAt(Pos p, boolean literal){
     if (p.line() == 0){ return List.of(); }
-    return sources.computeIfAbsent(p.fileName(), u -> new SourceDocs(u, oracle.loadString(u))).docsAt(p, includeBefore);
+    return sources.computeIfAbsent(p.fileName(), u -> new SourceDocs(u, oracle.loadString(u))).docsAt(p, literal);
   }
 }

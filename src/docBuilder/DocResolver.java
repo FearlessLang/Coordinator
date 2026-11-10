@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
+import java.util.function.Function;
 import java.util.stream.Stream;
 
 import core.E.Literal;
@@ -21,10 +22,10 @@ record Scope(Literal owner, Optional<M> method){
   static Scope of(Literal owner){ return new Scope(owner, Optional.empty()); }
   static Scope of(Literal owner, M method){ return new Scope(owner, Optional.of(method)); }
 }
-record DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other){
+record DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other, Function<TName,String> names){
   Optional<DocLink> resolve(DocRef ref, Scope scope){
     return switch (ref){
-      case DocRef.TypeName t -> resolveType(t);
+      case DocRef.TypeName t -> typeParameter(t, scope) ? Optional.of(new DocLink.NoLink()) : resolveType(t);
       case DocRef.LocalName l -> resolveLocal(l, scope);
       case DocRef.MethodName m -> resolveMethod(m, scope);
     };
@@ -34,6 +35,10 @@ record DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other){
     return Optional.of(localType(ref.name(), scope)
       .<DocLink>map(n -> new DocLink.Resolved(Candidate.ofType(n)))
       .orElseGet(DocLink.NoLink::new));
+  }
+  private boolean typeParameter(DocRef.TypeName t, Scope scope){
+    var bs= Stream.concat(scope.owner().bs().stream(), scope.method().stream().flatMap(m -> m.sig().bs().stream()));
+    return t.pkg().isEmpty() && t.arity().isEmpty() && bs.anyMatch(b -> b.x().equals(t.simpleName()));
   }
   private boolean inScope(String name, Scope scope){
     if (name.equals(scope.owner().thisName())){ return true; }
@@ -51,10 +56,12 @@ record DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other){
   private List<TName> typeCandidates(DocRef.TypeName ref){
     var pkg= ref.pkg();
     if (pkg.isEmpty() || pkg.get().equals(pkgName)){
-      var local= matching(types.stream().map(TypeDoc::main).filter(l -> !l.infName()).map(Literal::name), ref);
+      var local= matching(types.stream().map(TypeDoc::main).filter(l -> !l.infName()).map(Literal::name), TName::simpleName, ref);
       if (!local.isEmpty() || pkg.isPresent()){ return local; }
+      var used= matching(foreign(), names, ref);
+      if (!used.isEmpty()){ return used; }
     }
-    return matching(foreign().filter(n -> pkg.isEmpty() || written(n.pkgName()).equals(pkg.get())), ref);
+    return matching(foreign().filter(n -> pkg.isEmpty() || written(n.pkgName()).equals(pkg.get())), TName::simpleName, ref);
   }
   private String written(String pkg){
     return OneOr.opt("two names for "+pkg, other.virtualizationMap().getOrDefault(pkgName, Map.of()).entrySet().stream()
@@ -63,9 +70,9 @@ record DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other){
   private Stream<TName> foreign(){
     return other.dom().stream().sorted(Comparator.comparing(TName::s).thenComparing(TName::arity));
   }
-  private List<TName> matching(Stream<TName> names, DocRef.TypeName ref){
-    return names
-      .filter(n -> n.simpleName().equals(ref.simpleName()))
+  private List<TName> matching(Stream<TName> ns, Function<TName,String> written, DocRef.TypeName ref){
+    return ns
+      .filter(n -> written.apply(n).equals(ref.simpleName()))
       .filter(n -> ref.arity().isEmpty() || n.arity()==ref.arity().getAsInt())
       .toList();
   }

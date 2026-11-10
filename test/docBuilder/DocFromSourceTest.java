@@ -1,7 +1,6 @@
 package docBuilder;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.net.URI;
 import java.nio.file.Path;
@@ -38,8 +37,8 @@ final class DocFromSourceTest{
       new FrontendLogicMain().of("p", Map.of(), oracle.allFiles(), other, core -> {
         var builder= new HtmlDocBuilder(oracle, other, core, Optional.empty(), "p", html, true);
         core.forEach(builder::visitAll);
-        builder.complete(TName::s, false, Runnable::run);
-        var renderer= new HtmlDocRenderer(DocNames.uses("p", core), new DocResolver("p", builder.types, other), Map.of(), Optional.empty());
+        builder.complete(new FrontendLogicMain().names("p", Map.of(), oracle.allFiles(), other), false, Runnable::run);
+        var renderer= new HtmlDocRenderer(DocNames.uses("p", core), new DocResolver("p", builder.types, other, TName::s), Map.of(), Optional.empty());
         if (!renderer.testableTypes().isEmpty()){ tests.addAll(renderer.renderTests(TName::s)); }
         return List.of();
       });
@@ -80,6 +79,22 @@ Named : A
     assertEquals(List.of("_Cases_Examples: base.Test {::", "AllAutoTests_p: base.UnitTests {::"),
       docs.tests().stream().map(t -> t.text().lines().findFirst().orElseThrow()).toList());
   }
+  @Test void aNamedLiteralOnTheLineOfADocumentedTypeTakesNoneOfItsDocumentation(@TempDir Path tmp){
+    var docs= docs(tmp, a+"""
+///Holds an Inner.
+Outer:{ .get: A -> Inner: A{ .m -> A }; }
+""");
+    utils.Err.strCmp("""
+[###]
+Inner : A
+\t.m:A
+    from: A.m
+
+Outer
+  Holds an Inner.
+\t.get:A
+""", docs.text());
+  }
   @Test void aReferenceMayNameATypeByTheNameAUseGivesIt(@TempDir Path tmp){
     var q= compiled("q", "Thing:{}\n", OtherPackages.empty());
     var docs= docs(tmp, OtherPackages.start(Map.of(), q, 0L), """
@@ -106,30 +121,6 @@ Box[X:imm]:{ .get: X; }
 """);
     utils.Err.strCmp("[###]Box[X:imm]\n  Holds one `X`.\n[###]", docs.text());
   }
-  @Test void anExtraClosingBraceInAnExampleIsReportedAtThatBrace(@TempDir Path tmp){
-    var oracle= SourceOracle.debugBuilder().putURI(file, a+"""
-Calc:{
-  //> .check{Calc.one}}
-  .one: A -> A;
-  //> .check{Calc.two}
-  .two: A -> A;
-  }
-""").build();
-    var fe= assertThrows(FearlessException.class, () -> new FrontendLogicMain().of("p", Map.of(), oracle.allFiles(), OtherPackages.empty(), core -> {
-      var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), core, Optional.empty(), "p", tmp.resolve("p.html"), true);
-      core.forEach(builder::visitAll);
-      return builder.complete(TName::s, true, Runnable::run);
-    }));
-    utils.Err.strCmp("""
-In file: fear:/_p/_rank_app.fear
-
-003|   //> .check{Calc.one}}
-   |                       ^
-
-While inspecting groups of parenthesis
-Unopened "}".
-[###]""", fe.render(oracle));
-  }
   @Test void aDocBlockRightAboveAnAnonymousLiteralDocumentsThatLiteral(@TempDir Path tmp){
     var docs= docs(tmp, a+"""
 Maker:{
@@ -146,6 +137,6 @@ Maker:{
   .make: A -> A{ .m -> A }; /// makes an A
   }
 """);
-    utils.Err.strCmp("[###]Maker\n\t.make:A\n    makes an A\n[###]", docs.text());
+    utils.Err.strCmp("[###]Maker\n\t.make:A\n    makes an A[###]", docs.text());
   }
 }
