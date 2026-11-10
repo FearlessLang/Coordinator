@@ -91,7 +91,7 @@ public final class BuildWithZip{
   }
   private void collectBodyDiskZip(Path rel){
     for (var e : since.read(root.resolve(rel), () -> ZipEntry.allEntryPaths(root, rel, since))){
-      if (e.segments().getLast().endsWith(".zip")){ continue; }//expanded
+      if (e.expanded()){ continue; }//expanded
       addKids(e);
       if (!isInvisible(e)){ visibleFiles.add(e); }
     }

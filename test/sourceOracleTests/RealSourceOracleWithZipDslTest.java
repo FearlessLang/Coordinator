@@ -339,6 +339,56 @@ A
 A
 
 """);}
+  @Test void okProtectedFolderInsideAZipMayHoldAnEmptyZip(@TempDir Path tmp){ testOk(tmp, """
+_pkg/z.zip/.tool_cache/e.zip
+iii
+jjj
+_pkg/z.zip/a.fear
+iii
+A
+""", """
+--- fear:/_pkg/z/a.fear
+A
+
+""");}
+  @Test void okProtectedFolderInsideAZipMayHoldAZipNextToAFolderOfTheSameName(@TempDir Path tmp){ testOk(tmp, """
+_pkg/z.zip/.tool_cache/e.zip/x.txt
+iii
+X
+jjj
+_pkg/z.zip/.tool_cache/e/y.txt
+iii
+Y
+jjj
+_pkg/z.zip/a.fear
+iii
+A
+""", """
+--- fear:/_pkg/z/a.fear
+A
+
+""");}
+  @Test void errInvisibleZipInsideAZipWindowsBadCharColon(@TempDir Path tmp){ runErrIOE(tmp, """
+_pkg/z.zip/.d/a:b.zip/x.txt
+iii
+X
+""", """
+Invalid path in this project folder.
+
+Root: [###]
+Path: "_pkg/z/.d/a:b.zip"
+
+What went wrong
+- A protected name segment contains a character that Windows forbids.
+  Bad char: `:`
+  Segment: "a:b.zip"
+
+How to fix
+- Rename the segment to remove Windows-forbidden characters.
+  Forbidden on Windows: < > : " / \\ | ? *
+
+We check this so that you[###]
+""");}
   @Test void errEmptyDirectory(@TempDir Path tmp){ runErrIOE(tmp, """
 _pkg/
 iii

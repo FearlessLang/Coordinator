@@ -25,6 +25,7 @@ public record ZipEntry(Path root, Path local, List<String> segments, List<String
   @Override public long lastModified(){ return Fs.lastModified(root.resolve(local)); }
   @Override public RuntimeException notUtf8(long line, int offset){ return Report.notUtf8(this, line, offset); }
   @Override public String toString(){ return fearPath(); }
+  boolean expanded(){ return lastZips.endsWith(".zip") && !BuildWithZip.isInvisible(this); }
   private static final int maxZipNesting= 64;
   public static List<ZipEntry> allEntryPaths(Path root, Path local, Since since){
     assert root.isAbsolute() && !local.isAbsolute();
@@ -37,8 +38,9 @@ public record ZipEntry(Path root, Path local, List<String> segments, List<String
   private static void reqCollect(Path diskZip, Path root, Path local, List<String> steps, Since since, ArrayList<ZipEntry> res){
     if (steps.size() > maxZipNesting){ throw Report.zipNestingTooDeep(diskZip, steps); }
     for (var name : ZipLocator.entryNames(diskZip, steps)){
-      res.add(new ZipEntry(root, local, zipsToSegments(steps, name), steps, name, since));
-      if (name.endsWith(".zip")){ reqCollect(diskZip, root, local, Push.of(steps, name), since, res); }
+      var e= new ZipEntry(root, local, zipsToSegments(steps, name), steps, name, since);
+      res.add(e);
+      if (e.expanded()){ reqCollect(diskZip, root, local, Push.of(steps, name), since, res); }
     }
   }
   private static void reqNoFileUsedAsDirectory(List<ZipEntry> es){
@@ -52,7 +54,7 @@ public record ZipEntry(Path root, Path local, List<String> segments, List<String
   }
   private static void reqNoFolderForNestedZipName(List<ZipEntry> es){
     for (var e : es){
-      if (!e.lastZips().endsWith(".zip")){ continue; }
+      if (!e.expanded()){ continue; }
       var folder= dropZipExt(e.segments());
       es.stream()
         .filter(o -> o.zips().equals(e.zips()))
