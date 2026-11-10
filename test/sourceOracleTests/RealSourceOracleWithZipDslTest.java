@@ -540,11 +540,11 @@ Path: "_pkg/a"
 
 What went wrong
 - This file has no extension.
-  Files normally must be named like "name.ext" (one dot).
+  A visible file is named like "name.ext": a name, a dot and an extension.
 
 How to fix
-- Rename it to have a single extension (example: "foo.txt", "source.fear").
-- Rename it to a well-known extensionless file (example: "readme").
+- Rename it to have an extension (example: "foo.txt", "source.fear").
+- Or move it into a folder whose name starts with ".", which Fearless ignores.
 
 We check this so that[###]
 """);}
@@ -1354,37 +1354,6 @@ We check this so that you[###]
     refusesJunction(root, root.resolve("_pkg/.d/link"), tmp.resolve("outside"), "_pkg/.d/link");
     refusesSymbolicLink(root, root.resolve("_pkg/.d/link"), root.resolve("_pkg/.d/missing"), "_pkg/.d/link");
   }
-  @Test void errExtensionlessMasksExtension(@TempDir Path tmp){ runErrIOE(tmp, """
-_pkg/readme
-iii
-X
-jjj
-_pkg/readme.md
-iii
-Y
-""", """
-Invalid path in this project folder.
-
-Root: [###]
-Path: "_pkg/readme.md"
-
-What went wrong
-- Both an allowed extensionless file and an extended file share the same base name.
-  Extensionless file:
-  Root: [###]
-  Path: "_pkg/readme"
-
-  Extended file:
-  Root: [###]
-  Path: "_pkg/readme.md"
-
-  This is confusing in file browsers (extensions may be hidden).
-
-How to fix
-- Rename one of them so they are clearly distinct.
-
-We check this so that you[###]
-""");}
   @Test void errPathTooLong(@TempDir Path tmp){
     var longName= "a".repeat(200);
     runErrIOE(tmp, ("""

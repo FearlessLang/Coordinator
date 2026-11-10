@@ -120,7 +120,7 @@ public final class BuildWithZip{
     var split= d0>0 && kid instanceof Ref;
     checkVisibleAtom(kid, split ? name.substring(0, d0) : name);
     if (split){ checkExt(kid, name.substring(d0 + 1)); return; }
-    if (kid instanceof Ref && !Report.allowedNoExtFiles.contains(name)){ throw Report.needsExtension(kid); }
+    if (kid instanceof Ref){ throw Report.needsExtension(kid); }
   }
   private static void checkVisibleAtom(RefParent kid, String atom){
     var c0= atom.charAt(0);
@@ -169,15 +169,5 @@ public final class BuildWithZip{
   }
   private static void checkCollectiveVisible(Set<RefParent> kids){
     checkCollectiveInvisible(kids.stream().filter(kid -> Fs.fileNameWithExtension(kid.fearPath()).startsWith(".")).toList());
-    for (var kid : kids){
-      var name= Fs.fileNameWithExtension(kid.fearPath());
-      if (!(kid instanceof Ref)){ continue; } // directory
-      if (Report.allowedNoExtFiles.contains(name)){ checkNoExtBaseClash(kids, kid, name); }
-    }
-  }
-  private static void checkNoExtBaseClash(Collection<RefParent> kids, RefParent noExtKid, String base){
-    kids.stream()
-      .filter(kid -> !kid.equals(noExtKid) && Fs.fileNameWithExtension(kid.fearPath()).startsWith(base+"."))
-      .findFirst().ifPresent(kid -> { throw Report.extensionlessMaskExtension(kid, noExtKid); });
   }
 }
