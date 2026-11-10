@@ -412,4 +412,34 @@ B:{ .f[X:imm,Y:imm](a1: A, a2: A): A -> a1; }
 """);
     utils.Err.strCmp("[###]<span class=\"sig\">.f[X:imm,<wbr>Y:imm](a1:<a href=\"#type-p_2e_A-0\">A</a>,<wbr>a2:<a href=\"#type-p_2e_A-0\">A</a>):<a href=\"#type-p_2e_A-0\">A</a></span>[###]", docs.html());
   }
+  @Test void aBareSelectorReachesAMethodThatAPublicTypeOfAnotherPackageInheritsFromAPrivateOne(@TempDir Path tmp){
+    var q= compiled("q", """
+A:{}
+_Base:{ .reset: A -> A; }
+Thing:_Base{}
+""", OtherPackages.empty());
+    var docs= docs(tmp, OtherPackages.start(Map.of(), q, 0L), """
+///Same as `.reset`.
+User:{ .m: User -> this; }
+""");
+    utils.Err.strCmp("[###]<p>Same as <code><a href=\"q.html#method-q_2e_[###]-0-imm-_2e_reset-0\">.reset</a></code>.</p>[###]", docs.html());
+  }
+  @Test void aBareSelectorDeclaredInThisPackageWinsOverASameNamedMethodOfAnotherPackage(@TempDir Path tmp){
+    var q= compiled("q", "Thing:{ .reset(a: Thing): Thing -> a; }\n", OtherPackages.empty());
+    var docs= docs(tmp, OtherPackages.start(Map.of(), q, 0L), """
+///Call `.reset` first.
+User:{ .reset: User -> this; }
+""");
+    utils.Err.strCmp("[###]<p>Call <code><a href=\"#method-p_2e_User-0-imm-_2e_reset-0\">.reset</a></code> first.</p>[###]", docs.html());
+  }
+  @Test void aBaseTypeIsShownQualifiedWhereAUseGivesItsSimpleNameToAnotherType(@TempDir Path tmp){
+    var base= compiled("base", "Map:{}\n", OtherPackages.empty());
+    var q= compiled("q", "Map:{}\n", OtherPackages.empty());
+    var docs= docs(tmp, OtherPackages.start(Map.of(), Stream.concat(base.stream(), q.stream()).toList(), 0L), """
+use q.Map as Map;
+///Holds a `Map`.
+User:{ .mine: Map; .theirs: base.Map; }
+""");
+    utils.Err.strCmp("[###]\t.theirs:base.Map\n[###]", docs.text());
+  }
 }
