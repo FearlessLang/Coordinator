@@ -111,16 +111,12 @@ public final class HtmlDocBuilder{
     linkGroup(resolver, new Scope(t.main(), Optional.empty(), t.outer), t.docs, spans, problems);
     t.methods.forEach(m -> linkGroup(resolver, new Scope(t.main(), Optional.of(m.main()), t.outer), m.docs, spans, problems));
   }
-  //one group per declaration, carrying the scope its comment is written in: a fenced
-  //``` ... ``` block never spans declarations, so "inside a fence" resets per group.
   void linkGroup(DocResolver resolver, Scope scope, List<DocOcc> docs, HashMap<DocOcc,Map<Integer,DocLink>> spans,
       ArrayList<String> problems){
-    var inFence= false;
     for (var occ : docs){
-      if (occ.fence()){ inFence = !inFence; continue; }
       //a //> line is real Fearless code, not prose: any backtick in it is a genuine
       //raw string literal, never doc-comment markup, so it is never reference-checked.
-      if (inFence || occ.kind()!=DocKind.Prose){ continue; }
+      if (occ.kind()!=DocKind.Prose){ continue; }
       link(resolver, occ, scope, spans, problems);
     }
   }

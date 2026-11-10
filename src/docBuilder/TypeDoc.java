@@ -7,7 +7,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Optional;
 import java.util.SequencedCollection;
-import java.util.regex.Pattern;
 
 import core.E.Literal;
 import core.M;
@@ -80,7 +79,8 @@ record MethodRefKey(String provider, RC rc, MName m){
 }
 record ImportedKey(TName origin, RC rc, MName m){}
 enum DocKind{
-  Prose, Example, TestOnly;
+  Prose, Fence, Fenced, Example, TestOnly;
+  boolean tested(){ return this==Example || this==TestOnly; }
   static Optional<DocKind> ofMark(char mark){
     return switch (mark){
       case '/' -> Optional.of(Prose);
@@ -92,8 +92,6 @@ enum DocKind{
 }
 record DocOcc(URI file, int line, int column, int textColumn, String text, boolean pureLine, DocKind kind){
   boolean inline(){ return !pureLine; }
-  boolean fence(){ return fenceLine.matcher(text).matches(); }
-  private static final Pattern fenceLine= Pattern.compile(" *```[^`]*");
   DocOcc drop(int n){
     var k= Math.min(n, text.length());
     return new DocOcc(file, line, column, textColumn+k, text.substring(k), pureLine, kind);

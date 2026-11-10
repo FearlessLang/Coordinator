@@ -10,6 +10,7 @@ import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.regex.Pattern;
 
 import utils.Pos;
 
@@ -42,8 +43,20 @@ final class SourceDocs{
         attached.add(occ);
         res.add(shown);
       });
-    return res;
+    return fences(res);
   }
+  static List<DocOcc> fences(List<DocOcc> ds){
+    var res= new ArrayList<DocOcc>();
+    var inFence= false;
+    for (var d : ds){
+      if (d.kind()!=DocKind.Prose){ res.add(d); continue; }
+      var fence= fenceLine.matcher(d.text()).matches();
+      if (fence){ inFence = !inFence; }
+      res.add(new DocOcc(d.file(), d.line(), d.column(), d.textColumn(), d.text(), d.pureLine(), fence ? DocKind.Fence : inFence ? DocKind.Fenced : DocKind.Prose));
+    }
+    return List.copyOf(res);
+  }
+  private static final Pattern fenceLine= Pattern.compile(" *```[^`]*");
   int depthAt(int line, int column){
     var arr= depthByLine.get(line);
     return (arr==null || column>=arr.length) ? 0 : arr[column];

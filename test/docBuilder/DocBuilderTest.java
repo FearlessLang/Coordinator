@@ -1066,12 +1066,12 @@ documents, or turn it into a plain // comment.""", ex.getMessage());
   @Test void aFencedBlockIsShownAsOneBlockOfCode(){
     var holder= new TypeDoc(namedType("pkg.Holder", List.of(), List.of()), List.of(
       new DocOcc(file, 1, 1, 4, "Example:", true, DocKind.Prose),
-      new DocOcc(file, 2, 1, 4, "```", true, DocKind.Prose),
-      new DocOcc(file, 3, 1, 4, "Foo: Bar {", true, DocKind.Prose),
-      new DocOcc(file, 4, 1, 4, "  `x`", true, DocKind.Prose),
-      new DocOcc(file, 5, 1, 4, "", true, DocKind.Prose),
-      new DocOcc(file, 6, 1, 4, "  }", true, DocKind.Prose),
-      new DocOcc(file, 7, 1, 4, "```", true, DocKind.Prose),
+      new DocOcc(file, 2, 1, 4, "```", true, DocKind.Fence),
+      new DocOcc(file, 3, 1, 4, "Foo: Bar {", true, DocKind.Fenced),
+      new DocOcc(file, 4, 1, 4, "  `x`", true, DocKind.Fenced),
+      new DocOcc(file, 5, 1, 4, "", true, DocKind.Fenced),
+      new DocOcc(file, 6, 1, 4, "  }", true, DocKind.Fenced),
+      new DocOcc(file, 7, 1, 4, "```", true, DocKind.Fence),
       new DocOcc(file, 8, 1, 4, "After `x`.", true, DocKind.Prose)));
     var html= new HtmlDocRenderer(Map.of(), new DocResolver("pkg", List.of(holder), OtherPackages.empty(), TName::s), Map.of(), Optional.empty()).render();
     utils.Err.strCmp("[###]<div class=\"doc\">\n<p>Example:</p>\n<pre class=\"fenced\">Foo: Bar {\n  `x`\n\n  }</pre>\n<p>After <code>x</code>.</p>\n</div>[###]", html);

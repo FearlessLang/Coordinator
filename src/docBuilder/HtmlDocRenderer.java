@@ -83,7 +83,7 @@ final class HtmlDocRenderer{
   Stream<List<DocOcc>> docGroups(TypeDoc t){ return Stream.concat(Stream.of(t.docs), visibleMethods(t).stream().map(m -> m.docs)); }
   List<List<DocOcc>> testGroups(TypeDoc t){
     return docGroups(t)
-      .map(ds -> ds.stream().filter(d -> d.kind()!=DocKind.Prose).toList())
+      .map(ds -> ds.stream().filter(d -> d.kind().tested()).toList())
       .filter(g -> !g.isEmpty())
       .sorted(Comparator.comparingInt((List<DocOcc> g) -> g.getFirst().line()))
       .toList();
@@ -146,16 +146,16 @@ final class HtmlDocRenderer{
     return docs.stream().filter(c -> !c.inline() || claims.get(c)==owner).filter(c -> c.kind()!=DocKind.TestOnly).toList();
   }
   void renderDocText(StringBuilder sb, String indent, Object owner, List<DocOcc> docs, Map<DocOcc,Object> claims){
-    for (var run : runs(visibleDocs(owner, docs, claims))){
+    for (var run : runs(visibleDocs(owner, docs, claims), d -> d.kind()==DocKind.Example)){
       var example= run.getFirst().kind()==DocKind.Example;
       if (example){ sb.append(indent).append("example:\n"); }
       run.forEach(c -> appendIndented(sb, example ? indent+"  " : indent, c.text()));
     }
   }
-  static List<List<DocOcc>> runs(List<DocOcc> ds){
+  static <K> List<List<DocOcc>> runs(List<DocOcc> ds, Function<DocOcc,K> key){
     var res= new ArrayList<ArrayList<DocOcc>>();
     for (var d : ds){
-      if (res.isEmpty() || res.getLast().getLast().kind()!=d.kind()){ res.add(new ArrayList<>()); }
+      if (res.isEmpty() || !key.apply(res.getLast().getLast()).equals(key.apply(d))){ res.add(new ArrayList<>()); }
       res.getLast().add(d);
     }
     return List.copyOf(res);
@@ -444,11 +444,10 @@ code{
       sb.append("<p class=\"doc missing\">No documentation yet.</p>\n");
       return;
     }
-    var inFence= false;
-    for (var run : runs(visible)){
+    for (var run : runs(visible, d -> d.kind()==DocKind.Example)){
       if (run.getFirst().kind()==DocKind.Example){ renderExamples(sb, run.stream().map(DocOcc::text).toList()); continue; }
       sb.append("<div class=\"doc\">\n");
-      inFence = renderProse(sb, run, inFence);
+      runs(run, DocOcc::kind).forEach(b -> renderBlock(sb, b));
       sb.append("</div>\n");
     }
   }
@@ -458,19 +457,10 @@ code{
   //an empty doc line is where the author put a paragraph break; the lines between two
   //of them are one paragraph, kept on their own lines so that a list stays a list and
   //an indented line stays indented (the doc block is rendered with pre-wrap).
-  boolean renderProse(StringBuilder sb, List<DocOcc> prose, boolean inFence){
-    var block= new ArrayList<DocOcc>();
-    for (var o : prose){
-      if (!o.fence()){ block.add(o); continue; }
-      renderBlock(sb, block, inFence);
-      block.clear();
-      inFence = !inFence;
-    }
-    renderBlock(sb, block, inFence);
-    return inFence;
-  }
-  void renderBlock(StringBuilder sb, List<DocOcc> block, boolean fenced){
-    if (fenced && !block.isEmpty()){ sb.append("<pre class=\"fenced\">").append(Join.of(block.stream().map(o -> h(o.text())), "", "\n", "", "")).append("</pre>\n"); return; }
+  void renderBlock(StringBuilder sb, List<DocOcc> block){
+    var kind= block.getFirst().kind();
+    if (kind==DocKind.Fence){ return; }
+    if (kind==DocKind.Fenced){ sb.append("<pre class=\"fenced\">").append(Join.of(block.stream().map(o -> h(o.text())), "", "\n", "", "")).append("</pre>\n"); return; }
     var lines= Join.of(block.stream().map(o -> o.text().isBlank() ? "" : renderLine(o)), "", "\n", "", "");
     paragraph.matcher(lines).results().forEach(p -> sb.append("<p>").append(p.group()).append("</p>\n"));
   }
@@ -513,7 +503,7 @@ code{
     return sb.toString();
   }
   Stream<DocOcc> firstParagraph(MethodDoc m){
-    return m.docs.stream().filter(d -> d.kind()==DocKind.Prose).takeWhile(d -> !d.text().isBlank() && !d.fence());
+    return m.docs.stream().filter(d -> !d.kind().tested()).takeWhile(d -> d.kind()==DocKind.Prose && !d.text().isBlank());
   }
   String href(DocLink link){
     return switch (link){
