@@ -96,13 +96,14 @@ C:\\Users\\ada\\Downloads\\fearlessManaged0_007\\fearlessManaged0_007w.exe""", V
 Fearless cannot become the program that opens the kinds of file listed
 below.
 
-Your system remembers a choice you made by hand for these kinds of file,
-and no program can change or remove that choice, including this one.
-Fearless stopped before touching anything: your system is exactly as it
-was.
+Your system remembers a choice made by hand for these kinds of file,
+with "Open with" and "Always". Fearless never removes a choice of yours
+on its own, and stopped before touching anything: your system is
+exactly as it was.
 
-The only way to clear it is Settings, Apps, Default apps, Reset - which
-resets every app default on your machine, not only this one.
+Removing these choices clears the way. Each choice is the registry key
+HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts\\<kind of file>\\UserChoice,
+together with the key UserChoiceLatest next to it.
 
 What is locked:
 .fearless -> SomeApp.fearless""", Violation.associationUserLocked(Map.of(".fearless", List.of("SomeApp.fearless")), e -> "").getMessage());
@@ -112,13 +113,14 @@ What is locked:
 Fearless cannot become the program that opens the kinds of file listed
 below.
 
-Your system remembers a choice you made by hand for these kinds of file,
-and no program can change or remove that choice, including this one.
-Fearless stopped before touching anything: your system is exactly as it
-was.
+Your system remembers a choice made by hand for these kinds of file,
+with "Open with" and "Always". Fearless never removes a choice of yours
+on its own, and stopped before touching anything: your system is
+exactly as it was.
 
-The only way to clear it is Settings, Apps, Default apps, Reset - which
-resets every app default on your machine, not only this one.
+Removing these choices clears the way. Each choice is the registry key
+HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts\\<kind of file>\\UserChoice,
+together with the key UserChoiceLatest next to it.
 
 What is locked:
 .foo claimed by "hello.Foo" of project "demo" -> SomeApp.foo
@@ -174,6 +176,27 @@ What stood in the way:
 .fapp042 claimed by "hello.Bar" of project "demo" -> OtherApp.fapp042""", Violation.associationNotOurs(held, ViolationTest::claimedBy).getMessage());
   }
   private static String claimedBy(String ext){ return " claimed by \"hello."+(List.of(".foo", ".ffile001").contains(ext) ? "Foo" : "Bar")+"\" of project \"demo\""; }
+  @Test void associationBrokenDesk(){
+    var choices= new LinkedHashMap<String,List<String>>();
+    choices.put("/home/me/.config/mimeapps.list", List.of("application/x-fearless-htm=firefox.desktop", "application/x-fearless=editor.desktop;"));
+    choices.put("/etc/xdg/mimeapps.list", List.of("text/plain=fearlessBin0_001.desktop"));
+    utils.Err.strCmp("""
+Fearless cannot become the program that opens Fearless projects and the
+other kinds of file it registers.
+
+The files below hold lines naming Fearless. Only Fearless sets up what
+your desktop knows of Fearless, so these lines come from a choice made
+by hand, for example "Always use for this file type" in a file manager.
+Fearless stopped before touching anything: your system is exactly as it
+was.
+
+Removing these lines from these files clears the choice:
+/home/me/.config/mimeapps.list
+  application/x-fearless-htm=firefox.desktop
+  application/x-fearless=editor.desktop;
+/etc/xdg/mimeapps.list
+  text/plain=fearlessBin0_001.desktop""", Violation.associationBrokenDesk(choices).getMessage());
+  }
   @Test void associationNotWritable(){
     var registered= "HKEY_CLASSES_ROOT\\.fearless (write denied: not running as the owning user)";
     utils.Err.strCmp("""

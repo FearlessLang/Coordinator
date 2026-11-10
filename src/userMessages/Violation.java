@@ -101,13 +101,14 @@ What is registered:
 Fearless cannot become the program that opens the kinds of file listed
 below.
 
-Your system remembers a choice you made by hand for these kinds of file,
-and no program can change or remove that choice, including this one.
-Fearless stopped before touching anything: your system is exactly as it
-was.
+Your system remembers a choice made by hand for these kinds of file,
+with "Open with" and "Always". Fearless never removes a choice of yours
+on its own, and stopped before touching anything: your system is
+exactly as it was.
 
-The only way to clear it is Settings, Apps, Default apps, Reset - which
-resets every app default on your machine, not only this one.
+Removing these choices clears the way. Each choice is the registry key
+HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts\\<kind of file>\\UserChoice,
+together with the key UserChoiceLatest next to it.
 
 What is locked:
 %s""".formatted(Join.of(lines, "", "\n", "")));
@@ -123,6 +124,22 @@ Another program already answers for these kinds of file. Fearless
 stopped before touching anything: your system is exactly as it was.
 
 What stood in the way:
+%s""".formatted(Join.of(lines, "", "\n", "")));
+  }
+  public static UserError associationBrokenDesk(Map<String,List<String>> choices){
+    var lines= new ArrayList<String>();
+    choices.forEach((f,ls) -> lines.add(f+Join.of(ls, "\n  ", "\n  ", "")));
+    return new UserError("""
+Fearless cannot become the program that opens Fearless projects and the
+other kinds of file it registers.
+
+The files below hold lines naming Fearless. Only Fearless sets up what
+your desktop knows of Fearless, so these lines come from a choice made
+by hand, for example "Always use for this file type" in a file manager.
+Fearless stopped before touching anything: your system is exactly as it
+was.
+
+Removing these lines from these files clears the choice:
 %s""".formatted(Join.of(lines, "", "\n", "")));
   }
   public static UserError associationNotWritable(String reported){
