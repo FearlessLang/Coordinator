@@ -235,14 +235,14 @@ Box[X:imm]:{
 """);
     utils.Err.strCmp("[###]\t.m:A\n    Ignores the `X`.[###]", docs.text());
   }
-  @Test void aMethodOfAParameterWhoseTypeIsATypeParameterNamesNothing(@TempDir Path tmp){
+  @Test void aMethodOfAParameterWhoseTypeIsATypeParameterIsToldThatATypeParameterHasNoMethods(@TempDir Path tmp){
     var ex= assertThrows(UserError.class, () -> docs(tmp, a+"""
 B:{
   ///Calls `x.nonexistent` on its argument.
   .f[X:imm](x: X): A -> A;
   }
 """));
-    utils.Err.strCmp("Broken reference in a doc comment.[###]`x.nonexistent`[###]This names no type, no method, and nothing in scope where it is written.[###]", ex.getMessage());
+    utils.Err.strCmp("Broken reference in a doc comment.[###]`x.nonexistent`[###]The type of \"x\" is the type parameter \"X\", and a type parameter has no methods.[###]", ex.getMessage());
   }
   @Test void aMethodAnAnonymousLiteralInheritsIsANameInScopeThroughItsSelfName(@TempDir Path tmp){
     var docs= docs(tmp, """
@@ -727,5 +727,60 @@ Maker:{
 """);
     utils.Err.strCmp("package p\n\nA\n\t.m:A\n\nMaker\n\t.make:A\n\n", docs.text());
     assertEquals(2, docs.tests().size());
+  }
+  @Test void aBareSelectorWithAnArityNoMethodHasIsToldTheArityTheMethodHas(@TempDir Path tmp){
+    var ex= assertThrows(UserError.class, () -> docs(tmp, a+"""
+///Same as `.m(_)`.
+B:{ .k: A -> A; }
+"""));
+    utils.Err.strCmp("""
+Broken reference in a doc comment.[###]
+002| ///Same as `.m(_)`.
+   |             ^^^^^
+
+While inspecting the documentation of package p
+No type has a method ".m(_)".
+There is a method "A.m()",
+but with a different number of arguments.[###]""", ex.getMessage());
+  }
+  @Test void aTypeReferenceWithAnArityTheTypeDoesNotHaveIsToldTheArityTheTypeHas(@TempDir Path tmp){
+    var ex= assertThrows(UserError.class, () -> docs(tmp, a+"""
+///Holds an `A[_]`.
+B:{ .k: A -> A; }
+"""));
+    utils.Err.strCmp("""
+Broken reference in a doc comment.[###]
+002| ///Holds an `A[_]`.
+   |              ^^^^
+
+While inspecting the documentation of package p
+There is no type "A[_]".
+There is a type "A",
+but with a different number of type parameters.[###]""", ex.getMessage());
+  }
+  @Test void aMethodOnATypeParameterIsToldThatATypeParameterHasNoMethods(@TempDir Path tmp){
+    var ex= assertThrows(UserError.class, () -> docs(tmp, a+"""
+B:{
+  ///Calls `X.m` on its argument.
+  .f[X:imm](x: X): A -> A;
+  }
+"""));
+    utils.Err.strCmp("Broken reference in a doc comment.[###]`X.m`[###]\"X\" is a type parameter, and a type parameter has no methods.[###]", ex.getMessage());
+  }
+  @Test void aReferenceToAMethodOfAnotherPackageWithTwoReceiverCapabilitiesOffersBoth(@TempDir Path tmp){
+    var q= compiled("q", "Thing:{ read .n: read Thing -> this; mut .n: mut Thing -> this; }\n", OtherPackages.empty());
+    var html= docs(tmp, OtherPackages.start(Map.of(), q, 0L), """
+///Same as `q.Thing.n`.
+User:{ .m: User -> this; }
+""").html();
+    utils.Err.strCmp("[###]<li><a href=\"q.html#method-q_2e_Thing-0-read-_2e_n-0\">read q.Thing.n()</a></li>[###]", html);
+    utils.Err.strCmp("[###]<li><a href=\"q.html#method-q_2e_Thing-0-mut-_2e_n-0\">mut q.Thing.n()</a></li>[###]", html);
+  }
+  @Test void anInheritedGenericMethodKeepsTheTypeParameterNameItsSourceWrites(@TempDir Path tmp){
+    var docs= docs(tmp, a+"""
+P:{ .pipe[R:imm](r: R): R -> r; }
+Q:P{ .own[R:imm](r: R): R -> r; }
+""");
+    utils.Err.strCmp("[###]Q : P\n\t.own[R:imm](r:R):R\n\t.pipe[R:imm](R):R\n    from: P.pipe\n[###]", docs.text());
   }
 }
