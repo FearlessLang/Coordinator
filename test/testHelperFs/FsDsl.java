@@ -4,7 +4,6 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.ByteArrayOutputStream;
-import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -13,7 +12,6 @@ import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
-import org.junit.jupiter.api.Assumptions;
 
 import realSourceOracle.RealSourceOracleWithZip;
 import tools.Fs;
@@ -48,14 +46,9 @@ public final class FsDsl{
     out.add(new Item(name, content));
   }
   public static void materialize(Path root, String spec){
-    try{
-      var zips= new LinkedHashMap<Path,ZipNode>();
-      for (var it : parse(spec)){ emit(root, zips, it); }
-      zips.forEach((diskZip, node) -> writeDiskZip(diskZip, node));
-    }
-    catch (InvalidPathException e){
-      Assumptions.abort("OS forbids creating this path on disk: "+e.getMessage());
-    }
+    var zips= new LinkedHashMap<Path,ZipNode>();
+    for (var it : parse(spec)){ emit(root, zips, it); }
+    zips.forEach((diskZip, node) -> writeDiskZip(diskZip, node));
   }
   private static void emit(Path root, LinkedHashMap<Path,ZipNode> zips, Item it){
     var name= it.name();

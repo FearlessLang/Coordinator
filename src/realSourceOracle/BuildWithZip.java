@@ -1,5 +1,7 @@
 package realSourceOracle;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+
 import java.nio.file.Path;
 import java.text.Normalizer;
 import java.text.Normalizer.Form;
@@ -11,9 +13,12 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.function.LongFunction;
 import java.util.function.Supplier;
+import java.util.regex.Pattern;
 
 import tools.Fs;
 import tools.SourceOracle;
@@ -77,10 +82,13 @@ public final class BuildWithZip{
     var dirs= new LinkedHashSet<Path>();
     var nonEmpty= new LinkedHashSet<Path>();
     dirs.add(Path.of(""));
+    var mounted= Fix.mountPoints();
     Fs.walkV(root, s -> s.filter(p -> !p.equals(root)).forEach(abs -> {
       var rel= root.relativize(abs);
       nonEmpty.add(rel.resolveSibling(""));
-      if (Fs.isDirectory(abs)){ dirs.add(rel); }
+      if (!Fs.isDirectory(abs)){ return; }
+      if (mounted.test(abs)){ throw Report.mountPoint(abs); }
+      dirs.add(rel);
     }));
     dirs.removeAll(nonEmpty);
     for (var d : dirs){
@@ -113,7 +121,12 @@ public final class BuildWithZip{
   }
   static void checkTooLong(RefParent kid){
     var limit= isInvisible(kid) ? 250 : 200;
-    if (kid.fearPath().length() > limit+SourceOracle.root.length()){ throw Report.pathTooLong(kid, limit); }
+    if (len(kid.fearPath().substring(SourceOracle.root.length())) > limit){ throw Report.pathTooLong(kid, limit); }
+  }
+  static int len(String path){ return Fs.isWindows() ? path.length() : path.getBytes(UTF_8).length; }
+  public static String foldKey(String name){
+    return Normalizer.normalize(name, Form.NFC).codePoints().map(c -> c==0x130 || c==0x131 ? c : Character.toLowerCase(Character.toUpperCase(c)))
+      .collect(StringBuilder::new, StringBuilder::appendCodePoint, StringBuilder::append).toString();
   }
   public static void checkIndividualVisibleSegment(RefParent kid){
     checkTooLong(kid);
@@ -142,17 +155,25 @@ public final class BuildWithZip{
   private static void checkIndividualInvisibleSegment(RefParent kid){
     assert isInvisible(kid);
     checkTooLong(kid);
-    var name= Fs.fileNameWithExtension(kid.fearPath());
-    if (name.endsWith(".") || name.endsWith(" ")){ throw Report.invisibleNoTrailingDotOrSpace(kid, name); }
-    for (int cp : name.codePoints().toArray()){
-      if (0xD800<=cp && cp<=0xDFFF){ throw Report.invisibleInvalidSurrogate(kid, name); }
-      if (Character.isISOControl(cp)){ throw Report.invisibleNoControlChars(kid, cp, name); }
-      if (winBadChars.indexOf(cp) >= 0){ throw Report.invisibleNoWindowsBadChars(kid, (char)cp, name); }
-    }
-    var d= name.indexOf('.');
-    var base= (d<0 ? name : name.substring(0, d)).toLowerCase(Locale.ROOT);
-    if (Fs.winReserved.contains(base)){ throw Report.invisibleWindowsReservedDeviceName(kid, base, name); }
+    hiddenProblem(Fs.fileNameWithExtension(kid.fearPath())).ifPresent(f -> { throw f.apply(kid); });
   }
+  static Optional<Function<RefParent,UserError>> hiddenProblem(String name){
+    if (name.endsWith(".") || name.endsWith(" ")){ return Optional.of(k -> Report.invisibleNoTrailingDotOrSpace(k, name)); }
+    for (int cp : name.codePoints().toArray()){
+      if (0xD800<=cp && cp<=0xDFFF || cp==0xFFFD){ return Optional.of(k -> Report.invisibleInvalidSurrogate(k, name)); }
+      if (Character.isISOControl(cp)){ return Optional.of(k -> Report.invisibleNoControlChars(k, cp, name)); }
+      if (winBadChars.indexOf(cp) >= 0){ return Optional.of(k -> Report.invisibleNoWindowsBadChars(k, (char)cp, name)); }
+    }
+    if (reserved(name)){ return Optional.of(k -> Report.invisibleWindowsReservedDeviceName(k, base(name), name)); }
+    if (name.getBytes(UTF_8).length > 255){ return Optional.of(k -> Report.invisibleNameTooLong(k, name)); }
+    return Optional.empty();
+  }
+  static boolean reserved(String name){ return Fs.winReserved.contains(base(name)) || moreReserved.matcher(base(name)).matches(); }
+  private static String base(String name){
+    var d= name.indexOf('.');
+    return (d<0 ? name : name.substring(0, d)).replaceAll(" +$", "").toLowerCase(Locale.ROOT);
+  }
+  private static final Pattern moreReserved= Pattern.compile("conin\\$|conout\\$|(com|lpt)[\\u00B9\\u00B2\\u00B3]");
   private static void checkCollectiveInvisible(Collection<RefParent> kids){
     var seenKeyToName= new HashMap<String,String>();
     for (var kid : kids){ checkCollectiveInvisibleFocusOn(seenKeyToName, kid); }
@@ -161,8 +182,7 @@ public final class BuildWithZip{
     var name= Fs.fileNameWithExtension(kid.fearPath());
     var lowName= name.toLowerCase(Locale.ROOT);
     var nfc= Normalizer.normalize(name, Form.NFC);
-    var key= nfc.toLowerCase(Locale.ROOT);
-    var prev= seenKeyToName.putIfAbsent(key, name);
+    var prev= seenKeyToName.putIfAbsent(foldKey(name), name);
     if (prev == null){ return; }
     var lowPrev= prev.toLowerCase(Locale.ROOT);
     var prevNfc= Normalizer.normalize(prev, Form.NFC);

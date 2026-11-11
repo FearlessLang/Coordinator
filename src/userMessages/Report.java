@@ -89,17 +89,20 @@ Many tools treat names starting with '.' (for example `.gitignore`) as private t
 Fearless respects this convention and ignores those files and folders.
 But we still require them to be safe to check out using a relaxed set of checks:
   - no control characters
+  - no invalid Unicode
   - no Windows-forbidden characters like < > : " / \\ | ? *
   - no name ending with '.' or a space
   - not using Windows reserved device names
+  - a name of at most 255 bytes in UTF-8
   - no two items in the same folder that differ only by case or by Unicode-equivalent spellings
-  - a total path length of 200 characters
+  - a total path length of 250 characters
   - a protected folder is not empty, unless it is inside another protected folder
 Nothing else about a protected path is checked: a zip inside it is never opened.
 
 Other rules (everywhere)
 - Symbolic links/junctions are not allowed.
 - Only normal files and folders are allowed.
+- No file system is mounted on a folder of the project.
 """.formatted(tickList(allowedMultiDotExts));
   //-- the project folder itself
   public static UserError launchPathNotFound(Path given){ return new UserError("""
@@ -186,7 +189,7 @@ when deciding what needs compiling, so such a date cannot be trusted.
   //-- visible names
   public static UserError pathTooLong(RefParent kid, int limit){
     return fail(showRel(kid),
-      "- The path is longer than "+limit+" characters.\n"
+      "- The path is longer than "+limit+(Fs.isWindows() ? " characters.\n" : " bytes in UTF-8.\n")
     +"  Long paths often fail on Windows and in some tools.",
       "- Shorten folder/file names, or move this content closer to the project root."
     );
@@ -197,6 +200,14 @@ when deciding what needs compiling, so such a date cannot be trusted.
     +"  Symbolic links/junctions behave differently across systems and tools, so we forbid them.",
       "- Replace the symbolic link/junction with a real file/folder.\n"
     +"- If you need the linked content, copy it into the repository."
+    );
+  }
+  public static UserError mountPoint(Path kid){
+    return fail(showRel(kid),
+      "- A file system is mounted on this folder: the content of this folder comes from another drive, partition or folder.\n"
+    +"  A project keeps all its files on the file system of the project folder.",
+      "- Unmount the file system from this folder.\n"
+    +"- If the project needs the files of that file system, copy them into a normal folder."
     );
   }
   public static UserError onlyRegularFilesAndDirs(Path kid){
@@ -303,6 +314,14 @@ when deciding what needs compiling, so such a date cannot be trusted.
       "- Rename the segment to remove the invalid characters."
     );
   }
+  public static UserError invisibleNameTooLong(RefParent kid, String name){
+    return fail(showRel(kid),
+      "- A protected name segment is longer than 255 bytes in UTF-8.\n"
+    +"  Many file systems hold at most 255 bytes in one name.\n"
+    +"  Bad segment: "+disp(name),
+      "- Rename the segment to a shorter name."
+    );
+  }
   public static UserError invisibleNoControlChars(RefParent kid, int cp, String name){
     return fail(showRel(kid),
       "- A protected name segment contains a control character.\n"
@@ -324,7 +343,7 @@ when deciding what needs compiling, so such a date cannot be trusted.
       "- A protected name segment uses a Windows reserved device name.\n"
     +"  Bad base: "+disp(base)+" in segment: "+disp(name),
       "- Rename it so the base name is not a Windows device name.\n"
-    +"  Reserved device name: \"con\", \"prn\", \"aux\", \"nul\", \"com1\"..\"com9\", \"lpt1\"..\"lpt9\"."
+    +"  Reserved device name: \"con\", \"prn\", \"aux\", \"nul\", \"com1\"..\"com9\", \"lpt1\"..\"lpt9\", \"conin$\", \"conout$\", and \"com\" or \"lpt\" followed by U+00B9, U+00B2 or U+00B3."
     );
   }
   public static UserError invisibleSiblingNamesCollide(RefParent kid, String prev, String name, boolean caseOnly, boolean nfcOnly){

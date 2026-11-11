@@ -4,6 +4,7 @@ import static java.nio.charset.StandardCharsets.ISO_8859_1;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.fail;
 import static testHelperFs.FsDsl.runErrIOE;
 
 import java.io.ByteArrayOutputStream;
@@ -37,6 +38,7 @@ import utils.OneOr;
 import utils.Pos;
 
 final class RealSourceOracleWithZipDslTest{
+  private static final String unit= Fs.isWindows() ? "characters." : "bytes in UTF-8.";
   static{ utils.Err.setUp(AssertionFailedError.class, Assertions::assertEquals, Assertions::assertTrue); }
   private void testOk(Path tmp, String in, String out){
     assertEquals(out, FsDsl.runOk(tmp, in));
@@ -952,7 +954,9 @@ We check this so that you[###]
   //makes a protected zip a kid of its folder like any other protected file, so the
   //protected-name checks (characters, reserved device names, case/NFC sibling collisions,
   //path length) see it too. ".a:b.zip" is rejected like ".a:b.txt".
-  @Test void errInvisibleDiskZipWindowsBadCharColon(@TempDir Path tmp){ runErrIOE(tmp, """
+  @Test void errInvisibleDiskZipWindowsBadCharColon(@TempDir Path tmp){
+    if (Fs.isWindows()){ assertThrows(java.nio.file.InvalidPathException.class, () -> FsDsl.materialize(tmp, ".a:b.zip/x.txt\niii\nX\n")); return; }
+    runErrIOE(tmp, """
 .a:b.zip/x.txt
 iii
 X
@@ -1009,9 +1013,78 @@ What went wrong
 
 How to fix
 - Rename it so the base name is not a Windows device name.
-  Reserved device name: "con", "prn", "aux", "nul", "com1".."com9", "lpt1".."lpt9".
+  Reserved device name: "con", "prn", "aux", "nul", "com1".."com9", "lpt1".."lpt9", "conin$", "conout$", and "com" or "lpt" followed by U+00B9, U+00B2 or U+00B3.
 
 We check this so that you[###]
+""");}
+  @Test void errInvisibleReservedDeviceNamesOfTheConsoleAndWithSpaces(@TempDir Path tmp){
+    for (var name : List.of("conin$.log", "con .txt", "lpt\u00B9")){
+      runErrIOE(tmp.resolve("c"+name.length()), "_pkg/z.zip/.d/"+name+"\niii\nX\n", """
+Invalid path in this project folder.
+
+Root: [###]
+Path: [###]
+
+What went wrong
+- A protected name segment uses a Windows reserved device name.
+  Bad base: [###] in segment: [###]
+
+How to fix
+- Rename it so the base name is not a Windows device name.
+[###]
+""");
+    }
+  }
+  @Test void errInvisibleInvalidUnicode(@TempDir Path tmp){ runErrIOE(tmp, """
+_pkg/.d/a\uFFFDb.txt
+iii
+X
+""", """
+Invalid path in this project folder.
+
+Root: [###]
+Path: [###]
+
+What went wrong
+- A protected name segment contains invalid Unicode.
+[###]
+""");}
+  @Test void errInvisibleNameLongerThan255Bytes(@TempDir Path tmp){ runErrIOE(tmp, "_pkg/z.zip/.d/"+"\u00E9".repeat(130)+"\niii\nX\n", Fs.isWindows() ? """
+Invalid path in this project folder.
+
+Root: [###]
+Path: [###]
+
+What went wrong
+- A protected name segment is longer than 255 bytes in UTF-8.
+[###]
+""" : """
+Invalid path in this project folder.
+
+Root: [###]
+Path: [###]
+
+What went wrong
+- The path is longer than 250 <unit>
+[###]
+""".replace("<unit>", unit));}
+  @Test void errHiddenSiblingCaseFoldingCollisionInZip(@TempDir Path tmp){ runErrIOE(tmp, """
+_pkg/z.zip/.d/s.txt
+iii
+1
+jjj
+_pkg/z.zip/.d/\u017F.txt
+iii
+2
+""", """
+Invalid path in this project folder.
+
+Root: [###]
+Path: [###]
+
+What went wrong
+- Two protected names in the same folder collide.
+[###]
 """);}
   @Test void errHiddenSiblingCaseCollisionInZip(@TempDir Path tmp){ runErrIOE(tmp, """
 _pkg/z.zip/.d/a.txt
@@ -1432,7 +1505,7 @@ We check this so that you[###]
     try{ Files.createSymbolicLink(link, target); }
     catch (AccessDeniedException e){
       if (!Fs.isWindows()){ throw e; }
-      return;
+      fail("Agent on Windows: this process can not create symbolic links, so this test can not check them. Turn on Developer Mode (Settings, System, For developers), or run the tests with the privilege to create symbolic links.");
     }
     linkForbidden(root, shown);
   }
@@ -1487,14 +1560,14 @@ Root: [###]
 Path: "_pkg/%s.fear"
 
 What went wrong
-- The path is longer than 200 characters.
+- The path is longer than 200 <unit>
   Long paths often fail on Windows and in some tools.
 
 How to fix
 - Shorten folder/file names, or move this content closer to the project root.
 
 We check this so that you[###]
-""").formatted(longName));
+""").formatted(longName).replace("<unit>", unit));
   }
   // Real filesystem paths can't carry a raw UTF-16 surrogate through UTF-8 encoding,
   // so this exercises the message factory directly rather than through a real scan.
@@ -1834,7 +1907,7 @@ A:{}
     Fs.ensureDir(root.resolve(".x").resolve("a".repeat(240)));
     assertEquals(1, new RealSourceOracleWithZip(root).allFiles().size());
     Fs.ensureDir(root.resolve(".x").resolve("b".repeat(250)));
-    utils.Err.strCmp("[###]The path is longer than 250 characters.[###]", assertThrows(UserError.class, () -> new RealSourceOracleWithZip(root)).getMessage());
+    utils.Err.strCmp("[###]The path is longer than 250 "+unit+"[###]", assertThrows(UserError.class, () -> new RealSourceOracleWithZip(root)).getMessage());
   }
   @Test void aHiddenPathMayHave250Characters(@TempDir Path tmp){
     var root= tmp.resolve("root").toAbsolutePath().normalize();
@@ -1843,6 +1916,6 @@ A:{}
     Fs.writeUtf8(root.resolve(".x").resolve("a".repeat(240)+".txt"), "");
     assertEquals(1, new RealSourceOracleWithZip(root).allFiles().size());
     Fs.writeUtf8(root.resolve(".x").resolve("b".repeat(250)+".txt"), "");
-    utils.Err.strCmp("[###]The path is longer than 250 characters.[###]", assertThrows(UserError.class, () -> new RealSourceOracleWithZip(root)).getMessage());
+    utils.Err.strCmp("[###]The path is longer than 250 "+unit+"[###]", assertThrows(UserError.class, () -> new RealSourceOracleWithZip(root)).getMessage());
   }
 }
