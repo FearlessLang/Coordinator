@@ -62,7 +62,7 @@ final class FixTest{
   }
   private static String dump(Path root){
     var sb= new StringBuilder();
-    for (var p : Fs.walk(root, s -> s.filter(p -> !p.equals(root)).sorted(Comparator.comparing(Path::toString)).toList())){
+    for (var p : Fs.walk(root, s -> s.filter(p -> !p.equals(root)).sorted(Comparator.comparing(p -> root.toUri().relativize(p.toUri()).getPath())).toList())){
       var name= root.toUri().relativize(p.toUri()).getPath();
       sb.append(Fs.isDirectory(p) ? name : show(name, Fs.of(() -> Fs.readAllBytes(p)))).append("\n");
     }
@@ -563,6 +563,10 @@ a_b/x.txt=x
     assertEquals("Moved x/.h/a. to "+q+"a.\nMoved x/.h/b  to "+q+"b \nMoved x/.h/con.txt to "+q+"con.txt\nMoved x/.h/d. to "+q+"d.\nDeleted the empty folder x/.h\n", fix(root));
     assertEquals(List.of("a.", "b ", "con.txt", "d."), names(tmp.resolve("root_fix").resolve("x").resolve(".h")));
     assertEquals("x.zip[a.txt=x;]\n", dump(root));
+    removeUnreachable(tmp.resolve("root_fix"));
+  }
+  private static void removeUnreachable(Path folder){
+    if (Fs.isWindows()){ run("This test removes the names that only a \\\\?\\ path reaches.", "cmd", "/c", "rd", "/s", "/q", "\\\\?\\"+folder); }
   }
   @Test void movesAHiddenNameOfAZipHoldingAColonOrEndsOnWindows(@TempDir Path tmp) throws IOException{
     var root= root(tmp);
@@ -592,6 +596,7 @@ a_b/x.txt=x
     assertEquals("a.txt=a\nb_.txt=b\npcon.txt=c\n", dump(root));
     assertEquals(List.of(".d.", ".h "), names(tmp.resolve("root_fix")));
     assertEquals("", fix(root));
+    removeUnreachable(tmp.resolve("root_fix"));
   }
   private static void made(Path root, String name, String text){
     if (!Fs.isWindows()){ Fs.writeUtf8(root.resolve(name), text); return; }

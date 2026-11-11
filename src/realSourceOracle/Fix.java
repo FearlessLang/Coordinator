@@ -182,7 +182,8 @@ public final class Fix{
     }
     private static void remove(Path f) throws IOException{
       var folder= realFolder(f);
-      if (folder || Fs.isWindows()){ writable(f); }
+      if (Fs.isWindows()){ Files.setAttribute(f, "dos:readonly", false, NOFOLLOW_LINKS); }
+      if (folder){ writable(f); }
       if (!folder){ Files.delete(f); return; }
       try (var s= Files.list(f)){ for (var e : s.toList()){ remove(unreachable(e.getFileName().toString()) ? moveOut(f, e.getFileName().toString()) : e); } }
       Files.delete(f);
