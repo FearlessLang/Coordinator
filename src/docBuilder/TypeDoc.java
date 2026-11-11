@@ -7,6 +7,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Optional;
 import java.util.SequencedCollection;
+import java.util.function.Supplier;
 
 import core.E.Literal;
 import core.M;
@@ -16,48 +17,55 @@ import core.T;
 import core.TName;
 import utils.Pos;
 
-final class TypeDoc{
-  final ArrayList<Literal> variants= new ArrayList<>();
+sealed abstract class DeclarationDoc permits TypeDoc, MethodDoc{
   final List<DocOcc> docs;
+  DeclarationDoc(List<DocOcc> docs){ this.docs= docs; }
+  boolean hasDocs(){ return !docs.isEmpty(); }
+  abstract Scope scope();
+}
+final class TypeDoc extends DeclarationDoc{
+  final ArrayList<Literal> variants= new ArrayList<>();
+  final Optional<Scope> outer;
   final LinkedHashMap<Object,MethodDoc> byKey= new LinkedHashMap<>();
   final SequencedCollection<MethodDoc> methods= byKey.sequencedValues();
-  TypeDoc(Literal l, List<DocOcc> docs){
-    this.docs= docs;
+  TypeDoc(Literal l, Optional<Scope> outer, List<DocOcc> docs){
+    super(docs);
+    this.outer= outer;
     variants.add(l);
   }
   Literal main(){ return variants.getFirst(); }
-  boolean visible(){ return !main().infName() || !docs.isEmpty() || methods.stream().anyMatch(MethodDoc::hasDocs); }
+  Scope scope(){ return new Scope(main(), Optional.empty(), outer); }
+  boolean visible(){ return !main().infName() || hasDocs() || methods.stream().anyMatch(MethodDoc::hasDocs); }
   void addVariant(Literal l){
     assert variants.stream().noneMatch(v -> v.name().equals(l.name())) :
       "Repeated literal source with same name: "+l.pos()+" "+l.name();
     variants.add(l);
   }
-  void declared(Pos pos, M m, List<DocOcc> docs, List<MethodRef> inheritedFrom){
+  void declared(Pos pos, M m, Supplier<List<DocOcc>> docs, List<MethodRef> inheritedFrom){
     oneOf(new DeclaredMethodKey(pos.fileName(), pos.line(), pos.column(), m.sig().m()), true, docs, inheritedFrom).add(m);
   }
   void imported(M m, List<MethodRef> from){
-    oneOf(new ImportedKey(m.sig().origin(), m.sig().rc(), m.sig().m()), false, List.of(), from).add(m);
+    oneOf(new ImportedKey(m.sig().origin(), m.sig().rc(), m.sig().m()), false, List::of, from).add(m);
   }
-  private MethodDoc oneOf(Object k, boolean declared, List<DocOcc> docs, List<MethodRef> inheritedFrom){
-    var d= byKey.computeIfAbsent(k, _ -> new MethodDoc(this, declared, docs));
+  private MethodDoc oneOf(Object k, boolean declared, Supplier<List<DocOcc>> docs, List<MethodRef> inheritedFrom){
+    var d= byKey.computeIfAbsent(k, _ -> new MethodDoc(this, declared, docs.get()));
     d.addInheritedFrom(inheritedFrom);
     return d;
   }
 }
-final class MethodDoc{
+final class MethodDoc extends DeclarationDoc{
   final TypeDoc owner;
   final boolean declared;
-  final List<DocOcc> docs;
   final ArrayList<M> variants= new ArrayList<>();
   final LinkedHashMap<MethodRefKey,MethodRef> inheritedByKey= new LinkedHashMap<>();
   final Collection<MethodRef> inheritedFrom= inheritedByKey.values();
   MethodDoc(TypeDoc owner, boolean declared, List<DocOcc> docs){
+    super(docs);
     this.owner= owner;
     this.declared= declared;
-    this.docs= docs;
   }
   M main(){ return variants.getFirst(); }
-  boolean hasDocs(){ return !docs.isEmpty(); }
+  Scope scope(){ return new Scope(owner.main(), Optional.of(main()), owner.outer); }
   boolean visible(){ return declared || !owner.main().infName() || hasDocs(); }
   void add(M m){ variants.add(m); }
   void addInheritedFrom(List<MethodRef> refs){
@@ -77,6 +85,21 @@ record MethodRefKey(String provider, RC rc, MName m){
   }
 }
 record ImportedKey(TName origin, RC rc, MName m){}
-record DocOcc(URI file, int line, int column, int textColumn, String text, boolean pureLine, boolean example, boolean testOnly){
-  boolean inline(){ return !pureLine; }
+enum DocKind{
+  Prose, Fence, Fenced, Example, TestOnly;
+  boolean tested(){ return this==Example || this==TestOnly; }
+  static Optional<DocKind> ofMark(char mark){
+    return switch (mark){
+      case '/' -> Optional.of(Prose);
+      case '>' -> Optional.of(Example);
+      case '-' -> Optional.of(TestOnly);
+      default -> Optional.empty();
+    };
+  }
+}
+record DocOcc(URI file, int line, int column, int textColumn, String text, boolean trailing, DocKind kind){
+  DocOcc drop(int n){
+    var k= Math.min(n, text.length());
+    return new DocOcc(file, line, column, textColumn+k, text.substring(k), trailing, kind);
+  }
 }

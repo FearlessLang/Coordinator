@@ -64,8 +64,9 @@ final class DocRefScanner{
       i += first.length();
       if (TName.isTypeName(first)){ return Optional.of(new DocRef.TypeName(Optional.empty(), first, arity(typeArity))); }
       var second= s.startsWith(".", i) ? word(i+1) : "";
+      var named= TName.isTypeName(second) ? TName.isPkgName(first) : MName.isMethodName("."+first);
+      if (!named){ ok = false; return Optional.empty(); }
       if (!TName.isTypeName(second)){ return Optional.of(new DocRef.LocalName(first)); }
-      if (!TName.isPkgName(first)){ ok = false; return Optional.empty(); }
       i += 1+second.length();
       return Optional.of(new DocRef.TypeName(Optional.of(first), second, arity(typeArity)));
     }
@@ -79,9 +80,9 @@ final class DocRefScanner{
       var m= p.matcher(s).region(i, s.length());
       if (!m.lookingAt()){ return OptionalInt.empty(); }
       i = m.end();
-      return OptionalInt.of(m.group(1)==null ? 0 : (m.group(1).length()+1)/2);
+      return OptionalInt.of((int)m.group().chars().filter(c -> c=='_').count());
     }
-    private static final Pattern typeArity= Pattern.compile("\\[(_(,_)*)?]");
-    private static final Pattern callArity= Pattern.compile("\\((_(,_)*)?\\)");
+    private static final Pattern typeArity= Pattern.compile("\\[(_(, ?_)*)?]");
+    private static final Pattern callArity= Pattern.compile("\\((_(, ?_)*)?\\)");
   }
 }
