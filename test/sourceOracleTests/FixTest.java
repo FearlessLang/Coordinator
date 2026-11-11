@@ -1,5 +1,11 @@
 package sourceOracleTests;
 
+import static java.lang.foreign.ValueLayout.ADDRESS;
+import static java.lang.foreign.ValueLayout.JAVA_BYTE;
+import static java.lang.foreign.ValueLayout.JAVA_INT;
+import static java.lang.foreign.ValueLayout.JAVA_LONG;
+import static java.lang.foreign.ValueLayout.JAVA_LONG_UNALIGNED;
+import static java.lang.foreign.ValueLayout.JAVA_SHORT;
 import static java.nio.charset.StandardCharsets.ISO_8859_1;
 import static java.nio.charset.StandardCharsets.UTF_16BE;
 import static java.nio.charset.StandardCharsets.UTF_16LE;
@@ -16,9 +22,16 @@ import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.lang.ProcessBuilder.Redirect;
+import java.lang.foreign.Arena;
+import java.lang.foreign.FunctionDescriptor;
+import java.lang.foreign.Linker;
+import java.lang.foreign.MemoryLayout;
+import java.lang.foreign.MemorySegment;
+import java.lang.foreign.SymbolLookup;
 import java.net.URI;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
 import java.nio.file.attribute.PosixFilePermissions;
@@ -39,6 +52,7 @@ import realSourceOracle.LongPath;
 import realSourceOracle.RealSourceOracleWithZip;
 import testHelperFs.FsDsl;
 import tools.Fs;
+import tools.SourceOracle;
 import userMessages.Report;
 import userMessages.UserError;
 import utils.Join;
@@ -600,14 +614,66 @@ a_b/x.txt=x
     Fs.writeUtf8(mid.resolve(name.substring(top.length()).replaceFirst("^/", "")), text);
     Fs.ofV(() -> LongPath.move(LongPath.of(mid), LongPath.of(root, top)));
   }
-  @Test void aWindowsPlaceholderIsAFileAndALinkOfWslIsAnOther(){
+  @Test void aWindowsPlaceholderIsAFileAndALinkOfWslIsAnOther(@TempDir Path tmp) throws Exception{
     if (!Fs.isWindows()){ return; }
-    fail("""
-      Agent on Windows: FolderShapesDesign takes a OneDrive placeholder, a compressed file and a deduplicated file as files,
-      and a symbolic link of WSL, an app execution alias, and a socket, a fifo or a device of WSL as others.
-      Fix keeps a reparse point that is not a link as a file (Fix.Disk.kind), but the check takes only Fs.isRegularFile as a file (BuildWithZip.collectFile), so the check likely still refuses a placeholder after Fix.
-      Make a cloud placeholder (CfRegisterSyncRoot and CfCreatePlaceholders, no administrator rights) and a link of WSL (wsl ln -s),
-      then make this test check that the check accepts the placeholder, that Fix leaves the placeholder, and that Fix moves the link of WSL to the fix folder.""");
+    var root= root(tmp);
+    try (var a= Arena.ofConfined(); var _= syncRoot(a, root)){
+      placeholder(a, root, "a.txt");
+      wslLink(a, root.resolve("b.txt"), "a.txt");
+      var moved= tmp.resolve("root_fix").resolve("b.txt");
+      assertEquals("Moved b.txt to "+moved+"\n", fix(root));
+      assertTrue(Fs.isLink(moved));
+      assertEquals(0x400000, (int)Files.getAttribute(root.resolve("a.txt"), "dos:attributes", LinkOption.NOFOLLOW_LINKS) & 0x400000);
+      assertEquals(List.of("fear:/a.txt"), new RealSourceOracleWithZip(root).allFiles().stream().map(SourceOracle.Ref::fearPath).toList());
+      assertEquals("", fix(root));
+    }
+  }
+  @SuppressWarnings("restricted")
+  private static Object win(MemoryLayout result, String dll, String name, Object... args){
+    var types= Stream.of(args).map(e -> e instanceof Integer ? JAVA_INT : ADDRESS).toArray(MemoryLayout[]::new);
+    var call= Linker.nativeLinker().downcallHandle(SymbolLookup.libraryLookup(dll, Arena.global()).findOrThrow(name), FunctionDescriptor.of(result, types));
+    try{ return call.invokeWithArguments(args); }
+    catch (Throwable t){ throw new AssertionError(t); }
+  }
+  private static MemorySegment wide(Arena a, String s){ return a.allocateFrom(s, UTF_16LE); }
+  private static AutoCloseable syncRoot(Arena a, Path folder){
+    var registration= a.allocate(72, 8);
+    registration.set(JAVA_INT, 0, 72);
+    registration.set(ADDRESS, 8, wide(a, "fearless_test"));
+    registration.set(ADDRESS, 16, wide(a, "1"));
+    registration.set(ADDRESS, 24, a.allocateFrom("id"));
+    registration.set(JAVA_INT, 32, 2);
+    registration.set(JAVA_LONG_UNALIGNED, 52, 0x1234567890ABCDEFL);
+    var policies= a.allocate(24, 4);
+    policies.set(JAVA_INT, 0, 24);
+    policies.set(JAVA_SHORT, 4, (short)2);
+    policies.set(JAVA_SHORT, 8, (short)3);
+    assertEquals(0, win(JAVA_INT, "cldapi.dll", "CfRegisterSyncRoot", wide(a, folder.toString()), registration, policies, 0));
+    return () -> assertEquals(0, win(JAVA_INT, "cldapi.dll", "CfUnregisterSyncRoot", wide(a, folder.toString())));
+  }
+  private static void placeholder(Arena a, Path folder, String name){
+    var info= a.allocate(88, 8);
+    info.set(ADDRESS, 0, wide(a, name));
+    for (int at= 8; at < 40; at += 8){ info.set(JAVA_LONG, at, (fine + 11_644_473_600_000L) * 10_000L); }
+    info.set(JAVA_INT, 40, 0x80);
+    info.set(JAVA_LONG, 48, 1);
+    info.set(ADDRESS, 56, a.allocateFrom(name));
+    info.set(JAVA_INT, 64, name.length());
+    info.set(JAVA_INT, 68, 2);
+    assertEquals(0, win(JAVA_INT, "cldapi.dll", "CfCreatePlaceholders", wide(a, folder.toString()), info, 1, 0, a.allocate(JAVA_INT)));
+    assertEquals(0, info.get(JAVA_INT, 72));
+  }
+  private static void wslLink(Arena a, Path link, String target){
+    Fs.writeUtf8(link, "");
+    var handle= win(ADDRESS, "kernel32.dll", "CreateFileW", wide(a, link.toString()), 0x40000000, 0, MemorySegment.NULL, 3, 0x02200000, MemorySegment.NULL);
+    var bytes= target.getBytes(UTF_8);
+    var data= a.allocate(12 + bytes.length, 4);
+    data.set(JAVA_INT, 0, 0xA000001D);
+    data.set(JAVA_SHORT, 4, (short)(4 + bytes.length));
+    data.set(JAVA_INT, 8, 2);
+    MemorySegment.copy(bytes, 0, data, JAVA_BYTE, 12, bytes.length);
+    assertEquals(1, win(JAVA_INT, "kernel32.dll", "DeviceIoControl", handle, 0x900A4, data, (int)data.byteSize(), MemorySegment.NULL, 0, a.allocate(JAVA_INT), MemorySegment.NULL));
+    assertEquals(1, win(JAVA_INT, "kernel32.dll", "CloseHandle", handle));
   }
   @Test void fixWritesAFileOnAVolumeThatHoldsNoHardLinks(){
     if (!Fs.isWindows()){ return; }
