@@ -20,8 +20,6 @@ import utils.Join;
 import utils.OneOr;
 
 record Scope(Literal owner, Optional<M> method, Optional<Scope> outer){
-  static Scope of(Literal owner){ return new Scope(owner, Optional.empty(), Optional.empty()); }
-  static Scope of(Literal owner, M method){ return new Scope(owner, Optional.of(method), Optional.empty()); }
   boolean bindsTypeParameter(String x){
     var bs= Stream.concat(owner.bs().stream(), method.stream().flatMap(m -> m.sig().bs().stream()));
     return bs.anyMatch(b -> b.x().equals(x)) || outer.filter(o -> o.bindsTypeParameter(x)).isPresent();

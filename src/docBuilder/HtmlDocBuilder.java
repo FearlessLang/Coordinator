@@ -8,7 +8,6 @@ import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -169,7 +168,6 @@ public final class HtmlDocBuilder{
     return message(new Span(occ.file(), occ.line(), occ.textColumn()+sp.start(),
       occ.line(), occ.textColumn()+sp.end()-1), msg);
   }
-  TypeDoc type(Literal l){ return Objects.requireNonNull(typeBySrc.get(l.src())); }
   //owner.cs() is fully flattened, so an overridden ancestor still gets its own entry here:
   //by design, "From:" shows every provider along the chain, shadowed ones included.
   List<MethodRef> inheritedMethods(Literal owner, M m){
