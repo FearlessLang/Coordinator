@@ -443,4 +443,132 @@ User:{ .mine: Map; .theirs: base.Map; }
 """);
     utils.Err.strCmp("[###]\t.theirs:base.Map", docs.text());
   }
+  @Test void aSingleBacktickThatNothingClosesIsAnError(@TempDir Path tmp){
+    var ex= assertThrows(UserError.class, () -> docs(tmp, a+"""
+///Returns ``A`` otherwise .empty` otherwise.
+B:{ .m: A -> A; }
+"""));
+    utils.Err.strCmp("""
+Broken backticks in a doc comment.
+
+In file: fear:/_p/_rank_app.fear
+
+002| ///Returns ``A`` otherwise .empty` otherwise.
+   |                                  ^
+
+While inspecting the documentation of package p
+This code span is never closed.[###]""", ex.getMessage());
+  }
+  @Test void twoBackticksThatNothingClosesAreAnError(@TempDir Path tmp){
+    var ex= assertThrows(UserError.class, () -> docs(tmp, a+"""
+///Returns 0 if the parameter is ``
+B:{ .m: A -> A; }
+"""));
+    utils.Err.strCmp("""
+Broken backticks in a doc comment.
+
+In file: fear:/_p/_rank_app.fear
+
+002| ///Returns 0 if the parameter is ``
+   |                                  ^^
+
+While inspecting the documentation of package p
+This code span is never closed.[###]""", ex.getMessage());
+  }
+  @Test void backticksPairedWithTheWrongPartnerLeaveOneThatNothingCloses(@TempDir Path tmp){
+    var ex= assertThrows(UserError.class, () -> docs(tmp, a+"""
+///``x**y for ``x < 0.0``, ``y`` all return ``nan`
+B:{ .m: A -> A; }
+"""));
+    utils.Err.strCmp("[###]This code span is never closed.[###]", ex.getMessage());
+  }
+  @Test void aBacktickInsideACodeSpanOfTwoBackticksIsShownAsText(@TempDir Path tmp){
+    var docs= docs(tmp, a+"""
+///Shows `` a ` `` and `A`.
+B:{ .m: A -> A; }
+""");
+    utils.Err.strCmp("[###]<p>Shows <code> a ` </code> and <code><a href=\"#type-p_2e_A-0\">A</a></code>.</p>[###]", docs.html());
+  }
+  @Test void aCodeSpanOfTwoBackticksMayContinueOnTheNextLine(@TempDir Path tmp){
+    var docs= docs(tmp, a+"""
+///Calls ``this.m
+///  .m`` on `A`.
+B:{ .m: A -> A; }
+""");
+    utils.Err.strCmp("[###]<p>Calls <code>this.m\n  .m</code> on <code><a href=\"#type-p_2e_A-0\">A</a></code>.</p>[###]", docs.html());
+  }
+  @Test void aCodeSpanDoesNotContinueAfterAnEmptyDocLine(@TempDir Path tmp){
+    var ex= assertThrows(UserError.class, () -> docs(tmp, a+"""
+///Calls ``this.m
+///
+///.m`` on A.
+B:{ .m: A -> A; }
+"""));
+    utils.Err.strCmp("[###]002| ///Calls ``this.m\n   |          ^^[###]004| ///.m`` on A.\n   |      ^^[###]", ex.getMessage());
+  }
+  @Test void aReferenceThatContinuesOnTheNextLineIsAnError(@TempDir Path tmp){
+    var ex= assertThrows(UserError.class, () -> docs(tmp, a+"""
+///Same as `A
+///.m`.
+B:{ .m: A -> A; }
+"""));
+    utils.Err.strCmp("""
+Broken backticks in a doc comment.
+
+In file: fear:/_p/_rank_app.fear
+
+002| ///Same as `A
+003| ///.m`.
+
+While inspecting the documentation of package p
+This reference does not end on the line where it starts.[###]""", ex.getMessage());
+  }
+  @Test void aReferenceOnTheSecondLineOfAParagraphIsReportedOnThatLine(@TempDir Path tmp){
+    var ex= assertThrows(UserError.class, () -> docs(tmp, a+"""
+///Calls ``this.m
+///  .m`` on `Nope`.
+B:{ .m: A -> A; }
+"""));
+    utils.Err.strCmp("""
+Broken reference in a doc comment.
+
+In file: fear:/_p/_rank_app.fear
+
+003| ///  .m`` on `Nope`.
+   |               ^^^^
+
+While inspecting the documentation of package p
+This names no type, no method, and nothing in scope where it is written.[###]""", ex.getMessage());
+  }
+  @Test void aCodeBlockThatNothingClosesIsAnError(@TempDir Path tmp){
+    var ex= assertThrows(UserError.class, () -> docs(tmp, a+"""
+///Usage:
+///```
+///A.m
+B:{ .m: A -> A; }
+"""));
+    utils.Err.strCmp("""
+Broken backticks in a doc comment.
+
+In file: fear:/_p/_rank_app.fear
+
+003| ///```
+   |    ^^^
+
+While inspecting the documentation of package p
+This code block is never closed.[###]""", ex.getMessage());
+  }
+  @Test void theFirstParagraphOnASeveralMatchPageLinksAReferenceOnItsSecondLine(@TempDir Path tmp){
+    var docs= docs(tmp, a+"""
+B:{
+  ///Calls ``this
+  ///.m`` on `A`.
+  .f: A -> A;
+  }
+C:{ .f: A -> A; }
+///See `.f`.
+D:{ .m: A -> A; }
+""");
+    utils.Err.strCmp("[###]<span class=\"opt-doc\">— Calls <code>this .m</code> on <code><a href=\"#type-p_2e_A-0\">A</a></code>.</span>[###]", docs.html());
+  }
 }

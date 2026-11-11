@@ -447,13 +447,18 @@ code{
     var kind= block.getFirst().kind();
     if (kind==DocKind.Fence){ return; }
     if (kind==DocKind.Fenced){ sb.append("<pre class=\"fenced\">").append(Join.of(block.stream().map(o -> h(o.text())), "", "\n", "", "")).append("</pre>\n"); return; }
-    var lines= Join.of(block.stream().map(o -> o.text().isBlank() ? "" : renderLine(o)), "", "\n", "", "");
+    var lines= Join.of(runs(block, HtmlDocRenderer::inParagraph).stream().map(r -> inParagraph(r.getFirst()) ? renderParagraph(r, "\n") : ""), "", "\n", "", "");
     paragraph.matcher(lines).results().forEach(p -> sb.append("<p>").append(p.group()).append("</p>\n"));
   }
   private static final Pattern paragraph= Pattern.compile("(?dm)^.+(\n.+)*");
-  String renderLine(DocOcc occ){
-    var text= occ.text();
-    var linked= spans.getOrDefault(occ, Map.of());
+  static boolean inParagraph(DocOcc o){ return o.kind()==DocKind.Prose && !o.text().isBlank(); }
+  static List<List<DocOcc>> paragraphs(List<DocOcc> ds){
+    return runs(ds.stream().filter(o -> o.kind()!=DocKind.TestOnly).toList(), HtmlDocRenderer::inParagraph).stream().filter(r -> inParagraph(r.getFirst())).toList();
+  }
+  static String joined(List<DocOcc> p, String separator){ return Join.of(p.stream().map(DocOcc::text), "", separator, "", ""); }
+  String renderParagraph(List<DocOcc> p, String separator){
+    var text= joined(p, separator);
+    var linked= spans.getOrDefault(p.getFirst(), Map.of());
     var sb= new StringBuilder();
     var i= 0;
     for (var cs : DocRefScanner.codeSpans(text)){
@@ -485,11 +490,12 @@ code{
       .append(h(anonymous.map(this::shortTitle).orElseGet(() -> toStr.typeNameWithArity(c.owner()))));
     c.sig().ifPresent(s -> sb.append(h(s.m().s()+DocResolver.shape(OptionalInt.of(s.m().arity()), "(", ")"))));
     sb.append("</a>");
-    c.localMethod().ifPresent(m -> sb.append(Join.of(firstParagraph(m).map(this::renderLine), " <span class=\"opt-doc\">\u2014 ", " ", "</span>", "")));
+    c.localMethod().flatMap(this::firstParagraph).ifPresent(p -> sb.append(" <span class=\"opt-doc\">\u2014 ").append(renderParagraph(p, " ")).append("</span>"));
     return sb.toString();
   }
-  Stream<DocOcc> firstParagraph(MethodDoc m){
-    return m.docs.stream().filter(d -> !d.kind().tested()).takeWhile(d -> d.kind()==DocKind.Prose && !d.text().isBlank());
+  Optional<List<DocOcc>> firstParagraph(MethodDoc m){
+    return runs(m.docs.stream().filter(d -> d.kind()!=DocKind.TestOnly).toList(), HtmlDocRenderer::inParagraph).stream()
+      .dropWhile(r -> r.getFirst().kind()==DocKind.Example).findFirst().filter(r -> inParagraph(r.getFirst()));
   }
   String href(DocLink link){
     return switch (link){

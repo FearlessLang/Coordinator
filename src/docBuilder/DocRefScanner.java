@@ -16,10 +16,20 @@ import utils.Join;
 /// What counts as a name is asked of core (TName.isTypeName, TName.isPkgName,
 /// MName.isMethodName), so this never grows its own idea of the grammar.
 final class DocRefScanner{
-  record CodeSpan(int start, int end, int fence){}
+  record CodeSpan(int start, int end, int fence){
+    boolean covers(int i){ return start-fence<=i && i<end+fence; }
+  }
   private static final Pattern fenced= Pattern.compile("(?s)(?<!`)(`+)(?!`)(.*?)(?<!`)\\1(?!`)");
+  private static final Pattern backticks= Pattern.compile("`+");
   static List<CodeSpan> codeSpans(String text){
     return fenced.matcher(text).results().map(m -> new CodeSpan(m.start(2), m.end(2), m.group(1).length())).toList();
+  }
+  static List<CodeSpan> unclosed(String text){
+    var spans= codeSpans(text);
+    return backticks.matcher(text).results()
+      .filter(m -> spans.stream().noneMatch(s -> s.covers(m.start())))
+      .map(m -> new CodeSpan(m.start(), m.end(), m.end()-m.start()))
+      .toList();
   }
   static List<CodeSpan> refSpans(String text){
     return codeSpans(text).stream().filter(sp -> sp.fence() == 1).toList();
