@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -527,7 +528,6 @@ a_b/x.txt=x
     assertTrue(stored(Fs.readAllBytes(root.resolve("x.zip"))).getFirst().getTime() >= before-2_000);
   }
   @Test void endsAtAWriteOfAFileWithMoreThanOneName(@TempDir Path tmp) throws IOException{
-    if (Fs.isWindows()){ return; }
     var root= root(tmp);
     Fs.writeUtf8(root.resolve("a.fear"), "A:{}\r\n");
     Files.createLink(tmp.resolve("other.fear"), root.resolve("a.fear"));
@@ -536,6 +536,69 @@ a_b/x.txt=x
     utils.Err.strCmp("[###]this file has more than one name, so writing it changes those other names too", e.getCause().getMessage());
     assertEquals(List.of(), lines);
     assertEquals("A:{}\r\n", Fs.readUtf8(tmp.resolve("other.fear")));
+  }
+  @Test void aFolderWhereAFileSystemIsMountedMakesTheProjectInvalidAndEndsFix(@TempDir Path tmp) throws Exception{
+    var root= root(tmp, "a.txt\niii\na");
+    var at= root.resolve("sub");
+    Fs.ensureDir(at);
+    try (var _= fileSystemAt(tmp, at)){
+      Fs.writeUtf8(at.resolve("c.txt"), "c");
+      var e= assertThrows(UserError.class, () -> new RealSourceOracleWithZip(root));
+      utils.Err.strCmp("[###]A file system is mounted on this folder[###]", e.getMessage());
+      var lines= new ArrayList<String>();
+      var end= assertThrows(UncheckedIOException.class, () -> Fix.of(root, lines::add));
+      utils.Err.strCmp("[###]a file system is mounted here", end.getCause().getMessage());
+      assertEquals(List.of(), lines);
+      assertEquals("c", Fs.readUtf8(at.resolve("c.txt")));
+    }
+  }
+  @Test void fixDoesNotDeleteAFolderThatIsAlsoMountedAtAnotherPlace(@TempDir Path tmp) throws Exception{
+    if (Fs.isMac()){ fail("""
+      Agent on macOS: investigate whether macOS can show a folder at a second place (bindfs, mount_nullfs, a share of this machine mounted on this machine),
+      and how Fix can tell that an entry holds a folder shown at another place.
+      Fix must refuse to delete or move such an entry (FolderShapesDesign: the desk refuses delete(D, p s) when a mount point m has inside(D, m, p s)).
+      Then make this test show that folder at a second place, as it does on Linux."""); }
+    if (Fs.isWindows()){ fail("""
+      Agent on Windows: investigate how Fix can tell that an entry holds a folder shown at another place:
+      a drive made by "subst X: <folder>" (no administrator rights needed), a shared folder of this machine mapped as a drive.
+      Fix must refuse to delete or move such an entry (FolderShapesDesign: the desk refuses delete(D, p s) when a mount point m has inside(D, m, p s)).
+      Then make this test show that folder at a second place, as it does on Linux."""); }
+    var root= root(tmp, "a.txt\niii\na\njjj\n__MACOSX/b/c.txt\niii\nc");
+    var elsewhere= tmp.resolve("elsewhere");
+    Fs.ensureDir(elsewhere);
+    try (var _= bound(root.resolve("__MACOSX/b"), elsewhere)){
+      var lines= new ArrayList<String>();
+      var end= assertThrows(UncheckedIOException.class, () -> Fix.of(root, lines::add));
+      utils.Err.strCmp("[###]this entry, or an entry inside it, is also mounted at another place", end.getCause().getMessage());
+      assertEquals(List.of(), lines);
+      assertEquals("c", Fs.readUtf8(elsewhere.resolve("c.txt")));
+    }
+  }
+  private static final String needsRoot= "This test mounts a file system with \"sudo -n mount\": it needs a user that runs sudo with no password on this desk.";
+  private static AutoCloseable bound(Path folder, Path at){
+    run(needsRoot, "sudo", "-n", "mount", "--bind", folder.toString(), at.toString());
+    return () -> run(needsRoot, "sudo", "-n", "umount", at.toString());
+  }
+  private static AutoCloseable fileSystemAt(Path tmp, Path at){
+    if (Fs.isWindows()){ fail("""
+      Agent on Windows: investigate how this test can mount a file system on a folder of the project (a VHD with Mount-DiskImage and Add-PartitionAccessPath, or mountvol: both need administrator rights).
+      The check must then give the error Report.mountPoint, and Fix must end at that folder with "a file system is mounted here" (FolderShapesDesign: okEntry, and the desk refuses move(D, p s, _) when a mount point m has same(D, m, p s)).
+      Java may take such a folder for a junction (Fs.isLink): then the check gives the error of a link and Fix moves the folder to the fix folder, and both are wrong."""); }
+    if (Fs.isLinux()){
+      var other= tmp.resolve("other");
+      Fs.ensureDir(other);
+      return bound(other, at);
+    }
+    var image= tmp.resolve("disk.dmg").toString();
+    var why= "This test mounts a disk image with hdiutil.";
+    run(why, "hdiutil", "create", "-size", "1m", "-fs", "HFS+", "-volname", "fearless_test", image);
+    run(why, "hdiutil", "attach", "-nobrowse", "-mountpoint", at.toString(), image);
+    return () -> run(why, "hdiutil", "detach", at.toString());
+  }
+  private static void run(String why, String... cmd){
+    var p= Fs.of(() -> new ProcessBuilder(cmd).redirectErrorStream(true).start());
+    var out= new String(Fs.of(() -> p.getInputStream().readAllBytes()));
+    assertEquals(0, p.onExit().join().exitValue(), why+"\n"+String.join(" ", cmd)+"\n"+out);
   }
   @Test void aZipWrittenAgainLosesItsComment(@TempDir Path tmp) throws IOException{
     var root= root(tmp);

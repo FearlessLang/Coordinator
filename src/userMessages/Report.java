@@ -102,6 +102,7 @@ Nothing else about a protected path is checked: a zip inside it is never opened.
 Other rules (everywhere)
 - Symbolic links/junctions are not allowed.
 - Only normal files and folders are allowed.
+- No file system is mounted on a folder of the project.
 """.formatted(tickList(allowedMultiDotExts));
   //-- the project folder itself
   public static UserError launchPathNotFound(Path given){ return new UserError("""
@@ -199,6 +200,14 @@ when deciding what needs compiling, so such a date cannot be trusted.
     +"  Symbolic links/junctions behave differently across systems and tools, so we forbid them.",
       "- Replace the symbolic link/junction with a real file/folder.\n"
     +"- If you need the linked content, copy it into the repository."
+    );
+  }
+  public static UserError mountPoint(Path kid){
+    return fail(showRel(kid),
+      "- A file system is mounted on this folder: the content of this folder comes from another drive, partition or folder.\n"
+    +"  A project keeps all its files on the file system of the project folder.",
+      "- Unmount the file system from this folder.\n"
+    +"- If you need its files in the project, copy them into a normal folder."
     );
   }
   public static UserError onlyRegularFilesAndDirs(Path kid){
