@@ -37,6 +37,9 @@ public final class LongPath{
   private static final MethodHandle nextVolume= call("FindNextVolumeW", FunctionDescriptor.of(JAVA_INT, ADDRESS, ADDRESS, JAVA_INT));
   private static final MethodHandle closeVolumes= call("FindVolumeClose", FunctionDescriptor.of(JAVA_INT, ADDRESS));
   private static final MethodHandle volumePaths= call("GetVolumePathNamesForVolumeNameW", FunctionDescriptor.of(JAVA_INT, ADDRESS, ADDRESS, JAVA_INT, ADDRESS));
+  private static final MethodHandle openFile= call("CreateFileW", FunctionDescriptor.of(ADDRESS, ADDRESS, JAVA_INT, JAVA_INT, ADDRESS, JAVA_INT, JAVA_INT, ADDRESS));
+  private static final MethodHandle fileInfo= call("GetFileInformationByHandle", FunctionDescriptor.of(JAVA_INT, ADDRESS, ADDRESS));
+  private static final MethodHandle closeFile= call("CloseHandle", FunctionDescriptor.of(JAVA_INT, ADDRESS));
   private static MethodHandle call(String name, FunctionDescriptor d){ return linker.downcallHandle(kernel32.findOrThrow(name), d, Linker.Option.captureCallState("GetLastError")); }
   public static String of(Path folder, String name){
     var f= folder.toAbsolutePath().toString();
@@ -86,6 +89,21 @@ public final class LongPath{
         return res;
       }
       finally{ var _= (int)closeVolumes.invokeExact(state, found); }
+    }
+    catch (IOException e){ throw e; }
+    catch (Throwable t){ throw Bug.of(t); }
+  }
+  public static int names(String path) throws IOException{
+    try (var arena= Arena.ofConfined()){
+      var state= arena.allocate(Linker.Option.captureStateLayout());
+      var file= (MemorySegment)openFile.invokeExact(state, wide(arena, path), 0, 7, MemorySegment.NULL, 3, 0, MemorySegment.NULL);
+      if (file.address() == -1L){ throw failed(shown(path), error(state)); }
+      try{
+        var info= arena.allocate(JAVA_INT, 13);
+        if ((int)fileInfo.invokeExact(state, file, info) == 0){ throw failed(shown(path), error(state)); }
+        return info.getAtIndex(JAVA_INT, 10);
+      }
+      finally{ var _= (int)closeFile.invokeExact(state, file); }
     }
     catch (IOException e){ throw e; }
     catch (Throwable t){ throw Bug.of(t); }
