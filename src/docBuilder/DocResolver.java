@@ -15,6 +15,7 @@ import core.M;
 import core.OtherPackages;
 import core.T;
 import core.TName;
+import tools.Fs;
 import utils.DistinctBy;
 import utils.Join;
 import utils.OneOr;
@@ -31,12 +32,15 @@ record Scope(Literal owner, Optional<M> method, Optional<Scope> outer){
     return Optional.of(m.get().sig().ts().get(m.get().xs().indexOf(name)) instanceof T.RCC rcc ? Optional.of(rcc.c().name()) : Optional.empty());
   }
 }
-record DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other, Function<TName,String> names, Map<TName,TypeDoc> byName, List<TName> foreign, Map<String,List<MethodDoc>> declared){
+record DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other, Function<TName,String> names, Map<TName,TypeDoc> byName, List<TName> foreign, Map<String,List<MethodDoc>> declared, Map<String,Long> anonLines){
   DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other, Function<TName,String> names){
     this(pkgName, types, other, names, types.stream().collect(Collectors.toUnmodifiableMap(t -> t.main().name(), t -> t)),
       other.dom().stream().sorted(Comparator.comparing(TName::s).thenComparing(TName::arity)).toList(),
-      types.stream().filter(TypeDoc::visible).flatMap(t -> t.methods.stream()).filter(m -> m.declared).collect(Collectors.groupingBy(m -> m.main().sig().m().s())));
+      types.stream().filter(TypeDoc::visible).flatMap(t -> t.methods.stream()).filter(m -> m.declared).collect(Collectors.groupingBy(m -> m.main().sig().m().s())),
+      types.stream().filter(TypeDoc::visible).map(TypeDoc::main).filter(Literal::infName).collect(Collectors.groupingBy(DocResolver::fileLine, Collectors.counting())));
   }
+  static String fileLine(Literal l){ return Fs.fileNameWithoutExtension(l.pos().fileName().toString())+":"+l.pos().line(); }
+  String anonTitle(Literal l){ return "Anon@"+(anonLines.getOrDefault(fileLine(l), 0L)>1 ? l.pos() : fileLine(l)); }
   Optional<DocLink> resolve(DocRef ref, Scope scope){
     return switch (ref){
       case DocRef.TypeName t -> typeParameter(t, scope) ? Optional.of(new DocLink.NoLink()) : resolveType(t);
@@ -87,7 +91,7 @@ record DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other, Fun
     return scope.localType(l.name()).flatMap(t -> t.flatMap(o -> onOwners(title(o), List.of(o), ref.selector(), ref.arity())));
   }
   private String title(TName n){
-    return localTypeDoc(n).map(TypeDoc::main).filter(Literal::infName).map(HtmlDocRenderer::anonTitle).orElse(n.simpleName());
+    return localTypeDoc(n).map(TypeDoc::main).filter(Literal::infName).map(this::anonTitle).orElse(n.simpleName());
   }
   private Optional<DocLink> onOwners(String shown, List<TName> owners, String selector, OptionalInt arity){
     var cands= owners.stream().flatMap(o -> methodCandidatesOn(o, selector, arity).stream()).toList();

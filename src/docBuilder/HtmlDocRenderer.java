@@ -14,7 +14,6 @@ import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import core.B;
-import core.E.Literal;
 import core.ExportedToStr;
 import core.M;
 import core.Sig;
@@ -22,7 +21,6 @@ import core.T;
 import core.TName;
 import main.FrontendLogicMain.TestSource;
 import offensiveUtils.Require;
-import tools.Fs;
 import utils.Bug;
 import utils.DistinctBy;
 import utils.Join;
@@ -261,7 +259,7 @@ details{margin:.4em 0}
 code{
   font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
   font-size:.92em; background:var(--bg-code); border:1px solid var(--border-soft);
-  padding:.05em .32em; border-radius:.3em;
+  padding:.05em .32em; border-radius:.3em; overflow-wrap:anywhere;
 }
 .example,.variant,.fenced{
   font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
@@ -277,6 +275,11 @@ code{
 .options li:first-child{border-top:none}
 .opt-doc{color:var(--fg-muted); font-size:.92em}
 .disambig>h2{font-family:inherit; font-size:1.15em; color:var(--fg)}
+@media (max-width:48em){
+  .layout{display:block}
+  .toc{width:auto; height:auto; max-height:40vh; position:static; border-right:none; border-bottom:1px solid var(--border)}
+  main{padding:1.2em 1em 4em}
+}
 """;
   //a hash may name a section, or an id nested inside one: show the owning section,
   //then scroll to the precise target once it is no longer hidden.
@@ -520,11 +523,7 @@ code{
     return toStr.typeName(l.name())+Join.of(l.bs().stream().map(B::compactToString), "[", ",", "]", "");
   }
   String shortTitle(TypeDoc t){
-    return t.main().infName() ? anonTitle(t.main()) : typeTitle(t);
-  }
-  static String anonTitle(Literal l){
-    var p= l.pos();
-    return "Anon@"+Fs.fileNameWithoutExtension(p.fileName().toString())+":"+p.line();
+    return t.main().infName() ? resolver.anonTitle(t.main()) : typeTitle(t);
   }
   String typeLink(T.C c){
     return "<a href=\""+h(linkTo(c.name()))+"\">"+h(toStr.typeName(c))+"</a>";

@@ -136,10 +136,9 @@ public final class HtmlDocBuilder{
   String orphan(List<DocOcc> run){
     var first= run.getFirst();
     var last= run.getLast();
-    var lines= sources.get(last.file()).lines;
-    var below= lines.stream().skip(last.line()).filter(l -> !l.isBlank()).findFirst().orElse("");
-    var emptyBelow= last.line()<lines.size() && lines.get(last.line()).isBlank();
-    var msg= first.trailing() ? trailingNotAttached : emptyBelow ? emptyLineEnds : below.strip().startsWith("//") ? notAttached : nothingDeclaredBelow;
+    var source= sources.get(last.file());
+    var below= source.lines.stream().skip(last.line()).filter(l -> !l.isBlank()).findFirst().orElse("");
+    var msg= first.trailing() ? trailingNotAttached : source.declarationBelow(last.line()) ? emptyLineEnds : below.strip().startsWith("//") ? notAttached : nothingDeclaredBelow;
     return message(new Span(first.file(), first.line(), first.column(),
       last.line(), last.textColumn()+last.text().length()), msg);
   }

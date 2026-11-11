@@ -80,11 +80,17 @@ final class SourceDocs{
   List<DocOcc> collectBefore(int line){
     var before= new ArrayList<DocOcc>();
     for (int l= line-1; l >= 1; l -= 1){
-      var own= Optional.ofNullable(docByLine.get(l)).filter(d -> !d.trailing());
+      var own= ownDoc(l);
       if (own.isEmpty()){ break; }
       before.add(own.get());
     }
     return before.reversed();
+  }
+  Optional<DocOcc> ownDoc(int line){ return Optional.ofNullable(docByLine.get(line)).filter(d -> !d.trailing()); }
+  boolean declarationBelow(int line){
+    var l= line+1;
+    while (l<=lines.size() && (lines.get(l-1).isBlank() || ownDoc(l).isPresent())){ l += 1; }
+    return visitedLines.contains(l);
   }
   static List<DocOcc> dedent(List<DocOcc> ds){
     return ds.stream().map(d -> d.drop(indent(ds, d))).toList();
