@@ -662,4 +662,39 @@ Maker:{
     utils.Err.strCmp("[###]@media (max-width:48em){\n  .layout{display:block}[###]", html);
     utils.Err.strCmp("[###]<p id=\"welcome\" class=\"welcome\">Types: 1. Pick one from the list.</p>[###]", html);
   }
+  @Test void aReferenceWithAnArityTheMethodDoesNotHaveIsToldTheArityTheMethodHas(@TempDir Path tmp){
+    var ex= assertThrows(UserError.class, () -> docs(tmp, a+"""
+///Same as `A.m(_)`.
+B:{ .m: A -> A; }
+"""));
+    utils.Err.strCmp("""
+Broken reference in a doc comment.
+
+In file: fear:/_p/_rank_app.fear
+
+002| ///Same as `A.m(_)`.
+   |             ^^^^^^
+
+While inspecting the documentation of package p
+[###]A.m()[###]""", ex.getMessage());
+  }
+  @Test void theParameterThatDoubleColonIntroducesIsShownWithNoName(@TempDir Path tmp){
+    var docs= docs(tmp, a+"""
+B:{ .k(a: A): A; }
+C:B{ .k -> ::.m; }
+""");
+    utils.Err.strCmp("[###]C : B\n\t.k(A):A\n[###]", docs.text());
+  }
+  @Test void anAnonymousLiteralWhoseOnlyDocLinesAreTestOnlyIsNotListedButItsTestRuns(@TempDir Path tmp){
+    var docs= docs(tmp, a+"""
+Maker:{
+  .make: A -> A{
+    //- A.m
+    .m -> A;
+    };
+  }
+""");
+    utils.Err.strCmp("package p\n\nA\n\t.m:A\n\nMaker\n\t.make:A\n\n", docs.text());
+    assertEquals(2, docs.tests().size());
+  }
 }
