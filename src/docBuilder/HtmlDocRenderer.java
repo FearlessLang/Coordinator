@@ -30,7 +30,6 @@ import utils.Streams;
 final class HtmlDocRenderer{
   final String pkgName;
   final List<TypeDoc> types;
-  final Map<DocOcc,Map<Integer,DocLink>> spans;
   final Optional<Path> baseDocLocation;
   //filled by href() as links are emitted, so every ambiguous link that reaches the
   //page also gets its landing section; rendered after all types, when it is complete.
@@ -40,11 +39,10 @@ final class HtmlDocRenderer{
   final HashMap<String,Pattern> namePatterns= new HashMap<>();
   final List<TypeDoc> shown;
   final Map<DocOcc,DeclarationDoc> claims;
-  HtmlDocRenderer(Map<String,String> uses, DocResolver resolver, Map<DocOcc,Map<Integer,DocLink>> spans, Optional<Path> baseDocLocation){
-    assert Require.nonNull(uses, resolver, spans, baseDocLocation);
+  HtmlDocRenderer(Map<String,String> uses, DocResolver resolver, Optional<Path> baseDocLocation){
+    assert Require.nonNull(uses, resolver, baseDocLocation);
     pkgName= resolver.pkgName();
     types= resolver.types();
-    this.spans= spans;
     this.baseDocLocation= baseDocLocation;
     toStr= new ExportedToStr(pkgName, uses);
     this.resolver= resolver;
@@ -436,7 +434,7 @@ code{
     for (var run : runs(visible, o -> o.kind()==DocKind.Example)){
       if (run.getFirst().kind()==DocKind.Example){ renderExamples(sb, run.stream().map(DocOcc::text).toList()); continue; }
       sb.append("<div class=\"doc\">\n");
-      runs(run, DocOcc::kind).forEach(b -> renderBlock(sb, b));
+      runs(run, DocOcc::kind).forEach(b -> renderBlock(sb, b, d.scope()));
       sb.append("</div>\n");
     }
   }
@@ -446,34 +444,34 @@ code{
   //an empty doc line is where the author put a paragraph break; the lines between two
   //of them are one paragraph, kept on their own lines so that a list stays a list and
   //an indented line stays indented (the doc block is rendered with pre-wrap).
-  void renderBlock(StringBuilder sb, List<DocOcc> block){
+  void renderBlock(StringBuilder sb, List<DocOcc> block, Scope scope){
     var kind= block.getFirst().kind();
     if (kind==DocKind.Fence){ return; }
     if (kind==DocKind.Fenced){ sb.append("<pre class=\"fenced\">").append(Join.of(block.stream().map(o -> h(o.text())), "", "\n", "", "")).append("</pre>\n"); return; }
-    paragraphs(block).forEach(r -> sb.append("<p>").append(renderParagraph(r)).append("</p>\n"));
+    paragraphs(block).forEach(r -> sb.append("<p>").append(renderParagraph(r, scope)).append("</p>\n"));
   }
   static boolean inParagraph(DocOcc o){ return o.kind()==DocKind.Prose && !o.text().isBlank(); }
   static List<List<DocOcc>> paragraphs(List<DocOcc> ds){
     return runs(ds.stream().filter(o -> o.kind()!=DocKind.TestOnly).toList(), HtmlDocRenderer::inParagraph).stream().filter(r -> inParagraph(r.getFirst())).toList();
   }
   static String joined(List<DocOcc> p){ return Join.of(p.stream().map(DocOcc::text), "", "\n", "", ""); }
-  String renderParagraph(List<DocOcc> p){
+  String renderParagraph(List<DocOcc> p, Scope scope){
     var text= joined(p);
-    var linked= spans.getOrDefault(p.getFirst(), Map.of());
     var sb= new StringBuilder();
     var i= 0;
     for (var cs : DocRefScanner.codeSpans(text)){
       sb.append(h(text.substring(i, cs.start()-cs.fence())));
-      sb.append("<code>").append(renderCode(text, cs, linked)).append("</code>");
+      sb.append("<code>").append(renderCode(text, cs, scope)).append("</code>");
       i = cs.end()+cs.fence();
     }
     sb.append(h(text.substring(i)));
     return sb.toString();
   }
-  String renderCode(String text, DocRefScanner.CodeSpan cs, Map<Integer,DocLink> linked){
+  String renderCode(String text, DocRefScanner.CodeSpan cs, Scope scope){
     var body= h(text.substring(cs.start(), cs.end()));
-    var link= linked.get(cs.start());
-    return (link==null || link instanceof DocLink.NoLink) ? body : "<a href=\""+h(href(link))+"\">"+body+"</a>";
+    if (cs.fence()!=1){ return body; }
+    var link= DocRefScanner.wholeRef(text, cs).flatMap(r -> resolver.resolve(r, scope)).filter(l -> !(l instanceof DocLink.NoLink));
+    return link.map(l -> "<a href=\""+h(href(l))+"\">"+body+"</a>").orElse(body);
   }
   void renderPage(StringBuilder sb, DocLink.Ambiguous p, String anchor){
     sb.append("<section class=\"type disambig\" id=\"").append(anchor).append("\">\n")
@@ -491,12 +489,12 @@ code{
       .append(h(anonymous.map(this::shortTitle).orElseGet(() -> toStr.typeNameWithArity(c.owner()))));
     c.sig().ifPresent(s -> sb.append(h(s.m().s()+DocResolver.shape(OptionalInt.of(s.m().arity()), "(", ")"))));
     sb.append("</a>");
-    c.localMethod().flatMap(this::firstParagraph).ifPresent(p -> sb.append(" <span class=\"opt-doc\">\u2014 ").append(renderParagraph(p).replace("\n", " ")).append("</span>"));
+    c.localMethod().flatMap(this::renderFirstParagraph).ifPresent(p -> sb.append(" <span class=\"opt-doc\">\u2014 ").append(p.replace("\n", " ")).append("</span>"));
     return sb.toString();
   }
-  Optional<List<DocOcc>> firstParagraph(MethodDoc m){
+  Optional<String> renderFirstParagraph(MethodDoc m){
     return runs(m.docs.stream().filter(d -> d.kind()!=DocKind.TestOnly).toList(), HtmlDocRenderer::inParagraph).stream()
-      .dropWhile(r -> r.getFirst().kind()==DocKind.Example).findFirst().filter(r -> inParagraph(r.getFirst()));
+      .dropWhile(r -> r.getFirst().kind()==DocKind.Example).findFirst().filter(r -> inParagraph(r.getFirst())).map(p -> renderParagraph(p, m.scope()));
   }
   String href(DocLink link){
     return switch (link){

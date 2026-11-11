@@ -3,7 +3,6 @@ package docBuilder;
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -98,17 +97,16 @@ public final class HtmlDocBuilder{
   }
   public List<TestSource> complete(Function<TName,String> pkgNames, boolean testable, Consumer<Runnable> writes){
     var resolver= new DocResolver(pkgName, types, other, pkgNames);
-    var spans= new HashMap<DocOcc,Map<Integer,DocLink>>();
     oracle.allFiles().forEach(f -> sources.computeIfAbsent(f.fearURI(), u -> new SourceDocs(u, f.loadString())));
     var orphans= sources.values().stream().flatMap(s -> s.orphanRuns().stream()).map(this::orphan);
     var misplaced= Stream.concat(orphans, sources.values().stream().flatMap(s -> s.ambiguousTrailing().stream()).map(this::ambiguousTrailing)).toList();
     if (!misplaced.isEmpty()){ throw Report.docMisplaced(misplaced); }
     var markup= new ArrayList<String>();
     var problems= new ArrayList<String>();
-    types.stream().flatMap(t -> Stream.<DeclarationDoc>concat(Stream.of(t), t.methods.stream())).forEach(d -> linkDeclaration(resolver, d, spans, markup, problems));
+    types.stream().flatMap(t -> Stream.<DeclarationDoc>concat(Stream.of(t), t.methods.stream())).forEach(d -> checkDeclaration(resolver, d, markup, problems));
     if (!markup.isEmpty()){ throw Report.docBackticks(markup); }
     if (!problems.isEmpty()){ throw Report.docReferences(problems); }
-    var renderer= new HtmlDocRenderer(DocNames.uses(Stream.concat(currentByName.keySet().stream(), other.dom().stream()), pkgNames), resolver, spans, baseDocLocation);
+    var renderer= new HtmlDocRenderer(DocNames.uses(Stream.concat(currentByName.keySet().stream(), other.dom().stream()), pkgNames), resolver, baseDocLocation);
     var html= renderer.render();
     var txt= renderer.renderText();
     writes.accept(() -> { Fs.writeUtf8(htmlPath, html); Fs.writeUtf8(htmlPath.resolveSibling(pkgName+".txt"), txt); });
@@ -130,27 +128,22 @@ public final class HtmlDocBuilder{
   String message(Span span, String msg){
     return Message.of(oracle::loadString, List.of(new Frame("the documentation of package "+pkgName, span)), msg);
   }
-  void linkDeclaration(DocResolver resolver, DeclarationDoc d, HashMap<DocOcc,Map<Integer,DocLink>> spans, ArrayList<String> markup, ArrayList<String> problems){
+  void checkDeclaration(DocResolver resolver, DeclarationDoc d, ArrayList<String> markup, ArrayList<String> problems){
     var fences= d.docs.stream().filter(o -> o.kind()==DocKind.Fence).toList();
     if (fences.size()%2==1){ markup.add(problem(List.of(fences.getLast()), 0, fences.getLast().text().length()-1, unclosedBlock)); }
     //a //> line is real Fearless code, not prose: any backtick in it is a genuine
     //raw string literal, never doc-comment markup, so it is never reference-checked.
-    HtmlDocRenderer.paragraphs(d.docs).forEach(p -> link(resolver, p, d.scope(), spans, markup, problems));
+    HtmlDocRenderer.paragraphs(d.docs).forEach(p -> check(resolver, p, d.scope(), markup, problems));
   }
-  void link(DocResolver resolver, List<DocOcc> p, Scope scope,
-      HashMap<DocOcc,Map<Integer,DocLink>> spans, ArrayList<String> markup, ArrayList<String> problems){
+  void check(DocResolver resolver, List<DocOcc> p, Scope scope, ArrayList<String> markup, ArrayList<String> problems){
     var text= HtmlDocRenderer.joined(p);
     DocRefScanner.unclosed(text).forEach(r -> markup.add(problem(p, r.start(), r.end()-1, unclosedSpan)));
-    var res= new HashMap<Integer,DocLink>();
     for (var sp : DocRefScanner.refSpans(text)){
       if (text.substring(sp.start(), sp.end()).contains("\n")){ markup.add(problem(p, sp.start()-1, sp.end(), referenceOverLines)); continue; }
       var ref= DocRefScanner.wholeRef(text, sp);
       if (ref.isEmpty()){ problems.add(problem(p, sp.start(), sp.end()-1, notAName)); continue; }
-      var link= resolver.resolve(ref.get(), scope);
-      if (link.isEmpty()){ problems.add(problem(p, sp.start(), sp.end()-1, resolver.unresolved(ref.get(), scope).orElse(noSuchName))); continue; }
-      res.put(sp.start(), link.get());
+      if (resolver.resolve(ref.get(), scope).isEmpty()){ problems.add(problem(p, sp.start(), sp.end()-1, resolver.unresolved(ref.get(), scope).orElse(noSuchName))); }
     }
-    spans.put(p.getFirst(), res);
   }
   //documentation that reached no declaration is documentation nobody will ever read,
   //and the usual cause is a /// or //> written with one mark too few, which ends the
