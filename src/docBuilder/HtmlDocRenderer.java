@@ -373,8 +373,7 @@ code{
     sb.append("</details>\n");
   }
   String fromLink(MethodRef r){
-    var owner= r.provider().name();
-    return "<a href=\""+h(prefix(owner.pkgName())+"#"+methodId(owner, r.method().sig()))+"\">"+h(fromName(r))+"</a>";
+    return "<a href=\""+h(methodHref(r.provider().name(), r.method().sig()))+"\">"+h(fromName(r))+"</a>";
   }
   List<MethodRef> fromRefs(MethodDoc m){
     return m.inheritedFrom.stream().gather(DistinctBy.<MethodRef,String>of(this::fromName)).toList();
@@ -404,7 +403,7 @@ code{
       from = at.end();
       if (!resolver.byName().containsKey(n) && !resolver.other().dom().contains(n)){ continue; }
       sb.append(wrap(text.substring(i, at.start())));
-      sb.append("<a href=\"").append(h(linkTo(n))).append("\">").append(h(printed)).append("</a>");
+      sb.append("<a href=\"").append(h(typeHref(n))).append("\">").append(h(printed)).append("</a>");
       i = from;
     }
     sb.append(wrap(text.substring(i)));
@@ -493,8 +492,7 @@ code{
     };
   }
   String candidateHref(Candidate c){
-    if (c.sig().isPresent()){ return prefix(c.owner().pkgName())+"#"+methodId(c.owner(), c.sig().get()); }
-    return resolver.localTypeDoc(c.owner()).map(t -> "#"+typeId(t)).orElseGet(() -> linkTo(c.owner()));
+    return c.sig().map(s -> methodHref(c.owner(), s)).orElseGet(() -> typeHref(c.owner()));
   }
   <V> void renderVariants(StringBuilder sb, String title, List<V> variants, Function<V,String> show){
     if (variants.size() <= 1){ return; }
@@ -512,9 +510,10 @@ code{
     return t.main().infName() ? resolver.anonTitle(t.main()) : typeTitle(t);
   }
   String typeLink(T.C c){
-    return "<a href=\""+h(linkTo(c.name()))+"\">"+h(toStr.typeName(c))+"</a>";
+    return "<a href=\""+h(typeHref(c.name()))+"\">"+h(toStr.typeName(c))+"</a>";
   }
-  String linkTo(TName n){ return prefix(n.pkgName())+"#"+typeId(n); }
+  String typeHref(TName n){ return resolver.localTypeDoc(n).map(t -> "#"+typeId(t)).orElseGet(() -> prefix(n.pkgName())+"#"+typeId(n)); }
+  String methodHref(TName owner, Sig s){ return prefix(owner.pkgName())+"#"+methodId(owner, s); }
   String prefix(String pkg){
     if (pkg.equals(pkgName)){ return ""; }
     if (pkg.equals("base")){ return baseDocLocation.map(p -> p.toUri().toString()).orElse("base.html"); }
