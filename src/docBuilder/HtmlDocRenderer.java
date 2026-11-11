@@ -38,7 +38,6 @@ final class HtmlDocRenderer{
   final DocResolver resolver;
   final HashMap<String,Pattern> namePatterns= new HashMap<>();
   final List<TypeDoc> shown;
-  final Map<DocOcc,DeclarationDoc> claims;
   HtmlDocRenderer(Map<String,String> uses, DocResolver resolver, Optional<Path> baseDocLocation){
     assert Require.nonNull(uses, resolver, baseDocLocation);
     pkgName= resolver.pkgName();
@@ -47,7 +46,6 @@ final class HtmlDocRenderer{
     toStr= new ExportedToStr(pkgName, uses);
     this.resolver= resolver;
     shown= sortedTypes().stream().filter(TypeDoc::visible).toList();
-    claims= trailingClaims();
   }
   String render(){
     var sb= new StringBuilder(16_000)
@@ -128,11 +126,8 @@ final class HtmlDocRenderer{
     if (m.declared){ renderDocText(sb, "    ", m); }
     sb.append(Join.of(fromRefs(m).stream().map(this::fromName), "    from: ", ", ", "\n", ""));
   }
-  List<DocOcc> visibleDocs(DeclarationDoc d){
-    return d.docs.stream().filter(c -> !c.trailing() || claims.get(c)==d).filter(c -> c.kind()!=DocKind.TestOnly).toList();
-  }
   void renderDocText(StringBuilder sb, String indent, DeclarationDoc d){
-    for (var run : runs(visibleDocs(d), o -> o.kind()==DocKind.Example)){
+    for (var run : runs(d.visibleDocs(), o -> o.kind()==DocKind.Example)){
       var example= run.getFirst().kind()==DocKind.Example;
       if (example){ sb.append(indent).append("example:\n"); }
       run.forEach(c -> appendIndented(sb, example ? indent+"  " : indent, c.text()));
@@ -347,11 +342,6 @@ code{
         .thenComparing(m -> m.main().sig().rc()+"/"+toStr.sig(m.main().sig())))
       .toList();
   }
-  Map<DocOcc,DeclarationDoc> trailingClaims(){
-    var res= new HashMap<DocOcc,DeclarationDoc>();
-    shown.stream().flatMap(this::declarations).forEach(d -> d.docs.stream().filter(DocOcc::trailing).forEach(c -> res.put(c, d)));
-    return res;
-  }
   void renderToc(StringBuilder sb){
     sb.append("<nav class=\"toc\">\n")
       .append("<input id=\"filter\" type=\"search\" placeholder=\"Filter types\" autocomplete=\"off\">\n")
@@ -426,7 +416,7 @@ code{
     return Stream.concat(Stream.of(rcc.c().name()), rcc.c().ts().stream().flatMap(HtmlDocRenderer::typeNames));
   }
   void renderDoc(StringBuilder sb, DeclarationDoc d){
-    var visible= visibleDocs(d);
+    var visible= d.visibleDocs();
     if (visible.isEmpty()){
       sb.append("<p class=\"doc missing\">No documentation yet.</p>\n");
       return;
@@ -452,7 +442,7 @@ code{
   }
   static boolean inParagraph(DocOcc o){ return o.kind()==DocKind.Prose && !o.text().isBlank(); }
   static List<List<DocOcc>> paragraphs(List<DocOcc> ds){
-    return runs(ds.stream().filter(o -> o.kind()!=DocKind.TestOnly).toList(), HtmlDocRenderer::inParagraph).stream().filter(r -> inParagraph(r.getFirst())).toList();
+    return runs(ds, HtmlDocRenderer::inParagraph).stream().filter(r -> inParagraph(r.getFirst())).toList();
   }
   static String joined(List<DocOcc> p){ return Join.of(p.stream().map(DocOcc::text), "", "\n", "", ""); }
   String renderParagraph(List<DocOcc> p, Scope scope){
@@ -493,7 +483,7 @@ code{
     return sb.toString();
   }
   Optional<String> renderFirstParagraph(MethodDoc m){
-    return runs(m.docs.stream().filter(d -> d.kind()!=DocKind.TestOnly).toList(), HtmlDocRenderer::inParagraph).stream()
+    return runs(m.visibleDocs(), HtmlDocRenderer::inParagraph).stream()
       .dropWhile(r -> r.getFirst().kind()==DocKind.Example).findFirst().filter(r -> inParagraph(r.getFirst())).map(p -> renderParagraph(p, m.scope()));
   }
   String href(DocLink link){

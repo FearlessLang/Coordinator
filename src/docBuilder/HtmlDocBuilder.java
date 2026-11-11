@@ -133,7 +133,7 @@ public final class HtmlDocBuilder{
     if (fences.size()%2==1){ markup.add(problem(List.of(fences.getLast()), 0, fences.getLast().text().length()-1, unclosedBlock)); }
     //a //> line is real Fearless code, not prose: any backtick in it is a genuine
     //raw string literal, never doc-comment markup, so it is never reference-checked.
-    HtmlDocRenderer.paragraphs(d.docs).forEach(p -> check(resolver, p, d.scope(), markup, problems));
+    HtmlDocRenderer.paragraphs(d.visibleDocs()).forEach(p -> check(resolver, p, d.scope(), markup, problems));
   }
   void check(DocResolver resolver, List<DocOcc> p, Scope scope, ArrayList<String> markup, ArrayList<String> problems){
     var text= HtmlDocRenderer.joined(p);

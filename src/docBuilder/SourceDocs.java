@@ -19,7 +19,7 @@ final class SourceDocs{
   final List<String> lines;
   final HashMap<Integer,DocOcc> docByLine= new HashMap<>();
   final HashMap<Integer,int[]> depthByLine= new HashMap<>();
-  final HashMap<DocOcc,HashSet<Integer>> claimColumns= new HashMap<>();
+  final HashMap<DocOcc,Integer> claimCount= new HashMap<>();
   final HashSet<Integer> visitedLines= new HashSet<>();
   SourceDocs(URI uri, String text){
     this.uri= uri;
@@ -36,7 +36,7 @@ final class SourceDocs{
       .stream().toList();
     //everything collected is attached, including an empty line trimmed off the end:
     //trimming is about what to show, not about what the block reached.
-    Stream.concat(before.stream(), trailing.stream()).forEach(d -> claimColumns.computeIfAbsent(d, _ -> new HashSet<>()).add(pos.column()));
+    Stream.concat(before.stream(), trailing.stream()).forEach(d -> claimCount.merge(d, 1, Integer::sum));
     return fences(Stream.concat(dedent(trimBlanks(before)).stream(), dedent(trailing).stream()).toList());
   }
   static List<DocOcc> fences(List<DocOcc> ds){
@@ -55,7 +55,7 @@ final class SourceDocs{
   //every /// and //> that no declaration took, as runs of lines with only empty lines between them
   List<List<DocOcc>> orphanRuns(){
     var lost= docByLine.values().stream()
-      .filter(d -> !claimColumns.containsKey(d))
+      .filter(d -> !claimCount.containsKey(d))
       .sorted(bySource)
       .toList();
     var res= new ArrayList<ArrayList<DocOcc>>();
@@ -67,8 +67,8 @@ final class SourceDocs{
     return List.copyOf(res);
   }
   List<DocOcc> ambiguousTrailing(){
-    return claimColumns.entrySet().stream()
-      .filter(e -> e.getValue().size()>1)
+    return claimCount.entrySet().stream()
+      .filter(e -> e.getValue()>1)
       .map(Map.Entry::getKey)
       .sorted(bySource)
       .map(d -> dedent(List.of(d)).getFirst())
