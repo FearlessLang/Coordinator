@@ -657,11 +657,9 @@ Maker:{
 <li><a href="#method-p_2e_B-0-mut-_2e_n-0">mut B.n()</a></li>
 </ul>[###]""", html);
   }
-  @Test void theWelcomeTextDoesNotPlaceTheListOfTypesOnTheLeftWhenANarrowWindowShowsItAbove(@TempDir Path tmp){
+  @Test void theWelcomeTextCountsOneTypeAndDoesNotPlaceTheListOfTypesOnTheLeftWhenANarrowWindowShowsItAbove(@TempDir Path tmp){
     var html= docs(tmp, a).html();
     utils.Err.strCmp("[###]@media (max-width:48em){\n  .layout{display:block}[###]", html);
-    var from= html.indexOf("<p id=\"welcome\"");
-    var welcome= html.substring(from, html.indexOf("</p>", from));
-    Assertions.assertFalse(welcome.contains("on the left"), welcome);
+    utils.Err.strCmp("[###]<p id=\"welcome\" class=\"welcome\">Types: 1. Pick one from the list.</p>[###]", html);
   }
 }

@@ -157,7 +157,7 @@ final class HtmlDocRenderer{
       .append("<div><p class=\"eyebrow\">package</p><h1>").append(h(pkgName)).append("</h1></div>")
       .append("</header>\n")
       .append("<p id=\"welcome\" class=\"welcome\">")
-      .append(shown.size()).append(" types. Pick one from the list on the left.</p>\n");
+      .append("Types: ").append(shown.size()).append(". Pick one from the list.</p>\n");
   }
   //the Fearless mark: the blue to orange square of the icon, with its white F
   static final String mark= ""
@@ -488,7 +488,7 @@ code{
   String renderCandidate(Candidate c){
     var anonymous= resolver.localTypeDoc(c.owner()).filter(t -> t.main().infName());
     var sb= new StringBuilder("<a href=\"").append(h(candidateHref(c))).append("\">")
-      .append(c.localMethod().map(m -> m.main().sig().rc().toStrSpace()).orElse(""))
+      .append(c.sig().map(s -> s.rc().toStrSpace()).orElse(""))
       .append(h(anonymous.map(this::shortTitle).orElseGet(() -> toStr.typeNameWithArity(c.owner()))));
     c.sig().ifPresent(s -> sb.append(h(s.m().s()+DocResolver.shape(OptionalInt.of(s.m().arity()), "(", ")"))));
     sb.append("</a>");
