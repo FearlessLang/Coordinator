@@ -458,8 +458,9 @@ code{
   String renderCode(String text, DocRefScanner.CodeSpan cs, Scope scope){
     var body= h(text.substring(cs.start(), cs.end()));
     if (cs.fence()!=1){ return body; }
-    var link= DocRefScanner.wholeRef(text, cs).flatMap(r -> resolver.resolve(r, scope)).filter(l -> !(l instanceof DocLink.NoLink));
-    return link.map(l -> "<a href=\""+h(href(l))+"\">"+body+"</a>").orElse(body);
+    var link= resolver.resolve(DocRefScanner.wholeRef(text, cs).orElseThrow(), scope).orElseThrow();
+    if (link instanceof DocLink.NoLink){ return body; }
+    return "<a href=\""+h(href(link))+"\">"+body+"</a>";
   }
   void renderPage(StringBuilder sb, DocLink.Ambiguous p, String anchor){
     sb.append("<section class=\"type disambig\" id=\"").append(anchor).append("\">\n")

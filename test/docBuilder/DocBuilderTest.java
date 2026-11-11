@@ -1080,7 +1080,7 @@ documents, or turn it into a plain // comment.""", ex.getMessage());
       new DocOcc(file, 5, 1, 4, "", false, DocKind.Fenced),
       new DocOcc(file, 6, 1, 4, "  }", false, DocKind.Fenced),
       new DocOcc(file, 7, 1, 4, "```", false, DocKind.Fence),
-      new DocOcc(file, 8, 1, 4, "After `x`.", false, DocKind.Prose)));
+      new DocOcc(file, 8, 1, 4, "After ``x``.", false, DocKind.Prose)));
     var html= new HtmlDocRenderer(Map.of(), new DocResolver("pkg", List.of(holder), OtherPackages.empty(), TName::s), Optional.empty()).render();
     utils.Err.strCmp("[###]<div class=\"doc\">\n<p>Example:</p>\n<pre class=\"fenced\">Foo: Bar {\n  `x`\n\n  }</pre>\n<p>After <code>x</code>.</p>\n</div>[###]", html);
   }
