@@ -470,6 +470,34 @@ a_b/x.txt=x
     assertEquals(2, names(root.resolve(".h")).size());
     assertEquals("", fix(root));
   }
+  @Test void aFixEndingInsideAZipWritesTheZipWithTheChangesDone(@TempDir Path tmp) throws IOException{
+    var root= root(tmp);
+    var tooLong= ".a/"+"c".repeat(250);
+    var longName= ".h"+"\u00E9".repeat(127);
+    var holds= wrote(() -> tmp.resolve(longName), "x");
+    Fs.write(root.resolve("x.zip"), stored(List.of(".DS_Store", tooLong, longName), UTF_8));
+    var q= tmp.resolve("root_fix").resolve("x");
+    var done= List.of("Deleted x/.DS_Store", "Moved x/"+tooLong+" to "+q.resolve(tooLong), "Deleted the empty folder x/.a");
+    var lines= new ArrayList<String>();
+    if (holds){
+      Fix.of(root, lines::add);
+      assertEquals(Stream.concat(done.stream(), Stream.of("Moved x/"+longName+" to "+q.resolve(longName), "Deleted the empty zip x.zip")).toList(), lines);
+      return;
+    }
+    assertThrows(UncheckedIOException.class, () -> Fix.of(root, lines::add));
+    assertEquals(done, lines);
+    assertEquals(List.of(longName), stored(Fs.readAllBytes(root.resolve("x.zip"))).stream().map(ZipEntry::getName).toList());
+    assertEquals("x", Fs.readUtf8(q.resolve(tooLong)));
+  }
+  @Test void aMoveEndsWhenAnEarlierMoveLeftALinkOnItsWay(@TempDir Path tmp) throws Exception{
+    var root= root(tmp, "a/a.txt\niii\na\njjj\nx.zip/.h/con\niii\nc");
+    folderLink(root.resolve("x"), root.resolve("a"));
+    var q= tmp.resolve("root_fix").resolve("x");
+    var lines= new ArrayList<String>();
+    var e= assertThrows(UncheckedIOException.class, () -> Fix.of(root, lines::add));
+    assertEquals(new FileAlreadyExistsException(q.toString()).toString(), e.getCause().toString());
+    assertEquals(List.of("Moved x to "+q), lines);
+  }
   @Test void aCleanedFileInsideAZipGetsTheCurrentTime(@TempDir Path tmp) throws IOException{
     var root= root(tmp);
     var bytes= new ByteArrayOutputStream();

@@ -95,7 +95,7 @@ But we still require them to be safe to check out using a relaxed set of checks:
   - not using Windows reserved device names
   - a name of at most 255 bytes in UTF-8
   - no two items in the same folder that differ only by case or by Unicode-equivalent spellings
-  - a total path length of 200 characters
+  - a total path length of 250 characters
   - a protected folder is not empty, unless it is inside another protected folder
 Nothing else about a protected path is checked: a zip inside it is never opened.
 
@@ -188,7 +188,7 @@ when deciding what needs compiling, so such a date cannot be trusted.
   //-- visible names
   public static UserError pathTooLong(RefParent kid, int limit){
     return fail(showRel(kid),
-      "- The path is longer than "+limit+" characters.\n"
+      "- The path is longer than "+limit+(Fs.isWindows() ? " characters.\n" : " bytes in UTF-8.\n")
     +"  Long paths often fail on Windows and in some tools.",
       "- Shorten folder/file names, or move this content closer to the project root."
     );

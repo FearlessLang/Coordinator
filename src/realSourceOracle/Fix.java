@@ -15,7 +15,6 @@ import java.nio.ByteBuffer;
 import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
 import java.nio.file.FileAlreadyExistsException;
-import java.nio.file.FileStore;
 import java.nio.file.FileSystemException;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
@@ -28,11 +27,13 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -62,10 +63,10 @@ public final class Fix{
     Path away(String name, Path into);
   }
   private record Disk(Path p) implements Dir{
-    public List<String> names(){ return Fs.of(() -> { try (var s= Files.list(p)){ return s.sorted(Disk::order).map(e -> e.getFileName().toString()).toList(); } }); }
-    private static int order(Path a, Path b){
-      if (Fs.isWindows()){ return a.getFileName().toString().compareTo(b.getFileName().toString()); }
-      return Arrays.compareUnsigned(PathBytes.of(a), PathBytes.of(b));
+    public List<String> names(){
+      var all= Fs.of(() -> { try (var s= Files.list(p)){ return s.toList(); } });
+      if (Fs.isWindows()){ return all.stream().map(e -> e.getFileName().toString()).sorted().toList(); }
+      return all.stream().map(e -> Map.entry(PathBytes.of(e), e.getFileName().toString())).sorted((a, b) -> Arrays.compareUnsigned(a.getKey(), b.getKey())).map(Map.Entry::getValue).toList();
     }
     public Kind kind(String name){
       var at= at(name);
@@ -88,7 +89,8 @@ public final class Fix{
       return to;
     }
     private Path at(String name){
-      if (Fs.isWindows() && (name.endsWith(".") || name.endsWith(" "))){ throw new UncheckedIOException(new FileSystemException(p+File.separator+name, null, "Windows can not reach a name ending with a dot or a space")); }
+      var unreachable= Fs.isWindows() && (name.endsWith(".") || name.endsWith(" ") || BuildWithZip.reserved(name));
+      if (unreachable){ throw new UncheckedIOException(new FileSystemException(p+File.separator+name, null, "Windows can not reach a name ending with a dot or a space, or a reserved device name")); }
       return resolved(name).orElseGet(() -> listed(name));
     }
     private Optional<Path> resolved(String name){
@@ -99,7 +101,7 @@ public final class Fix{
     private Path listed(String name){
       return Fs.of(() -> { try (var s= Files.list(p)){ return s.filter(e -> e.getFileName().toString().equals(name)).sorted().findFirst().orElseThrow(); } });
     }
-    private static Path free(Path to) throws IOException{
+    static Path free(Path to) throws IOException{
       if (Files.exists(to, NOFOLLOW_LINKS)){ throw new FileAlreadyExistsException(to.toString()); }
       return to;
     }
@@ -111,22 +113,22 @@ public final class Fix{
       Files.move(mid, to);
     }
     private static Path oneName(Path f) throws IOException{
-      if (!Files.getFileStore(f).equals(Files.getFileStore(f.getParent()))){ throw new FileSystemException(f.toString(), null, "a file system is mounted here"); }
-      if (Fs.isWindows() || (int)Files.getAttribute(f, "unix:nlink", NOFOLLOW_LINKS) == 1){ return f; }
+      if (mountPoints().test(f)){ throw new FileSystemException(f.toString(), null, "a file system is mounted here"); }
+      if (Fs.isWindows()){ Files.setAttribute(f, "dos:readonly", false, NOFOLLOW_LINKS); return f; }
+      if ((int)Files.getAttribute(f, "unix:nlink", NOFOLLOW_LINKS) == 1){ return f; }
       throw new FileSystemException(f.toString(), null, "this file has more than one name, so writing it changes those other names too");
     }
     private static Path noMountBelow(Path f) throws IOException{
-      mounts(f, Files.getFileStore(f.getParent()));
+      mounts(f, mountPoints());
       return f;
     }
-    private static void mounts(Path f, FileStore store) throws IOException{
-      if (!Files.isDirectory(f, NOFOLLOW_LINKS) || Fs.isLink(f)){ return; }
-      if (!Files.getFileStore(f).equals(store)){ throw new FileSystemException(f.toString(), null, "a file system is mounted here"); }
-      try (var s= Files.list(f)){ for (var e : s.toList()){ mounts(e, store); } }
+    private static void mounts(Path f, Predicate<Path> mounted) throws IOException{
+      if (mounted.test(f)){ throw new FileSystemException(f.toString(), null, "a file system is mounted here"); }
+      if (!realFolder(f)){ return; }
+      try (var s= Files.list(f)){ for (var e : s.toList()){ mounts(e, mounted); } }
     }
     private static void remove(Path f) throws IOException{
-      var folder= Files.isDirectory(f, NOFOLLOW_LINKS) && !Fs.isLink(f);
-      if (folder){ try (var s= Files.list(f)){ for (var e : s.toList()){ remove(e); } } }
+      if (realFolder(f)){ try (var s= Files.list(f)){ for (var e : s.toList()){ remove(e); } } }
       if (Fs.isWindows()){ Files.setAttribute(f, "dos:readonly", false, NOFOLLOW_LINKS); }
       Files.delete(f);
     }
@@ -139,8 +141,9 @@ public final class Fix{
     public List<String> names(){
       return all.stream().map(Stored::name)
         .filter(n -> n.startsWith(prefix) && n.length()>prefix.length())
-        .map(n -> n.substring(prefix.length()).split("/")[0]).distinct().sorted().toList();
+        .map(n -> n.substring(prefix.length()).split("/")[0]).distinct().sorted(Zip::order).toList();
     }
+    private static int order(String a, String b){ return Fs.isWindows() ? a.compareTo(b) : Arrays.compareUnsigned(a.getBytes(UTF_8), b.getBytes(UTF_8)); }
     public Kind kind(String name){ return all.stream().anyMatch(e -> e.name.startsWith(prefix+name+"/")) ? Kind.folder : Kind.file; }
     public Dir dir(String name){ return new Zip(all, prefix+name+"/"); }
     public byte[] read(String name){ return file(name).bytes; }
@@ -156,7 +159,7 @@ public final class Fix{
     public void rename(String name, String to){ each(name, e -> new Stored(prefix+to+e.name.substring(prefix.length()+name.length()), e.time, e.bytes)); }
     public Path away(String name, Path into){
       var to= resolve(into, name);
-      Fs.ofV(() -> { if (Files.exists(to, NOFOLLOW_LINKS)){ throw new FileAlreadyExistsException(to.toString()); } });
+      Fs.ofV(() -> Disk.free(to));
       for (var e : all.stream().filter(e -> in(e, name)).toList()){ extract(e, resolve(into, e.name.substring(prefix.length()))); }
       delete(name);
       return to;
@@ -170,10 +173,24 @@ public final class Fix{
   }
   private final Consumer<String> out;
   private final int depth;
-  private final long now;
   private final Path fixFolder;
-  private Fix(Consumer<String> out, int depth, long now, Path fixFolder){ this.out= out; this.depth= depth; this.now= now; this.fixFolder= fixFolder; }
-  public static void of(Path folder, Consumer<String> out){ new Fix(out, 0, System.currentTimeMillis(), fixFolder(folder)).dir(new Disk(folder), "", false); }
+  private Fix(Consumer<String> out, int depth, Path fixFolder){ this.out= out; this.depth= depth; this.fixFolder= fixFolder; }
+  public static void of(Path folder, Consumer<String> out){ new Fix(out, 0, fixFolder(folder)).dir(new Disk(folder), "", false); }
+  public static Predicate<Path> mountPoints(){
+    if (!Fs.isLinux()){ return p -> !Fs.of(() -> Files.getFileStore(p)).equals(Fs.of(() -> Files.getFileStore(p.getParent()))); }
+    var all= new String(Fs.of(() -> Files.readAllBytes(Path.of("/proc/self/mountinfo"))), ISO_8859_1).lines().map(l -> mountPath(l.split(" ")[4])).collect(Collectors.toSet());
+    return all::contains;
+  }
+  private static Path mountPath(String field){
+    var res= new ByteArrayOutputStream();
+    for (var i= 0; i<field.length(); i += 1){
+      var octal= field.charAt(i)=='\\' && i+3<field.length();
+      res.write(octal ? Integer.parseInt(field.substring(i+1, i+4), 8) : field.charAt(i));
+      if (octal){ i += 3; }
+    }
+    return PathBytes.path(res.toByteArray());
+  }
+  public static boolean realFolder(Path p){ return Files.isDirectory(p, NOFOLLOW_LINKS) && !Fs.isLink(p); }
   private static Path fixFolder(Path folder){
     var taken= new Disk(folder.getParent()).names().stream().map(Fix::clashKey).collect(Collectors.toSet());
     var f= folder.getFileName().toString();
@@ -193,16 +210,15 @@ public final class Fix{
     var badHidden= hidden && BuildWithZip.hiddenProblem(name).isPresent();
     var key= BuildWithZip.foldKey(name);
     if (tooLong || badHidden || kept.contains(key)){ away(d, name, path); return; }
-    kept.add(key);
-    if (kind == Kind.folder){ folder(d, name, path+name, hidden, inside); }
-    if (kind == Kind.file){ file(d, name, path, hidden); }
-    if (!d.names().contains(name)){ kept.remove(key); }
+    var deleted= kind == Kind.folder ? folder(d, name, path+name, hidden, inside) : file(d, name, path, hidden);
+    if (!deleted){ kept.add(key); }
   }
-  private void file(Dir d, String name, String path, boolean hidden){
+  private boolean file(Dir d, String name, String path, boolean hidden){
     if (!hidden && name.endsWith(".fear")){ fear(d, name, path+name); }
     var time= d.time(name);
+    var now= System.currentTimeMillis();
     if (time<=0 || time>now+BuildWithZip.futureTolerance){ d.time(name, now); out.accept("Reset the time of "+path+name); }
-    if (!hidden && name.endsWith(".zip")){ zip(d, name, path); }
+    return !hidden && name.endsWith(".zip") && zip(d, name, path);
   }
   private void away(Dir d, String name, String path){
     var into= folderOf(fixFolder);
@@ -217,15 +233,16 @@ public final class Fix{
   private static Path folderOf(Path p){
     Fs.ofV(() -> {
       if (!Files.exists(p, NOFOLLOW_LINKS)){ Files.createDirectory(p); return; }
-      if (!Files.isDirectory(p, NOFOLLOW_LINKS) || Fs.isLink(p)){ throw new FileAlreadyExistsException(p.toString()); }
+      if (!realFolder(p)){ throw new FileAlreadyExistsException(p.toString()); }
     });
     return p;
   }
-  private void folder(Dir d, String name, String full, boolean hidden, boolean inside){
+  private boolean folder(Dir d, String name, String full, boolean hidden, boolean inside){
     dir(d.dir(name), full+"/", hidden);
-    if (inside || !d.dir(name).names().isEmpty()){ return; }
+    if (inside || !d.dir(name).names().isEmpty()){ return false; }
     d.delete(name);
     out.accept("Deleted the empty folder "+full);
+    return true;
   }
   private String renamed(Dir d, String old, String path, boolean isDir){
     var ext= isDir ? "" : "."+ext(d, old);
@@ -288,21 +305,26 @@ public final class Fix{
     try{ return Optional.of(UTF_8.newDecoder().decode(ByteBuffer.wrap(bytes)).toString()); }
     catch (CharacterCodingException _){ return Optional.empty(); }
   }
-  private void zip(Dir d, String name, String path){
+  private boolean zip(Dir d, String name, String path){
     var full= path+name;
     var bytes= d.read(name);
     var read= read(bytes);
     var all= new ArrayList<>(read.orElse(List.of()).stream().map(e -> new Stored(storedName(e.name), e.time, e.bytes)).filter(e -> !e.name.equals("/")).toList());
     var names= all.stream().map(Stored::name).toList();
     var noZip= read.isEmpty() || read.get().isEmpty() && !new String(bytes, ISO_8859_1).startsWith("PK\5\6");
-    if (noZip || depth>ZipEntry.maxZipNesting || !namesOk(names)){ away(d, name, path); return; }
+    if (noZip || depth>ZipEntry.maxZipNesting || !namesOk(names)){ away(d, name, path); return true; }
     var lines= new ArrayList<String>();
     if (!names.equals(read.get().stream().map(Stored::name).toList())){ lines.add("Fixed the stored names of "+full); }
-    try{ new Fix(lines::add, depth+1, now, fixFolder).dir(new Zip(all, ""), full.substring(0, full.length()-4)+"/", false); }
-    catch (RuntimeException e){ lines.stream().filter(l -> l.startsWith("Moved ")).forEach(out); throw e; }
+    try{ new Fix(lines::add, depth+1, fixFolder).dir(new Zip(all, ""), full.substring(0, full.length()-4)+"/", false); }
+    catch (RuntimeException e){
+      if (!lines.isEmpty()){ d.write(name, write(all)); }
+      lines.forEach(out);
+      throw e;
+    }
     if (all.isEmpty()){ d.delete(name); lines.add("Deleted the empty zip "+full); }
     if (!all.isEmpty() && !lines.isEmpty()){ d.write(name, write(all)); }
     lines.forEach(out);
+    return all.isEmpty();
   }
   private static String storedName(String name){
     var s= name.replace('\\', '/');

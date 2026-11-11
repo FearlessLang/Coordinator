@@ -1061,7 +1061,7 @@ Root: [###]
 Path: [###]
 
 What went wrong
-- The path is longer than 250 characters.
+- The path is longer than 250 [###]
 [###]
 """);}
   @Test void errHiddenSiblingCaseFoldingCollisionInZip(@TempDir Path tmp){ runErrIOE(tmp, """
@@ -1556,7 +1556,7 @@ Root: [###]
 Path: "_pkg/%s.fear"
 
 What went wrong
-- The path is longer than 200 characters.
+- The path is longer than 200 [###]
   Long paths often fail on Windows and in some tools.
 
 How to fix
@@ -1903,7 +1903,7 @@ A:{}
     Fs.ensureDir(root.resolve(".x").resolve("a".repeat(240)));
     assertEquals(1, new RealSourceOracleWithZip(root).allFiles().size());
     Fs.ensureDir(root.resolve(".x").resolve("b".repeat(250)));
-    utils.Err.strCmp("[###]The path is longer than 250 characters.[###]", assertThrows(UserError.class, () -> new RealSourceOracleWithZip(root)).getMessage());
+    utils.Err.strCmp("[###]The path is longer than 250 [###]", assertThrows(UserError.class, () -> new RealSourceOracleWithZip(root)).getMessage());
   }
   @Test void aHiddenPathMayHave250Characters(@TempDir Path tmp){
     var root= tmp.resolve("root").toAbsolutePath().normalize();
@@ -1912,6 +1912,6 @@ A:{}
     Fs.writeUtf8(root.resolve(".x").resolve("a".repeat(240)+".txt"), "");
     assertEquals(1, new RealSourceOracleWithZip(root).allFiles().size());
     Fs.writeUtf8(root.resolve(".x").resolve("b".repeat(250)+".txt"), "");
-    utils.Err.strCmp("[###]The path is longer than 250 characters.[###]", assertThrows(UserError.class, () -> new RealSourceOracleWithZip(root)).getMessage());
+    utils.Err.strCmp("[###]The path is longer than 250 [###]", assertThrows(UserError.class, () -> new RealSourceOracleWithZip(root)).getMessage());
   }
 }

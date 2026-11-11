@@ -161,11 +161,14 @@ public final class BuildWithZip{
       if (Character.isISOControl(cp)){ return Optional.of(k -> Report.invisibleNoControlChars(k, cp, name)); }
       if (winBadChars.indexOf(cp) >= 0){ return Optional.of(k -> Report.invisibleNoWindowsBadChars(k, (char)cp, name)); }
     }
-    var d= name.indexOf('.');
-    var base= (d<0 ? name : name.substring(0, d)).stripTrailing().toLowerCase(Locale.ROOT);
-    if (Fs.winReserved.contains(base) || moreReserved.matcher(base).matches()){ return Optional.of(k -> Report.invisibleWindowsReservedDeviceName(k, base, name)); }
+    if (reserved(name)){ return Optional.of(k -> Report.invisibleWindowsReservedDeviceName(k, base(name), name)); }
     if (name.getBytes(UTF_8).length > 255){ return Optional.of(k -> Report.invisibleNameTooLong(k, name)); }
     return Optional.empty();
+  }
+  static boolean reserved(String name){ return Fs.winReserved.contains(base(name)) || moreReserved.matcher(base(name)).matches(); }
+  private static String base(String name){
+    var d= name.indexOf('.');
+    return (d<0 ? name : name.substring(0, d)).replaceAll(" +$", "").toLowerCase(Locale.ROOT);
   }
   private static final Pattern moreReserved= Pattern.compile("conin\\$|conout\\$|(com|lpt)[\\u00B9\\u00B2\\u00B3]");
   private static void checkCollectiveInvisible(Collection<RefParent> kids){
