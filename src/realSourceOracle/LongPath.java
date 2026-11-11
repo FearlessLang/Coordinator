@@ -3,6 +3,7 @@ package realSourceOracle;
 import static java.lang.foreign.ValueLayout.ADDRESS;
 import static java.lang.foreign.ValueLayout.JAVA_CHAR;
 import static java.lang.foreign.ValueLayout.JAVA_INT;
+import static java.nio.charset.StandardCharsets.UTF_16LE;
 
 import java.io.IOException;
 import java.lang.foreign.Arena;
@@ -16,7 +17,11 @@ import java.lang.invoke.VarHandle;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.FileSystemException;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
 import java.util.OptionalInt;
+import java.util.Set;
 
 import utils.Bug;
 
@@ -28,6 +33,10 @@ public final class LongPath{
   private static final MethodHandle getAttributes= call("GetFileAttributesW", FunctionDescriptor.of(JAVA_INT, ADDRESS));
   private static final MethodHandle moveFile= call("MoveFileExW", FunctionDescriptor.of(JAVA_INT, ADDRESS, ADDRESS, JAVA_INT));
   private static final MethodHandle createFolder= call("CreateDirectoryW", FunctionDescriptor.of(JAVA_INT, ADDRESS, ADDRESS));
+  private static final MethodHandle firstVolume= call("FindFirstVolumeW", FunctionDescriptor.of(ADDRESS, ADDRESS, JAVA_INT));
+  private static final MethodHandle nextVolume= call("FindNextVolumeW", FunctionDescriptor.of(JAVA_INT, ADDRESS, ADDRESS, JAVA_INT));
+  private static final MethodHandle closeVolumes= call("FindVolumeClose", FunctionDescriptor.of(JAVA_INT, ADDRESS));
+  private static final MethodHandle volumePaths= call("GetVolumePathNamesForVolumeNameW", FunctionDescriptor.of(JAVA_INT, ADDRESS, ADDRESS, JAVA_INT, ADDRESS));
   private static MethodHandle call(String name, FunctionDescriptor d){ return linker.downcallHandle(kernel32.findOrThrow(name), d, Linker.Option.captureCallState("GetLastError")); }
   public static String of(Path folder, String name){
     var f= folder.toAbsolutePath().toString();
@@ -40,9 +49,9 @@ public final class LongPath{
       var state= arena.allocate(Linker.Option.captureStateLayout());
       var res= (int)getAttributes.invokeExact(state, wide(arena, path));
       if (res != -1){ return OptionalInt.of(res); }
-      var code= (int)lastError.get(state, 0L);
+      var code= error(state);
       if (code == 2 || code == 3){ return OptionalInt.empty(); }
-      throw failed(path, code);
+      throw failed(shown(path), code);
     }
     catch (IOException e){ throw e; }
     catch (Throwable t){ throw Bug.of(t); }
@@ -50,7 +59,7 @@ public final class LongPath{
   public static void move(String from, String to) throws IOException{
     try (var arena= Arena.ofConfined()){
       var state= arena.allocate(Linker.Option.captureStateLayout());
-      if ((int)moveFile.invokeExact(state, wide(arena, from), wide(arena, to), 0) == 0){ throw failed(to, (int)lastError.get(state, 0L)); }
+      if ((int)moveFile.invokeExact(state, wide(arena, from), wide(arena, to), 0) == 0){ throw failed(shown(to), error(state)); }
     }
     catch (IOException e){ throw e; }
     catch (Throwable t){ throw Bug.of(t); }
@@ -58,19 +67,46 @@ public final class LongPath{
   public static void makeFolder(String path) throws IOException{
     try (var arena= Arena.ofConfined()){
       var state= arena.allocate(Linker.Option.captureStateLayout());
-      if ((int)createFolder.invokeExact(state, wide(arena, path), MemorySegment.NULL) == 0){ throw failed(path, (int)lastError.get(state, 0L)); }
+      if ((int)createFolder.invokeExact(state, wide(arena, path), MemorySegment.NULL) == 0){ throw failed(shown(path), error(state)); }
     }
     catch (IOException e){ throw e; }
     catch (Throwable t){ throw Bug.of(t); }
   }
-  public static String shown(String path){ return path.startsWith("\\\\?\\UNC\\") ? "\\\\"+path.substring(8) : path.substring(4); }
-  private static MemorySegment wide(Arena arena, String s){
-    var res= arena.allocate(JAVA_CHAR, s.length()+1);
-    for (var i= 0; i<s.length(); i += 1){ res.setAtIndex(JAVA_CHAR, i, s.charAt(i)); }
+  public static Set<Path> mountPoints() throws IOException{
+    try (var arena= Arena.ofConfined()){
+      var state= arena.allocate(Linker.Option.captureStateLayout());
+      var volume= arena.allocate(JAVA_CHAR, 64);
+      var found= (MemorySegment)firstVolume.invokeExact(state, volume, 64);
+      if (found.address() == -1L){ throw failed("the volumes of this system", error(state)); }
+      try{
+        var res= new HashSet<Path>();
+        do{ res.addAll(paths(arena, state, volume)); }
+        while ((int)nextVolume.invokeExact(state, found, volume, 64) != 0);
+        if (error(state) != 18){ throw failed("the volumes of this system", error(state)); }
+        return res;
+      }
+      finally{ var _= (int)closeVolumes.invokeExact(state, found); }
+    }
+    catch (IOException e){ throw e; }
+    catch (Throwable t){ throw Bug.of(t); }
+  }
+  private static List<Path> paths(Arena arena, MemorySegment state, MemorySegment volume) throws Throwable{
+    var names= arena.allocate(JAVA_CHAR, 32768);
+    if ((int)volumePaths.invokeExact(state, volume, names, 32768, arena.allocate(JAVA_INT)) == 0){ throw failed(volume.getString(0, UTF_16LE), error(state)); }
+    var res= new ArrayList<Path>();
+    var at= 0L;
+    while (names.get(JAVA_CHAR, at) != 0){
+      var s= names.getString(at, UTF_16LE);
+      res.add(Path.of(s));
+      at += 2L*(s.length()+1);
+    }
     return res;
   }
-  private static IOException failed(String path, int code){
-    if (code == 80 || code == 183){ return new FileAlreadyExistsException(shown(path)); }
-    return new FileSystemException(shown(path), null, "Windows error "+code);
+  public static String shown(String path){ return path.startsWith("\\\\?\\UNC\\") ? "\\\\"+path.substring(8) : path.substring(4); }
+  private static MemorySegment wide(Arena arena, String s){ return arena.allocateFrom(JAVA_CHAR, (s+"\0").toCharArray()); }
+  private static int error(MemorySegment state){ return (int)lastError.get(state, 0L); }
+  private static IOException failed(String shown, int code){
+    if (code == 80 || code == 183){ return new FileAlreadyExistsException(shown); }
+    return new FileSystemException(shown, null, "Windows error "+code);
   }
 }

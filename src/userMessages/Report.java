@@ -207,7 +207,7 @@ when deciding what needs compiling, so such a date cannot be trusted.
       "- A file system is mounted on this folder: the content of this folder comes from another drive, partition or folder.\n"
     +"  A project keeps all its files on the file system of the project folder.",
       "- Unmount the file system from this folder.\n"
-    +"- If you need its files in the project, copy them into a normal folder."
+    +"- If the project needs the files of that file system, copy them into a normal folder."
     );
   }
   public static UserError onlyRegularFilesAndDirs(Path kid){

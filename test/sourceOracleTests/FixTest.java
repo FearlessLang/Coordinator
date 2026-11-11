@@ -573,6 +573,7 @@ a_b/x.txt=x
       assertThrows(UncheckedIOException.class, () -> Fix.of(root, lines::add));
       assertEquals(List.of(), lines);
       assertArrayEquals(zip, Fs.readAllBytes(root.resolve("x.zip")));
+      assertEquals(List.of(), texts(tmp.resolve("root_fix")));
       return;
     }
     var q= tmp.resolve("root_fix").resolve("x").resolve(".h");
@@ -626,7 +627,7 @@ a_b/x.txt=x
       utils.Err.strCmp("[###]A file system is mounted on this folder[###]", e.getMessage());
       var lines= new ArrayList<String>();
       var end= assertThrows(UncheckedIOException.class, () -> Fix.of(root, lines::add));
-      utils.Err.strCmp("[###]a file system is mounted here", end.getCause().getMessage());
+      utils.Err.strCmp("[###]a file system is mounted on this entry or inside it", end.getCause().getMessage());
       assertEquals(List.of(), lines);
       assertEquals("c", Fs.readUtf8(at.resolve("c.txt")));
     }
@@ -661,8 +662,8 @@ a_b/x.txt=x
   private static AutoCloseable fileSystemAt(Path tmp, Path at){
     if (Fs.isWindows()){ fail("""
       Agent on Windows: investigate how this test can mount a file system on a folder of the project (a VHD with Mount-DiskImage and Add-PartitionAccessPath, or mountvol: both need administrator rights).
-      The check must then give the error Report.mountPoint, and Fix must end at that folder with "a file system is mounted here" (FolderShapesDesign: okEntry, and the desk refuses move(D, p s, _) when a mount point m has same(D, m, p s)).
-      Java may take such a folder for a junction (Fs.isLink): then the check gives the error of a link and Fix moves the folder to the fix folder, and both are wrong."""); }
+      The check must then give the error Report.mountPoint, and Fix must end at that folder with "a file system is mounted on this entry or inside it" (FolderShapesDesign: okEntry, and the desk refuses move(D, p s, _) when a mount point m has same(D, m, p s)).
+      Fix reads the mount points from the volumes of the system (LongPath.mountPoints), but the check walks the folders with Fs.walk, which may take such a folder for a junction (Fs.isLink) and then gives the error of a link."""); }
     if (Fs.isLinux()){
       var other= tmp.resolve("other");
       Fs.ensureDir(other);
