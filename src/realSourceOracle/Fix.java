@@ -11,7 +11,6 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
@@ -61,7 +60,7 @@ public final class Fix{
     void time(String name, long time);
     void delete(String name);
     void rename(String name, String to);
-    Path away(String name, Path into);
+    String away(String name, Path into);
   }
   private record Disk(Path p, Predicate<Path> mounted) implements Dir{
     public List<String> names(){
@@ -69,31 +68,64 @@ public final class Fix{
       return Fs.of(() -> { try (var s= Files.list(p)){ return s.sorted(order).map(e -> e.getFileName().toString()).toList(); } });
     }
     public Kind kind(String name){
+      if (unreachable(name)){ return kindOf(Fs.of(() -> LongPath.attributes(LongPath.of(p, name))).orElseThrow()); }
       var at= at(name);
       var a= Fs.of(() -> Files.readAttributes(at, BasicFileAttributes.class, NOFOLLOW_LINKS));
       if (Fs.isLink(at, a)){ return Kind.other; }
       if (a.isDirectory()){ return mounted.test(at) ? Kind.other : Kind.folder; }
       return a.isRegularFile() || Fs.isWindows() && a.isOther() ? Kind.file : Kind.other;
     }
+    private static Kind kindOf(int attributes){
+      if ((attributes & 0x400) != 0){ return Kind.other; }
+      return (attributes & 0x10) != 0 ? Kind.folder : Kind.file;
+    }
     public Dir dir(String name){ return new Disk(at(name), mounted); }
-    public byte[] read(String name){ return Fs.of(() -> Files.readAllBytes(at(name))); }
+    public byte[] read(String name){
+      if (!unreachable(name)){ return Fs.of(() -> Files.readAllBytes(at(name))); }
+      return Fs.of(() -> {
+        var mid= reached(name);
+        try{ return Files.readAllBytes(mid); }
+        finally{ LongPath.move(LongPath.of(mid), LongPath.of(p, name)); }
+      });
+    }
     public void write(String name, byte[] bytes){ Fs.ofV(() -> Files.write(oneName(at(name)), bytes)); }
     public long time(String name){ return Fs.of(() -> Files.getLastModifiedTime(at(name), NOFOLLOW_LINKS)).toMillis(); }
     public void time(String name, long time){ Fs.ofV(() -> Files.setLastModifiedTime(oneName(at(name)), FileTime.fromMillis(time))); }
-    public void delete(String name){ Fs.ofV(() -> { writable(p); remove(noMountBelow(at(name))); }); }
-    public void rename(String name, String to){ Fs.ofV(() -> { writable(p); rename(at(name), p.resolve(to)); }); }
-    public Path away(String name, Path into){
-      var at= at(name);
-      var to= into.resolve(at.getFileName());
+    public void delete(String name){ Fs.ofV(() -> { writable(p); remove(noMountBelow(reached(name))); }); }
+    public void rename(String name, String to){
       Fs.ofV(() -> {
         writable(p);
-        if (realFolder(at)){ writable(at); }
-        Files.move(noMountBelow(at), free(to));
+        if (!unreachable(name)){ rename(at(name), p.resolve(to)); return; }
+        LongPath.move(LongPath.of(p, name), LongPath.of(free(p.resolve(to))));
       });
-      return to;
+    }
+    public String away(String name, Path into){
+      Fs.ofV(() -> {
+        writable(p);
+        if (!unreachable(name)){ awayReached(at(name), into); return; }
+        var to= LongPath.of(into, name);
+        if (LongPath.attributes(to).isPresent()){ throw new FileAlreadyExistsException(LongPath.shown(to)); }
+        var mid= reached(name);
+        try{
+          if (realFolder(mid)){ writable(mid); }
+          LongPath.move(LongPath.of(noMountBelow(mid)), to);
+        }
+        catch (IOException e){ LongPath.move(LongPath.of(mid), LongPath.of(p, name)); throw e; }
+      });
+      return into+File.separator+name;
+    }
+    private static void awayReached(Path at, Path into) throws IOException{
+      if (realFolder(at)){ writable(at); }
+      Files.move(noMountBelow(at), free(into.resolve(at.getFileName())));
+    }
+    private Path reached(String name) throws IOException{
+      if (!unreachable(name)){ return at(name); }
+      var mid= free(p.resolve("fix_"+UUID.randomUUID()));
+      LongPath.move(LongPath.of(p, name), LongPath.of(mid));
+      return mid;
     }
     private Path at(String name){
-      reachable(p, name);
+      assert !unreachable(name);
       return resolved(name).orElseGet(() -> listed(name));
     }
     private Optional<Path> resolved(String name){
@@ -175,22 +207,50 @@ public final class Fix{
       if (empty){ all.add(new Stored(prefix, gone.getFirst().time, new byte[0])); }
     }
     public void rename(String name, String to){ each(name, e -> new Stored(prefix+to+e.name.substring(prefix.length()+name.length()), e.time, e.bytes)); }
-    public Path away(String name, Path into){
-      var to= resolve(into, name);
-      Fs.ofV(() -> Disk.free(to));
-      try{ for (var e : all.stream().filter(e -> in(e, name)).toList()){ extract(e, resolve(into, e.name.substring(prefix.length()))); } }
-      catch (RuntimeException ex){
-        Fs.ofV(() -> { if (Files.exists(to, NOFOLLOW_LINKS)){ Disk.remove(to); } });
+    public String away(String name, Path into){
+      var mine= all.stream().filter(e -> in(e, name)).toList();
+      Fs.ofV(Fs.isWindows() ? () -> awayLong(mine, name, into) : () -> awayReached(mine, name, into));
+      delete(name);
+      return into+File.separator+name;
+    }
+    private void awayReached(List<Stored> mine, String name, Path into) throws IOException{
+      var to= Disk.free(into.resolve(name));
+      try{ for (var e : mine){ extract(e, into.resolve(e.name.substring(prefix.length()))); } }
+      catch (IOException | RuntimeException ex){
+        if (Files.exists(to, NOFOLLOW_LINKS)){ Disk.remove(to); }
         throw ex;
       }
-      delete(name);
-      return to;
     }
-    private static void extract(Stored e, Path to){
-      if (e.name.endsWith("/")){ Fs.ofV(() -> Files.createDirectories(to)); return; }
-      Fs.ofV(() -> Files.createDirectories(to.getParent()));
-      Fs.ofV(() -> Files.write(to, e.bytes, StandardOpenOption.CREATE_NEW));
-      Fs.ofV(() -> Files.setLastModifiedTime(to, e.time));
+    private static void extract(Stored e, Path to) throws IOException{
+      if (e.name.endsWith("/")){ Files.createDirectories(to); return; }
+      Files.createDirectories(to.getParent());
+      Files.write(to, e.bytes, StandardOpenOption.CREATE_NEW);
+      Files.setLastModifiedTime(to, e.time);
+    }
+    private void awayLong(List<Stored> mine, String name, Path into) throws IOException{
+      var to= LongPath.of(into, name);
+      if (LongPath.attributes(to).isPresent()){ throw new FileAlreadyExistsException(LongPath.shown(to)); }
+      try{ for (var e : mine){ extractLong(e, into, e.name.substring(prefix.length())); } }
+      catch (IOException | RuntimeException ex){
+        if (LongPath.attributes(to).isEmpty()){ throw ex; }
+        var mid= Disk.free(into.resolve("fix_"+UUID.randomUUID()));
+        LongPath.move(to, LongPath.of(mid));
+        Disk.remove(mid);
+        throw ex;
+      }
+    }
+    private static void extractLong(Stored e, Path into, String rel) throws IOException{
+      var segs= List.of(rel.split("/"));
+      var folders= rel.endsWith("/") ? segs.size() : segs.size()-1;
+      for (var i= 1; i<=folders; i += 1){
+        var f= LongPath.of(into, String.join("/", segs.subList(0, i)));
+        if (LongPath.attributes(f).isEmpty()){ LongPath.makeFolder(f); }
+      }
+      if (rel.endsWith("/")){ return; }
+      var mid= Disk.free(into.resolve("fix_"+UUID.randomUUID()));
+      Files.write(mid, e.bytes, StandardOpenOption.CREATE_NEW);
+      Files.setLastModifiedTime(mid, e.time);
+      LongPath.move(LongPath.of(mid), LongPath.of(into, rel));
     }
   }
   private final Consumer<String> out;
@@ -258,19 +318,11 @@ public final class Fix{
   }
   private void away(Dir d, String name, String path){
     var into= folderOf(fixFolder);
-    for (var seg : Stream.of(path.split("/")).filter(s -> !s.isEmpty()).toList()){ into = folderOf(resolve(into, seg)); }
+    for (var seg : Stream.of(path.split("/")).filter(s -> !s.isEmpty()).toList()){ into = folderOf(into.resolve(seg)); }
     var at= d.away(name, into);
     out.accept("Moved "+path+name+" to "+at);
   }
-  private static void reachable(Path into, String name){
-    var no= Fs.isWindows() && (name.endsWith(".") || name.endsWith(" ") || BuildWithZip.reserved(name));
-    if (no){ throw new UncheckedIOException(new FileSystemException(into+File.separator+name, null, "Windows can not reach a name ending with a dot or a space, or a reserved device name")); }
-  }
-  private static Path resolve(Path into, String name){
-    for (var s : name.split("/")){ reachable(into, s); }
-    try{ return into.resolve(name); }
-    catch (InvalidPathException e){ throw new UncheckedIOException(new FileSystemException(into+File.separator+name, null, e.getReason())); }
-  }
+  private static boolean unreachable(String name){ return Fs.isWindows() && (name.endsWith(".") || name.endsWith(" ") || BuildWithZip.reserved(name)); }
   private static Path folderOf(Path p){
     Fs.ofV(() -> {
       if (!Files.exists(p, NOFOLLOW_LINKS)){ Files.createDirectory(p); return; }

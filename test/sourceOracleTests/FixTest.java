@@ -12,6 +12,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.lang.ProcessBuilder.Redirect;
@@ -34,6 +35,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import realSourceOracle.Fix;
+import realSourceOracle.LongPath;
 import realSourceOracle.RealSourceOracleWithZip;
 import testHelperFs.FsDsl;
 import tools.Fs;
@@ -554,22 +556,48 @@ a_b/x.txt=x
     if (Fs.isWindows()){ Fs.ofV(() -> Files.setAttribute(p, "dos:readonly", true)); return; }
     Fs.ofV(() -> Files.setPosixFilePermissions(p, PosixFilePermissions.fromString(Files.isDirectory(p) ? "r-xr-xr-x" : "r--r--r--")));
   }
-  @Test void movesTheHiddenNamesOfAZipThatWindowsCanNotReachOrEndsOnWindows(@TempDir Path tmp) throws IOException{
+  @Test void movesTheHiddenNamesOfAZipEndingWithADotOrASpaceOrReservedForADevice(@TempDir Path tmp) throws IOException{
     var root= root(tmp);
-    var zip= stored(List.of(".h/a.", ".h/a:b", ".h/con.txt", "a.txt"), UTF_8);
+    Fs.write(root.resolve("x.zip"), stored(List.of(".h/a.", ".h/b ", ".h/con.txt", ".h/d./nul", "a.txt"), UTF_8));
+    var q= tmp.resolve("root_fix")+File.separator+"x"+File.separator+".h"+File.separator;
+    assertEquals("Moved x/.h/a. to "+q+"a.\nMoved x/.h/b  to "+q+"b \nMoved x/.h/con.txt to "+q+"con.txt\nMoved x/.h/d. to "+q+"d.\nDeleted the empty folder x/.h\n", fix(root));
+    assertEquals(List.of("a.", "b ", "con.txt", "d."), names(tmp.resolve("root_fix").resolve("x").resolve(".h")));
+    assertEquals("x.zip[a.txt=x;]\n", dump(root));
+  }
+  @Test void movesAHiddenNameOfAZipHoldingAColonOrEndsOnWindows(@TempDir Path tmp) throws IOException{
+    var root= root(tmp);
+    var zip= stored(List.of(".h/a:b", "a.txt"), UTF_8);
     Fs.write(root.resolve("x.zip"), zip);
     var lines= new ArrayList<String>();
     if (Fs.isWindows()){
-      var end= assertThrows(UncheckedIOException.class, () -> Fix.of(root, lines::add));
-      utils.Err.strCmp("[###]Windows can not reach a name ending with a dot or a space, or a reserved device name", end.getCause().getMessage());
+      assertThrows(UncheckedIOException.class, () -> Fix.of(root, lines::add));
       assertEquals(List.of(), lines);
       assertArrayEquals(zip, Fs.readAllBytes(root.resolve("x.zip")));
       return;
     }
     var q= tmp.resolve("root_fix").resolve("x").resolve(".h");
     Fix.of(root, lines::add);
-    assertEquals(List.of("Moved x/.h/a. to "+q.resolve("a."), "Moved x/.h/a:b to "+q.resolve("a:b"), "Moved x/.h/con.txt to "+q.resolve("con.txt"), "Deleted the empty folder x/.h"), lines);
-    assertEquals(List.of("a.", "a:b", "con.txt"), names(q));
+    assertEquals(List.of("Moved x/.h/a:b to "+q.resolve("a:b"), "Deleted the empty folder x/.h"), lines);
+  }
+  @Test void fixRenamesAndMovesTheNamesEndingWithADotOrASpaceOrReservedForADevice(@TempDir Path tmp){
+    var root= root(tmp, "a.txt\niii\na");
+    made(root, ".d./x", "x");
+    made(root, ".h ", "h");
+    made(root, "b.", "b");
+    made(root, "con", "c");
+    made(root, "con.txt~", "j");
+    var q= tmp.resolve("root_fix")+File.separator;
+    assertEquals("Moved .d. to "+q+".d.\nMoved .h  to "+q+".h \nRenamed b. to b_.txt\nRenamed con to pcon.txt\nDeleted con.txt~\n", fix(root));
+    assertEquals("a.txt=a\nb_.txt=b\npcon.txt=c\n", dump(root));
+    assertEquals(List.of(".d.", ".h "), names(tmp.resolve("root_fix")));
+    assertEquals("", fix(root));
+  }
+  private static void made(Path root, String name, String text){
+    if (!Fs.isWindows()){ Fs.writeUtf8(root.resolve(name), text); return; }
+    var top= name.split("/")[0];
+    var mid= root.resolveSibling("made");
+    Fs.writeUtf8(mid.resolve(name.substring(top.length()).replaceFirst("^/", "")), text);
+    Fs.ofV(() -> LongPath.move(LongPath.of(mid), LongPath.of(root, top)));
   }
   @Test void aWindowsPlaceholderIsAFileAndALinkOfWslIsAnOther(){
     if (!Fs.isWindows()){ return; }
