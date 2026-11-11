@@ -640,4 +640,28 @@ A /// or //> block documents the declaration right below it, but no declaration
 starts right below this block. Move this block right above the declaration it
 documents, or turn it into a plain // comment.""", ex.getMessage());
   }
+  @Test void twoOptionsForTheInheritedMethodsOfAnAnonymousLiteralShowTheirReceiverCapabilities(@TempDir Path tmp){
+    var html= docs(tmp, a+"""
+B:{ read .n: A -> A; mut .n: A -> A; .k: A; }
+Maker:{
+  .make: B -> {'self
+    ///Uses `self.n`.
+    .k -> self.n;
+    };
+  }
+""").html();
+    utils.Err.strCmp("""
+[###]<h2>Several match Anon@_rank_app:4.n</h2>
+<ul class="options">
+<li><a href="#method-p_2e_B-0-read-_2e_n-0">read B.n()</a></li>
+<li><a href="#method-p_2e_B-0-mut-_2e_n-0">mut B.n()</a></li>
+</ul>[###]""", html);
+  }
+  @Test void theWelcomeTextDoesNotPlaceTheListOfTypesOnTheLeftWhenANarrowWindowShowsItAbove(@TempDir Path tmp){
+    var html= docs(tmp, a).html();
+    utils.Err.strCmp("[###]@media (max-width:48em){\n  .layout{display:block}[###]", html);
+    var from= html.indexOf("<p id=\"welcome\"");
+    var welcome= html.substring(from, html.indexOf("</p>", from));
+    Assertions.assertFalse(welcome.contains("on the left"), welcome);
+  }
 }
