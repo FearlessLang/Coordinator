@@ -5,6 +5,7 @@ import static java.nio.charset.StandardCharsets.UTF_16BE;
 import static java.nio.charset.StandardCharsets.UTF_16LE;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -622,7 +623,7 @@ a_b/x.txt=x
     var at= root.resolve("sub");
     Fs.ensureDir(at);
     try (var _= fileSystemAt(tmp, at)){
-      Fs.writeUtf8(at.resolve("c.txt"), "c");
+      Files.writeString(at.resolve("c.txt"), "c");
       var e= assertThrows(UserError.class, () -> new RealSourceOracleWithZip(root));
       utils.Err.strCmp("[###]A file system is mounted on this folder[###]", e.getMessage());
       var lines= new ArrayList<String>();
@@ -660,10 +661,22 @@ a_b/x.txt=x
     return () -> run(needsRoot, "sudo", "-n", "umount", at.toString());
   }
   private static AutoCloseable fileSystemAt(Path tmp, Path at){
-    if (Fs.isWindows()){ fail("""
-      Agent on Windows: investigate how this test can mount a file system on a folder of the project (a VHD with Mount-DiskImage and Add-PartitionAccessPath, or mountvol: both need administrator rights).
-      The check must then give the error Report.mountPoint, and Fix must end at that folder with "a file system is mounted on this entry or inside it" (FolderShapesDesign: okEntry, and the desk refuses move(D, p s, _) when a mount point m has same(D, m, p s)).
-      Fix reads the mount points from the volumes of the system (LongPath.mountPoints), but the check walks the folders with Fs.walk, which may take such a folder for a junction (Fs.isLink) and then gives the error of a link."""); }
+    if (Fs.isWindows()){
+      var disk= tmp.resolve("fearless_mount.vhdx");
+      diskpart(tmp, """
+create vdisk file="%s" maximum=16
+attach vdisk
+create partition primary
+format fs=ntfs quick
+assign mount="%s"
+""".formatted(disk, at));
+      return () -> diskpart(tmp, """
+select volume="%s"
+remove mount="%s"
+select vdisk file="%s"
+detach vdisk
+""".formatted(at, at, disk));
+    }
     if (Fs.isLinux()){
       var other= tmp.resolve("other");
       Fs.ensureDir(other);
@@ -675,8 +688,13 @@ a_b/x.txt=x
     run(why, "hdiutil", "attach", "-nobrowse", "-mountpoint", at.toString(), image);
     return () -> run(why, "hdiutil", "detach", at.toString());
   }
+  private static void diskpart(Path tmp, String script){
+    var file= tmp.resolve("fearless_mount.txt");
+    Fs.writeUtf8(file, script);
+    run("This test mounts a file system with diskpart: it needs a process with administrator rights on this desk.", "diskpart", "/s", file.toString());
+  }
   private static void run(String why, String... cmd){
-    var p= Fs.of(() -> new ProcessBuilder(cmd).redirectErrorStream(true).start());
+    var p= assertDoesNotThrow(() -> new ProcessBuilder(cmd).redirectErrorStream(true).start(), why+"\n"+String.join(" ", cmd));
     var out= new String(Fs.of(() -> p.getInputStream().readAllBytes()));
     assertEquals(0, p.onExit().join().exitValue(), why+"\n"+String.join(" ", cmd)+"\n"+out);
   }

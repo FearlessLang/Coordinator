@@ -2,6 +2,7 @@ package realSourceOracle;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.text.Normalizer;
 import java.text.Normalizer.Form;
@@ -83,13 +84,13 @@ public final class BuildWithZip{
     var nonEmpty= new LinkedHashSet<Path>();
     dirs.add(Path.of(""));
     var mounted= Fix.mountPoints();
-    Fs.walkV(root, s -> s.filter(p -> !p.equals(root)).forEach(abs -> {
+    Fs.ofV(() -> { try (var s= Files.find(root, Integer.MAX_VALUE, (p, _) -> !p.equals(root))){ s.forEach(abs -> {
+      var mount= !Files.isSymbolicLink(abs) && Files.isDirectory(abs) && mounted.test(abs);
+      if (mount){ throw Report.mountPoint(abs); }
       var rel= root.relativize(abs);
       nonEmpty.add(rel.resolveSibling(""));
-      if (!Fs.isDirectory(abs)){ return; }
-      if (mounted.test(abs)){ throw Report.mountPoint(abs); }
-      dirs.add(rel);
-    }));
+      if (Fs.isDirectory(abs)){ dirs.add(rel); }
+    }); } });
     dirs.removeAll(nonEmpty);
     for (var d : dirs){
       if (!isInvisible(new PathEntry(root, d.resolveSibling("")))){ throw Report.emptyDirectory(d); }
