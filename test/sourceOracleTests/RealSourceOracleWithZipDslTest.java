@@ -1009,9 +1009,78 @@ What went wrong
 
 How to fix
 - Rename it so the base name is not a Windows device name.
-  Reserved device name: "con", "prn", "aux", "nul", "com1".."com9", "lpt1".."lpt9".
+  Reserved device name: "con", "prn", "aux", "nul", "com1".."com9", "lpt1".."lpt9", "conin$", "conout$", and "com" or "lpt" followed by U+00B9, U+00B2 or U+00B3.
 
 We check this so that you[###]
+""");}
+  @Test void errInvisibleReservedDeviceNamesOfTheConsoleAndWithSpaces(@TempDir Path tmp){
+    for (var name : List.of("conin$.log", "con .txt", "lpt\u00B9")){
+      runErrIOE(tmp.resolve("c"+name.length()), "_pkg/z.zip/.d/"+name+"\niii\nX\n", """
+Invalid path in this project folder.
+
+Root: [###]
+Path: [###]
+
+What went wrong
+- A protected name segment uses a Windows reserved device name.
+  Bad base: [###] in segment: [###]
+
+How to fix
+- Rename it so the base name is not a Windows device name.
+[###]
+""");
+    }
+  }
+  @Test void errInvisibleInvalidUnicode(@TempDir Path tmp){ runErrIOE(tmp, """
+_pkg/.d/a\uFFFDb.txt
+iii
+X
+""", """
+Invalid path in this project folder.
+
+Root: [###]
+Path: [###]
+
+What went wrong
+- A protected name segment contains invalid Unicode.
+[###]
+""");}
+  @Test void errInvisibleNameLongerThan255Bytes(@TempDir Path tmp){ runErrIOE(tmp, "_pkg/z.zip/.d/"+"\u00E9".repeat(130)+"\niii\nX\n", Fs.isWindows() ? """
+Invalid path in this project folder.
+
+Root: [###]
+Path: [###]
+
+What went wrong
+- A protected name segment is longer than 255 bytes in UTF-8.
+[###]
+""" : """
+Invalid path in this project folder.
+
+Root: [###]
+Path: [###]
+
+What went wrong
+- The path is longer than 250 characters.
+[###]
+""");}
+  @Test void errHiddenSiblingCaseFoldingCollisionInZip(@TempDir Path tmp){ runErrIOE(tmp, """
+_pkg/z.zip/.d/s.txt
+iii
+1
+jjj
+_pkg/z.zip/.d/\u017F.txt
+iii
+2
+""", """
+Invalid path in this project folder.
+
+Root: [###]
+Path: [###]
+
+What went wrong
+- Two protected names in the same folder collide.
+[###]
 """);}
   @Test void errHiddenSiblingCaseCollisionInZip(@TempDir Path tmp){ runErrIOE(tmp, """
 _pkg/z.zip/.d/a.txt
