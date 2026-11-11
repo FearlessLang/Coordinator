@@ -37,6 +37,7 @@ import utils.OneOr;
 import utils.Pos;
 
 final class RealSourceOracleWithZipDslTest{
+  private static final String unit= Fs.isWindows() ? "characters." : "bytes in UTF-8.";
   static{ utils.Err.setUp(AssertionFailedError.class, Assertions::assertEquals, Assertions::assertTrue); }
   private void testOk(Path tmp, String in, String out){
     assertEquals(out, FsDsl.runOk(tmp, in));
@@ -1061,9 +1062,9 @@ Root: [###]
 Path: [###]
 
 What went wrong
-- The path is longer than 250 [###]
+- The path is longer than 250 <unit>
 [###]
-""");}
+""".replace("<unit>", unit));}
   @Test void errHiddenSiblingCaseFoldingCollisionInZip(@TempDir Path tmp){ runErrIOE(tmp, """
 _pkg/z.zip/.d/s.txt
 iii
@@ -1556,14 +1557,14 @@ Root: [###]
 Path: "_pkg/%s.fear"
 
 What went wrong
-- The path is longer than 200 [###]
+- The path is longer than 200 <unit>
   Long paths often fail on Windows and in some tools.
 
 How to fix
 - Shorten folder/file names, or move this content closer to the project root.
 
 We check this so that you[###]
-""").formatted(longName));
+""").formatted(longName).replace("<unit>", unit));
   }
   // Real filesystem paths can't carry a raw UTF-16 surrogate through UTF-8 encoding,
   // so this exercises the message factory directly rather than through a real scan.
@@ -1903,7 +1904,7 @@ A:{}
     Fs.ensureDir(root.resolve(".x").resolve("a".repeat(240)));
     assertEquals(1, new RealSourceOracleWithZip(root).allFiles().size());
     Fs.ensureDir(root.resolve(".x").resolve("b".repeat(250)));
-    utils.Err.strCmp("[###]The path is longer than 250 [###]", assertThrows(UserError.class, () -> new RealSourceOracleWithZip(root)).getMessage());
+    utils.Err.strCmp("[###]The path is longer than 250 "+unit+"[###]", assertThrows(UserError.class, () -> new RealSourceOracleWithZip(root)).getMessage());
   }
   @Test void aHiddenPathMayHave250Characters(@TempDir Path tmp){
     var root= tmp.resolve("root").toAbsolutePath().normalize();
@@ -1912,6 +1913,6 @@ A:{}
     Fs.writeUtf8(root.resolve(".x").resolve("a".repeat(240)+".txt"), "");
     assertEquals(1, new RealSourceOracleWithZip(root).allFiles().size());
     Fs.writeUtf8(root.resolve(".x").resolve("b".repeat(250)+".txt"), "");
-    utils.Err.strCmp("[###]The path is longer than 250 [###]", assertThrows(UserError.class, () -> new RealSourceOracleWithZip(root)).getMessage());
+    utils.Err.strCmp("[###]The path is longer than 250 "+unit+"[###]", assertThrows(UserError.class, () -> new RealSourceOracleWithZip(root)).getMessage());
   }
 }

@@ -1116,6 +1116,17 @@ c""");
     assertEquals("a/\na/a.txt=a\nc/\nc/c.txt=c\n", dump(root));
     assertEquals("", fix(root));
   }
+  @Test void movesADanglingLinkToTheFixFolder(@TempDir Path tmp) throws Exception{
+    var root= root(tmp, "a.txt\niii\na");
+    var gone= tmp.resolve("gone");
+    Fs.ensureDir(gone);
+    folderLink(root.resolve("x"), gone);
+    Files.delete(gone);
+    var moved= tmp.resolve("root_fix").resolve("x");
+    assertEquals("Moved x to "+moved+"\n", fix(root));
+    assertTrue(Fs.isLink(moved));
+    assertEquals("a.txt=a\n", dump(root));
+  }
   private static void folderLink(Path link, Path target) throws Exception{
     if (!Fs.isWindows()){ Files.createSymbolicLink(link, target); return; }
     assertEquals(0, new ProcessBuilder("cmd", "/c", "mklink", "/J", link.toString(), target.toString()).redirectErrorStream(true).redirectOutput(Redirect.DISCARD).start().waitFor());

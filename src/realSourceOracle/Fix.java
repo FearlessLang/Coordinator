@@ -25,9 +25,9 @@ import java.nio.file.attribute.FileTime;
 import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
@@ -64,9 +64,8 @@ public final class Fix{
   }
   private record Disk(Path p) implements Dir{
     public List<String> names(){
-      var all= Fs.of(() -> { try (var s= Files.list(p)){ return s.toList(); } });
-      if (Fs.isWindows()){ return all.stream().map(e -> e.getFileName().toString()).sorted().toList(); }
-      return all.stream().map(e -> Map.entry(PathBytes.of(e), e.getFileName().toString())).sorted((a, b) -> Arrays.compareUnsigned(a.getKey(), b.getKey())).map(Map.Entry::getValue).toList();
+      var order= Fs.isWindows() ? Comparator.comparing(Path::toString) : Comparator.<Path>naturalOrder();
+      return Fs.of(() -> { try (var s= Files.list(p)){ return s.sorted(order).map(e -> e.getFileName().toString()).toList(); } });
     }
     public Kind kind(String name){
       var at= at(name);
@@ -123,8 +122,8 @@ public final class Fix{
       return f;
     }
     private static void mounts(Path f, Predicate<Path> mounted) throws IOException{
-      if (mounted.test(f)){ throw new FileSystemException(f.toString(), null, "a file system is mounted here"); }
       if (!realFolder(f)){ return; }
+      if (mounted.test(f)){ throw new FileSystemException(f.toString(), null, "a file system is mounted here"); }
       try (var s= Files.list(f)){ for (var e : s.toList()){ mounts(e, mounted); } }
     }
     private static void remove(Path f) throws IOException{
@@ -198,20 +197,22 @@ public final class Fix{
   }
   private void dir(Dir d, String path, boolean inside){
     var kept= new HashSet<String>();
-    for (var name : d.names()){ entry(d, name, path, inside, kept); }
+    var listing= new ArrayList<>(d.names());
+    for (var name : List.copyOf(listing)){ entry(d, name, path, inside, kept, listing); }
   }
-  private void entry(Dir d, String old, String path, boolean inside, Set<String> kept){
+  private void entry(Dir d, String old, String path, boolean inside, Set<String> kept, ArrayList<String> listing){
     var kind= d.kind(old);
-    if (junk(old, kind)){ d.delete(old); out.accept("Deleted "+path+old); return; }
-    if (kind == Kind.other){ away(d, old, path); return; }
+    if (junk(old, kind)){ d.delete(old); listing.remove(old); out.accept("Deleted "+path+old); return; }
+    if (kind == Kind.other){ away(d, old, path); listing.remove(old); return; }
     var hidden= inside || old.startsWith(".");
-    var name= hidden ? old : renamed(d, old, path, kind == Kind.folder);
+    var name= hidden ? old : renamed(d, old, path, kind == Kind.folder, listing);
     var tooLong= BuildWithZip.len(path+name) > (hidden ? 250 : 200);
     var badHidden= hidden && BuildWithZip.hiddenProblem(name).isPresent();
     var key= BuildWithZip.foldKey(name);
-    if (tooLong || badHidden || kept.contains(key)){ away(d, name, path); return; }
+    if (tooLong || badHidden || kept.contains(key)){ away(d, name, path); listing.remove(name); return; }
     var deleted= kind == Kind.folder ? folder(d, name, path+name, hidden, inside) : file(d, name, path, hidden);
-    if (!deleted){ kept.add(key); }
+    if (deleted){ listing.remove(name); return; }
+    kept.add(key);
   }
   private boolean file(Dir d, String name, String path, boolean hidden){
     if (!hidden && name.endsWith(".fear")){ fear(d, name, path+name); }
@@ -244,15 +245,16 @@ public final class Fix{
     out.accept("Deleted the empty folder "+full);
     return true;
   }
-  private String renamed(Dir d, String old, String path, boolean isDir){
+  private String renamed(Dir d, String old, String path, boolean isDir, ArrayList<String> listing){
     var ext= isDir ? "" : "."+ext(d, old);
     var seg= segment(isDir || !old.toLowerCase(Locale.ROOT).endsWith(ext) ? old : old.substring(0, old.length()-ext.length()));
-    var zipOf= !isDir && old.endsWith(".zip") && d.names().contains(old.substring(0, old.length()-4));
+    var zipOf= !isDir && old.endsWith(".zip") && listing.contains(old.substring(0, old.length()-4));
     if ((seg+ext).equals(old) && !zipOf){ return old; }
-    var taken= d.names().stream().filter(n -> !n.equals(old)).map(Fix::clashKey).collect(Collectors.toSet());
+    var taken= listing.stream().filter(n -> !n.equals(old)).map(Fix::clashKey).collect(Collectors.toSet());
     var res= Stream.iterate(1, i -> i+1).map(i -> seg+(i==1 ? "" : i)).filter(s -> !Fs.winReserved.contains(s)).map(s -> s+ext)
       .filter(n -> !taken.contains(clashKey(n)) && !junk(n, isDir ? Kind.folder : Kind.file)).findFirst().get();
     d.rename(old, res);
+    listing.set(listing.indexOf(old), res);
     out.accept("Renamed "+path+old+" to "+res);
     return res;
   }
