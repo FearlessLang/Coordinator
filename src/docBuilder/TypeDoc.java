@@ -66,7 +66,7 @@ final class MethodDoc extends DeclarationDoc{
   }
   M main(){ return variants.getFirst(); }
   Scope scope(){ return new Scope(owner.main(), Optional.of(main()), owner.outer); }
-  boolean visible(){ return declared || !owner.main().infName() || hasDocs(); }
+  boolean visible(){ return declared || !owner.main().infName(); }
   void add(M m){ variants.add(m); }
   void addInheritedFrom(List<MethodRef> refs){
     refs.forEach(r -> inheritedByKey.putIfAbsent(MethodRefKey.of(r), r));
