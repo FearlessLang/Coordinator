@@ -7,6 +7,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Optional;
 import java.util.SequencedCollection;
+import java.util.function.Supplier;
 
 import core.E.Literal;
 import core.M;
@@ -40,14 +41,14 @@ final class TypeDoc extends DeclarationDoc{
       "Repeated literal source with same name: "+l.pos()+" "+l.name();
     variants.add(l);
   }
-  void declared(Pos pos, M m, List<DocOcc> docs, List<MethodRef> inheritedFrom){
+  void declared(Pos pos, M m, Supplier<List<DocOcc>> docs, List<MethodRef> inheritedFrom){
     oneOf(new DeclaredMethodKey(pos.fileName(), pos.line(), pos.column(), m.sig().m()), true, docs, inheritedFrom).add(m);
   }
   void imported(M m, List<MethodRef> from){
-    oneOf(new ImportedKey(m.sig().origin(), m.sig().rc(), m.sig().m()), false, List.of(), from).add(m);
+    oneOf(new ImportedKey(m.sig().origin(), m.sig().rc(), m.sig().m()), false, List::of, from).add(m);
   }
-  private MethodDoc oneOf(Object k, boolean declared, List<DocOcc> docs, List<MethodRef> inheritedFrom){
-    var d= byKey.computeIfAbsent(k, _ -> new MethodDoc(this, declared, docs));
+  private MethodDoc oneOf(Object k, boolean declared, Supplier<List<DocOcc>> docs, List<MethodRef> inheritedFrom){
+    var d= byKey.computeIfAbsent(k, _ -> new MethodDoc(this, declared, docs.get()));
     d.addInheritedFrom(inheritedFrom);
     return d;
   }
