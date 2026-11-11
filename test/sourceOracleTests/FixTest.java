@@ -317,6 +317,15 @@ old_lib.zip[y.txt=y;]
 old_lib2/
 old_lib2/x.txt=x
 """);}
+  @Test void neverRenamesToTheNameOfAJunkFile(@TempDir Path tmp){ fixes(tmp, """
+ehthumbs vista.db
+iii
+x
+jjj""", """
+Renamed ehthumbs vista.db to ehthumbs_vista2.db
+""", """
+ehthumbs_vista2.db=x
+""");}
   @Test void guessesTheExtensionOfAFileWithNoExtension(@TempDir Path tmp) throws IOException{
     var root= root(tmp);
     Fs.ensureDir(root.resolve("img"));
