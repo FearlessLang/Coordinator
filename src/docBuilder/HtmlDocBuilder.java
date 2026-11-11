@@ -79,10 +79,10 @@ public final class HtmlDocBuilder{
       else{ t.imported(written(l, m, from), from); }
     }
   }
-  static M written(Literal l, M m, List<MethodRef> from){
+  M written(Literal l, M m, List<MethodRef> from){
     var s= m.sig();
     var ws= OneOr.of("one origin", from.stream().filter(r -> r.owner().equals(s.origin())).map(r -> B.xs(r.method().sig().bs())).distinct());
-    var used= Stream.concat(s.ts().stream(), Stream.of(s.ret())).flatMap(HtmlDocRenderer::typeNames).map(TName::simpleName);
+    var used= Stream.concat(Stream.concat(s.ts().stream(), Stream.of(s.ret())).flatMap(HtmlDocRenderer::typeNames), currentByName.keySet().stream()).map(TName::simpleName);
     if (Stream.concat(B.xs(l.bs()).stream(), used).anyMatch(ws::contains)){ return m; }
     var xs= B.xs(s.bs());
     var bs= Streams.zip(s.bs(), ws).map((b, w) -> new B(w, b.rcs())).toList();
