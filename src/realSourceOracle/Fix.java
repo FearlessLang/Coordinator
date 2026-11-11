@@ -122,7 +122,8 @@ public final class Fix{
     var seg= segment(isDir || !old.toLowerCase(Locale.ROOT).endsWith(ext) ? old : old.substring(0, old.length()-ext.length()));
     if ((seg+ext).equals(old)){ return old; }
     var taken= d.names().stream().filter(n -> !n.equals(old)).map(Fix::clashKey).collect(Collectors.toSet());
-    var res= Stream.iterate(1, i -> i+1).map(i -> seg+(i==1 ? "" : i)+ext).filter(n -> !taken.contains(clashKey(n)) && !desk(n, isDir)).findFirst().get();
+    var res= Stream.iterate(1, i -> i+1).map(i -> seg+(i==1 ? "" : i)).filter(s -> !Fs.winReserved.contains(s)).map(s -> s+ext)
+      .filter(n -> !taken.contains(clashKey(n)) && !desk(n, isDir)).findFirst().get();
     d.rename(old, res);
     out.accept("Renamed "+path+old+" to "+res);
     return res;
