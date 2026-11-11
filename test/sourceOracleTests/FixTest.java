@@ -335,11 +335,11 @@ com10/
 com10/b.txt=b
 """);}
   @Test void theFixedSegmentLowersOnlyTheLettersAToZ(@TempDir Path tmp){ fixes(tmp, """
-Key.txt
+\u212Aey.txt
 iii
 k
 jjj""", """
-Renamed Key.txt to _ey.txt
+Renamed \u212Aey.txt to _ey.txt
 """, """
 _ey.txt=k
 """);}
@@ -387,12 +387,13 @@ x""", "Renamed lib/DES\u212ATOP.INI to des_top.ini\n", "lib/\nlib/des_top.ini=x\
     var root= root(tmp);
     Fs.writeUtf8(root.resolve(".a/x"), "lower");
     Fs.writeUtf8(root.resolve(".a/\u00E9"), "nfc");
-    var bothCases= wrote(() -> root.resolve(".a/X"), "upper");
-    var bothForms= wrote(() -> root.resolve(".a/e\u0301"), "nfd");
+    wrote(() -> root.resolve(".a/X"), "upper");
+    wrote(() -> root.resolve(".a/e\u0301"), "nfd");
+    var listed= names(root.resolve(".a"));
     var into= tmp.resolve("root_fix").resolve(".a");
     var lines= new StringBuilder();
-    if (bothCases && names(root.resolve(".a")).size() > 2){ lines.append("Moved .a/x to "+into.resolve("x")+"\n"); }
-    if (bothForms && names(root.resolve(".a")).stream().anyMatch(n -> n.equals("e\u0301"))){ lines.append("Moved .a/\u00E9 to "+into.resolve("\u00E9")+"\n"); }
+    if (listed.contains("x") && listed.contains("X")){ lines.append("Moved .a/x to "+into.resolve("x")+"\n"); }
+    if (listed.contains("\u00E9") && listed.contains("e\u0301")){ lines.append("Moved .a/\u00E9 to "+into.resolve("\u00E9")+"\n"); }
     assertEquals(lines.toString(), fix(root));
     assertEquals("", fix(root));
   }
@@ -421,12 +422,62 @@ x/
 x/a.txt=a
 x2.zip[b.txt=b;]
 """);}
-  @Test void movesAHiddenNameLongerThan255BytesToTheFixFolder(@TempDir Path tmp){
+  @Test void movesAHiddenNameLongerThan255BytesToTheFixFolderOrEndsWhereTheDeskCanNotHoldIt(@TempDir Path tmp) throws IOException{
     var name= ".h"+"\u00E9".repeat(127);
     var root= root(tmp);
-    if (!wrote(() -> root.resolve(name), "x")){ return; }
-    assertEquals("Moved "+name+" to "+tmp.resolve("root_fix").resolve(name)+"\n", fix(root));
+    var holds= wrote(() -> tmp.resolve(name), "x");
+    var zip= stored(List.of(name, "a.txt"), UTF_8);
+    Fs.write(root.resolve("x.zip"), zip);
+    var to= tmp.resolve("root_fix").resolve("x").resolve(name);
+    if (holds){
+      assertEquals("Moved x/"+name+" to "+to+"\n", fix(root));
+      assertEquals("x.zip[a.txt=x;]\n", dump(root));
+      return;
+    }
+    var lines= new ArrayList<String>();
+    assertThrows(UncheckedIOException.class, () -> Fix.of(root, lines::add));
+    assertEquals(List.of(), lines);
+    assertArrayEquals(zip, Fs.readAllBytes(root.resolve("x.zip")));
+  }
+  @Test void aRenameCanBringAPathOverTheLimitAndTheEntryMovesToTheFixFolder(@TempDir Path tmp){
+    var name= "a".repeat(197);
+    var root= root(tmp, name+"\niii\nx");
+    assertEquals("Renamed "+name+" to "+name+".txt\nMoved "+name+".txt to "+tmp.resolve("root_fix").resolve(name+".txt")+"\n", fix(root));
     assertEquals(List.of(), names(root));
+    assertEquals("", fix(root));
+  }
+  @Test void aDeletedEntryDoesNotMoveALaterEntryRenamedToItsName(@TempDir Path tmp){ fixes(tmp, """
+a_b/
+iii
+jjj
+a\u00E9b/x.txt
+iii
+x""", """
+Deleted the empty folder a_b
+Renamed a\u00E9b to a_b
+""", """
+a_b/
+a_b/x.txt=x
+""");}
+  @Test void theNamesOfAFolderAreHandledInTheOrderOfTheDesk(@TempDir Path tmp){
+    var root= root(tmp, "a\uFF01.txt\niii\n1\njjj\na\uD83D\uDE00.txt\niii\n2");
+    var first= Fs.isWindows() ? "a\uD83D\uDE00.txt" : "a\uFF01.txt";
+    var second= Fs.isWindows() ? "a\uFF01.txt" : "a\uD83D\uDE00.txt";
+    assertEquals("Renamed "+first+" to a_.txt\nRenamed "+second+" to a_2.txt\n", fix(root));
+  }
+  @Test void theDottedAndTheDotlessIAreNotEqualAfterSimpleCaseFolding(@TempDir Path tmp){
+    var root= root(tmp, ".h/i\niii\n1\njjj\n.h/\u0131\niii\n2");
+    assertEquals(2, names(root.resolve(".h")).size());
+    assertEquals("", fix(root));
+  }
+  @Test void aCleanedFileInsideAZipGetsTheCurrentTime(@TempDir Path tmp) throws IOException{
+    var root= root(tmp);
+    var bytes= new ByteArrayOutputStream();
+    try (var zip= new ZipOutputStream(bytes, UTF_8)){ put(zip, "a.fear", fine, "A:{}\r\n"); }
+    Fs.write(root.resolve("x.zip"), bytes.toByteArray());
+    var before= System.currentTimeMillis();
+    assertEquals("Fixed the line endings of x/a.fear\n", fix(root));
+    assertTrue(stored(Fs.readAllBytes(root.resolve("x.zip"))).getFirst().getTime() >= before-2_000);
   }
   @Test void endsAtAWriteOfAFileWithMoreThanOneName(@TempDir Path tmp) throws IOException{
     if (Fs.isWindows()){ return; }
@@ -435,7 +486,7 @@ x2.zip[b.txt=b;]
     Files.createLink(tmp.resolve("other.fear"), root.resolve("a.fear"));
     var lines= new ArrayList<String>();
     var e= assertThrows(UncheckedIOException.class, () -> Fix.of(root, lines::add));
-    assertTrue(e.getCause().getMessage().contains("more than one name"), e.getCause().getMessage());
+    utils.Err.strCmp("[###]this file has more than one name, so writing it changes those other names too", e.getCause().getMessage());
     assertEquals(List.of(), lines);
     assertEquals("A:{}\r\n", Fs.readUtf8(tmp.resolve("other.fear")));
   }

@@ -122,7 +122,7 @@ public final class BuildWithZip{
   }
   static int len(String path){ return Fs.isWindows() ? path.length() : path.getBytes(UTF_8).length; }
   public static String foldKey(String name){
-    return Normalizer.normalize(name, Form.NFC).codePoints().map(c -> Character.toLowerCase(Character.toUpperCase(c)))
+    return Normalizer.normalize(name, Form.NFC).codePoints().map(c -> c==0x130 || c==0x131 ? c : Character.toLowerCase(Character.toUpperCase(c)))
       .collect(StringBuilder::new, StringBuilder::appendCodePoint, StringBuilder::append).toString();
   }
   public static void checkIndividualVisibleSegment(RefParent kid){
