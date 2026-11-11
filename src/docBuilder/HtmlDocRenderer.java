@@ -450,15 +450,15 @@ code{
     var kind= block.getFirst().kind();
     if (kind==DocKind.Fence){ return; }
     if (kind==DocKind.Fenced){ sb.append("<pre class=\"fenced\">").append(Join.of(block.stream().map(o -> h(o.text())), "", "\n", "", "")).append("</pre>\n"); return; }
-    paragraphs(block).forEach(r -> sb.append("<p>").append(renderParagraph(r, "\n")).append("</p>\n"));
+    paragraphs(block).forEach(r -> sb.append("<p>").append(renderParagraph(r)).append("</p>\n"));
   }
   static boolean inParagraph(DocOcc o){ return o.kind()==DocKind.Prose && !o.text().isBlank(); }
   static List<List<DocOcc>> paragraphs(List<DocOcc> ds){
     return runs(ds.stream().filter(o -> o.kind()!=DocKind.TestOnly).toList(), HtmlDocRenderer::inParagraph).stream().filter(r -> inParagraph(r.getFirst())).toList();
   }
-  static String joined(List<DocOcc> p, String separator){ return Join.of(p.stream().map(DocOcc::text), "", separator, "", ""); }
-  String renderParagraph(List<DocOcc> p, String separator){
-    var text= joined(p, separator);
+  static String joined(List<DocOcc> p){ return Join.of(p.stream().map(DocOcc::text), "", "\n", "", ""); }
+  String renderParagraph(List<DocOcc> p){
+    var text= joined(p);
     var linked= spans.getOrDefault(p.getFirst(), Map.of());
     var sb= new StringBuilder();
     var i= 0;
@@ -491,7 +491,7 @@ code{
       .append(h(anonymous.map(this::shortTitle).orElseGet(() -> toStr.typeNameWithArity(c.owner()))));
     c.sig().ifPresent(s -> sb.append(h(s.m().s()+DocResolver.shape(OptionalInt.of(s.m().arity()), "(", ")"))));
     sb.append("</a>");
-    c.localMethod().flatMap(this::firstParagraph).ifPresent(p -> sb.append(" <span class=\"opt-doc\">\u2014 ").append(renderParagraph(p, " ")).append("</span>"));
+    c.localMethod().flatMap(this::firstParagraph).ifPresent(p -> sb.append(" <span class=\"opt-doc\">\u2014 ").append(renderParagraph(p).replace("\n", " ")).append("</span>"));
     return sb.toString();
   }
   Optional<List<DocOcc>> firstParagraph(MethodDoc m){

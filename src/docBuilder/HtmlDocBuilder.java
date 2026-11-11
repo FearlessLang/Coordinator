@@ -139,7 +139,7 @@ public final class HtmlDocBuilder{
   }
   void link(DocResolver resolver, List<DocOcc> p, Scope scope,
       HashMap<DocOcc,Map<Integer,DocLink>> spans, ArrayList<String> markup, ArrayList<String> problems){
-    var text= HtmlDocRenderer.joined(p, "\n");
+    var text= HtmlDocRenderer.joined(p);
     DocRefScanner.unclosed(text).forEach(r -> markup.add(problem(p, r.start(), r.end()-1, unclosedSpan)));
     var res= new HashMap<Integer,DocLink>();
     for (var sp : DocRefScanner.refSpans(text)){
