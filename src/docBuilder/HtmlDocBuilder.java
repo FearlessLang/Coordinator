@@ -80,7 +80,7 @@ public final class HtmlDocBuilder{
   }
   M written(Literal l, M m, List<MethodRef> from){
     var s= m.sig();
-    var ws= OneOr.of("one origin", from.stream().filter(r -> r.owner().equals(s.origin())).map(r -> B.xs(r.method().sig().bs())).distinct());
+    var ws= OneOr.of("one origin", from.stream().filter(r -> r.provider().name().equals(s.origin())).map(r -> B.xs(r.method().sig().bs())).distinct());
     var used= Stream.concat(Stream.concat(s.ts().stream(), Stream.of(s.ret())).flatMap(HtmlDocRenderer::typeNames), currentByName.keySet().stream()).map(TName::simpleName);
     if (Stream.concat(B.xs(l.bs()).stream(), used).anyMatch(ws::contains)){ return m; }
     var xs= B.xs(s.bs());
@@ -227,7 +227,7 @@ public final class HtmlDocBuilder{
   Stream<MethodRef> matchingMethods(T.C provider, Literal sup, M m){
     return sup.ms().stream()
       .filter(sm -> sm.sig().rc()==m.sig().rc() && sm.sig().m().equals(m.sig().m()))
-      .map(sm -> new MethodRef(provider.name(), Optional.of(provider), sm));
+      .map(sm -> new MethodRef(provider, sm));
   }
   List<DocOcc> docsAt(Pos p, boolean literal){
     if (p.line() == 0){ return List.of(); }

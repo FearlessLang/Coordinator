@@ -74,15 +74,14 @@ final class MethodDoc extends DeclarationDoc{
   }
 }
 /*
- * owner is the declaration used for the hyperlink target.
- * provider is the actual type-use through which the method was found, when we
- * have one. This preserves distinctions such as DataType[_] vs DataType[_,_].
+ * provider is the actual type-use through which the method was found.
+ * This preserves distinctions such as DataType[_] vs DataType[_,_].
  */
-record MethodRef(TName owner, Optional<T.C> provider, M method){}
+record MethodRef(T.C provider, M method){}
 record DeclaredMethodKey(URI file, int line, int column, MName m){}
 record MethodRefKey(String provider, RC rc, MName m){
   static MethodRefKey of(MethodRef r){
-    return new MethodRefKey(r.provider().map(Object::toString).orElse(r.owner().toString()), r.method().sig().rc(), r.method().sig().m());
+    return new MethodRefKey(r.provider().toString(), r.method().sig().rc(), r.method().sig().m());
   }
 }
 record ImportedKey(TName origin, RC rc, MName m){}

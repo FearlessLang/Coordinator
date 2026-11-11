@@ -373,12 +373,11 @@ code{
     sb.append("</details>\n");
   }
   String fromLink(MethodRef r){
-    return "<a href=\""+h(prefix(r.owner().pkgName())+"#"+methodId(r.owner(), r.method().sig()))+"\">"+h(fromName(r))+"</a>";
+    var owner= r.provider().name();
+    return "<a href=\""+h(prefix(owner.pkgName())+"#"+methodId(owner, r.method().sig()))+"\">"+h(fromName(r))+"</a>";
   }
   List<MethodRef> fromRefs(MethodDoc m){
-    if (!m.inheritedFrom.isEmpty()){ return m.inheritedFrom.stream().gather(DistinctBy.<MethodRef,String>of(this::fromName)).toList(); }
-    if (m.declared){ return List.of(); }
-    return List.of(new MethodRef(m.main().sig().origin(), Optional.empty(), m.main()));
+    return m.inheritedFrom.stream().gather(DistinctBy.<MethodRef,String>of(this::fromName)).toList();
   }
   String sig(M m){
     var s= m.sig();
@@ -386,7 +385,7 @@ code{
     return s.rc().toStrSpace()+s.m().s()+Join.of(s.bs().stream().map(B::compactToString), "[", ",", "]", "")+Join.of(ps, "(", ",", ")", "")+":"+toStr.type(s.ret());
   }
   String fromName(MethodRef r){
-    return r.provider().map(toStr::typeName).orElseGet(() -> toStr.typeNameWithArity(r.owner()))+r.method().sig().m();
+    return toStr.typeName(r.provider())+r.method().sig().m();
   }
   //only the types a signature mentions become links: its own selector would just point
   //back at itself. A name that fails to resolve, or that names one of this method's own
