@@ -610,4 +610,34 @@ D:{ .m: A -> A; }
 """);
     utils.Err.strCmp("[###]<span class=\"opt-doc\">— Calls <code>this .m</code> on <code><a href=\"#type-p_2e_A-0\">A</a></code>.</span>[###]", docs.html());
   }
+  @Test void twoAnonymousLiteralsStartingOnOneLineReadDifferentlyInTheListOfTypes(@TempDir Path tmp){
+    var html= docs(tmp, a+"""
+Both:{ #(a: A, b: A): A -> a; }
+Maker:{
+  .two: A ->
+    ///First.
+    Both#(A{ .m -> A }, A{
+      ///Second.
+      .m -> A
+      });
+  }
+""").html();
+    var listed= Pattern.compile("<li><a href=\"#literal-[^>]*>([^<]*)</a>").matcher(html).results().map(m -> m.group(1)).toList();
+    assertEquals(listed.stream().distinct().toList(), listed);
+  }
+  @Test void aDocAboveAnEmptyLineWithNoDeclarationBelowIsNotToldToDeleteTheEmptyLine(@TempDir Path tmp){
+    var ex= assertThrows(UserError.class, () -> docs(tmp, a+"""
+B:{
+  .m: A -> A;
+  ///Last note.
+
+  }
+"""));
+    utils.Err.strCmp("""
+Misplaced doc comment.[###]
+This documentation is attached to nothing.
+A /// or //> block documents the declaration right below it, but no declaration
+starts right below this block. Move this block right above the declaration it
+documents, or turn it into a plain // comment.""", ex.getMessage());
+  }
 }
