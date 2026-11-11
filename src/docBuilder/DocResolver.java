@@ -27,9 +27,9 @@ record Scope(Literal owner, Optional<M> method, Optional<Scope> outer){
   }
   Optional<Optional<TName>> localType(String name){
     if (name.equals(owner.thisName())){ return Optional.of(Optional.of(owner.name())); }
-    var m= method.filter(mi -> mi.xs().contains(name));
+    var m= method.filter(mi -> mi.names().contains(name));
     if (m.isEmpty()){ return outer.flatMap(o -> o.localType(name)); }
-    return Optional.of(m.get().sig().ts().get(m.get().xs().indexOf(name)) instanceof T.RCC rcc ? Optional.of(rcc.c().name()) : Optional.empty());
+    return Optional.of(m.get().sig().ts().get(m.get().names().indexOf(name)) instanceof T.RCC rcc ? Optional.of(rcc.c().name()) : Optional.empty());
   }
 }
 record DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other, Function<TName,String> names, Map<TName,TypeDoc> byName, List<TName> foreign, Map<String,List<MethodDoc>> declared, Map<String,Long> anonLines){
@@ -82,13 +82,24 @@ record DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other, Fun
   }
   private Optional<DocLink> resolveMethod(DocRef.MethodName ref, Scope scope){
     if (ref.owner().isEmpty()){ return resolveBareSelector(ref.selector(), ref.arity()); }
-    return switch (ref.owner().get()){
-      case DocRef.LocalName l -> onLocal(l, ref, scope);
-      case DocRef.TypeName t -> onOwners(t.simpleName(), typeCandidates(t), ref.selector(), ref.arity());
+    var o= owners(ref.owner().get(), scope);
+    return onOwners(o.getKey(), o.getValue(), ref.selector(), ref.arity());
+  }
+  private Map.Entry<String,List<TName>> owners(DocRef.Receiver r, Scope scope){
+    return switch (r){
+      case DocRef.LocalName l -> scope.localType(l.name()).flatMap(t -> t).map(o -> Map.entry(title(o), List.of(o))).orElse(Map.entry("", List.of()));
+      case DocRef.TypeName t -> Map.entry(t.simpleName(), typeCandidates(t));
     };
   }
-  private Optional<DocLink> onLocal(DocRef.LocalName l, DocRef.MethodName ref, Scope scope){
-    return scope.localType(l.name()).flatMap(t -> t.flatMap(o -> onOwners(title(o), List.of(o), ref.selector(), ref.arity())));
+  Optional<String> noSuchMethod(DocRef ref, Scope scope){
+    if (!(ref instanceof DocRef.MethodName(var owner, var selector, var arity)) || owner.isEmpty()){ return Optional.empty(); }
+    var o= owners(owner.get(), scope);
+    if (o.getValue().isEmpty()){ return Optional.empty(); }
+    var forms= o.getValue().stream().flatMap(n -> methodCandidatesOn(n, selector, OptionalInt.empty()).stream())
+      .map(c -> "\""+o.getKey()+selector+shape(OptionalInt.of(c.sig().get().m().arity()), "(", ")")+"\"").distinct().sorted().toList();
+    var missing= "Type \""+o.getKey()+"\" has no method \""+selector+shape(arity, "(", ")")+"\".";
+    if (forms.isEmpty()){ return Optional.of(missing); }
+    return Optional.of(missing+"\n"+(forms.size()==1 ? "There is a method " : "There are methods ")+Join.of(forms, "", " and ", "")+",\nbut with a different number of arguments.");
   }
   private String title(TName n){
     return localTypeDoc(n).map(TypeDoc::main).filter(Literal::infName).map(this::anonTitle).orElse(n.simpleName());

@@ -242,7 +242,7 @@ Foo: Bar {
   }
   private static M fooMethodAt(RC rc, TName origin, TSpan span){
     var sig= new Sig(rc, new MName(".foo", 0), List.of(), List.of(), retVoid(), origin, false, span);
-    return new M(sig, List.of(), Optional.empty());
+    return new M(sig, List.of(), List.of(), Optional.empty());
   }
   private static M fooMethod(RC rc, TName origin){
     return fooMethodAt(rc, origin, TSpan.fromPos(Pos.unknown, 1));
@@ -252,16 +252,16 @@ Foo: Bar {
   }
   private static M namedMethod(String selector, TName origin){
     var sig= new Sig(RC.imm, new MName(selector, 0), List.of(), List.of(), retVoid(), origin, false, TSpan.fromPos(Pos.unknown, 1));
-    return new M(sig, List.of(), Optional.empty());
+    return new M(sig, List.of(), List.of(), Optional.empty());
   }
   private static M namedMethodAt(String selector, TName origin, Pos at){
     var sig= new Sig(RC.imm, new MName(selector, 0), List.of(), List.of(), retVoid(), origin, false, TSpan.fromPos(at, 1));
-    return new M(sig, List.of(), Optional.empty());
+    return new M(sig, List.of(), List.of(), Optional.empty());
   }
   private static M methodTaking(String selector, TName origin, String paramName, TName paramType){
     var t= new T.RCC(RC.imm, new T.C(paramType, List.of()), TSpan.fromPos(Pos.unknown, 1));
     var sig= new Sig(RC.imm, new MName(selector, 1), List.of(), List.of(t), retVoid(), origin, false, TSpan.fromPos(Pos.unknown, 1));
-    return new M(sig, List.of(paramName), Optional.empty());
+    return new M(sig, List.of(paramName), List.of(paramName), Optional.empty());
   }
   private static Scope scope(Literal owner){ return new Scope(owner, Optional.empty(), Optional.empty()); }
   private static Scope scope(Literal owner, M m){ return new Scope(owner, Optional.of(m), Optional.empty()); }
@@ -536,7 +536,7 @@ Foo: Bar {
   @Test void aSignatureTypeOfBaseShadowedByALocalTypeLinksToBase(){
     var holderName= new TName("pkg.Holder", 0, Pos.unknown);
     var baseList= new T.RCC(RC.imm, new T.C(new TName("base.List", 0, Pos.unknown), List.of()), TSpan.fromPos(Pos.unknown, 1));
-    var toBase= new M(new Sig(RC.imm, new MName(".toBase", 0), List.of(), List.of(), baseList, holderName, false, TSpan.fromPos(Pos.unknown, 1)), List.of(), Optional.empty());
+    var toBase= new M(new Sig(RC.imm, new MName(".toBase", 0), List.of(), List.of(), baseList, holderName, false, TSpan.fromPos(Pos.unknown, 1)), List.of(), List.of(), Optional.empty());
     var local= namedType("pkg.List", List.of(), List.of());
     var holder= namedType("pkg.Holder", List.of(), List.of(toBase));
     var other= OtherPackages.start(Map.of(), List.of(namedType("base.List", List.of(), List.of())), 0L);
@@ -550,7 +550,7 @@ Foo: Bar {
   @Test void aSignatureTypeOfAMappedPackageLinksToItsType(){
     var holderName= new TName("pkg.Holder", 0, Pos.unknown);
     var thing= new T.RCC(RC.imm, new T.C(new TName("q.Thing", 0, Pos.unknown), List.of()), TSpan.fromPos(Pos.unknown, 1));
-    var get= new M(new Sig(RC.imm, new MName(".get", 0), List.of(), List.of(), thing, holderName, false, TSpan.fromPos(Pos.unknown, 1)), List.of(), Optional.empty());
+    var get= new M(new Sig(RC.imm, new MName(".get", 0), List.of(), List.of(), thing, holderName, false, TSpan.fromPos(Pos.unknown, 1)), List.of(), List.of(), Optional.empty());
     var holder= namedType("pkg.Holder", List.of(), List.of(get));
     var other= OtherPackages.start(Map.of("pkg", Map.of("v", "q fear:/_pkg/_rank_pkg.fear")), List.of(namedType("q.Thing", List.of(), List.of())), 0L);
     SourceOracle oracle= List::of;
@@ -1069,7 +1069,7 @@ documents, or turn it into a plain // comment.""", ex.getMessage());
     var page= (DocLink.Ambiguous)renderer.resolver.resolve(new DocRef.MethodName(Optional.empty(), ".bar", OptionalInt.empty()), scope(named.main())).get();
     var shown= page.options().stream().map(renderer::renderCandidate).map(s -> s.replaceAll("<[^>]*>", "")).toList();
     assertEquals(List.of("Anon@a:2.bar() \u2014 the anonymous bar", "Named.bar()"), shown);
-    assertEquals(List.of("Named", "Anon@a:2"), renderer.visibleTypes().stream().map(renderer::shortTitle).toList());
+    assertEquals(List.of("Named", "Anon@a:2"), renderer.shown.stream().map(renderer::shortTitle).toList());
   }
   @Test void aFencedBlockIsShownAsOneBlockOfCode(){
     var holder= new TypeDoc(namedType("pkg.Holder", List.of(), List.of()), Optional.empty(), List.of(
@@ -1107,13 +1107,13 @@ documents, or turn it into a plain // comment.""", ex.getMessage());
     var action= new TypeDoc(new Literal(RC.imm, new TName("pkg.Action", 2, Pos.unknown), twoBounds(), List.of(), "this", List.of(), freshSrc(), false), Optional.empty(), List.of());
     var actionMatch= new TypeDoc(namedType("pkg.ActionMatch", List.of(), List.of()), Optional.empty(), List.of());
     var renderer= new HtmlDocRenderer(Map.of(), new DocResolver("pkg", List.of(actionMatch, action), OtherPackages.empty(), TName::s), Map.of(), Optional.empty());
-    assertEquals(List.of("pkg.Action", "pkg.ActionMatch"), renderer.visibleTypes().stream().map(t -> t.main().name().s()).toList());
+    assertEquals(List.of("pkg.Action", "pkg.ActionMatch"), renderer.shown.stream().map(t -> t.main().name().s()).toList());
   }
   @Test void typesOfOneNameAreListedByArityAsANumber(){
     var ten= new TypeDoc(new Literal(RC.imm, new TName("pkg.F", 10, Pos.unknown), IntStream.range(0, 10).mapToObj(i -> new B("X"+i, EnumSet.of(RC.imm))).toList(), List.of(), "this", List.of(), freshSrc(), false), Optional.empty(), List.of());
     var two= new TypeDoc(new Literal(RC.imm, new TName("pkg.F", 2, Pos.unknown), twoBounds(), List.of(), "this", List.of(), freshSrc(), false), Optional.empty(), List.of());
     var renderer= new HtmlDocRenderer(Map.of(), new DocResolver("pkg", List.of(ten, two), OtherPackages.empty(), TName::s), Map.of(), Optional.empty());
-    assertEquals(List.of(2, 10), renderer.visibleTypes().stream().map(t -> t.main().name().arity()).toList());
+    assertEquals(List.of(2, 10), renderer.shown.stream().map(t -> t.main().name().arity()).toList());
   }
   private static List<String> idsIn(String html, String prefix){
     var res= new ArrayList<String>();

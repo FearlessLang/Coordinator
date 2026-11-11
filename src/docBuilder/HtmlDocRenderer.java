@@ -48,7 +48,7 @@ final class HtmlDocRenderer{
     this.baseDocLocation= baseDocLocation;
     toStr= new ExportedToStr(pkgName, uses);
     this.resolver= resolver;
-    shown= visibleTypes();
+    shown= sortedTypes().stream().filter(TypeDoc::visible).toList();
     claims= trailingClaims();
   }
   String render(){
@@ -73,7 +73,7 @@ final class HtmlDocRenderer{
   }
   record Suite(String name, List<List<DocOcc>> groups){}
   List<Suite> suites(){
-    return shown.stream()
+    return sortedTypes().stream()
       .map(t -> new Suite(suiteName(t.main().name()), testGroups(t)))
       .filter(s -> !s.groups().isEmpty())
       .toList();
@@ -334,9 +334,8 @@ code{
 })();
 </script>
 """;
-  List<TypeDoc> visibleTypes(){
+  List<TypeDoc> sortedTypes(){
     return types.stream()
-      .filter(TypeDoc::visible)
       .sorted(Comparator.comparing((TypeDoc t) -> t.main().infName() ? "1:"+t.main().pos().fileName() : "0:"+toStr.typeName(t.main().name()))
         .thenComparingInt(t -> t.main().infName() ? t.main().pos().line() : t.main().name().arity())
         .thenComparingInt(t -> t.main().pos().column()))
@@ -395,7 +394,7 @@ code{
   }
   String sig(M m){
     var s= m.sig();
-    var ps= Streams.zip(m.xs(), s.ts()).map((x,t) -> (x.equals("_") ? "" : x+":")+toStr.type(t));
+    var ps= Streams.zip(m.names(), s.ts()).map((x,t) -> (x.equals("_") ? "" : x+":")+toStr.type(t));
     return s.rc().toStrSpace()+s.m().s()+Join.of(s.bs().stream().map(B::compactToString), "[", ",", "]", "")+Join.of(ps, "(", ",", ")", "")+":"+toStr.type(s.ret());
   }
   String fromName(MethodRef r){

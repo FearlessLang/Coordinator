@@ -20,7 +20,7 @@ import utils.Pos;
 sealed abstract class DeclarationDoc permits TypeDoc, MethodDoc{
   final List<DocOcc> docs;
   DeclarationDoc(List<DocOcc> docs){ this.docs= docs; }
-  boolean hasDocs(){ return !docs.isEmpty(); }
+  boolean hasDocs(){ return docs.stream().anyMatch(o -> o.kind()!=DocKind.TestOnly); }
   abstract Scope scope();
 }
 final class TypeDoc extends DeclarationDoc{

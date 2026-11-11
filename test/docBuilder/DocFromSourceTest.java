@@ -676,7 +676,38 @@ In file: fear:/_p/_rank_app.fear
    |             ^^^^^^
 
 While inspecting the documentation of package p
-[###]A.m()[###]""", ex.getMessage());
+Type "A" has no method ".m(_)".
+There is a method "A.m()",
+but with a different number of arguments.[###]""", ex.getMessage());
+  }
+  @Test void aReferenceToAMethodTheTypeDoesNotHaveIsToldTheTypeHasNoSuchMethod(@TempDir Path tmp){
+    var ex= assertThrows(UserError.class, () -> docs(tmp, a+"""
+///Same as `A.k`.
+B:{ .m: A -> A; }
+"""));
+    utils.Err.strCmp("""
+Broken reference in a doc comment.
+
+In file: fear:/_p/_rank_app.fear
+
+002| ///Same as `A.k`.
+   |             ^^^
+
+While inspecting the documentation of package p
+Type "A" has no method ".k".[###]""", ex.getMessage());
+  }
+  @Test void aParameterThatAPatternDestructuresIsShownWithNoNameAndTheOthersKeepTheirNames(@TempDir Path tmp){
+    var base= compiled("base", """
+Destruct:{ #[A:**,B:**,R:**](a: A, b: B, f: mut MF[A,B,R]): R -> f#(a,b); }
+MF[A:**,B:**,R:**]:{ mut #(a: A, b: B): R; }
+""", OtherPackages.empty());
+    var docs= docs(tmp, OtherPackages.start(Map.of(), base, 0L), a+"""
+B:{
+  ///Keeps `x`.
+  .k(x: A, {.m}: A): A -> x;
+  }
+""");
+    utils.Err.strCmp("[###]B\n\t.k(x:A,A):A\n    Keeps `x`.[###]", docs.text());
   }
   @Test void theParameterThatDoubleColonIntroducesIsShownWithNoName(@TempDir Path tmp){
     var docs= docs(tmp, a+"""

@@ -125,7 +125,7 @@ public final class HtmlDocBuilder{
       var ref= DocRefScanner.wholeRef(text, sp);
       if (ref.isEmpty()){ problems.add(problem(p, sp.start(), sp.end()-1, notAName)); continue; }
       var link= resolver.resolve(ref.get(), scope);
-      if (link.isEmpty()){ problems.add(problem(p, sp.start(), sp.end()-1, noSuchName)); continue; }
+      if (link.isEmpty()){ problems.add(problem(p, sp.start(), sp.end()-1, resolver.noSuchMethod(ref.get(), scope).orElse(noSuchName))); continue; }
       res.put(sp.start(), link.get());
     }
     spans.put(p.getFirst(), res);
