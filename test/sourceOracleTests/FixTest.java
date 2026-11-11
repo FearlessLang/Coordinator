@@ -355,11 +355,7 @@ _ey.txt=k
   }
   @Test void aNameInDecomposedFormIsFixedFromItsBytes(@TempDir Path tmp){
     var spec= "@/cafe\u0301.txt\niii\nx";
-    var why= """
-      Agent on macOS: the JDK writes each name in NFD and lists the names of a folder in NFC (sun.nio.fs.MacOSXFileSystem), so a Java program does not see the bytes of a name.
-      FolderShapesDesign reads an s as bytes on macOS as on Linux, and ControllersDesign takes a path in another Unicode form as a path that corresponds to no p.
-      Investigate how Fearless can see and keep the bytes of the names on macOS, then fix the code until this test passes.""";
-    for (var lib : List.of("lib", "lib.zip")){ assertEquals("Renamed lib/cafe\u0301.txt to cafe_.txt\n", fix(root(tmp.resolve(lib), spec.replace("@", lib))), why); }
+    for (var lib : List.of("lib", "lib.zip")){ assertEquals("Renamed lib/cafe\u0301.txt to cafe_.txt\n", fix(root(tmp.resolve(lib), spec.replace("@", lib)))); }
   }
   @Test void theKelvinSignIsNotTheLetterKOfAJunkFile(@TempDir Path tmp){ fixes(tmp, """
 lib/DES\u212ATOP.INI
@@ -434,7 +430,7 @@ x2.zip[b.txt=b;]
   @Test void movesAHiddenNameLongerThan255BytesToTheFixFolderOrEndsWhereTheDeskCanNotHoldIt(@TempDir Path tmp) throws IOException{
     var name= ".h"+"\u00E9".repeat(127);
     var root= root(tmp);
-    var holds= Fs.isWindows();
+    var holds= !Fs.isLinux();
     var zip= stored(List.of(name, "a.txt"), UTF_8);
     Fs.write(root.resolve("x.zip"), zip);
     var to= tmp.resolve("root_fix").resolve("x").resolve(name);
@@ -483,7 +479,7 @@ a_b/x.txt=x
     var root= root(tmp);
     var tooLong= ".a/"+"c".repeat(250);
     var longName= ".h"+"\u00E9".repeat(127);
-    var holds= Fs.isWindows();
+    var holds= !Fs.isLinux();
     Fs.write(root.resolve("x.zip"), stored(List.of(".DS_Store", tooLong, longName), UTF_8));
     var q= tmp.resolve("root_fix").resolve("x");
     var done= List.of("Deleted x/.DS_Store", "Moved x/"+tooLong+" to "+q.resolve(tooLong), "Deleted the empty folder x/.a");
@@ -501,7 +497,7 @@ a_b/x.txt=x
   @Test void aRefusedMoveOutOfAZipLeavesNoPartialCopy(@TempDir Path tmp) throws IOException{
     var root= root(tmp);
     var longName= "\u00E9".repeat(150);
-    var holds= Fs.isWindows();
+    var holds= !Fs.isLinux();
     var zip= stored(List.of(".H/a.txt", ".h/ok.txt", ".h/"+longName), UTF_8);
     Fs.write(root.resolve("a.zip"), zip);
     var moved= tmp.resolve("root_fix").resolve("a").resolve(".h");
