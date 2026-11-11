@@ -232,7 +232,7 @@ public final class Fix{
     var text= utf8(bytes).filter(s -> s.chars().noneMatch(c -> Character.isISOControl(c) && "\t\n\r".indexOf(c)<0));
     return text.isPresent() ? "txt" : "bin";
   }
-  private static String segment(String s){
+  public static String segment(String s){
     var res= s.replaceAll("[^A-Za-z0-9_]+", "_").toLowerCase(Locale.ROOT);
     return res.matches("[a-z_][a-z0-9_]*") && !Fs.winReserved.contains(res) ? res : "p"+res;
   }
