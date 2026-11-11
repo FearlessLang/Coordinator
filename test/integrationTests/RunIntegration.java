@@ -3382,7 +3382,7 @@ Foo:{.foo:Void->Bar.bar(7 .getDiv 0)}
 Bar:{.bar(n:Nat):Void->{}}
 """);
     utils.Err.strCmp("""
-Nat.getDiv: Cannot divide by 0
+Nat.getDiv: d==0
 imm Nat.getDiv(_) error line: [###]
 imm Foo.foo error line: 5 in file _hello/_rank_app.fear
 imm Hello.main(_) error line: 4 in file _hello/_rank_app.fear
