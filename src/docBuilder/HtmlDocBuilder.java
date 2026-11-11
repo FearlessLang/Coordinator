@@ -214,13 +214,12 @@ public final class HtmlDocBuilder{
   String problem(List<DocOcc> p, int from, int to, String msg){
     var a= locate(p, from);
     var b= locate(p, to);
-    return message(new Span(a.getKey().file(), a.getKey().line(), a.getKey().textColumn()+a.getValue(),
-      b.getKey().line(), b.getKey().textColumn()+b.getValue()), msg);
+    return message(new Span(a.fileName(), a.line(), a.column(), b.line(), b.column()), msg);
   }
-  static Map.Entry<DocOcc,Integer> locate(List<DocOcc> p, int offset){
+  static Pos locate(List<DocOcc> p, int offset){
     var at= offset;
     for (var o : p){
-      if (at<o.text().length()){ return Map.entry(o, at); }
+      if (at<o.text().length()){ return new Pos(o.file(), o.line(), o.textColumn()+at); }
       at -= o.text().length()+1;
     }
     throw Bug.unreachable();

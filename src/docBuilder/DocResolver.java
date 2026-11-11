@@ -84,12 +84,14 @@ record DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other, Fun
   private Optional<DocLink> resolveMethod(DocRef.MethodName ref, Scope scope){
     if (ref.owner().isEmpty()){ return resolveBareSelector(ref.selector(), ref.arity()); }
     var o= owners(ref.owner().get(), scope);
-    return onOwners(o.getKey(), o.getValue(), ref.selector(), ref.arity());
+    var cands= o.names().stream().flatMap(n -> methodCandidatesOn(n, ref.selector(), ref.arity()).stream()).toList();
+    return pack(o.title()+ref.selector()+shape(ref.arity(), "(", ")"), cands);
   }
-  private Map.Entry<String,List<TName>> owners(DocRef.Receiver r, Scope scope){
+  private record Owners(String title, List<TName> names){}
+  private Owners owners(DocRef.Receiver r, Scope scope){
     return switch (r){
-      case DocRef.LocalName l -> scope.localType(l.name()).flatMap(t -> t).map(o -> Map.entry(title(o), List.of(o))).orElse(Map.entry("", List.of()));
-      case DocRef.TypeName t -> Map.entry(shown(t), typeParameter(t, scope) ? List.of() : typeCandidates(t));
+      case DocRef.LocalName l -> scope.localType(l.name()).flatMap(t -> t).map(o -> new Owners(title(o), List.of(o))).orElse(new Owners("", List.of()));
+      case DocRef.TypeName t -> new Owners(shown(t), typeParameter(t, scope) ? List.of() : typeCandidates(t));
     };
   }
   Optional<String> unresolved(DocRef ref, Scope scope){
@@ -105,15 +107,15 @@ record DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other, Fun
   private Optional<String> onOwner(DocRef.Receiver r, String selector, OptionalInt arity, Scope scope){
     var o= owners(r, scope);
     var noMethods= " is a type parameter, and a type parameter has no methods.";
-    if (o.getValue().isEmpty()){
+    if (o.names().isEmpty()){
       return switch (r){
         case DocRef.TypeName t when typeParameter(t, scope) -> Optional.of("\""+t.simpleName()+"\""+noMethods);
         case DocRef.LocalName l when scope.localType(l.name()).isPresent() -> Optional.of("The type of \""+l.name()+"\""+noMethods);
         default -> unresolved(r, scope);
       };
     }
-    var forms= o.getValue().stream().flatMap(n -> methodCandidatesOn(n, selector, OptionalInt.empty()).stream()).map(c -> o.getKey()+arities(selector, c));
-    return Optional.of(others("Type \""+o.getKey()+"\" has no method \""+selector+shape(arity, "(", ")")+"\".", "method", forms, "arguments"));
+    var forms= o.names().stream().flatMap(n -> methodCandidatesOn(n, selector, OptionalInt.empty()).stream()).map(c -> o.title()+arities(selector, c));
+    return Optional.of(others("Type \""+o.title()+"\" has no method \""+selector+shape(arity, "(", ")")+"\".", "method", forms, "arguments"));
   }
   private static String arities(String selector, Candidate c){ return selector+shape(OptionalInt.of(c.sig().get().m().arity()), "(", ")"); }
   private static String others(String missing, String kind, Stream<String> forms, String counted){
@@ -124,10 +126,6 @@ record DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other, Fun
   }
   private String title(TName n){
     return localTypeDoc(n).map(t -> t.main().infName() ? anonTitle(t.main()) : n.simpleName()).orElseGet(() -> names.apply(n));
-  }
-  private Optional<DocLink> onOwners(String shown, List<TName> owners, String selector, OptionalInt arity){
-    var cands= owners.stream().flatMap(o -> methodCandidatesOn(o, selector, arity).stream()).toList();
-    return pack(shown+selector+shape(arity, "(", ")"), cands);
   }
   private List<Candidate> methodCandidatesOn(TName owner, String selector, OptionalInt arity){
     var local= localTypeDoc(owner);
