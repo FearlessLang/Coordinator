@@ -326,6 +326,20 @@ Renamed ehthumbs vista.db to ehthumbs_vista2.db
 """, """
 ehthumbs_vista2.db=x
 """);}
+  @Test void neverRenamesToADeviceName(@TempDir Path tmp){ fixes(tmp, """
+Com/b.txt
+iii
+b
+jjj
+com.zip/y.txt
+iii
+y""", """
+Renamed Com to com10
+""", """
+com.zip[y.txt=y;]
+com10/
+com10/b.txt=b
+""");}
   @Test void guessesTheExtensionOfAFileWithNoExtension(@TempDir Path tmp) throws IOException{
     var root= root(tmp);
     Fs.ensureDir(root.resolve("img"));
