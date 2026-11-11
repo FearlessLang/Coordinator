@@ -68,10 +68,6 @@ final class MethodDoc extends DeclarationDoc{
   boolean visible(){ return declared || !owner.main().infName(); }
   void add(M m){ variants.add(m); }
 }
-/*
- * provider is the actual type-use through which the method was found.
- * This preserves distinctions such as DataType[_] vs DataType[_,_].
- */
 record MethodRef(T.C provider, M method){}
 record DeclaredMethodKey(URI file, int line, int column, MName m){}
 record ImportedKey(TName origin, RC rc, MName m){}

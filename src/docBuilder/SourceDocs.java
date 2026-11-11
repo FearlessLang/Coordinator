@@ -34,8 +34,6 @@ final class SourceDocs{
     var trailing= trailingAfter(pos.line(), pos.column())
       .filter(occ -> Math.max(depthAt(occ.line(), occ.column()), depthAt(pos.line(), 1)) >= depthAt(pos.line(), pos.column()))
       .stream().toList();
-    //everything collected is attached, including an empty line trimmed off the end:
-    //trimming is about what to show, not about what the block reached.
     Stream.concat(before.stream(), trailing.stream()).forEach(d -> claimCount.merge(d, 1, Integer::sum));
     return fences(Stream.concat(dedent(trimBlanks(before)).stream(), dedent(trailing).stream()).toList());
   }
@@ -52,7 +50,6 @@ final class SourceDocs{
   }
   private static final Pattern fenceLine= Pattern.compile(" *```[^`]*");
   int depthAt(int line, int column){ return depthByLine.get(line)[column-1]; }
-  //every /// and //> that no declaration took, as runs of lines with only empty lines between them
   List<List<DocOcc>> orphanRuns(){
     var lost= docByLine.values().stream()
       .filter(d -> !claimCount.containsKey(d))
@@ -75,8 +72,6 @@ final class SourceDocs{
       .toList();
   }
   private static final Comparator<DocOcc> bySource= Comparator.comparingInt(DocOcc::line);
-  //Any line other than a doc line of its own ends the block, an empty line too, and whatever
-  //documentation is left above it is then attached to nothing, which is an error.
   List<DocOcc> collectBefore(int line){
     var before= new ArrayList<DocOcc>();
     for (int l= line-1; l >= 1; l -= 1){
@@ -139,8 +134,6 @@ final class SourceDocs{
       depthByLine.put(l, arr);
     }
   }
-  //textColumn is where the stored text really starts in the line, so an error can put
-  //its carets under the offending characters: past the "///" and the indentation dedent drops.
   void add(int line, int column, String text, boolean trailing, DocKind kind){
     var previous= docByLine.put(line, new DocOcc(uri, line, column, column+3, text, trailing, kind));
     assert previous==null;

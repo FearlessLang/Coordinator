@@ -132,8 +132,6 @@ public final class HtmlDocBuilder{
   void checkDeclaration(DocResolver resolver, DeclarationDoc d, ArrayList<String> markup, ArrayList<String> problems){
     var fences= d.docs.stream().filter(o -> o.kind()==DocKind.Fence).toList();
     if (fences.size()%2==1){ markup.add(problem(List.of(fences.getLast()), 0, fences.getLast().text().length()-1, unclosedBlock)); }
-    //a //> line is real Fearless code, not prose: any backtick in it is a genuine
-    //raw string literal, never doc-comment markup, so it is never reference-checked.
     HtmlDocRenderer.paragraphs(d.visibleDocs()).forEach(p -> check(resolver, p, d.scope(), markup, problems));
   }
   void check(DocResolver resolver, List<DocOcc> p, Scope scope, ArrayList<String> markup, ArrayList<String> problems){
@@ -146,9 +144,6 @@ public final class HtmlDocBuilder{
       if (resolver.resolve(ref.get(), scope).isEmpty()){ problems.add(problem(p, sp.start(), sp.end()-1, resolver.unresolved(ref.get(), scope).orElse(noSuchName))); }
     }
   }
-  //documentation that reached no declaration is documentation nobody will ever read,
-  //and the usual cause is a /// or //> written with one mark too few, which ends the
-  //block silently. Reported per run of lines, at the run.
   String orphan(List<DocOcc> run){
     var first= run.getFirst();
     var last= run.getLast();
@@ -218,8 +213,6 @@ public final class HtmlDocBuilder{
     }
     throw Bug.unreachable();
   }
-  //owner.cs() is fully flattened, so an overridden ancestor still gets its own entry here:
-  //by design, "From:" shows every provider along the chain, shadowed ones included.
   List<MethodRef> inheritedMethods(Literal owner, M m){
     return owner.cs().stream()
       .flatMap(c -> Stream.ofNullable(currentByName.getOrDefault(c.name(), other.__of(c.name()))).flatMap(sup -> matchingMethods(c, sup, m)))

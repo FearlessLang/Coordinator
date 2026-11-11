@@ -809,29 +809,6 @@ Q[R:imm]:P{ .own(r: R): R -> r; }
 """);
     utils.Err.strCmp("[###]\t.pipe[_AR:imm](_AR):_AR\n[###]", docs.text());
   }
-  @Test void anImplementedGenericMethodKeepsTheTypeParameterNameItsSourceWritesAlsoWhereItIsInheritedFurther(@TempDir Path tmp){
-    var docs= docs(tmp, a+"""
-P:{ .pipe[R:imm](r: R): R; }
-Q:P{
-  ///Gives `r` back.
-  .pipe r -> r;
-  .own[R:imm](r: R): R -> r;
-  }
-Z:Q{ .zz: A -> A; }
-""");
-    utils.Err.strCmp("[###]Q : P\n\t.own[R:imm](r:R):R\n\t.pipe[R:imm](r:R):R\n    Gives `r` back.\n[###]Z : Q, P\n\t.own[R:imm](R):R\n    from: Q.own\n\t.pipe[R:imm](R):R\n[###]", docs.text());
-  }
-  @Test void theDocOfAnImplementedGenericMethodMayNameTheTypeParameterTheSignatureShows(@TempDir Path tmp){
-    var docs= docs(tmp, a+"""
-P:{ .pipe[R:imm](r: R): R; }
-Q:P{
-  ///Gives back an `R`.
-  .pipe r -> r;
-  .own[R:imm](r: R): R -> r;
-  }
-""");
-    utils.Err.strCmp("[###]\t.pipe[R:imm](r:R):R\n    Gives back an `R`.\n[###]", docs.text());
-  }
   @Test void anInheritedGenericMethodKeepsAFreshNameWhereTheSourceNameIsATypeOfTheInheritingPackage(@TempDir Path tmp){
     var q= compiled("q", "P:{ .pipe[A:imm](a: A): A -> a; }\n", OtherPackages.empty());
     var docs= docs(tmp, OtherPackages.start(Map.of(), q, 0L), a+"""

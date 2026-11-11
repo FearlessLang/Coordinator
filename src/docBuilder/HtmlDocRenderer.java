@@ -31,8 +31,6 @@ final class HtmlDocRenderer{
   final String pkgName;
   final List<TypeDoc> types;
   final Optional<Path> baseDocLocation;
-  //filled by href() as links are emitted, so every ambiguous link that reaches the
-  //page also gets its landing section; rendered after all types, when it is complete.
   final LinkedHashMap<DocLink.Ambiguous,String> pages= new LinkedHashMap<>();
   final ExportedToStr toStr;
   final DocResolver resolver;
@@ -118,9 +116,6 @@ final class HtmlDocRenderer{
     visibleMethods(t).forEach(m -> renderMethodText(sb, m));
     sb.append('\n');
   }
-  //a tab opens every method line and nothing else, so a reader tells a signature from the
-  //documentation of the type, written at the same indent, without parsing either: the source
-  //whitelist (Fs.allowed) has no tab, so neither a signature nor a doc comment can carry one.
   void renderMethodText(StringBuilder sb, MethodDoc m){
     m.variants.stream().map(this::sig).distinct().forEach(s -> sb.append('\t').append(s).append('\n'));
     if (m.declared){ renderDocText(sb, "    ", m); }
@@ -152,7 +147,6 @@ final class HtmlDocRenderer{
       .append("<p id=\"welcome\" class=\"welcome\">")
       .append("Types: ").append(shown.size()).append(". Pick one from the list.</p>\n");
   }
-  //the Fearless mark: the blue to orange square of the icon, with its white F
   static final String mark= ""
     +"<svg class=\"mark\" viewBox=\"0 0 64 64\" width=\"38\" height=\"38\" aria-hidden=\"true\">"
     +"<defs><linearGradient id=\"fearless\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"0.3\">"
@@ -187,7 +181,6 @@ body{
 a{color:var(--blue); text-decoration:none}
 a:hover{text-decoration:underline}
 .layout{display:flex; align-items:flex-start}
-/* the list of types, its own scroll so the page never scrolls it away */
 .toc{
   width:19em; flex:none; position:sticky; top:0; height:100vh; display:flex; flex-direction:column;
   padding:1.1em .9em; background:var(--bg-soft); border-right:1px solid var(--border);
@@ -213,7 +206,6 @@ main{flex:1; min-width:0; padding:2.2em 2.6em 6em; max-width:64em}
   text-transform:uppercase; color:var(--fg-faint);
 }
 .welcome{color:var(--fg-muted)}
-/* one type at a time: the router shows the section the hash names */
 .type{display:none; margin:1.6em 0}
 .type.active{display:block}
 .type>h2{
@@ -262,7 +254,6 @@ code{
   padding:.6em .8em; overflow-x:auto; color:var(--fg);
 }
 .variant,.fenced{border-left-color:var(--border)}
-/* every declaration a name could mean, when it names more than one */
 .options{list-style:none; margin:.6em 0; padding:0}
 .options li{padding:.4em .1em; border-top:1px solid var(--border-soft)}
 .options li:first-child{border-top:none}
@@ -274,8 +265,6 @@ code{
   main{padding:1.2em 1em 4em}
 }
 """;
-  //a hash may name a section, or an id nested inside one: show the owning section,
-  //then scroll to the precise target once it is no longer hidden.
   static final String router= """
 <script>
 (function(){
@@ -386,9 +375,6 @@ code{
   String fromName(MethodRef r){
     return toStr.typeName(r.provider())+r.method().sig().m();
   }
-  //only the types a signature mentions become links: its own selector would just point
-  //back at itself. A name that fails to resolve, or that names one of this method's own
-  //bound parameters (eg. "R" in ".toOpt[R:*]"), stays plain text and is never an error.
   String renderSig(MethodDoc m){
     var sig= m.main().sig();
     var text= sig(m.main());
@@ -429,9 +415,6 @@ code{
   void renderExamples(StringBuilder sb, List<String> examples){
     sb.append(Join.of(examples.stream().map(HtmlDocRenderer::h), "<details class=\"examples\"><summary><span class=\"disclosure\">&#9656;</span>runnable example</summary>\n<pre class=\"example\">", "\n", "</pre></details>\n", ""));
   }
-  //an empty doc line is where the author put a paragraph break; the lines between two
-  //of them are one paragraph, kept on their own lines so that a list stays a list and
-  //an indented line stays indented (the doc block is rendered with pre-wrap).
   void renderBlock(StringBuilder sb, List<DocOcc> block, Scope scope){
     var kind= block.getFirst().kind();
     if (kind==DocKind.Fence){ return; }
