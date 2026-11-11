@@ -489,6 +489,25 @@ a_b/x.txt=x
     assertEquals(List.of(longName), stored(Fs.readAllBytes(root.resolve("x.zip"))).stream().map(ZipEntry::getName).toList());
     assertEquals("x", Fs.readUtf8(q.resolve(tooLong)));
   }
+  @Test void aRefusedMoveOutOfAZipLeavesNoPartialCopy(@TempDir Path tmp) throws IOException{
+    var root= root(tmp);
+    var longName= "\u00E9".repeat(150);
+    var holds= wrote(() -> tmp.resolve(longName), "x");
+    var zip= stored(List.of(".H/a.txt", ".h/ok.txt", ".h/"+longName), UTF_8);
+    Fs.write(root.resolve("a.zip"), zip);
+    var moved= tmp.resolve("root_fix").resolve("a").resolve(".h");
+    var lines= new ArrayList<String>();
+    if (holds){
+      Fix.of(root, lines::add);
+      assertEquals(List.of("Moved a/.h to "+moved), lines);
+      assertEquals("x", Fs.readUtf8(moved.resolve("ok.txt")));
+      return;
+    }
+    assertThrows(UncheckedIOException.class, () -> Fix.of(root, lines::add));
+    assertEquals(List.of(), lines);
+    assertTrue(!Files.exists(moved, java.nio.file.LinkOption.NOFOLLOW_LINKS));
+    assertArrayEquals(zip, Fs.readAllBytes(root.resolve("a.zip")));
+  }
   @Test void aMoveEndsWhenAnEarlierMoveLeftALinkOnItsWay(@TempDir Path tmp) throws Exception{
     var root= root(tmp, "a/a.txt\niii\na\njjj\nx.zip/.h/con\niii\nc");
     folderLink(root.resolve("x"), root.resolve("a"));

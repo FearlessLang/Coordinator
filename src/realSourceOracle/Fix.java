@@ -88,8 +88,7 @@ public final class Fix{
       return to;
     }
     private Path at(String name){
-      var unreachable= Fs.isWindows() && (name.endsWith(".") || name.endsWith(" ") || BuildWithZip.reserved(name));
-      if (unreachable){ throw new UncheckedIOException(new FileSystemException(p+File.separator+name, null, "Windows can not reach a name ending with a dot or a space, or a reserved device name")); }
+      reachable(p, name);
       return resolved(name).orElseGet(() -> listed(name));
     }
     private Optional<Path> resolved(String name){
@@ -159,7 +158,11 @@ public final class Fix{
     public Path away(String name, Path into){
       var to= resolve(into, name);
       Fs.ofV(() -> Disk.free(to));
-      for (var e : all.stream().filter(e -> in(e, name)).toList()){ extract(e, resolve(into, e.name.substring(prefix.length()))); }
+      try{ for (var e : all.stream().filter(e -> in(e, name)).toList()){ extract(e, resolve(into, e.name.substring(prefix.length()))); } }
+      catch (RuntimeException ex){
+        Fs.ofV(() -> { if (Files.exists(to, NOFOLLOW_LINKS)){ Disk.remove(to); } });
+        throw ex;
+      }
       delete(name);
       return to;
     }
@@ -227,7 +230,12 @@ public final class Fix{
     var at= d.away(name, into);
     out.accept("Moved "+path+name+" to "+at);
   }
+  private static void reachable(Path into, String name){
+    var no= Fs.isWindows() && (name.endsWith(".") || name.endsWith(" ") || BuildWithZip.reserved(name));
+    if (no){ throw new UncheckedIOException(new FileSystemException(into+File.separator+name, null, "Windows can not reach a name ending with a dot or a space, or a reserved device name")); }
+  }
   private static Path resolve(Path into, String name){
+    for (var s : name.split("/")){ reachable(into, s); }
     try{ return into.resolve(name); }
     catch (InvalidPathException e){ throw new UncheckedIOException(new FileSystemException(into+File.separator+name, null, e.getReason())); }
   }
