@@ -374,6 +374,36 @@ User:{ .m: A -> A; }
 <li><a href="#method-p_2e_Zed-0-imm-_2e_go-1">Zed.go(_)</a></li>
 </ul>[###]""", html);
   }
+  @Test void anEmptyLineBetweenTwoDocBlocksLeavesTheUpperOneAttachedToNothing(@TempDir Path tmp){
+    var ex= assertThrows(UserError.class, () -> docs(tmp, a+"""
+///First paragraph.
+
+///Second paragraph.
+B:{ .m: A -> A; }
+"""));
+    utils.Err.strCmp("""
+Misplaced doc comment.
+
+In file: fear:/_p/_rank_app.fear
+
+002| ///First paragraph.
+   | ^^^^^^^^^^^^^^^^^^^
+
+While inspecting the documentation of package p
+This documentation is attached to nothing.
+A /// or //> block documents the declaration right below it, and an empty line
+ends the block. Delete the empty line below this block, or write /// on it to
+keep an empty line in the documentation.""", ex.getMessage());
+  }
+  @Test void anEmptyDocLineBetweenTwoParagraphsKeepsThemInOneBlock(@TempDir Path tmp){
+    var docs= docs(tmp, a+"""
+///First paragraph.
+///
+///Second paragraph.
+B:{ .m: A -> A; }
+""");
+    utils.Err.strCmp("[###]<p>First paragraph.</p>\n<p>Second paragraph.</p>[###]", docs.html());
+  }
   @Test void anOrphanBlockSplitByAnEmptyLineIsReportedAsOneBlock(@TempDir Path tmp){
     var ex= assertThrows(UserError.class, () -> docs(tmp, a+"""
 B:{

@@ -158,20 +158,19 @@ Foo: Bar {
     docs.docsAt(Pos.of(file, 2, 1), true);
     assertTrue(docs.orphanRuns().isEmpty());
   }
-  @Test void anEmptyLineInsideADocBlockEndsTheParagraphNotTheBlock(){
+  @Test void anEmptyLineEndsADocBlock(){
     var text= "/// first\n\n/// second\nFoo: Bar {\n}\n";
     var docs= new SourceDocs(file, text);
     var res= docs.docsAt(Pos.of(file, 4, 1), true);
-    assertEquals(List.of("first", "", "second"), res.stream().map(DocOcc::text).toList());
-    assertTrue(docs.orphanRuns().isEmpty(), "an empty line must not detach what is above it");
+    assertEquals(List.of("second"), res.stream().map(DocOcc::text).toList());
+    assertEquals(List.of(List.of(" first")), docs.orphanRuns().stream().map(r -> r.stream().map(DocOcc::text).toList()).toList());
   }
-  @Test void anEmptyLineBetweenRunnableExamplesReadsAsAnEmptyExample(){
+  @Test void anEmptyLineBetweenRunnableExamplesEndsTheBlock(){
     var text= "//> one\n\n//> two\nFoo: Bar {\n}\n";
     var docs= new SourceDocs(file, text);
     var res= docs.docsAt(Pos.of(file, 4, 1), true);
-    assertEquals(3, res.size());
-    assertTrue(res.get(1).text().isBlank() && res.get(1).kind()==DocKind.Example,
-      "between two //> lines the empty line is an example line, not prose");
+    assertEquals(List.of("two"), res.stream().map(DocOcc::text).toList());
+    assertEquals(List.of(List.of(" one")), docs.orphanRuns().stream().map(r -> r.stream().map(DocOcc::text).toList()).toList());
   }
   //trimming an empty line off the end of a block is about what to show; the line was
   //still reached by the declaration and must not be reported as attached to nothing.

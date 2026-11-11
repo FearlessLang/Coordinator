@@ -75,19 +75,14 @@ final class SourceDocs{
       .toList();
   }
   private static final Comparator<DocOcc> bySource= Comparator.comparingInt(DocOcc::line);
-  //An empty line inside a block reads as an empty doc line of whatever kind surrounds
-  //it, so it ends a paragraph without ending the block. The ones at either end of the
-  //block separate nothing and are dropped. Anything else ends the block, and whatever
+  //Any line other than a doc line of its own ends the block, an empty line too, and whatever
   //documentation is left above it is then attached to nothing, which is an error.
   List<DocOcc> collectBefore(int line){
     var before= new ArrayList<DocOcc>();
     for (int l= line-1; l >= 1; l -= 1){
       var own= Optional.ofNullable(docByLine.get(l)).filter(d -> !d.trailing());
-      if (own.isPresent()){ before.add(own.get()); continue; }
-      if (!lines.get(l-1).isBlank()){ break; }
-      //the line just below the empty one, which is the last one collected walking up
-      var below= !before.isEmpty();
-      before.add(new DocOcc(uri, l, 1, 1, "", false, below ? before.getLast().kind() : DocKind.Prose));
+      if (own.isEmpty()){ break; }
+      before.add(own.get());
     }
     return before.reversed();
   }

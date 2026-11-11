@@ -136,8 +136,10 @@ public final class HtmlDocBuilder{
   String orphan(List<DocOcc> run){
     var first= run.getFirst();
     var last= run.getLast();
-    var below= sources.get(last.file()).lines.stream().skip(last.line()).filter(l -> !l.isBlank()).findFirst().orElse("");
-    var msg= first.trailing() ? trailingNotAttached : below.strip().startsWith("//") ? notAttached : nothingDeclaredBelow;
+    var lines= sources.get(last.file()).lines;
+    var below= lines.stream().skip(last.line()).filter(l -> !l.isBlank()).findFirst().orElse("");
+    var emptyBelow= last.line()<lines.size() && lines.get(last.line()).isBlank();
+    var msg= first.trailing() ? trailingNotAttached : emptyBelow ? emptyLineEnds : below.strip().startsWith("//") ? notAttached : nothingDeclaredBelow;
     return message(new Span(first.file(), first.line(), first.column(),
       last.line(), last.textColumn()+last.text().length()), msg);
   }
@@ -149,6 +151,11 @@ public final class HtmlDocBuilder{
    +"A /// or //> block documents the declaration right below it, and nothing else\n"
    +"may come between them. A line starting with // ends the block, so check whether\n"
    +"one of these was meant to start with /// instead.";
+  static final String emptyLineEnds=
+    "This documentation is attached to nothing.\n"
+   +"A /// or //> block documents the declaration right below it, and an empty line\n"
+   +"ends the block. Delete the empty line below this block, or write /// on it to\n"
+   +"keep an empty line in the documentation.";
   static final String nothingDeclaredBelow=
     "This documentation is attached to nothing.\n"
    +"A /// or //> block documents the declaration right below it, but no declaration\n"
