@@ -29,6 +29,7 @@ import offensiveUtils.Require;
 import tools.Fs;
 import tools.SourceOracle;
 import userMessages.Report;
+import utils.Bug;
 import utils.Pos;
 
 public final class HtmlDocBuilder{
@@ -80,8 +81,10 @@ public final class HtmlDocBuilder{
     var orphans= sources.values().stream().flatMap(s -> s.orphanRuns().stream()).map(this::orphan);
     var misplaced= Stream.concat(orphans, sources.values().stream().flatMap(s -> s.ambiguousTrailing().stream()).map(this::ambiguousTrailing)).toList();
     if (!misplaced.isEmpty()){ throw Report.docMisplaced(misplaced); }
+    var markup= new ArrayList<String>();
     var problems= new ArrayList<String>();
-    types.stream().flatMap(t -> Stream.<DeclarationDoc>concat(Stream.of(t), t.methods.stream())).forEach(d -> linkDeclaration(resolver, d, spans, problems));
+    types.stream().flatMap(t -> Stream.<DeclarationDoc>concat(Stream.of(t), t.methods.stream())).forEach(d -> linkDeclaration(resolver, d, spans, markup, problems));
+    if (!markup.isEmpty()){ throw Report.docBackticks(markup); }
     if (!problems.isEmpty()){ throw Report.docReferences(problems); }
     var renderer= new HtmlDocRenderer(DocNames.uses(Stream.concat(currentByName.keySet().stream(), other.dom().stream()), pkgNames), resolver, spans, baseDocLocation);
     var html= renderer.render();
@@ -105,25 +108,27 @@ public final class HtmlDocBuilder{
   String message(Span span, String msg){
     return Message.of(oracle::loadString, List.of(new Frame("the documentation of package "+pkgName, span)), msg);
   }
-  void linkDeclaration(DocResolver resolver, DeclarationDoc d, HashMap<DocOcc,Map<Integer,DocLink>> spans, ArrayList<String> problems){
-    for (var occ : d.docs){
-      //a //> line is real Fearless code, not prose: any backtick in it is a genuine
-      //raw string literal, never doc-comment markup, so it is never reference-checked.
-      if (occ.kind()!=DocKind.Prose){ continue; }
-      link(resolver, occ, d.scope(), spans, problems);
-    }
+  void linkDeclaration(DocResolver resolver, DeclarationDoc d, HashMap<DocOcc,Map<Integer,DocLink>> spans, ArrayList<String> markup, ArrayList<String> problems){
+    var fences= d.docs.stream().filter(o -> o.kind()==DocKind.Fence).toList();
+    if (fences.size()%2==1){ markup.add(problem(List.of(fences.getLast()), 0, fences.getLast().text().length()-1, unclosedBlock)); }
+    //a //> line is real Fearless code, not prose: any backtick in it is a genuine
+    //raw string literal, never doc-comment markup, so it is never reference-checked.
+    HtmlDocRenderer.paragraphs(d.docs).forEach(p -> link(resolver, p, d.scope(), spans, markup, problems));
   }
-  void link(DocResolver resolver, DocOcc occ, Scope scope,
-      HashMap<DocOcc,Map<Integer,DocLink>> spans, ArrayList<String> problems){
+  void link(DocResolver resolver, List<DocOcc> p, Scope scope,
+      HashMap<DocOcc,Map<Integer,DocLink>> spans, ArrayList<String> markup, ArrayList<String> problems){
+    var text= HtmlDocRenderer.joined(p, "\n");
+    DocRefScanner.unclosed(text).forEach(r -> markup.add(problem(p, r.start(), r.end()-1, unclosedSpan)));
     var res= new HashMap<Integer,DocLink>();
-    for (var sp : DocRefScanner.refSpans(occ.text())){
-      var ref= DocRefScanner.wholeRef(occ.text(), sp);
-      if (ref.isEmpty()){ problems.add(problem(occ, sp, notAName)); continue; }
+    for (var sp : DocRefScanner.refSpans(text)){
+      if (text.substring(sp.start(), sp.end()).contains("\n")){ markup.add(problem(p, sp.start()-1, sp.end(), referenceOverLines)); continue; }
+      var ref= DocRefScanner.wholeRef(text, sp);
+      if (ref.isEmpty()){ problems.add(problem(p, sp.start(), sp.end()-1, notAName)); continue; }
       var link= resolver.resolve(ref.get(), scope);
-      if (link.isEmpty()){ problems.add(problem(occ, sp, noSuchName)); continue; }
+      if (link.isEmpty()){ problems.add(problem(p, sp.start(), sp.end()-1, noSuchName)); continue; }
       res.put(sp.start(), link.get());
     }
-    spans.put(occ, res);
+    spans.put(p.getFirst(), res);
   }
   //documentation that reached no declaration is documentation nobody will ever read,
   //and the usual cause is a /// or //> written with one mark too few, which ends the
@@ -164,9 +169,33 @@ public final class HtmlDocBuilder{
   static final String noSuchName=
     "This names no type, no method, and nothing in scope where it is written.\n"
    +"Use two backticks or more to show it as code instead.";
-  String problem(DocOcc occ, DocRefScanner.CodeSpan sp, String msg){
-    return message(new Span(occ.file(), occ.line(), occ.textColumn()+sp.start(),
-      occ.line(), occ.textColumn()+sp.end()-1), msg);
+  static final String unclosedSpan=
+    "This code span is never closed.\n"
+   +"Backticks open a code span, and the next run of exactly as many backticks in the\n"
+   +"same paragraph closes it. A paragraph ends at an empty doc line, at a //> line\n"
+   +"and at a ``` line. To show a backtick as text, put it in a code span opened by\n"
+   +"more backticks: `` ` `` shows one backtick.";
+  static final String referenceOverLines=
+    "This reference does not end on the line where it starts.\n"
+   +"A single backtick marks a reference, and a reference is one name on one line.\n"
+   +"Use two backticks or more to show code over several lines.";
+  static final String unclosedBlock=
+    "This code block is never closed.\n"
+   +"A doc line starting with ``` opens a code block, and the next such line closes\n"
+   +"it. Close this code block with a ``` line before the documentation ends.";
+  String problem(List<DocOcc> p, int from, int to, String msg){
+    var a= locate(p, from);
+    var b= locate(p, to);
+    return message(new Span(a.getKey().file(), a.getKey().line(), a.getKey().textColumn()+a.getValue(),
+      b.getKey().line(), b.getKey().textColumn()+b.getValue()), msg);
+  }
+  static Map.Entry<DocOcc,Integer> locate(List<DocOcc> p, int offset){
+    var at= offset;
+    for (var o : p){
+      if (at<o.text().length()){ return Map.entry(o, at); }
+      at -= o.text().length()+1;
+    }
+    throw Bug.unreachable();
   }
   //owner.cs() is fully flattened, so an overridden ancestor still gets its own entry here:
   //by design, "From:" shows every provider along the chain, shadowed ones included.

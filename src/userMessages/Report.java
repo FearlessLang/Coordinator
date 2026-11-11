@@ -632,6 +632,10 @@ File:
 Misplaced doc comment.
 
 %s""".formatted(Join.of(problems, "", "\n\n", ""))); }
+  public static UserError docBackticks(List<String> problems){ return new UserError("""
+Broken backticks in a doc comment.
+
+%s""".formatted(Join.of(problems, "", "\n\n", ""))); }
   public static UserError docReferences(List<String> problems){ return new UserError("""
 Broken reference in a doc comment.
 
