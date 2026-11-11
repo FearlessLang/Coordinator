@@ -18,13 +18,12 @@ import java.lang.ProcessBuilder.Redirect;
 import java.net.URI;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
-import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.function.Supplier;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
@@ -348,9 +347,17 @@ _ey.txt=k
     for (var name : List.of("Icon\r", "a.txt:Zone.Identifier")){
       var spec= "@/"+name+"\niii\nx\njjj\n@/a.txt\niii\na";
       var lines= "Deleted lib/"+name+"\n";
-      if (wrote(() -> tmp.resolve(name), "")){ fixes(tmp.resolve("disk"+name.length()), spec.replace("@", "lib"), lines, "lib/\nlib/a.txt=a\n"); }
+      if (!Fs.isWindows()){ fixes(tmp.resolve("disk"+name.length()), spec.replace("@", "lib"), lines, "lib/\nlib/a.txt=a\n"); }
       fixes(tmp.resolve("zip"+name.length()), spec.replace("@", "lib.zip"), lines, "lib.zip[a.txt=a;]\n");
     }
+  }
+  @Test void aNameInDecomposedFormIsFixedFromItsBytes(@TempDir Path tmp){
+    var spec= "@/cafe\u0301.txt\niii\nx";
+    var why= """
+      Agent on macOS: the JDK writes each name in NFD and lists the names of a folder in NFC (sun.nio.fs.MacOSXFileSystem), so a Java program does not see the bytes of a name.
+      FolderShapesDesign reads an s as bytes on macOS as on Linux, and ControllersDesign takes a path in another Unicode form as a path that corresponds to no p.
+      Investigate how Fearless can see and keep the bytes of the names on macOS, then fix the code until this test passes.""";
+    for (var lib : List.of("lib", "lib.zip")){ assertEquals("Renamed lib/cafe\u0301.txt to cafe_.txt\n", fix(root(tmp.resolve(lib), spec.replace("@", lib))), why); }
   }
   @Test void theKelvinSignIsNotTheLetterKOfAJunkFile(@TempDir Path tmp){ fixes(tmp, """
 lib/DES\u212ATOP.INI
@@ -358,9 +365,9 @@ iii
 x""", "Renamed lib/DES\u212ATOP.INI to des_top.ini\n", "lib/\nlib/des_top.ini=x\n");}
   @Test void renamesTheVisibleNamesThatAreNotValidUnicode(@TempDir Path tmp){
     var root= root(tmp);
-    var rawByte= wrote(() -> Path.of(URI.create(root.toUri()+"caf%E9.txt")), "raw");
-    var loneSurrogate= wrote(() -> root.resolve("caf\uD800.txt"), "lone");
-    if (!rawByte || !loneSurrogate){ Fs.writeUtf8(root.resolve("caf\uFFFD.txt"), "real"); }
+    if (Fs.isLinux()){ Fs.writeUtf8(Path.of(URI.create(root.toUri()+"caf%E9.txt")), "raw"); }
+    if (Fs.isWindows()){ Fs.writeUtf8(root.resolve("caf\uD800.txt"), "lone"); }
+    Fs.writeUtf8(root.resolve("caf\uFFFD.txt"), "real");
     var old= names(root);
     var texts= texts(root);
     var fixed= Stream.of("caf_.txt", "caf_2.txt", "caf_3.txt").limit(old.size()).toList();
@@ -372,11 +379,11 @@ x""", "Renamed lib/DES\u212ATOP.INI to des_top.ini\n", "lib/\nlib/des_top.ini=x\
   @Test void movesTheHiddenNamesThatAreNotValidUnicodeToTheFixFolder(@TempDir Path tmp){
     var root= root(tmp);
     Fs.writeUtf8(root.resolve(".git/caf\uFFFD"), "real");
-    var rawByte= wrote(() -> Path.of(URI.create(root.toUri()+".git/raw%E9")), "raw");
-    var loneSurrogate= wrote(() -> root.resolve(".git/lone\uD800"), "lone");
+    if (Fs.isLinux()){ Fs.writeUtf8(Path.of(URI.create(root.toUri()+".git/raw%E9")), "raw"); }
+    if (Fs.isWindows()){ Fs.writeUtf8(root.resolve(".git/lone\uD800"), "lone"); }
     Fs.writeUtf8(root.resolve(".git/ok"), "ok");
     var gone= names(root.resolve(".git")).stream().filter(n -> !n.equals("ok")).toList();
-    assertEquals((rawByte ? 1 : 0)+(loneSurrogate ? 1 : 0)+1, gone.size());
+    assertEquals(Fs.isMac() ? 1 : 2, gone.size());
     var into= tmp.resolve("root_fix").resolve(".git");
     var lines= gone.stream().map(n -> "Moved .git/"+n+" to "+into.resolve(n)+"\n").collect(java.util.stream.Collectors.joining());
     assertEquals(lines, fix(root));
@@ -388,13 +395,12 @@ x""", "Renamed lib/DES\u212ATOP.INI to des_top.ini\n", "lib/\nlib/des_top.ini=x\
     var root= root(tmp);
     Fs.writeUtf8(root.resolve(".a/x"), "lower");
     Fs.writeUtf8(root.resolve(".a/\u00E9"), "nfc");
-    wrote(() -> root.resolve(".a/X"), "upper");
-    wrote(() -> root.resolve(".a/e\u0301"), "nfd");
-    var listed= names(root.resolve(".a"));
+    if (Fs.isLinux()){ Fs.writeUtf8(root.resolve(".a/X"), "upper"); }
+    if (!Fs.isMac()){ Fs.writeUtf8(root.resolve(".a/e\u0301"), "nfd"); }
     var into= tmp.resolve("root_fix").resolve(".a");
     var lines= new StringBuilder();
-    if (listed.contains("x") && listed.contains("X")){ lines.append("Moved .a/x to "+into.resolve("x")+"\n"); }
-    if (listed.contains("\u00E9") && listed.contains("e\u0301")){ lines.append("Moved .a/\u00E9 to "+into.resolve("\u00E9")+"\n"); }
+    if (Fs.isLinux()){ lines.append("Moved .a/x to "+into.resolve("x")+"\n"); }
+    if (!Fs.isMac()){ lines.append("Moved .a/\u00E9 to "+into.resolve("\u00E9")+"\n"); }
     assertEquals(lines.toString(), fix(root));
     assertEquals("", fix(root));
   }
@@ -426,7 +432,7 @@ x2.zip[b.txt=b;]
   @Test void movesAHiddenNameLongerThan255BytesToTheFixFolderOrEndsWhereTheDeskCanNotHoldIt(@TempDir Path tmp) throws IOException{
     var name= ".h"+"\u00E9".repeat(127);
     var root= root(tmp);
-    var holds= wrote(() -> tmp.resolve(name), "x");
+    var holds= Fs.isWindows();
     var zip= stored(List.of(name, "a.txt"), UTF_8);
     Fs.write(root.resolve("x.zip"), zip);
     var to= tmp.resolve("root_fix").resolve("x").resolve(name);
@@ -475,7 +481,7 @@ a_b/x.txt=x
     var root= root(tmp);
     var tooLong= ".a/"+"c".repeat(250);
     var longName= ".h"+"\u00E9".repeat(127);
-    var holds= wrote(() -> tmp.resolve(longName), "x");
+    var holds= Fs.isWindows();
     Fs.write(root.resolve("x.zip"), stored(List.of(".DS_Store", tooLong, longName), UTF_8));
     var q= tmp.resolve("root_fix").resolve("x");
     var done= List.of("Deleted x/.DS_Store", "Moved x/"+tooLong+" to "+q.resolve(tooLong), "Deleted the empty folder x/.a");
@@ -493,7 +499,7 @@ a_b/x.txt=x
   @Test void aRefusedMoveOutOfAZipLeavesNoPartialCopy(@TempDir Path tmp) throws IOException{
     var root= root(tmp);
     var longName= "\u00E9".repeat(150);
-    var holds= wrote(() -> tmp.resolve(longName), "x");
+    var holds= Fs.isWindows();
     var zip= stored(List.of(".H/a.txt", ".h/ok.txt", ".h/"+longName), UTF_8);
     Fs.write(root.resolve("a.zip"), zip);
     var moved= tmp.resolve("root_fix").resolve("a").resolve(".h");
@@ -536,6 +542,51 @@ a_b/x.txt=x
     utils.Err.strCmp("[###]this file has more than one name, so writing it changes those other names too", e.getCause().getMessage());
     assertEquals(List.of(), lines);
     assertEquals("A:{}\r\n", Fs.readUtf8(tmp.resolve("other.fear")));
+  }
+  @Test void fixChangesTheReadOnlyFilesAndFoldersOfTheProject(@TempDir Path tmp){
+    var root= root(tmp, "lib/a.fear\niii\nA:{}\njjj\nlib/Bad Name.txt\niii\nb\njjj\n__MACOSX/x/._a\niii\nj");
+    Fs.writeUtf8(root.resolve("lib/a.fear"), "A:{}\r\n");
+    Stream.of("lib/a.fear", "lib/Bad Name.txt", "lib", "__MACOSX/x/._a", "__MACOSX/x", "__MACOSX").forEach(n -> readOnly(root.resolve(n)));
+    assertEquals("Deleted __MACOSX\nRenamed lib/Bad Name.txt to bad_name.txt\nFixed the line endings of lib/a.fear\n", fix(root));
+    assertEquals("lib/\nlib/a.fear=A:{}<lf>\nlib/bad_name.txt=b\n", dump(root));
+  }
+  private static void readOnly(Path p){
+    if (Fs.isWindows()){ Fs.ofV(() -> Files.setAttribute(p, "dos:readonly", true)); return; }
+    Fs.ofV(() -> Files.setPosixFilePermissions(p, PosixFilePermissions.fromString(Files.isDirectory(p) ? "r-xr-xr-x" : "r--r--r--")));
+  }
+  @Test void movesTheHiddenNamesOfAZipThatWindowsCanNotReachOrEndsOnWindows(@TempDir Path tmp) throws IOException{
+    var root= root(tmp);
+    var zip= stored(List.of(".h/a.", ".h/a:b", ".h/con.txt", "a.txt"), UTF_8);
+    Fs.write(root.resolve("x.zip"), zip);
+    var lines= new ArrayList<String>();
+    if (Fs.isWindows()){
+      var end= assertThrows(UncheckedIOException.class, () -> Fix.of(root, lines::add));
+      utils.Err.strCmp("[###]Windows can not reach a name ending with a dot or a space, or a reserved device name", end.getCause().getMessage());
+      assertEquals(List.of(), lines);
+      assertArrayEquals(zip, Fs.readAllBytes(root.resolve("x.zip")));
+      return;
+    }
+    var q= tmp.resolve("root_fix").resolve("x").resolve(".h");
+    Fix.of(root, lines::add);
+    assertEquals(List.of("Moved x/.h/a. to "+q.resolve("a."), "Moved x/.h/a:b to "+q.resolve("a:b"), "Moved x/.h/con.txt to "+q.resolve("con.txt"), "Deleted the empty folder x/.h"), lines);
+    assertEquals(List.of("a.", "a:b", "con.txt"), names(q));
+  }
+  @Test void aWindowsPlaceholderIsAFileAndALinkOfWslIsAnOther(){
+    if (!Fs.isWindows()){ return; }
+    fail("""
+      Agent on Windows: FolderShapesDesign takes a OneDrive placeholder, a compressed file and a deduplicated file as files,
+      and a symbolic link of WSL, an app execution alias, and a socket, a fifo or a device of WSL as others.
+      Fix keeps a reparse point that is not a link as a file (Fix.Disk.kind), but the check takes only Fs.isRegularFile as a file (BuildWithZip.collectFile), so the check likely still refuses a placeholder after Fix.
+      Make a cloud placeholder (CfRegisterSyncRoot and CfCreatePlaceholders, no administrator rights) and a link of WSL (wsl ln -s),
+      then make this test check that the check accepts the placeholder, that Fix leaves the placeholder, and that Fix moves the link of WSL to the fix folder.""");
+  }
+  @Test void fixWritesAFileOnAVolumeThatHoldsNoHardLinks(){
+    if (!Fs.isWindows()){ return; }
+    fail("""
+      Agent on Windows: Fix counts the names of a file with "fsutil hardlink list" (Fix.Disk.names), and takes a FAT volume as holding no hard links.
+      FolderShapesDesign counts a file as having one name when fsutil fails because the volume holds no hard links.
+      Investigate fsutil hardlink list on a shared folder of the network, on a ReFS volume and on a FAT volume (a VHD, or a USB stick),
+      then make this test check that Fix cleans a .fear file on each of those volumes.""");
   }
   @Test void aFolderWhereAFileSystemIsMountedMakesTheProjectInvalidAndEndsFix(@TempDir Path tmp) throws Exception{
     var root= root(tmp, "a.txt\niii\na");
@@ -1214,8 +1265,4 @@ c""");
     assertEquals(0, new ProcessBuilder("cmd", "/c", "mklink", "/J", link.toString(), target.toString()).redirectErrorStream(true).redirectOutput(Redirect.DISCARD).start().waitFor());
   }
   private static List<String> texts(Path dir){ return Fs.walk(dir, s -> s.filter(Fs::isRegularFile).map(Fs::readUtf8).sorted().toList()); }
-  private static boolean wrote(Supplier<Path> file, String text){
-    try{ Files.writeString(file.get(), text); return true; }
-    catch (IOException | InvalidPathException _){ return false; }
-  }
 }

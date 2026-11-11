@@ -4,6 +4,7 @@ import static java.nio.charset.StandardCharsets.ISO_8859_1;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.fail;
 import static testHelperFs.FsDsl.runErrIOE;
 
 import java.io.ByteArrayOutputStream;
@@ -953,7 +954,9 @@ We check this so that you[###]
   //makes a protected zip a kid of its folder like any other protected file, so the
   //protected-name checks (characters, reserved device names, case/NFC sibling collisions,
   //path length) see it too. ".a:b.zip" is rejected like ".a:b.txt".
-  @Test void errInvisibleDiskZipWindowsBadCharColon(@TempDir Path tmp){ runErrIOE(tmp, """
+  @Test void errInvisibleDiskZipWindowsBadCharColon(@TempDir Path tmp){
+    if (Fs.isWindows()){ assertThrows(java.nio.file.InvalidPathException.class, () -> FsDsl.materialize(tmp, ".a:b.zip/x.txt\niii\nX\n")); return; }
+    runErrIOE(tmp, """
 .a:b.zip/x.txt
 iii
 X
@@ -1502,7 +1505,7 @@ We check this so that you[###]
     try{ Files.createSymbolicLink(link, target); }
     catch (AccessDeniedException e){
       if (!Fs.isWindows()){ throw e; }
-      return;
+      fail("Agent on Windows: this process can not create symbolic links, so this test can not check them. Turn on Developer Mode (Settings, System, For developers), or run the tests with the privilege to create symbolic links.");
     }
     linkForbidden(root, shown);
   }

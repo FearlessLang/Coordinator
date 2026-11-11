@@ -5,6 +5,7 @@ import static java.nio.charset.StandardCharsets.UTF_16BE;
 import static java.nio.charset.StandardCharsets.UTF_16LE;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.nio.file.LinkOption.NOFOLLOW_LINKS;
+import static java.nio.file.attribute.PosixFilePermission.OWNER_WRITE;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -79,12 +80,16 @@ public final class Fix{
     public void write(String name, byte[] bytes){ Fs.ofV(() -> Files.write(oneName(at(name)), bytes)); }
     public long time(String name){ return Fs.of(() -> Files.getLastModifiedTime(at(name), NOFOLLOW_LINKS)).toMillis(); }
     public void time(String name, long time){ Fs.ofV(() -> Files.setLastModifiedTime(oneName(at(name)), FileTime.fromMillis(time))); }
-    public void delete(String name){ Fs.ofV(() -> remove(noMountBelow(at(name)))); }
-    public void rename(String name, String to){ Fs.ofV(() -> rename(at(name), p.resolve(to))); }
+    public void delete(String name){ Fs.ofV(() -> { writable(p); remove(noMountBelow(at(name))); }); }
+    public void rename(String name, String to){ Fs.ofV(() -> { writable(p); rename(at(name), p.resolve(to)); }); }
     public Path away(String name, Path into){
       var at= at(name);
       var to= into.resolve(at.getFileName());
-      Fs.ofV(() -> Files.move(noMountBelow(at), free(to)));
+      Fs.ofV(() -> {
+        writable(p);
+        if (realFolder(at)){ writable(at); }
+        Files.move(noMountBelow(at), free(to));
+      });
       return to;
     }
     private Path at(String name){
@@ -113,8 +118,13 @@ public final class Fix{
     private static Path oneName(Path f) throws IOException{
       if (mountPoints().test(f)){ throw new FileSystemException(f.toString(), null, "a file system is mounted here"); }
       if (names(f) != 1){ throw new FileSystemException(f.toString(), null, "this file has more than one name, so writing it changes those other names too"); }
-      if (Fs.isWindows()){ Files.setAttribute(f, "dos:readonly", false, NOFOLLOW_LINKS); }
+      writable(f);
       return f;
+    }
+    private static void writable(Path f) throws IOException{
+      if (Fs.isWindows()){ Files.setAttribute(f, "dos:readonly", false, NOFOLLOW_LINKS); return; }
+      var all= Files.getPosixFilePermissions(f, NOFOLLOW_LINKS);
+      if (all.add(OWNER_WRITE)){ Files.setPosixFilePermissions(f, all); }
     }
     private static int names(Path f) throws IOException{
       if (!Fs.isWindows()){ return (int)Files.getAttribute(f, "unix:nlink", NOFOLLOW_LINKS); }
@@ -135,8 +145,9 @@ public final class Fix{
       try (var s= Files.list(f)){ for (var e : s.toList()){ mounts(e, mounted); } }
     }
     private static void remove(Path f) throws IOException{
-      if (realFolder(f)){ try (var s= Files.list(f)){ for (var e : s.toList()){ remove(e); } } }
-      if (Fs.isWindows()){ Files.setAttribute(f, "dos:readonly", false, NOFOLLOW_LINKS); }
+      var folder= realFolder(f);
+      if (folder || Fs.isWindows()){ writable(f); }
+      if (folder){ try (var s= Files.list(f)){ for (var e : s.toList()){ remove(e); } } }
       Files.delete(f);
     }
   }
