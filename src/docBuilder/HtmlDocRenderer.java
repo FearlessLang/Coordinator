@@ -14,7 +14,6 @@ import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import core.B;
-import core.E.Literal;
 import core.ExportedToStr;
 import core.M;
 import core.Sig;
@@ -22,7 +21,6 @@ import core.T;
 import core.TName;
 import main.FrontendLogicMain.TestSource;
 import offensiveUtils.Require;
-import tools.Fs;
 import utils.Bug;
 import utils.DistinctBy;
 import utils.Join;
@@ -32,26 +30,20 @@ import utils.Streams;
 final class HtmlDocRenderer{
   final String pkgName;
   final List<TypeDoc> types;
-  final Map<DocOcc,Map<Integer,DocLink>> spans;
   final Optional<Path> baseDocLocation;
-  //filled by href() as links are emitted, so every ambiguous link that reaches the
-  //page also gets its landing section; rendered after all types, when it is complete.
   final LinkedHashMap<DocLink.Ambiguous,String> pages= new LinkedHashMap<>();
   final ExportedToStr toStr;
   final DocResolver resolver;
   final HashMap<String,Pattern> namePatterns= new HashMap<>();
   final List<TypeDoc> shown;
-  final Map<DocOcc,DeclarationDoc> claims;
-  HtmlDocRenderer(Map<String,String> uses, DocResolver resolver, Map<DocOcc,Map<Integer,DocLink>> spans, Optional<Path> baseDocLocation){
-    assert Require.nonNull(uses, resolver, spans, baseDocLocation);
+  HtmlDocRenderer(Map<String,String> uses, DocResolver resolver, Optional<Path> baseDocLocation){
+    assert Require.nonNull(uses, resolver, baseDocLocation);
     pkgName= resolver.pkgName();
     types= resolver.types();
-    this.spans= spans;
     this.baseDocLocation= baseDocLocation;
     toStr= new ExportedToStr(pkgName, uses);
     this.resolver= resolver;
-    shown= visibleTypes();
-    claims= trailingClaims();
+    shown= sortedTypes().stream().filter(TypeDoc::visible).toList();
   }
   String render(){
     var sb= new StringBuilder(16_000)
@@ -75,7 +67,7 @@ final class HtmlDocRenderer{
   }
   record Suite(String name, List<List<DocOcc>> groups){}
   List<Suite> suites(){
-    return shown.stream()
+    return sortedTypes().stream()
       .map(t -> new Suite(suiteName(t.main().name()), testGroups(t)))
       .filter(s -> !s.groups().isEmpty())
       .toList();
@@ -124,19 +116,13 @@ final class HtmlDocRenderer{
     visibleMethods(t).forEach(m -> renderMethodText(sb, m));
     sb.append('\n');
   }
-  //a tab opens every method line and nothing else, so a reader tells a signature from the
-  //documentation of the type, written at the same indent, without parsing either: the source
-  //whitelist (Fs.allowed) has no tab, so neither a signature nor a doc comment can carry one.
   void renderMethodText(StringBuilder sb, MethodDoc m){
     m.variants.stream().map(this::sig).distinct().forEach(s -> sb.append('\t').append(s).append('\n'));
     if (m.declared){ renderDocText(sb, "    ", m); }
     sb.append(Join.of(fromRefs(m).stream().map(this::fromName), "    from: ", ", ", "\n", ""));
   }
-  List<DocOcc> visibleDocs(DeclarationDoc d){
-    return d.docs.stream().filter(c -> !c.trailing() || claims.get(c)==d).filter(c -> c.kind()!=DocKind.TestOnly).toList();
-  }
   void renderDocText(StringBuilder sb, String indent, DeclarationDoc d){
-    for (var run : runs(visibleDocs(d), o -> o.kind()==DocKind.Example)){
+    for (var run : runs(d.visibleDocs(), o -> o.kind()==DocKind.Example)){
       var example= run.getFirst().kind()==DocKind.Example;
       if (example){ sb.append(indent).append("example:\n"); }
       run.forEach(c -> appendIndented(sb, example ? indent+"  " : indent, c.text()));
@@ -159,9 +145,8 @@ final class HtmlDocRenderer{
       .append("<div><p class=\"eyebrow\">package</p><h1>").append(h(pkgName)).append("</h1></div>")
       .append("</header>\n")
       .append("<p id=\"welcome\" class=\"welcome\">")
-      .append(shown.size()).append(" types. Pick one from the list on the left.</p>\n");
+      .append("Types: ").append(shown.size()).append(". Pick one from the list.</p>\n");
   }
-  //the Fearless mark: the blue to orange square of the icon, with its white F
   static final String mark= ""
     +"<svg class=\"mark\" viewBox=\"0 0 64 64\" width=\"38\" height=\"38\" aria-hidden=\"true\">"
     +"<defs><linearGradient id=\"fearless\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"0.3\">"
@@ -196,7 +181,6 @@ body{
 a{color:var(--blue); text-decoration:none}
 a:hover{text-decoration:underline}
 .layout{display:flex; align-items:flex-start}
-/* the list of types, its own scroll so the page never scrolls it away */
 .toc{
   width:19em; flex:none; position:sticky; top:0; height:100vh; display:flex; flex-direction:column;
   padding:1.1em .9em; background:var(--bg-soft); border-right:1px solid var(--border);
@@ -222,7 +206,6 @@ main{flex:1; min-width:0; padding:2.2em 2.6em 6em; max-width:64em}
   text-transform:uppercase; color:var(--fg-faint);
 }
 .welcome{color:var(--fg-muted)}
-/* one type at a time: the router shows the section the hash names */
 .type{display:none; margin:1.6em 0}
 .type.active{display:block}
 .type>h2{
@@ -261,7 +244,7 @@ details{margin:.4em 0}
 code{
   font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
   font-size:.92em; background:var(--bg-code); border:1px solid var(--border-soft);
-  padding:.05em .32em; border-radius:.3em;
+  padding:.05em .32em; border-radius:.3em; overflow-wrap:anywhere;
 }
 .example,.variant,.fenced{
   font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
@@ -271,15 +254,17 @@ code{
   padding:.6em .8em; overflow-x:auto; color:var(--fg);
 }
 .variant,.fenced{border-left-color:var(--border)}
-/* every declaration a name could mean, when it names more than one */
 .options{list-style:none; margin:.6em 0; padding:0}
 .options li{padding:.4em .1em; border-top:1px solid var(--border-soft)}
 .options li:first-child{border-top:none}
 .opt-doc{color:var(--fg-muted); font-size:.92em}
 .disambig>h2{font-family:inherit; font-size:1.15em; color:var(--fg)}
+@media (max-width:48em){
+  .layout{display:block}
+  .toc{width:auto; height:auto; max-height:40vh; position:static; border-right:none; border-bottom:1px solid var(--border)}
+  main{padding:1.2em 1em 4em}
+}
 """;
-  //a hash may name a section, or an id nested inside one: show the owning section,
-  //then scroll to the precise target once it is no longer hidden.
   static final String router= """
 <script>
 (function(){
@@ -331,9 +316,8 @@ code{
 })();
 </script>
 """;
-  List<TypeDoc> visibleTypes(){
+  List<TypeDoc> sortedTypes(){
     return types.stream()
-      .filter(TypeDoc::visible)
       .sorted(Comparator.comparing((TypeDoc t) -> t.main().infName() ? "1:"+t.main().pos().fileName() : "0:"+toStr.typeName(t.main().name()))
         .thenComparingInt(t -> t.main().infName() ? t.main().pos().line() : t.main().name().arity())
         .thenComparingInt(t -> t.main().pos().column()))
@@ -346,11 +330,6 @@ code{
         .thenComparingInt(m -> m.main().sig().m().arity())
         .thenComparing(m -> m.main().sig().rc()+"/"+toStr.sig(m.main().sig())))
       .toList();
-  }
-  Map<DocOcc,DeclarationDoc> trailingClaims(){
-    var res= new HashMap<DocOcc,DeclarationDoc>();
-    shown.stream().flatMap(this::declarations).forEach(d -> d.docs.stream().filter(DocOcc::trailing).forEach(c -> res.put(c, d)));
-    return res;
   }
   void renderToc(StringBuilder sb){
     sb.append("<nav class=\"toc\">\n")
@@ -383,24 +362,19 @@ code{
     sb.append("</details>\n");
   }
   String fromLink(MethodRef r){
-    return "<a href=\""+h(prefix(r.owner().pkgName())+"#"+methodId(r.owner(), r.method().sig()))+"\">"+h(fromName(r))+"</a>";
+    return "<a href=\""+h(methodHref(r.provider().name(), r.method().sig()))+"\">"+h(fromName(r))+"</a>";
   }
   List<MethodRef> fromRefs(MethodDoc m){
-    if (!m.inheritedFrom.isEmpty()){ return m.inheritedFrom.stream().gather(DistinctBy.<MethodRef,String>of(this::fromName)).toList(); }
-    if (m.declared){ return List.of(); }
-    return List.of(new MethodRef(m.main().sig().origin(), Optional.empty(), m.main()));
+    return m.inheritedFrom.stream().gather(DistinctBy.<MethodRef,String>of(this::fromName)).toList();
   }
   String sig(M m){
     var s= m.sig();
-    var ps= Streams.zip(m.xs(), s.ts()).map((x,t) -> (x.equals("_") ? "" : x+":")+toStr.type(t));
+    var ps= Streams.zip(m.names(), s.ts()).map((x,t) -> (x.equals("_") ? "" : x+":")+toStr.type(t));
     return s.rc().toStrSpace()+s.m().s()+Join.of(s.bs().stream().map(B::compactToString), "[", ",", "]", "")+Join.of(ps, "(", ",", ")", "")+":"+toStr.type(s.ret());
   }
   String fromName(MethodRef r){
-    return r.provider().map(toStr::typeName).orElseGet(() -> toStr.typeNameWithArity(r.owner()))+r.method().sig().m();
+    return toStr.typeName(r.provider())+r.method().sig().m();
   }
-  //only the types a signature mentions become links: its own selector would just point
-  //back at itself. A name that fails to resolve, or that names one of this method's own
-  //bound parameters (eg. "R" in ".toOpt[R:*]"), stays plain text and is never an error.
   String renderSig(MethodDoc m){
     var sig= m.main().sig();
     var text= sig(m.main());
@@ -415,18 +389,18 @@ code{
       from = at.end();
       if (!resolver.byName().containsKey(n) && !resolver.other().dom().contains(n)){ continue; }
       sb.append(wrap(text.substring(i, at.start())));
-      sb.append("<a href=\"").append(h(linkTo(n))).append("\">").append(h(printed)).append("</a>");
+      sb.append("<a href=\"").append(h(typeHref(n))).append("\">").append(h(printed)).append("</a>");
       i = from;
     }
     sb.append(wrap(text.substring(i)));
     return sb.toString();
   }
-  private static Stream<TName> typeNames(T t){
+  static Stream<TName> typeNames(T t){
     if (!(t instanceof T.RCC rcc)){ return Stream.of(); }
     return Stream.concat(Stream.of(rcc.c().name()), rcc.c().ts().stream().flatMap(HtmlDocRenderer::typeNames));
   }
   void renderDoc(StringBuilder sb, DeclarationDoc d){
-    var visible= visibleDocs(d);
+    var visible= d.visibleDocs();
     if (visible.isEmpty()){
       sb.append("<p class=\"doc missing\">No documentation yet.</p>\n");
       return;
@@ -434,44 +408,42 @@ code{
     for (var run : runs(visible, o -> o.kind()==DocKind.Example)){
       if (run.getFirst().kind()==DocKind.Example){ renderExamples(sb, run.stream().map(DocOcc::text).toList()); continue; }
       sb.append("<div class=\"doc\">\n");
-      runs(run, DocOcc::kind).forEach(b -> renderBlock(sb, b));
+      runs(run, DocOcc::kind).forEach(b -> renderBlock(sb, b, d.scope()));
       sb.append("</div>\n");
     }
   }
   void renderExamples(StringBuilder sb, List<String> examples){
     sb.append(Join.of(examples.stream().map(HtmlDocRenderer::h), "<details class=\"examples\"><summary><span class=\"disclosure\">&#9656;</span>runnable example</summary>\n<pre class=\"example\">", "\n", "</pre></details>\n", ""));
   }
-  //an empty doc line is where the author put a paragraph break; the lines between two
-  //of them are one paragraph, kept on their own lines so that a list stays a list and
-  //an indented line stays indented (the doc block is rendered with pre-wrap).
-  void renderBlock(StringBuilder sb, List<DocOcc> block){
+  void renderBlock(StringBuilder sb, List<DocOcc> block, Scope scope){
     var kind= block.getFirst().kind();
     if (kind==DocKind.Fence){ return; }
     if (kind==DocKind.Fenced){ sb.append("<pre class=\"fenced\">").append(Join.of(block.stream().map(o -> h(o.text())), "", "\n", "", "")).append("</pre>\n"); return; }
-    paragraphs(block).forEach(r -> sb.append("<p>").append(renderParagraph(r, "\n")).append("</p>\n"));
+    paragraphs(block).forEach(r -> sb.append("<p>").append(renderParagraph(r, scope)).append("</p>\n"));
   }
   static boolean inParagraph(DocOcc o){ return o.kind()==DocKind.Prose && !o.text().isBlank(); }
   static List<List<DocOcc>> paragraphs(List<DocOcc> ds){
-    return runs(ds.stream().filter(o -> o.kind()!=DocKind.TestOnly).toList(), HtmlDocRenderer::inParagraph).stream().filter(r -> inParagraph(r.getFirst())).toList();
+    return runs(ds, HtmlDocRenderer::inParagraph).stream().filter(r -> inParagraph(r.getFirst())).toList();
   }
-  static String joined(List<DocOcc> p, String separator){ return Join.of(p.stream().map(DocOcc::text), "", separator, "", ""); }
-  String renderParagraph(List<DocOcc> p, String separator){
-    var text= joined(p, separator);
-    var linked= spans.getOrDefault(p.getFirst(), Map.of());
+  static String joined(List<DocOcc> p){ return Join.of(p.stream().map(DocOcc::text), "", "\n", "", ""); }
+  String renderParagraph(List<DocOcc> p, Scope scope){
+    var text= joined(p);
     var sb= new StringBuilder();
     var i= 0;
     for (var cs : DocRefScanner.codeSpans(text)){
       sb.append(h(text.substring(i, cs.start()-cs.fence())));
-      sb.append("<code>").append(renderCode(text, cs, linked)).append("</code>");
+      sb.append("<code>").append(renderCode(text, cs, scope)).append("</code>");
       i = cs.end()+cs.fence();
     }
     sb.append(h(text.substring(i)));
     return sb.toString();
   }
-  String renderCode(String text, DocRefScanner.CodeSpan cs, Map<Integer,DocLink> linked){
+  String renderCode(String text, DocRefScanner.CodeSpan cs, Scope scope){
     var body= h(text.substring(cs.start(), cs.end()));
-    var link= linked.get(cs.start());
-    return (link==null || link instanceof DocLink.NoLink) ? body : "<a href=\""+h(href(link))+"\">"+body+"</a>";
+    if (cs.fence()!=1){ return body; }
+    var link= resolver.resolve(DocRefScanner.wholeRef(text, cs).orElseThrow(), scope).orElseThrow();
+    if (link instanceof DocLink.NoLink){ return body; }
+    return "<a href=\""+h(href(link))+"\">"+body+"</a>";
   }
   void renderPage(StringBuilder sb, DocLink.Ambiguous p, String anchor){
     sb.append("<section class=\"type disambig\" id=\"").append(anchor).append("\">\n")
@@ -485,16 +457,16 @@ code{
   String renderCandidate(Candidate c){
     var anonymous= resolver.localTypeDoc(c.owner()).filter(t -> t.main().infName());
     var sb= new StringBuilder("<a href=\"").append(h(candidateHref(c))).append("\">")
-      .append(c.localMethod().map(m -> m.main().sig().rc().toStrSpace()).orElse(""))
+      .append(c.sig().map(s -> s.rc().toStrSpace()).orElse(""))
       .append(h(anonymous.map(this::shortTitle).orElseGet(() -> toStr.typeNameWithArity(c.owner()))));
     c.sig().ifPresent(s -> sb.append(h(s.m().s()+DocResolver.shape(OptionalInt.of(s.m().arity()), "(", ")"))));
     sb.append("</a>");
-    c.localMethod().flatMap(this::firstParagraph).ifPresent(p -> sb.append(" <span class=\"opt-doc\">\u2014 ").append(renderParagraph(p, " ")).append("</span>"));
+    c.localMethod().flatMap(this::renderFirstParagraph).ifPresent(p -> sb.append(" <span class=\"opt-doc\">\u2014 ").append(p.replace("\n", " ")).append("</span>"));
     return sb.toString();
   }
-  Optional<List<DocOcc>> firstParagraph(MethodDoc m){
-    return runs(m.docs.stream().filter(d -> d.kind()!=DocKind.TestOnly).toList(), HtmlDocRenderer::inParagraph).stream()
-      .dropWhile(r -> r.getFirst().kind()==DocKind.Example).findFirst().filter(r -> inParagraph(r.getFirst()));
+  Optional<String> renderFirstParagraph(MethodDoc m){
+    return runs(m.visibleDocs(), HtmlDocRenderer::inParagraph).stream()
+      .dropWhile(r -> r.getFirst().kind()==DocKind.Example).findFirst().filter(r -> inParagraph(r.getFirst())).map(p -> renderParagraph(p, m.scope()));
   }
   String href(DocLink link){
     return switch (link){
@@ -504,8 +476,7 @@ code{
     };
   }
   String candidateHref(Candidate c){
-    if (c.sig().isPresent()){ return prefix(c.owner().pkgName())+"#"+methodId(c.owner(), c.sig().get()); }
-    return resolver.localTypeDoc(c.owner()).map(t -> "#"+typeId(t)).orElseGet(() -> linkTo(c.owner()));
+    return c.sig().map(s -> methodHref(c.owner(), s)).orElseGet(() -> typeHref(c.owner()));
   }
   <V> void renderVariants(StringBuilder sb, String title, List<V> variants, Function<V,String> show){
     if (variants.size() <= 1){ return; }
@@ -520,16 +491,13 @@ code{
     return toStr.typeName(l.name())+Join.of(l.bs().stream().map(B::compactToString), "[", ",", "]", "");
   }
   String shortTitle(TypeDoc t){
-    return t.main().infName() ? anonTitle(t.main()) : typeTitle(t);
-  }
-  static String anonTitle(Literal l){
-    var p= l.pos();
-    return "Anon@"+Fs.fileNameWithoutExtension(p.fileName().toString())+":"+p.line();
+    return t.main().infName() ? resolver.anonTitle(t.main()) : typeTitle(t);
   }
   String typeLink(T.C c){
-    return "<a href=\""+h(linkTo(c.name()))+"\">"+h(toStr.typeName(c))+"</a>";
+    return "<a href=\""+h(typeHref(c.name()))+"\">"+h(toStr.typeName(c))+"</a>";
   }
-  String linkTo(TName n){ return prefix(n.pkgName())+"#"+typeId(n); }
+  String typeHref(TName n){ return resolver.localTypeDoc(n).map(t -> "#"+typeId(t)).orElseGet(() -> prefix(n.pkgName())+"#"+typeId(n)); }
+  String methodHref(TName owner, Sig s){ return prefix(owner.pkgName())+"#"+methodId(owner, s); }
   String prefix(String pkg){
     if (pkg.equals(pkgName)){ return ""; }
     if (pkg.equals("base")){ return baseDocLocation.map(p -> p.toUri().toString()).orElse("base.html"); }

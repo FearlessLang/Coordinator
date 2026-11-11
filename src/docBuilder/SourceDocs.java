@@ -19,7 +19,7 @@ final class SourceDocs{
   final List<String> lines;
   final HashMap<Integer,DocOcc> docByLine= new HashMap<>();
   final HashMap<Integer,int[]> depthByLine= new HashMap<>();
-  final HashMap<DocOcc,HashSet<Integer>> claimColumns= new HashMap<>();
+  final HashMap<DocOcc,Integer> claimCount= new HashMap<>();
   final HashSet<Integer> visitedLines= new HashSet<>();
   SourceDocs(URI uri, String text){
     this.uri= uri;
@@ -34,9 +34,7 @@ final class SourceDocs{
     var trailing= trailingAfter(pos.line(), pos.column())
       .filter(occ -> Math.max(depthAt(occ.line(), occ.column()), depthAt(pos.line(), 1)) >= depthAt(pos.line(), pos.column()))
       .stream().toList();
-    //everything collected is attached, including an empty line trimmed off the end:
-    //trimming is about what to show, not about what the block reached.
-    Stream.concat(before.stream(), trailing.stream()).forEach(d -> claimColumns.computeIfAbsent(d, _ -> new HashSet<>()).add(pos.column()));
+    Stream.concat(before.stream(), trailing.stream()).forEach(d -> claimCount.merge(d, 1, Integer::sum));
     return fences(Stream.concat(dedent(trimBlanks(before)).stream(), dedent(trailing).stream()).toList());
   }
   static List<DocOcc> fences(List<DocOcc> ds){
@@ -52,10 +50,9 @@ final class SourceDocs{
   }
   private static final Pattern fenceLine= Pattern.compile(" *```[^`]*");
   int depthAt(int line, int column){ return depthByLine.get(line)[column-1]; }
-  //every /// and //> that no declaration took, as runs of lines with only empty lines between them
   List<List<DocOcc>> orphanRuns(){
     var lost= docByLine.values().stream()
-      .filter(d -> !claimColumns.containsKey(d))
+      .filter(d -> !claimCount.containsKey(d))
       .sorted(bySource)
       .toList();
     var res= new ArrayList<ArrayList<DocOcc>>();
@@ -67,24 +64,28 @@ final class SourceDocs{
     return List.copyOf(res);
   }
   List<DocOcc> ambiguousTrailing(){
-    return claimColumns.entrySet().stream()
-      .filter(e -> e.getValue().size()>1)
+    return claimCount.entrySet().stream()
+      .filter(e -> e.getValue()>1)
       .map(Map.Entry::getKey)
       .sorted(bySource)
       .map(d -> dedent(List.of(d)).getFirst())
       .toList();
   }
   private static final Comparator<DocOcc> bySource= Comparator.comparingInt(DocOcc::line);
-  //Any line other than a doc line of its own ends the block, an empty line too, and whatever
-  //documentation is left above it is then attached to nothing, which is an error.
   List<DocOcc> collectBefore(int line){
     var before= new ArrayList<DocOcc>();
     for (int l= line-1; l >= 1; l -= 1){
-      var own= Optional.ofNullable(docByLine.get(l)).filter(d -> !d.trailing());
+      var own= ownDoc(l);
       if (own.isEmpty()){ break; }
       before.add(own.get());
     }
     return before.reversed();
+  }
+  Optional<DocOcc> ownDoc(int line){ return Optional.ofNullable(docByLine.get(line)).filter(d -> !d.trailing()); }
+  boolean declarationBelow(int line){
+    var l= line+1;
+    while (l<=lines.size() && (lines.get(l-1).isBlank() || ownDoc(l).isPresent())){ l += 1; }
+    return visitedLines.contains(l);
   }
   static List<DocOcc> dedent(List<DocOcc> ds){
     return ds.stream().map(d -> d.drop(indent(ds, d))).toList();
@@ -133,8 +134,6 @@ final class SourceDocs{
       depthByLine.put(l, arr);
     }
   }
-  //textColumn is where the stored text really starts in the line, so an error can put
-  //its carets under the offending characters: past the "///" and the indentation dedent drops.
   void add(int line, int column, String text, boolean trailing, DocKind kind){
     var previous= docByLine.put(line, new DocOcc(uri, line, column, column+3, text, trailing, kind));
     assert previous==null;

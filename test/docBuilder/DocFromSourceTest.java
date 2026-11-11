@@ -42,7 +42,7 @@ final class DocFromSourceTest{
         var builder= new HtmlDocBuilder(oracle, other, core, Optional.empty(), "p", html, true);
         core.forEach(builder::visitAll);
         builder.complete(new FrontendLogicMain().names("p", Map.of(), oracle.allFiles(), other), false, Runnable::run);
-        var renderer= new HtmlDocRenderer(Map.of(), new DocResolver("p", builder.types, other, TName::s), Map.of(), Optional.empty());
+        var renderer= new HtmlDocRenderer(Map.of(), new DocResolver("p", builder.types, other, TName::s), Optional.empty());
         var suites= renderer.suites();
         if (!suites.isEmpty()){ tests.addAll(renderer.renderTests(suites, TName::s)); }
         return List.of();
@@ -235,14 +235,14 @@ Box[X:imm]:{
 """);
     utils.Err.strCmp("[###]\t.m:A\n    Ignores the `X`.[###]", docs.text());
   }
-  @Test void aMethodOfAParameterWhoseTypeIsATypeParameterNamesNothing(@TempDir Path tmp){
+  @Test void aMethodOfAParameterWhoseTypeIsATypeParameterIsToldThatATypeParameterHasNoMethods(@TempDir Path tmp){
     var ex= assertThrows(UserError.class, () -> docs(tmp, a+"""
 B:{
   ///Calls `x.nonexistent` on its argument.
   .f[X:imm](x: X): A -> A;
   }
 """));
-    utils.Err.strCmp("Broken reference in a doc comment.[###]`x.nonexistent`[###]This names no type, no method, and nothing in scope where it is written.[###]", ex.getMessage());
+    utils.Err.strCmp("Broken reference in a doc comment.[###]`x.nonexistent`[###]The type of \"x\" is a type parameter, and a type parameter has no methods.[###]", ex.getMessage());
   }
   @Test void aMethodAnAnonymousLiteralInheritsIsANameInScopeThroughItsSelfName(@TempDir Path tmp){
     var docs= docs(tmp, """
@@ -256,16 +256,23 @@ Maker:{
 """);
     utils.Err.strCmp("[###]\t.n:A\n    Same as `self.m`.[###]", docs.text());
   }
-  @Test void aFenceAroundAnExampleDoesNotTurnTheProseAfterItIntoCode(@TempDir Path tmp){
-    var docs= docs(tmp, a+"""
+  @Test void aFenceAroundAnExampleIsACodeBlockNeverClosed(@TempDir Path tmp){
+    var ex= assertThrows(UserError.class, () -> docs(tmp, a+"""
 ///Usage:
 ///```
 //> .check{ A.m }
 ///```
 ///See `A`.
 B:{ .m: A -> A; }
-""");
-    utils.Err.strCmp("[###]<p>See <code><a href=\"#type-p_2e_A-0\">A</a></code>.</p>[###]", docs.html());
+"""));
+    utils.Err.strCmp("""
+Broken backticks in a doc comment.
+
+In file: fear:/_p/_rank_app.fear
+
+003| ///```
+   |    ^^^
+[###]This code block is never closed.[###]""", ex.getMessage());
   }
   @Test void methodsOfOneNameAreListedByArityAsANumber(@TempDir Path tmp){
     var docs= docs(tmp, a+"""
@@ -597,6 +604,47 @@ In file: fear:/_p/_rank_app.fear
 While inspecting the documentation of package p
 This code block is never closed.[###]""", ex.getMessage());
   }
+  @Test void aCodeBlockThatAnExampleLineInterruptsIsNeverClosed(@TempDir Path tmp){
+    var ex= assertThrows(UserError.class, () -> docs(tmp, a+"""
+///Shape of a use:
+///```
+///Foo: { .bar: Foo -> this; }
+//>A.m
+///Foo.bar
+///```
+B:{ .m: A -> A; }
+"""));
+    utils.Err.strCmp("""
+Broken backticks in a doc comment.
+
+In file: fear:/_p/_rank_app.fear
+
+003| ///```
+   |    ^^^
+
+While inspecting the documentation of package p
+This code block is never closed.
+A doc line starting with ``` opens a code block, and the next such line closes
+it, within the same run of /// lines: a //> line, a //- line and the end of the
+documentation all end that run. Close this code block with a ``` line before them.""", ex.getMessage());
+  }
+  @Test void aCodeBlockThatATestOnlyLineInterruptsIsNeverClosed(@TempDir Path tmp){
+    var ex= assertThrows(UserError.class, () -> docs(tmp, a+"""
+///```
+///Foo: { .bar: Foo -> this; }
+//-A.m
+///```
+B:{ .m: A -> A; }
+"""));
+    utils.Err.strCmp("""
+Broken backticks in a doc comment.
+
+In file: fear:/_p/_rank_app.fear
+
+002| ///```
+   |    ^^^
+[###]""", ex.getMessage());
+  }
   @Test void theFirstParagraphOnASeveralMatchPageLinksAReferenceOnItsSecondLine(@TempDir Path tmp){
     var docs= docs(tmp, a+"""
 B:{
@@ -609,5 +657,211 @@ C:{ .f: A -> A; }
 D:{ .m: A -> A; }
 """);
     utils.Err.strCmp("[###]<span class=\"opt-doc\">— Calls <code>this .m</code> on <code><a href=\"#type-p_2e_A-0\">A</a></code>.</span>[###]", docs.html());
+  }
+  @Test void twoAnonymousLiteralsStartingOnOneLineReadDifferentlyInTheListOfTypes(@TempDir Path tmp){
+    var html= docs(tmp, a+"""
+Both:{ #(a: A, b: A): A -> a; }
+Maker:{
+  .two: A ->
+    ///First.
+    Both#(A{ .m -> A }, A{
+      ///Second.
+      .m -> A
+      });
+  }
+""").html();
+    var listed= Pattern.compile("<li><a href=\"#literal-[^>]*>([^<]*)</a>").matcher(html).results().map(m -> m.group(1)).toList();
+    assertEquals(listed.stream().distinct().toList(), listed);
+  }
+  @Test void aDocAboveAnEmptyLineWithNoDeclarationBelowIsNotToldToDeleteTheEmptyLine(@TempDir Path tmp){
+    var ex= assertThrows(UserError.class, () -> docs(tmp, a+"""
+B:{
+  .m: A -> A;
+  ///Last note.
+
+  }
+"""));
+    utils.Err.strCmp("""
+Misplaced doc comment.[###]
+This documentation is attached to nothing.
+A /// or //> block documents the declaration right below it, but no declaration
+starts right below this block. Move this block right above the declaration it
+documents, or turn it into a plain // comment.""", ex.getMessage());
+  }
+  @Test void twoOptionsForTheInheritedMethodsOfAnAnonymousLiteralShowTheirReceiverCapabilities(@TempDir Path tmp){
+    var html= docs(tmp, a+"""
+B:{ read .n: A -> A; mut .n: A -> A; .k: A; }
+Maker:{
+  .make: B -> {'self
+    ///Uses `self.n`.
+    .k -> self.n;
+    };
+  }
+""").html();
+    utils.Err.strCmp("""
+[###]<h2>Several match Anon@_rank_app:4.n</h2>
+<ul class="options">
+<li><a href="#method-p_2e_B-0-read-_2e_n-0">read B.n()</a></li>
+<li><a href="#method-p_2e_B-0-mut-_2e_n-0">mut B.n()</a></li>
+</ul>[###]""", html);
+  }
+  @Test void theWelcomeTextCountsOneTypeAndDoesNotPlaceTheListOfTypesOnTheLeftWhenANarrowWindowShowsItAbove(@TempDir Path tmp){
+    var html= docs(tmp, a).html();
+    utils.Err.strCmp("[###]@media (max-width:48em){\n  .layout{display:block}[###]", html);
+    utils.Err.strCmp("[###]<p id=\"welcome\" class=\"welcome\">Types: 1. Pick one from the list.</p>[###]", html);
+  }
+  @Test void aReferenceWithAnArityTheMethodDoesNotHaveIsToldTheArityTheMethodHas(@TempDir Path tmp){
+    var ex= assertThrows(UserError.class, () -> docs(tmp, a+"""
+///Same as `A.m(_)`.
+B:{ .m: A -> A; }
+"""));
+    utils.Err.strCmp("""
+Broken reference in a doc comment.
+
+In file: fear:/_p/_rank_app.fear
+
+002| ///Same as `A.m(_)`.
+   |             ^^^^^^
+
+While inspecting the documentation of package p
+Type "A" has no method ".m(_)".
+There is a method "A.m()",
+but with a different number of arguments.[###]""", ex.getMessage());
+  }
+  @Test void aReferenceToAMethodTheTypeDoesNotHaveIsToldTheTypeHasNoSuchMethod(@TempDir Path tmp){
+    var ex= assertThrows(UserError.class, () -> docs(tmp, a+"""
+///Same as `A.k`.
+B:{ .m: A -> A; }
+"""));
+    utils.Err.strCmp("""
+Broken reference in a doc comment.
+
+In file: fear:/_p/_rank_app.fear
+
+002| ///Same as `A.k`.
+   |             ^^^
+
+While inspecting the documentation of package p
+Type "A" has no method ".k".[###]""", ex.getMessage());
+  }
+  @Test void aParameterThatAPatternDestructuresIsShownWithNoNameAndTheOthersKeepTheirNames(@TempDir Path tmp){
+    var base= compiled("base", """
+Destruct:{ #[A:**,B:**,R:**](a: A, b: B, f: mut MF[A,B,R]): R -> f#(a,b); }
+MF[A:**,B:**,R:**]:{ mut #(a: A, b: B): R; }
+""", OtherPackages.empty());
+    var docs= docs(tmp, OtherPackages.start(Map.of(), base, 0L), a+"""
+B:{
+  ///Keeps `x`.
+  .k(x: A, {.m}: A): A -> x;
+  }
+""");
+    utils.Err.strCmp("[###]B\n\t.k(x:A,A):A\n    Keeps `x`.[###]", docs.text());
+  }
+  @Test void theParameterThatDoubleColonIntroducesIsShownWithNoName(@TempDir Path tmp){
+    var docs= docs(tmp, a+"""
+B:{ .k(a: A): A; }
+C:B{ .k -> ::.m; }
+""");
+    utils.Err.strCmp("[###]C : B\n\t.k(A):A\n[###]", docs.text());
+  }
+  @Test void anAnonymousLiteralWhoseOnlyDocLinesAreTestOnlyIsNotListedButItsTestRuns(@TempDir Path tmp){
+    var docs= docs(tmp, a+"""
+Maker:{
+  .make: A -> A{
+    //- A.m
+    .m -> A;
+    };
+  }
+""");
+    utils.Err.strCmp("package p\n\nA\n\t.m:A\n\nMaker\n\t.make:A\n\n", docs.text());
+    assertEquals(2, docs.tests().size());
+  }
+  @Test void aBareSelectorWithAnArityNoMethodHasIsToldTheArityTheMethodHas(@TempDir Path tmp){
+    var ex= assertThrows(UserError.class, () -> docs(tmp, a+"""
+///Same as `.m(_)`.
+B:{ .k: A -> A; }
+"""));
+    utils.Err.strCmp("""
+Broken reference in a doc comment.[###]
+002| ///Same as `.m(_)`.
+   |             ^^^^^
+
+While inspecting the documentation of package p
+No type has a method ".m(_)".
+There is a method "A.m()",
+but with a different number of arguments.[###]""", ex.getMessage());
+  }
+  @Test void aTypeReferenceWithAnArityTheTypeDoesNotHaveIsToldTheArityTheTypeHas(@TempDir Path tmp){
+    var ex= assertThrows(UserError.class, () -> docs(tmp, a+"""
+///Holds an `A[_]`.
+B:{ .k: A -> A; }
+"""));
+    utils.Err.strCmp("""
+Broken reference in a doc comment.[###]
+002| ///Holds an `A[_]`.
+   |              ^^^^
+
+While inspecting the documentation of package p
+There is no type "A[_]".
+There is a type "A",
+but with a different number of type parameters.[###]""", ex.getMessage());
+  }
+  @Test void aMethodOnATypeParameterIsToldThatATypeParameterHasNoMethods(@TempDir Path tmp){
+    var ex= assertThrows(UserError.class, () -> docs(tmp, a+"""
+B:{
+  ///Calls `X.m` on its argument.
+  .f[X:imm](x: X): A -> A;
+  }
+"""));
+    utils.Err.strCmp("Broken reference in a doc comment.[###]`X.m`[###]\"X\" is a type parameter, and a type parameter has no methods.[###]", ex.getMessage());
+  }
+  @Test void aReferenceToAMethodOfAnotherPackageWithTwoReceiverCapabilitiesOffersBoth(@TempDir Path tmp){
+    var q= compiled("q", "Thing:{ read .n: read Thing -> this; mut .n: mut Thing -> this; }\n", OtherPackages.empty());
+    var html= docs(tmp, OtherPackages.start(Map.of(), q, 0L), """
+///Same as `q.Thing.n`.
+User:{ .m: User -> this; }
+""").html();
+    utils.Err.strCmp("[###]<li><a href=\"q.html#method-q_2e_Thing-0-read-_2e_n-0\">read q.Thing.n()</a></li>[###]", html);
+    utils.Err.strCmp("[###]<li><a href=\"q.html#method-q_2e_Thing-0-mut-_2e_n-0\">mut q.Thing.n()</a></li>[###]", html);
+  }
+  @Test void anInheritedGenericMethodKeepsTheTypeParameterNameItsSourceWrites(@TempDir Path tmp){
+    var docs= docs(tmp, a+"""
+P:{ .pipe[R:imm](r: R): R -> r; }
+Q:P{ .own[R:imm](r: R): R -> r; }
+""");
+    utils.Err.strCmp("[###]Q : P\n\t.own[R:imm](r:R):R\n\t.pipe[R:imm](R):R\n    from: P.pipe[###]", docs.text());
+  }
+  @Test void threeMethodsWithOtherAritiesAreListedWithCommasAndAFinalAnd(@TempDir Path tmp){
+    var ex= assertThrows(UserError.class, () -> docs(tmp, """
+A:{ .m: A -> this; .m(a: A): A -> a; .m(a: A, b: A): A -> a; }
+///Same as `A.m(_,_,_)`.
+B:{ .k: A -> A; }
+"""));
+    utils.Err.strCmp("""
+[###]Type "A" has no method ".m(_,_,_)".
+There are methods "A.m()", "A.m(_)" and "A.m(_,_)",
+but with a different number of arguments.[###]""", ex.getMessage());
+  }
+  @Test void aMethodMissingOnATypeOfAnotherPackageQuotesTheTypeAsTheReferenceWritesIt(@TempDir Path tmp){
+    var q= compiled("q", "Thing:{ .n: Thing -> this; }\n", OtherPackages.empty());
+    var ex= assertThrows(UserError.class, () -> docs(tmp, OtherPackages.start(Map.of(), q, 0L), """
+///Same as `q.Thing.k`.
+User:{ .m: User -> this; }
+"""));
+    utils.Err.strCmp("[###]Type \"q.Thing\" has no method \".k\".[###]", ex.getMessage());
+  }
+  @Test void anInheritedGenericMethodKeepsAFreshNameWhereTheSourceNameIsATypeParameterOfTheInheritingType(@TempDir Path tmp){
+    var docs= docs(tmp, a+"""
+P:{ .pipe[R:imm](r: R): R -> r; }
+Q[R:imm]:P{ .own(r: R): R -> r; }
+""");
+    utils.Err.strCmp("[###]\t.pipe[_AR:imm](_AR):_AR\n[###]", docs.text());
+  }
+  @Test void anInheritedGenericMethodKeepsAFreshNameWhereTheSourceNameIsATypeOfTheInheritingPackage(@TempDir Path tmp){
+    var q= compiled("q", "P:{ .pipe[A:imm](a: A): A -> a; }\n", OtherPackages.empty());
+    var docs= docs(tmp, OtherPackages.start(Map.of(), q, 0L), a+"""
+Q:q.P{ .own: A -> A; }
+""");
+    utils.Err.strCmp("[###]Q : q.P\n\t.own:A\n\t.pipe[_AA:imm](_AA):_AA\n[###]", docs.text());
   }
 }

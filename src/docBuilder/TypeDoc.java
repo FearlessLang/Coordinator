@@ -2,7 +2,6 @@ package docBuilder;
 
 import java.net.URI;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Optional;
@@ -20,7 +19,8 @@ import utils.Pos;
 sealed abstract class DeclarationDoc permits TypeDoc, MethodDoc{
   final List<DocOcc> docs;
   DeclarationDoc(List<DocOcc> docs){ this.docs= docs; }
-  boolean hasDocs(){ return !docs.isEmpty(); }
+  List<DocOcc> visibleDocs(){ return docs.stream().filter(o -> o.kind()!=DocKind.TestOnly).toList(); }
+  boolean hasDocs(){ return !visibleDocs().isEmpty(); }
   abstract Scope scope();
 }
 final class TypeDoc extends DeclarationDoc{
@@ -49,7 +49,7 @@ final class TypeDoc extends DeclarationDoc{
   }
   private MethodDoc oneOf(Object k, boolean declared, Supplier<List<DocOcc>> docs, List<MethodRef> inheritedFrom){
     var d= byKey.computeIfAbsent(k, _ -> new MethodDoc(this, declared, docs.get()));
-    d.addInheritedFrom(inheritedFrom);
+    d.inheritedFrom.addAll(inheritedFrom);
     return d;
   }
 }
@@ -57,8 +57,7 @@ final class MethodDoc extends DeclarationDoc{
   final TypeDoc owner;
   final boolean declared;
   final ArrayList<M> variants= new ArrayList<>();
-  final LinkedHashMap<MethodRefKey,MethodRef> inheritedByKey= new LinkedHashMap<>();
-  final Collection<MethodRef> inheritedFrom= inheritedByKey.values();
+  final ArrayList<MethodRef> inheritedFrom= new ArrayList<>();
   MethodDoc(TypeDoc owner, boolean declared, List<DocOcc> docs){
     super(docs);
     this.owner= owner;
@@ -68,22 +67,9 @@ final class MethodDoc extends DeclarationDoc{
   Scope scope(){ return new Scope(owner.main(), Optional.of(main()), owner.outer); }
   boolean visible(){ return declared || !owner.main().infName(); }
   void add(M m){ variants.add(m); }
-  void addInheritedFrom(List<MethodRef> refs){
-    refs.forEach(r -> inheritedByKey.putIfAbsent(MethodRefKey.of(r), r));
-  }
 }
-/*
- * owner is the declaration used for the hyperlink target.
- * provider is the actual type-use through which the method was found, when we
- * have one. This preserves distinctions such as DataType[_] vs DataType[_,_].
- */
-record MethodRef(TName owner, Optional<T.C> provider, M method){}
+record MethodRef(T.C provider, M method){}
 record DeclaredMethodKey(URI file, int line, int column, MName m){}
-record MethodRefKey(String provider, RC rc, MName m){
-  static MethodRefKey of(MethodRef r){
-    return new MethodRefKey(r.provider().map(Object::toString).orElse(r.owner().toString()), r.method().sig().rc(), r.method().sig().m());
-  }
-}
 record ImportedKey(TName origin, RC rc, MName m){}
 enum DocKind{
   Prose, Fence, Fenced, Example, TestOnly;

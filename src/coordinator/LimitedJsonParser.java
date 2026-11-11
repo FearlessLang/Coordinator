@@ -74,8 +74,8 @@ final class LimitedJsonParser{
     var tag= asStr(a.get(7));
     var abs= tag.equals("abs");
     if (!abs && !tag.equals("concrete")){ throw err("Bad abs/concrete tag"); }
-    return new M(new Sig(rc, new MName(nameS, ts.size()), bs, ts, ret, new TName(originS, originA, Pos.unknown), abs, dummySpan()),
-      IntStream.range(0, ts.size()).mapToObj(j -> "x"+j).toList(), Optional.empty());
+    var xs= IntStream.range(0, ts.size()).mapToObj(j -> "x"+j).toList();
+    return new M(new Sig(rc, new MName(nameS, ts.size()), bs, ts, ret, new TName(originS, originA, Pos.unknown), abs, dummySpan()), xs, xs, Optional.empty());
   }
   private int nat(Object o){
     try{ return Integer.parseInt("+"+asStr(o)); }//to reject negatives

@@ -3,7 +3,6 @@ package docBuilder;
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -14,10 +13,12 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.function.Consumer;
 
+import core.B;
 import core.E;
 import core.E.Literal;
 import core.M;
 import core.OtherPackages;
+import core.Sig;
 import core.Src;
 import core.T;
 import core.TName;
@@ -30,7 +31,9 @@ import tools.Fs;
 import tools.SourceOracle;
 import userMessages.Report;
 import utils.Bug;
+import utils.OneOr;
 import utils.Pos;
+import utils.Streams;
 
 public final class HtmlDocBuilder{
   final Optional<Path> baseDocLocation;
@@ -70,23 +73,41 @@ public final class HtmlDocBuilder{
     else{ t.addVariant(l); }
     for (var m : l.ms()){
       var p= m.sig().span().pos();
-      if (m.sig().origin().equals(l.name())){ t.declared(p, m, () -> docsAt(p, false), inheritedMethods(l, m)); }
-      else{ t.imported(m, inheritedMethods(l, m)); }
+      var from= inheritedMethods(l, m);
+      if (m.sig().origin().equals(l.name())){ t.declared(p, m, () -> docsAt(p, false), from); }
+      else{ t.imported(written(l, m, from), from); }
     }
+  }
+  M written(Literal l, M m, List<MethodRef> from){
+    var s= m.sig();
+    var ws= OneOr.of("one origin", from.stream().filter(r -> r.provider().name().equals(s.origin())).map(r -> B.xs(r.method().sig().bs())).distinct());
+    var xs= B.xs(s.bs());
+    if (ws.equals(xs)){ return m; }
+    var used= Stream.concat(Stream.concat(s.ts().stream(), Stream.of(s.ret())).flatMap(HtmlDocRenderer::typeNames), currentByName.keySet().stream()).map(TName::simpleName);
+    if (Stream.concat(B.xs(l.bs()).stream(), used).anyMatch(ws::contains)){ return m; }
+    var bs= Streams.zip(s.bs(), ws).map((b, w) -> new B(w, b.rcs())).toList();
+    return m.withSig(new Sig(s.rc(), s.m(), bs, s.ts().stream().map(t -> renamed(t, xs, ws)).toList(), renamed(s.ret(), xs, ws), s.origin(), s.abs(), s.span()));
+  }
+  static T renamed(T t, List<String> xs, List<String> ws){
+    return switch (t){
+      case T.X x -> xs.contains(x.name()) ? new T.X(ws.get(xs.indexOf(x.name())), x.span()) : x;
+      case T.RCX(var rc, var x) -> renamed(x, xs, ws).withRC(rc);
+      case T.ReadImmX(var x) -> renamed(x, xs, ws).readImm();
+      case T.RCC rcc -> rcc.withTs(rcc.c().ts().stream().map(ti -> renamed(ti, xs, ws)).toList());
+    };
   }
   public List<TestSource> complete(Function<TName,String> pkgNames, boolean testable, Consumer<Runnable> writes){
     var resolver= new DocResolver(pkgName, types, other, pkgNames);
-    var spans= new HashMap<DocOcc,Map<Integer,DocLink>>();
     oracle.allFiles().forEach(f -> sources.computeIfAbsent(f.fearURI(), u -> new SourceDocs(u, f.loadString())));
     var orphans= sources.values().stream().flatMap(s -> s.orphanRuns().stream()).map(this::orphan);
     var misplaced= Stream.concat(orphans, sources.values().stream().flatMap(s -> s.ambiguousTrailing().stream()).map(this::ambiguousTrailing)).toList();
     if (!misplaced.isEmpty()){ throw Report.docMisplaced(misplaced); }
     var markup= new ArrayList<String>();
     var problems= new ArrayList<String>();
-    types.stream().flatMap(t -> Stream.<DeclarationDoc>concat(Stream.of(t), t.methods.stream())).forEach(d -> linkDeclaration(resolver, d, spans, markup, problems));
+    types.stream().flatMap(t -> Stream.<DeclarationDoc>concat(Stream.of(t), t.methods.stream())).forEach(d -> checkDeclaration(resolver, d, markup, problems));
     if (!markup.isEmpty()){ throw Report.docBackticks(markup); }
     if (!problems.isEmpty()){ throw Report.docReferences(problems); }
-    var renderer= new HtmlDocRenderer(DocNames.uses(Stream.concat(currentByName.keySet().stream(), other.dom().stream()), pkgNames), resolver, spans, baseDocLocation);
+    var renderer= new HtmlDocRenderer(DocNames.uses(Stream.concat(currentByName.keySet().stream(), other.dom().stream()), pkgNames), resolver, baseDocLocation);
     var html= renderer.render();
     var txt= renderer.renderText();
     writes.accept(() -> { Fs.writeUtf8(htmlPath, html); Fs.writeUtf8(htmlPath.resolveSibling(pkgName+".txt"), txt); });
@@ -108,38 +129,30 @@ public final class HtmlDocBuilder{
   String message(Span span, String msg){
     return Message.of(oracle::loadString, List.of(new Frame("the documentation of package "+pkgName, span)), msg);
   }
-  void linkDeclaration(DocResolver resolver, DeclarationDoc d, HashMap<DocOcc,Map<Integer,DocLink>> spans, ArrayList<String> markup, ArrayList<String> problems){
-    var fences= d.docs.stream().filter(o -> o.kind()==DocKind.Fence).toList();
-    if (fences.size()%2==1){ markup.add(problem(List.of(fences.getLast()), 0, fences.getLast().text().length()-1, unclosedBlock)); }
-    //a //> line is real Fearless code, not prose: any backtick in it is a genuine
-    //raw string literal, never doc-comment markup, so it is never reference-checked.
-    HtmlDocRenderer.paragraphs(d.docs).forEach(p -> link(resolver, p, d.scope(), spans, markup, problems));
+  void checkDeclaration(DocResolver resolver, DeclarationDoc d, ArrayList<String> markup, ArrayList<String> problems){
+    HtmlDocRenderer.runs(d.docs, o -> o.kind().tested() || o.trailing()).stream()
+      .map(r -> r.stream().filter(o -> o.kind()==DocKind.Fence).toList())
+      .filter(fs -> fs.size()%2==1)
+      .findFirst()
+      .ifPresent(fs -> markup.add(problem(List.of(fs.getLast()), 0, fs.getLast().text().length()-1, unclosedBlock)));
+    HtmlDocRenderer.paragraphs(d.visibleDocs()).forEach(p -> check(resolver, p, d.scope(), markup, problems));
   }
-  void link(DocResolver resolver, List<DocOcc> p, Scope scope,
-      HashMap<DocOcc,Map<Integer,DocLink>> spans, ArrayList<String> markup, ArrayList<String> problems){
-    var text= HtmlDocRenderer.joined(p, "\n");
+  void check(DocResolver resolver, List<DocOcc> p, Scope scope, ArrayList<String> markup, ArrayList<String> problems){
+    var text= HtmlDocRenderer.joined(p);
     DocRefScanner.unclosed(text).forEach(r -> markup.add(problem(p, r.start(), r.end()-1, unclosedSpan)));
-    var res= new HashMap<Integer,DocLink>();
     for (var sp : DocRefScanner.refSpans(text)){
       if (text.substring(sp.start(), sp.end()).contains("\n")){ markup.add(problem(p, sp.start()-1, sp.end(), referenceOverLines)); continue; }
       var ref= DocRefScanner.wholeRef(text, sp);
       if (ref.isEmpty()){ problems.add(problem(p, sp.start(), sp.end()-1, notAName)); continue; }
-      var link= resolver.resolve(ref.get(), scope);
-      if (link.isEmpty()){ problems.add(problem(p, sp.start(), sp.end()-1, noSuchName)); continue; }
-      res.put(sp.start(), link.get());
+      if (resolver.resolve(ref.get(), scope).isEmpty()){ problems.add(problem(p, sp.start(), sp.end()-1, resolver.unresolved(ref.get(), scope).orElse(noSuchName))); }
     }
-    spans.put(p.getFirst(), res);
   }
-  //documentation that reached no declaration is documentation nobody will ever read,
-  //and the usual cause is a /// or //> written with one mark too few, which ends the
-  //block silently. Reported per run of lines, at the run.
   String orphan(List<DocOcc> run){
     var first= run.getFirst();
     var last= run.getLast();
-    var lines= sources.get(last.file()).lines;
-    var below= lines.stream().skip(last.line()).filter(l -> !l.isBlank()).findFirst().orElse("");
-    var emptyBelow= last.line()<lines.size() && lines.get(last.line()).isBlank();
-    var msg= first.trailing() ? trailingNotAttached : emptyBelow ? emptyLineEnds : below.strip().startsWith("//") ? notAttached : nothingDeclaredBelow;
+    var source= sources.get(last.file());
+    var below= source.lines.stream().skip(last.line()).filter(l -> !l.isBlank()).findFirst().orElse("");
+    var msg= first.trailing() ? trailingNotAttached : source.declarationBelow(last.line()) ? emptyLineEnds : below.strip().startsWith("//") ? notAttached : nothingDeclaredBelow;
     return message(new Span(first.file(), first.line(), first.column(),
       last.line(), last.textColumn()+last.text().length()), msg);
   }
@@ -189,23 +202,21 @@ public final class HtmlDocBuilder{
   static final String unclosedBlock=
     "This code block is never closed.\n"
    +"A doc line starting with ``` opens a code block, and the next such line closes\n"
-   +"it. Close this code block with a ``` line before the documentation ends.";
+   +"it, within the same run of /// lines: a //> line, a //- line and the end of the\n"
+   +"documentation all end that run. Close this code block with a ``` line before them.";
   String problem(List<DocOcc> p, int from, int to, String msg){
     var a= locate(p, from);
     var b= locate(p, to);
-    return message(new Span(a.getKey().file(), a.getKey().line(), a.getKey().textColumn()+a.getValue(),
-      b.getKey().line(), b.getKey().textColumn()+b.getValue()), msg);
+    return message(new Span(a.fileName(), a.line(), a.column(), b.line(), b.column()), msg);
   }
-  static Map.Entry<DocOcc,Integer> locate(List<DocOcc> p, int offset){
+  static Pos locate(List<DocOcc> p, int offset){
     var at= offset;
     for (var o : p){
-      if (at<o.text().length()){ return Map.entry(o, at); }
+      if (at<o.text().length()){ return new Pos(o.file(), o.line(), o.textColumn()+at); }
       at -= o.text().length()+1;
     }
     throw Bug.unreachable();
   }
-  //owner.cs() is fully flattened, so an overridden ancestor still gets its own entry here:
-  //by design, "From:" shows every provider along the chain, shadowed ones included.
   List<MethodRef> inheritedMethods(Literal owner, M m){
     return owner.cs().stream()
       .flatMap(c -> Stream.ofNullable(currentByName.getOrDefault(c.name(), other.__of(c.name()))).flatMap(sup -> matchingMethods(c, sup, m)))
@@ -214,7 +225,7 @@ public final class HtmlDocBuilder{
   Stream<MethodRef> matchingMethods(T.C provider, Literal sup, M m){
     return sup.ms().stream()
       .filter(sm -> sm.sig().rc()==m.sig().rc() && sm.sig().m().equals(m.sig().m()))
-      .map(sm -> new MethodRef(provider.name(), Optional.of(provider), sm));
+      .map(sm -> new MethodRef(provider, sm));
   }
   List<DocOcc> docsAt(Pos p, boolean literal){
     if (p.line() == 0){ return List.of(); }
