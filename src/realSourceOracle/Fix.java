@@ -286,6 +286,10 @@ public final class Fix{
     return false;
   }
   private static boolean holdsASource(Path f){
+    if (Fs.isWindows()){
+      var real= Fs.of(() -> f.getParent().toRealPath()).resolve(f.getFileName());
+      return Fs.of(LongPath::shownFolders).stream().filter(Files::exists).anyMatch(s -> Fs.of(s::toRealPath).startsWith(real));
+    }
     if (!Fs.isLinux()){ return false; }
     var all= mounts();
     var on= all.stream().filter(m -> f.startsWith(m.point)).reduce((a, b) -> b.point.getNameCount() >= a.point.getNameCount() ? b : a).orElseThrow();

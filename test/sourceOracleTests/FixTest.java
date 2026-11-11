@@ -638,21 +638,32 @@ a_b/x.txt=x
       and how Fix can tell that an entry holds a folder shown at another place.
       Fix must refuse to delete or move such an entry (FolderShapesDesign: the desk refuses delete(D, p s) when a mount point m has inside(D, m, p s)).
       Then make this test show that folder at a second place, as it does on Linux."""); }
-    if (Fs.isWindows()){ fail("""
-      Agent on Windows: investigate how Fix can tell that an entry holds a folder shown at another place:
-      a drive made by "subst X: <folder>" (no administrator rights needed), a shared folder of this machine mapped as a drive.
-      Fix must refuse to delete or move such an entry (FolderShapesDesign: the desk refuses delete(D, p s) when a mount point m has inside(D, m, p s)).
-      Then make this test show that folder at a second place, as it does on Linux."""); }
     var root= root(tmp, "a.txt\niii\na\njjj\n__MACOSX/b/c.txt\niii\nc");
-    var elsewhere= tmp.resolve("elsewhere");
-    Fs.ensureDir(elsewhere);
-    try (var _= bound(root.resolve("__MACOSX/b"), elsewhere)){
-      var lines= new ArrayList<String>();
-      var end= assertThrows(UncheckedIOException.class, () -> Fix.of(root, lines::add));
-      utils.Err.strCmp("[###]this entry, or an entry inside it, is also mounted at another place", end.getCause().getMessage());
-      assertEquals(List.of(), lines);
-      assertEquals("c", Fs.readUtf8(elsewhere.resolve("c.txt")));
+    var b= root.resolve("__MACOSX/b");
+    if (!Fs.isWindows()){
+      var elsewhere= tmp.resolve("elsewhere");
+      Fs.ensureDir(elsewhere);
+      try (var _= bound(b, elsewhere)){ refusedAt(root, elsewhere); }
+      return;
     }
+    var drive= Stream.of("ZYXWVUTSRQPONMLKJIHGFED".split("")).filter(l -> Stream.of(File.listRoots()).noneMatch(r -> r.toString().startsWith(l))).findFirst().orElseThrow()+":";
+    var why= "This test shows a folder at a second place with \"subst\".";
+    run(why, "subst", drive, b.toString());
+    try (var _= (AutoCloseable)() -> run(why, "subst", drive, "/D")){ refusedAt(root, Path.of(drive+"\\")); }
+    var share= "fearless_shown_"+ProcessHandle.current().pid();
+    var needsAdmin= "This test shares a folder with \"net share\": it needs administrator rights on this desk.";
+    run(needsAdmin, "net", "share", share+"="+b, "/GRANT:"+System.getProperty("user.name")+",READ");
+    try (var _= (AutoCloseable)() -> run(needsAdmin, "net", "share", share, "/DELETE", "/Y")){
+      run(needsAdmin, "net", "use", drive, "\\\\localhost\\"+share);
+      try (var _= (AutoCloseable)() -> run(needsAdmin, "net", "use", drive, "/DELETE", "/Y")){ refusedAt(root, Path.of(drive+"\\")); }
+    }
+  }
+  private static void refusedAt(Path root, Path elsewhere){
+    var lines= new ArrayList<String>();
+    var end= assertThrows(UncheckedIOException.class, () -> Fix.of(root, lines::add));
+    utils.Err.strCmp("[###]this entry, or an entry inside it, is also mounted at another place", end.getCause().getMessage());
+    assertEquals(List.of(), lines);
+    assertEquals("c", Fs.readUtf8(elsewhere.resolve("c.txt")));
   }
   private static final String needsRoot= "This test mounts a file system with \"sudo -n mount\": it needs a user that runs sudo with no password on this desk.";
   private static AutoCloseable bound(Path folder, Path at){
