@@ -144,6 +144,15 @@ Maker:{
 """);
     utils.Err.strCmp("[###]Maker\n\t.make:A\n    makes an A[###]", docs.text());
   }
+  @Test void aTrailingDocAfterAnUntypedAnonymousLiteralOnItsOwnLineDocumentsThatLiteral(@TempDir Path tmp){
+    var docs= docs(tmp, a+"""
+Maker:{
+  .make: A ->
+    { .m -> A }; /// makes an A
+  }
+""");
+    utils.Err.strCmp("[###]anonymous literal at [###]\n  makes an A\n[###]", docs.text());
+  }
   @Test void aCommentLineOfSlashesOrDashesIsAPlainComment(@TempDir Path tmp){
     var docs= docs(tmp, a+"""
 ////////////////////////////

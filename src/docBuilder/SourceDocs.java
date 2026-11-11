@@ -32,7 +32,7 @@ final class SourceDocs{
     if (literal && !first){ return List.of(); }
     var before= first ? collectBefore(pos.line()) : List.<DocOcc>of();
     var trailing= trailingAfter(pos.line(), pos.column())
-      .filter(occ -> Math.max(depthAt(occ.line(), occ.column()), depthAt(pos.line(), 0)) >= depthAt(pos.line(), pos.column()))
+      .filter(occ -> Math.max(depthAt(occ.line(), occ.column()), depthAt(pos.line(), 1)) >= depthAt(pos.line(), pos.column()))
       .stream().toList();
     //everything collected is attached, including an empty line trimmed off the end:
     //trimming is about what to show, not about what the block reached.
@@ -51,10 +51,7 @@ final class SourceDocs{
     return List.copyOf(res);
   }
   private static final Pattern fenceLine= Pattern.compile(" *```[^`]*");
-  int depthAt(int line, int column){
-    var arr= depthByLine.get(line);
-    return (arr==null || column>=arr.length) ? 0 : arr[column];
-  }
+  int depthAt(int line, int column){ return depthByLine.get(line)[column-1]; }
   //every /// and //> that no declaration took, as runs of lines with only empty lines between them
   List<List<DocOcc>> orphanRuns(){
     var lost= docByLine.values().stream()
