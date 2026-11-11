@@ -313,6 +313,7 @@ code{
     if (e.target.closest('a')){ history.replaceState({y:window.scrollY}, ''); }
   }, true);
   window.addEventListener('hashchange', route);
+  window.addEventListener('load', route);
   route();
   filter.addEventListener('input', function(){
     var q= filter.value.toLowerCase();
