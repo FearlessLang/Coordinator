@@ -447,7 +447,7 @@ code{
     var kind= block.getFirst().kind();
     if (kind==DocKind.Fence){ return; }
     if (kind==DocKind.Fenced){ sb.append("<pre class=\"fenced\">").append(Join.of(block.stream().map(o -> h(o.text())), "", "\n", "", "")).append("</pre>\n"); return; }
-    runs(block, HtmlDocRenderer::inParagraph).stream().filter(r -> inParagraph(r.getFirst())).forEach(r -> sb.append("<p>").append(renderParagraph(r, "\n")).append("</p>\n"));
+    paragraphs(block).forEach(r -> sb.append("<p>").append(renderParagraph(r, "\n")).append("</p>\n"));
   }
   static boolean inParagraph(DocOcc o){ return o.kind()==DocKind.Prose && !o.text().isBlank(); }
   static List<List<DocOcc>> paragraphs(List<DocOcc> ds){
