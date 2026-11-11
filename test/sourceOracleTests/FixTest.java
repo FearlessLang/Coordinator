@@ -340,6 +340,15 @@ com.zip[y.txt=y;]
 com10/
 com10/b.txt=b
 """);}
+  @Test void theFixedSegmentLowersOnlyTheLettersAToZ(@TempDir Path tmp){ fixes(tmp, """
+Key.txt
+iii
+k
+jjj""", """
+Renamed Key.txt to _ey.txt
+""", """
+_ey.txt=k
+""");}
   @Test void guessesTheExtensionOfAFileWithNoExtension(@TempDir Path tmp) throws IOException{
     var root= root(tmp);
     Fs.ensureDir(root.resolve("img"));
