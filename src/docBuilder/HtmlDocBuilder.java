@@ -81,9 +81,10 @@ public final class HtmlDocBuilder{
   M written(Literal l, M m, List<MethodRef> from){
     var s= m.sig();
     var ws= OneOr.of("one origin", from.stream().filter(r -> r.provider().name().equals(s.origin())).map(r -> B.xs(r.method().sig().bs())).distinct());
+    var xs= B.xs(s.bs());
+    if (ws.equals(xs)){ return m; }
     var used= Stream.concat(Stream.concat(s.ts().stream(), Stream.of(s.ret())).flatMap(HtmlDocRenderer::typeNames), currentByName.keySet().stream()).map(TName::simpleName);
     if (Stream.concat(B.xs(l.bs()).stream(), used).anyMatch(ws::contains)){ return m; }
-    var xs= B.xs(s.bs());
     var bs= Streams.zip(s.bs(), ws).map((b, w) -> new B(w, b.rcs())).toList();
     return m.withSig(new Sig(s.rc(), s.m(), bs, s.ts().stream().map(t -> renamed(t, xs, ws)).toList(), renamed(s.ret(), xs, ws), s.origin(), s.abs(), s.span()));
   }
