@@ -242,7 +242,7 @@ B:{
   .f[X:imm](x: X): A -> A;
   }
 """));
-    utils.Err.strCmp("Broken reference in a doc comment.[###]`x.nonexistent`[###]The type of \"x\" is the type parameter \"X\", and a type parameter has no methods.[###]", ex.getMessage());
+    utils.Err.strCmp("Broken reference in a doc comment.[###]`x.nonexistent`[###]The type of \"x\" is a type parameter, and a type parameter has no methods.[###]", ex.getMessage());
   }
   @Test void aMethodAnAnonymousLiteralInheritsIsANameInScopeThroughItsSelfName(@TempDir Path tmp){
     var docs= docs(tmp, """
@@ -781,6 +781,32 @@ User:{ .m: User -> this; }
 P:{ .pipe[R:imm](r: R): R -> r; }
 Q:P{ .own[R:imm](r: R): R -> r; }
 """);
-    utils.Err.strCmp("[###]Q : P\n\t.own[R:imm](r:R):R\n\t.pipe[R:imm](R):R\n    from: P.pipe\n[###]", docs.text());
+    utils.Err.strCmp("[###]Q : P\n\t.own[R:imm](r:R):R\n\t.pipe[R:imm](R):R\n    from: P.pipe[###]", docs.text());
+  }
+  @Test void threeMethodsWithOtherAritiesAreListedWithCommasAndAFinalAnd(@TempDir Path tmp){
+    var ex= assertThrows(UserError.class, () -> docs(tmp, """
+A:{ .m: A -> this; .m(a: A): A -> a; .m(a: A, b: A): A -> a; }
+///Same as `A.m(_,_,_)`.
+B:{ .k: A -> A; }
+"""));
+    utils.Err.strCmp("""
+[###]Type "A" has no method ".m(_,_,_)".
+There are methods "A.m()", "A.m(_)" and "A.m(_,_)",
+but with a different number of arguments.[###]""", ex.getMessage());
+  }
+  @Test void aMethodMissingOnATypeOfAnotherPackageQuotesTheTypeAsTheReferenceWritesIt(@TempDir Path tmp){
+    var q= compiled("q", "Thing:{ .n: Thing -> this; }\n", OtherPackages.empty());
+    var ex= assertThrows(UserError.class, () -> docs(tmp, OtherPackages.start(Map.of(), q, 0L), """
+///Same as `q.Thing.k`.
+User:{ .m: User -> this; }
+"""));
+    utils.Err.strCmp("[###]Type \"q.Thing\" has no method \".k\".[###]", ex.getMessage());
+  }
+  @Test void anInheritedGenericMethodKeepsAFreshNameWhereTheSourceNameIsATypeParameterOfTheInheritingType(@TempDir Path tmp){
+    var docs= docs(tmp, a+"""
+P:{ .pipe[R:imm](r: R): R -> r; }
+Q[R:imm]:P{ .own(r: R): R -> r; }
+""");
+    utils.Err.strCmp("[###]\t.pipe[_AR:imm](_AR):_AR\n[###]", docs.text());
   }
 }

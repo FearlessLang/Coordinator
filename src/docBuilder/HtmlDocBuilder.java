@@ -14,10 +14,12 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.function.Consumer;
 
+import core.B;
 import core.E;
 import core.E.Literal;
 import core.M;
 import core.OtherPackages;
+import core.Sig;
 import core.Src;
 import core.T;
 import core.TName;
@@ -30,7 +32,9 @@ import tools.Fs;
 import tools.SourceOracle;
 import userMessages.Report;
 import utils.Bug;
+import utils.OneOr;
 import utils.Pos;
+import utils.Streams;
 
 public final class HtmlDocBuilder{
   final Optional<Path> baseDocLocation;
@@ -70,9 +74,27 @@ public final class HtmlDocBuilder{
     else{ t.addVariant(l); }
     for (var m : l.ms()){
       var p= m.sig().span().pos();
-      if (m.sig().origin().equals(l.name())){ t.declared(p, m, () -> docsAt(p, false), inheritedMethods(l, m)); }
-      else{ t.imported(m, inheritedMethods(l, m)); }
+      var from= inheritedMethods(l, m);
+      if (m.sig().origin().equals(l.name())){ t.declared(p, m, () -> docsAt(p, false), from); }
+      else{ t.imported(written(l, m, from), from); }
     }
+  }
+  static M written(Literal l, M m, List<MethodRef> from){
+    var s= m.sig();
+    var ws= OneOr.of("one origin", from.stream().filter(r -> r.owner().equals(s.origin())).map(r -> B.xs(r.method().sig().bs())).distinct());
+    var used= Stream.concat(s.ts().stream(), Stream.of(s.ret())).flatMap(HtmlDocRenderer::typeNames).map(TName::simpleName);
+    if (Stream.concat(B.xs(l.bs()).stream(), used).anyMatch(ws::contains)){ return m; }
+    var xs= B.xs(s.bs());
+    var bs= Streams.zip(s.bs(), ws).map((b, w) -> new B(w, b.rcs())).toList();
+    return m.withSig(new Sig(s.rc(), s.m(), bs, s.ts().stream().map(t -> renamed(t, xs, ws)).toList(), renamed(s.ret(), xs, ws), s.origin(), s.abs(), s.span()));
+  }
+  static T renamed(T t, List<String> xs, List<String> ws){
+    return switch (t){
+      case T.X x -> xs.contains(x.name()) ? new T.X(ws.get(xs.indexOf(x.name())), x.span()) : x;
+      case T.RCX(var rc, var x) -> renamed(x, xs, ws).withRC(rc);
+      case T.ReadImmX(var x) -> renamed(x, xs, ws).readImm();
+      case T.RCC rcc -> rcc.withTs(rcc.c().ts().stream().map(ti -> renamed(ti, xs, ws)).toList());
+    };
   }
   public List<TestSource> complete(Function<TName,String> pkgNames, boolean testable, Consumer<Runnable> writes){
     var resolver= new DocResolver(pkgName, types, other, pkgNames);
@@ -125,7 +147,7 @@ public final class HtmlDocBuilder{
       var ref= DocRefScanner.wholeRef(text, sp);
       if (ref.isEmpty()){ problems.add(problem(p, sp.start(), sp.end()-1, notAName)); continue; }
       var link= resolver.resolve(ref.get(), scope);
-      if (link.isEmpty()){ problems.add(problem(p, sp.start(), sp.end()-1, resolver.noSuchMethod(ref.get(), scope).orElse(noSuchName))); continue; }
+      if (link.isEmpty()){ problems.add(problem(p, sp.start(), sp.end()-1, resolver.unresolved(ref.get(), scope).orElse(noSuchName))); continue; }
       res.put(sp.start(), link.get());
     }
     spans.put(p.getFirst(), res);

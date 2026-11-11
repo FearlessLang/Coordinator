@@ -423,7 +423,7 @@ code{
     sb.append(wrap(text.substring(i)));
     return sb.toString();
   }
-  private static Stream<TName> typeNames(T t){
+  static Stream<TName> typeNames(T t){
     if (!(t instanceof T.RCC rcc)){ return Stream.of(); }
     return Stream.concat(Stream.of(rcc.c().name()), rcc.c().ts().stream().flatMap(HtmlDocRenderer::typeNames));
   }
