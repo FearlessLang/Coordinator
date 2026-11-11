@@ -130,8 +130,11 @@ public final class HtmlDocBuilder{
     return Message.of(oracle::loadString, List.of(new Frame("the documentation of package "+pkgName, span)), msg);
   }
   void checkDeclaration(DocResolver resolver, DeclarationDoc d, ArrayList<String> markup, ArrayList<String> problems){
-    var fences= d.docs.stream().filter(o -> o.kind()==DocKind.Fence).toList();
-    if (fences.size()%2==1){ markup.add(problem(List.of(fences.getLast()), 0, fences.getLast().text().length()-1, unclosedBlock)); }
+    HtmlDocRenderer.runs(d.docs, o -> o.kind().tested() || o.trailing()).stream()
+      .map(r -> r.stream().filter(o -> o.kind()==DocKind.Fence).toList())
+      .filter(fs -> fs.size()%2==1)
+      .findFirst()
+      .ifPresent(fs -> markup.add(problem(List.of(fs.getLast()), 0, fs.getLast().text().length()-1, unclosedBlock)));
     HtmlDocRenderer.paragraphs(d.visibleDocs()).forEach(p -> check(resolver, p, d.scope(), markup, problems));
   }
   void check(DocResolver resolver, List<DocOcc> p, Scope scope, ArrayList<String> markup, ArrayList<String> problems){
@@ -199,7 +202,8 @@ public final class HtmlDocBuilder{
   static final String unclosedBlock=
     "This code block is never closed.\n"
    +"A doc line starting with ``` opens a code block, and the next such line closes\n"
-   +"it. Close this code block with a ``` line before the documentation ends.";
+   +"it, within the same run of /// lines: a //> line, a //- line and the end of the\n"
+   +"documentation all end that run. Close this code block with a ``` line before them.";
   String problem(List<DocOcc> p, int from, int to, String msg){
     var a= locate(p, from);
     var b= locate(p, to);

@@ -256,16 +256,23 @@ Maker:{
 """);
     utils.Err.strCmp("[###]\t.n:A\n    Same as `self.m`.[###]", docs.text());
   }
-  @Test void aFenceAroundAnExampleDoesNotTurnTheProseAfterItIntoCode(@TempDir Path tmp){
-    var docs= docs(tmp, a+"""
+  @Test void aFenceAroundAnExampleIsACodeBlockNeverClosed(@TempDir Path tmp){
+    var ex= assertThrows(UserError.class, () -> docs(tmp, a+"""
 ///Usage:
 ///```
 //> .check{ A.m }
 ///```
 ///See `A`.
 B:{ .m: A -> A; }
-""");
-    utils.Err.strCmp("[###]<p>See <code><a href=\"#type-p_2e_A-0\">A</a></code>.</p>[###]", docs.html());
+"""));
+    utils.Err.strCmp("""
+Broken backticks in a doc comment.
+
+In file: fear:/_p/_rank_app.fear
+
+003| ///```
+   |    ^^^
+[###]This code block is never closed.[###]""", ex.getMessage());
   }
   @Test void methodsOfOneNameAreListedByArityAsANumber(@TempDir Path tmp){
     var docs= docs(tmp, a+"""
@@ -596,6 +603,47 @@ In file: fear:/_p/_rank_app.fear
 
 While inspecting the documentation of package p
 This code block is never closed.[###]""", ex.getMessage());
+  }
+  @Test void aCodeBlockThatAnExampleLineInterruptsIsNeverClosed(@TempDir Path tmp){
+    var ex= assertThrows(UserError.class, () -> docs(tmp, a+"""
+///Shape of a use:
+///```
+///Foo: { .bar: Foo -> this; }
+//>A.m
+///Foo.bar
+///```
+B:{ .m: A -> A; }
+"""));
+    utils.Err.strCmp("""
+Broken backticks in a doc comment.
+
+In file: fear:/_p/_rank_app.fear
+
+003| ///```
+   |    ^^^
+
+While inspecting the documentation of package p
+This code block is never closed.
+A doc line starting with ``` opens a code block, and the next such line closes
+it, within the same run of /// lines: a //> line, a //- line and the end of the
+documentation all end that run. Close this code block with a ``` line before them.""", ex.getMessage());
+  }
+  @Test void aCodeBlockThatATestOnlyLineInterruptsIsNeverClosed(@TempDir Path tmp){
+    var ex= assertThrows(UserError.class, () -> docs(tmp, a+"""
+///```
+///Foo: { .bar: Foo -> this; }
+//-A.m
+///```
+B:{ .m: A -> A; }
+"""));
+    utils.Err.strCmp("""
+Broken backticks in a doc comment.
+
+In file: fear:/_p/_rank_app.fear
+
+002| ///```
+   |    ^^^
+[###]""", ex.getMessage());
   }
   @Test void theFirstParagraphOnASeveralMatchPageLinksAReferenceOnItsSecondLine(@TempDir Path tmp){
     var docs= docs(tmp, a+"""
