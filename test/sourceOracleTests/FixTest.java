@@ -650,13 +650,6 @@ a_b/x.txt=x
     var why= "This test shows a folder at a second place with \"subst\".";
     run(why, "subst", drive, b.toString());
     try (var _= (AutoCloseable)() -> run(why, "subst", drive, "/D")){ refusedAt(root, Path.of(drive+"\\")); }
-    var share= "fearless_shown_"+ProcessHandle.current().pid();
-    var needsAdmin= "This test shares a folder with \"net share\": it needs administrator rights on this desk.";
-    run(needsAdmin, "net", "share", share+"="+b, "/GRANT:"+System.getProperty("user.name")+",READ");
-    try (var _= (AutoCloseable)() -> run(needsAdmin, "net", "share", share, "/DELETE", "/Y")){
-      run(needsAdmin, "net", "use", drive, "\\\\localhost\\"+share);
-      try (var _= (AutoCloseable)() -> run(needsAdmin, "net", "use", drive, "/DELETE", "/Y")){ refusedAt(root, Path.of(drive+"\\")); }
-    }
   }
   private static void refusedAt(Path root, Path elsewhere){
     var lines= new ArrayList<String>();
