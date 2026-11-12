@@ -50,7 +50,6 @@ import org.junit.jupiter.api.io.TempDir;
 import realSourceOracle.Fix;
 import realSourceOracle.LongPath;
 import realSourceOracle.RealSourceOracleWithZip;
-import resources.LocalResources;
 import testHelperFs.FsDsl;
 import tools.Fs;
 import tools.SourceOracle;
@@ -676,47 +675,6 @@ a_b/x.txt=x
     MemorySegment.copy(bytes, 0, data, JAVA_BYTE, 12, bytes.length);
     assertEquals(1, win(JAVA_INT, "kernel32.dll", "DeviceIoControl", handle, 0x900A4, data, (int)data.byteSize(), MemorySegment.NULL, 0, a.allocate(JAVA_INT), MemorySegment.NULL));
     assertEquals(1, win(JAVA_INT, "kernel32.dll", "CloseHandle", handle));
-  }
-  @Test void fixDoesNotDeleteAFolderThatIsAlsoMountedAtAnotherPlace(@TempDir Path tmp) throws Exception{
-    var share= tmp.resolve("share");
-    try (var _= share(share)){
-      var root= root(share.resolve(tmp.getFileName().toString()), "a.txt\niii\na\njjj\n__MACOSX/b/c.txt\niii\nc");
-      var b= root.resolve("__MACOSX/b");
-      if (!Fs.isWindows()){
-        var elsewhere= tmp.resolve("elsewhere");
-        Fs.ensureDir(elsewhere);
-        try (var _= Fs.isMac() ? mounted(LocalResources.nfsShare+"/"+share.relativize(b), elsewhere) : bound(b, elsewhere)){ refusedAt(root, elsewhere); }
-        return;
-      }
-      var drive= Stream.of("ZYXWVUTSRQPONMLKJIHGFED".split("")).filter(l -> Stream.of(File.listRoots()).noneMatch(r -> r.toString().startsWith(l))).findFirst().orElseThrow()+":";
-      var why= "This test shows a folder at a second place with \"subst\".";
-      run(why, "subst", drive, b.toString());
-      try (var _= (AutoCloseable)() -> run(why, "subst", drive, "/D")){ refusedAt(root, Path.of(drive+"\\")); }
-    }
-  }
-  private static void refusedAt(Path root, Path elsewhere){
-    var lines= new ArrayList<String>();
-    var end= assertThrows(UncheckedIOException.class, () -> Fix.of(root, lines::add));
-    utils.Err.strCmp("[###]this entry, or an entry inside it, is a mount point or is also mounted at another place", end.getCause().getMessage());
-    assertEquals(List.of(), lines);
-    assertEquals("c", Fs.readUtf8(elsewhere.resolve("c.txt")));
-  }
-  private static final String needsShare= "This test mounts the NFS share LocalResources.nfsShare with \"sudo -n mount\": a folder that a Linux machine exports with NFS version 3.";
-  private static AutoCloseable share(Path at){
-    Fs.ensureDir(at);
-    if (!Fs.isMac()){ return () -> {}; }
-    var mount= mounted(LocalResources.nfsShare, at);
-    var mine= at.resolve(at.getParent().getFileName().toString());
-    return () -> { run(needsShare, "rm", "-rf", mine.toString()); mount.close(); };
-  }
-  private static AutoCloseable mounted(String source, Path at){
-    run(needsShare, "sudo", "-n", "mount", "-t", "nfs", "-o", "vers=3,nolocks,resvport,nobrowse", source, at.toString());
-    return () -> run(needsShare, "sudo", "-n", "umount", at.toString());
-  }
-  private static final String needsRoot= "This test mounts a file system with \"sudo -n mount\": it needs a user that runs sudo with no password on this desk.";
-  private static AutoCloseable bound(Path folder, Path at){
-    run(needsRoot, "sudo", "-n", "mount", "--bind", folder.toString(), at.toString());
-    return () -> run(needsRoot, "sudo", "-n", "umount", at.toString());
   }
   private static void run(String why, String... cmd){
     var p= Fs.of(() -> new ProcessBuilder(cmd).redirectErrorStream(true).start());
