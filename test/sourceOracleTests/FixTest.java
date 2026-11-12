@@ -37,6 +37,7 @@ import org.junit.jupiter.api.io.TempDir;
 import realSourceOracle.Fix;
 import realSourceOracle.LongPath;
 import realSourceOracle.RealSourceOracleWithZip;
+import resources.LocalResources;
 import testHelperFs.FsDsl;
 import tools.Fs;
 import userMessages.Report;
@@ -629,26 +630,37 @@ a_b/x.txt=x
     }
   }
   @Test void fixDoesNotDeleteAFolderThatIsAlsoMountedAtAnotherPlace(@TempDir Path tmp) throws Exception{
-    if (Fs.isMac()){ fail("""
-      Agent on macOS: investigate whether macOS can show a folder at a second place (bindfs, mount_nullfs, a share of this machine mounted on this machine),
-      and how Fix can tell that an entry holds a folder shown at another place.
-      Fix must refuse to delete or move such an entry (FolderShapesDesign: the desk refuses delete(D, p s) when a mount point m has inside(D, m, p s)).
-      Then make this test show that folder at a second place, as it does on Linux."""); }
     if (Fs.isWindows()){ fail("""
       Agent on Windows: investigate how Fix can tell that an entry holds a folder shown at another place:
       a drive made by "subst X: <folder>" (no administrator rights needed), a shared folder of this machine mapped as a drive.
       Fix must refuse to delete or move such an entry (FolderShapesDesign: the desk refuses delete(D, p s) when a mount point m has inside(D, m, p s)).
       Then make this test show that folder at a second place, as it does on Linux."""); }
-    var root= root(tmp, "a.txt\niii\na\njjj\n__MACOSX/b/c.txt\niii\nc");
-    var elsewhere= tmp.resolve("elsewhere");
-    Fs.ensureDir(elsewhere);
-    try (var _= bound(root.resolve("__MACOSX/b"), elsewhere)){
-      var lines= new ArrayList<String>();
-      var end= assertThrows(UncheckedIOException.class, () -> Fix.of(root, lines::add));
-      utils.Err.strCmp("[###]this entry, or an entry inside it, is also mounted at another place", end.getCause().getMessage());
-      assertEquals(List.of(), lines);
-      assertEquals("c", Fs.readUtf8(elsewhere.resolve("c.txt")));
+    var share= tmp.resolve("share");
+    try (var _= share(share)){
+      var root= root(share.resolve(tmp.getFileName().toString()), "a.txt\niii\na\njjj\n__MACOSX/b/c.txt\niii\nc");
+      var b= root.resolve("__MACOSX/b");
+      var elsewhere= tmp.resolve("elsewhere");
+      Fs.ensureDir(elsewhere);
+      try (var _= Fs.isMac() ? mounted(LocalResources.nfsShare+"/"+share.relativize(b), elsewhere) : bound(b, elsewhere)){
+        var lines= new ArrayList<String>();
+        var end= assertThrows(UncheckedIOException.class, () -> Fix.of(root, lines::add));
+        utils.Err.strCmp("[###]this entry, or an entry inside it, is also mounted at another place", end.getCause().getMessage());
+        assertEquals(List.of(), lines);
+        assertEquals("c", Fs.readUtf8(elsewhere.resolve("c.txt")));
+      }
     }
+  }
+  private static final String needsShare= "This test mounts the NFS share LocalResources.nfsShare with \"sudo -n mount\": a folder that a Linux machine exports with NFS version 3.";
+  private static AutoCloseable share(Path at){
+    Fs.ensureDir(at);
+    if (!Fs.isMac()){ return () -> {}; }
+    var mount= mounted(LocalResources.nfsShare, at);
+    var mine= at.resolve(at.getParent().getFileName().toString());
+    return () -> { run(needsShare, "rm", "-rf", mine.toString()); mount.close(); };
+  }
+  private static AutoCloseable mounted(String source, Path at){
+    run(needsShare, "sudo", "-n", "mount", "-t", "nfs", "-o", "vers=3,nolocks,resvport,nobrowse", source, at.toString());
+    return () -> run(needsShare, "sudo", "-n", "umount", at.toString());
   }
   private static final String needsRoot= "This test mounts a file system with \"sudo -n mount\": it needs a user that runs sudo with no password on this desk.";
   private static AutoCloseable bound(Path folder, Path at){
