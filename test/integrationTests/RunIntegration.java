@@ -253,7 +253,7 @@ Child: InfoMain{ sys, arg -> arg }
     p.getOutputStream().flush();
     var out= new String(p.getInputStream().readAllBytes(), UTF_8);
     assertEquals(1, p.waitFor(), out);
-    utils.Err.strCmp("The argument of the main p.Child holds the character U+00E9, which a Str can not hold.", out.strip());
+    utils.Err.strCmp("The argument of the main p.Child holds the character .u`00E9`, which a Str can not hold.", out.strip());
   }
   @Test void aFailureTextLineStartingWithAPlanLineIsNotAPlanLine(@TempDir Path tmp){
     var root= unitTestsProject(tmp, """
