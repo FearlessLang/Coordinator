@@ -2,7 +2,6 @@ package integrationTests;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.io.RandomAccessFile;
@@ -16,14 +15,18 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import realSourceOracle.Fix;
+import resources.LocalResources;
 import tools.Fs;
 
 final class FixNamesTest{
   @Test void fixCountsTheNamesOfAFileOnEachKindOfVolume(@TempDir Path tmp) throws Exception{
-    if (Fs.isMac()){ fail("""
-      Agent on macOS: make this test check Fix on a FAT32 volume and on an exFAT volume (hdiutil create -fs "MS-DOS FAT32" and -fs ExFAT, then hdiutil attach -nobrowse -mountpoint),
-      and on the NFS share LocalResources.nfsShare, where a file can have two names:
-      Fix cleans a .fear file on each of the three, and ends at a file with two names on the share (FolderShapesDesign, macOS: stat -f %l prints 1)."""); }
+    if (Fs.isMac()){
+      for (var fs : List.of("fat32", "exfat")){
+        try (var _= image(tmp, fs)){ cleans(tmp.resolve(fs)); }
+      }
+      try (var _= nfs(tmp)){ endsAtASecondName(cleans(tmp.resolve("share").resolve(tmp.getFileName().toString()))); }
+      return;
+    }
     if (Fs.isLinux()){
       for (var fs : List.of("vfat", "exfat")){
         try (var _= loop(tmp, fs)){ cleans(tmp.resolve(fs)); }
@@ -67,6 +70,25 @@ final class FixNamesTest{
     var owner= "uid="+Files.getAttribute(tmp, "unix:uid")+",gid="+Files.getAttribute(tmp, "unix:gid");
     run(needsRoot, "sudo", "-n", "mount", "-o", "loop,"+owner, image, at.toString());
     return () -> run(needsRoot, "sudo", "-n", "umount", at.toString());
+  }
+  private static final String needsMac= "This test makes a FAT32 and an exFAT volume with \"hdiutil\", and mounts the NFS share LocalResources.nfsShare with \"sudo -n mount\": a folder that a Linux machine exports with NFS version 3.";
+  private static AutoCloseable image(Path tmp, String fs){
+    var image= tmp.resolve(fs+".dmg").toString();
+    var at= tmp.resolve(fs);
+    Fs.ensureDir(at);
+    run(needsMac, "hdiutil", "create", "-size", "64m", "-fs", fs.equals("fat32") ? "MS-DOS FAT32" : "ExFAT", "-volname", "FIX", image);
+    run(needsMac, "hdiutil", "attach", "-nobrowse", "-mountpoint", at.toString(), image);
+    return () -> run(needsMac, "hdiutil", "detach", at.toString());
+  }
+  private static AutoCloseable nfs(Path tmp){
+    var at= tmp.resolve("share");
+    Fs.ensureDir(at);
+    run(needsMac, "sudo", "-n", "mount", "-t", "nfs", "-o", "vers=3,nolocks,resvport,nobrowse", LocalResources.nfsShare, at.toString());
+    var mine= at.resolve(tmp.getFileName().toString());
+    return () -> {
+      run(needsMac, "rm", "-rf", mine.toString());
+      run(needsMac, "sudo", "-n", "umount", at.toString());
+    };
   }
   private static final String needsAdmin= "This test makes volumes with \"diskpart\" and \"format /DevDrv\", and shares a folder with \"net share\": it needs an administrator on a desk that makes a Dev Drive.";
   private static String vdisk(Path tmp, String fs){ return "vdisk file=\""+tmp.resolve(fs+".vhdx")+"\""; }
