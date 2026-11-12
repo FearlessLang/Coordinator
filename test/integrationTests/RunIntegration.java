@@ -168,7 +168,6 @@ Test failure MyTests at line: 5 in file: _hello/_rank_app.fear
 Assertion failure.
 Expected: 3
 Actual: 1
-imm Assert._fail(_) error line: [###]
 imm MyTests.tests(_) error line: 5 in file _hello/_rank_app.fear
 """, out);
   }
@@ -3140,31 +3139,21 @@ Hello:Main{s->base.Debug#("from z")}
     utils.Err.strCmp("""
 deep boom
 imm Fail#(_) error line: 18 in file _rec/_rank_app.fear
-imm True.if(_) error line: [###] in file datatypes/bools.fear
+imm Fail#(_) error line: 18 in file _rec/_rank_app.fear
+imm _RunRecursion#(_,_) error line: [###] in file run_recursion.fear
+imm RunRecursion#(_) error line: [###] in file run_recursion.fear
 imm Fail#(_) error line: 18 in file _rec/_rank_app.fear
 imm Fail#(_) error line: 18 in file _rec/_rank_app.fear
 imm _RunRecursion#(_,_) error line: [###] in file run_recursion.fear
 imm RunRecursion#(_) error line: [###] in file run_recursion.fear
 imm Fail#(_) error line: 18 in file _rec/_rank_app.fear
-imm False.if(_) error line: [###] in file datatypes/bools.fear
-imm Fail#(_) error line: 18 in file _rec/_rank_app.fear
 imm Fail#(_) error line: 18 in file _rec/_rank_app.fear
 imm _RunRecursion#(_,_) error line: [###] in file run_recursion.fear
 imm RunRecursion#(_) error line: [###] in file run_recursion.fear
 imm Fail#(_) error line: 18 in file _rec/_rank_app.fear
-imm False.if(_) error line: [###] in file datatypes/bools.fear
-imm Fail#(_) error line: 18 in file _rec/_rank_app.fear
 imm Fail#(_) error line: 18 in file _rec/_rank_app.fear
 imm _RunRecursion#(_,_) error line: [###] in file run_recursion.fear
 imm RunRecursion#(_) error line: [###] in file run_recursion.fear
-imm Fail#(_) error line: 18 in file _rec/_rank_app.fear
-imm False.if(_) error line: [###] in file datatypes/bools.fear
-imm Fail#(_) error line: 18 in file _rec/_rank_app.fear
-imm Fail#(_) error line: 18 in file _rec/_rank_app.fear
-imm _RunRecursion#(_,_) error line: [###] in file run_recursion.fear
-imm RunRecursion#(_) error line: [###] in file run_recursion.fear
-imm Fail#(_) error line: 18 in file _rec/_rank_app.fear
-imm False.if(_) error line: [###] in file datatypes/bools.fear
 imm Fail#(_) error line: 18 in file _rec/_rank_app.fear
 imm GluedTrace.main(_) error line: 27 in file _rec/_rank_app.fear
 """, runRecursionMain("rec.GluedTrace"));
