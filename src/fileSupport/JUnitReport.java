@@ -2,11 +2,8 @@ package fileSupport;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
-import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
-import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
-import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.regex.MatchResult;
@@ -14,17 +11,9 @@ import java.util.regex.Pattern;
 
 import tools.Fs;
 
-/// A Fearless unit test log rendered as JUnit XML. `write` is for the Eclipse plugin
-/// (FearlessLang/Controllers), which polls that file into the JUnit view.
+/// A Fearless unit test log rendered as JUnit XML.
 public final class JUnitReport{
   private static final Pattern disabled= Pattern.compile("(?m)^PLAN\tDISABLED\t([^\t\\r\\n]*)\t([^\t\\r\\n]*)\t([^\t\\r\\n]*)\t([^\t\\r\\n]*)$");
-  public static Path file(Path reports){ return reports.resolve("report.xml"); }
-  public static void write(Path reports, Path folder, String name, Instant since){
-    while (true){
-      try{ newest(folder).filter(e -> e.when().isAfter(since)).ifPresent(e -> Fs.writeUtf8(file(reports), document(suiteOf(name, e.path())))); return; }
-      catch (UncheckedIOException e){ if (!(e.getCause() instanceof NoSuchFileException)){ throw e; } }
-    }
-  }
   public static String suite(String name, Path folder){
     return newest(folder).map(e -> suiteOf(name, e.path())).orElse("");
   }
