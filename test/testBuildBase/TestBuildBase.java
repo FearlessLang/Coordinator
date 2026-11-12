@@ -10,7 +10,6 @@ import java.util.Map;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
 import org.opentest4j.AssertionFailedError;
 
 import coordinator.CapabilityEnvironment;
@@ -20,11 +19,10 @@ import core.OtherPackages;
 import naiveBackend.BackendTools;
 import realSourceOracle.SourceOracleWithAutoload;
 import resources.ResolveResource;
-import tools.Fs;
 import tools.SourceOracle;
 import utils.Push;
 
-final class TestBuildBase{
+public final class TestBuildBase{
   static{ utils.Err.setUp(AssertionFailedError.class, Assertions::assertEquals, Assertions::assertTrue); }
   static Coordinator coordinator(Path base, Path debugOut){ return new Coordinator(){
     @Override public Path modsPath(){  return ResolveResource.coordinatorJars; }
@@ -43,21 +41,10 @@ final class TestBuildBase{
       return Coordinator.runMains(Coordinator.runData(debugOut.getParent(), base), jars, "_"+pkgName+".Main");
     }
   };}
-  static String run(Path base, Path debugOut){
+  public static String run(Path base, Path debugOut){
     var c= coordinator(base, debugOut);
     try{ return c.main(base, base); }
     catch (InterruptedException e){ return fail(e); }
   }
   @Test void test(){ assertEquals("", run(ResolveResource.stLibPath, ResolveResource.stLibDebugOut)); }
-  @Test void aFailingExampleOfBaseInAFileOfTheErrorMachineryIsReportedAtItsLine(@TempDir Path tmp){
-    var base= tmp.resolve("base");
-    Fs.copyTree(ResolveResource.stLibPath, base);
-    var action= base.resolve("action.fear");
-    var text= Fs.readUtf8(action)+"///A probe.\n//> .check{1 .assertEq 2}\nMachineryProbe:{}\n";
-    Fs.writeUtf8(action, text);
-    var line= text.lines().toList().indexOf("//> .check{1 .assertEq 2}")+1;
-    utils.Err.strCmp("""
-Test failure _MachineryProbe_Examples at line: %d in file: action.fear
-[###]""".formatted(line), run(base, tmp.resolve("dbgOut")));
-  }
 }

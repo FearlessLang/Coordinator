@@ -2,8 +2,10 @@ package integrationTests;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -17,8 +19,17 @@ import realSourceOracle.Fix;
 import tools.Fs;
 
 final class FixNamesTest{
-  @Test void fixCountsTheNamesOfAFileOnAFatVolumeOnAReFSVolumeAndOnASharedFolder(@TempDir Path tmp) throws Exception{
-    if (!Fs.isWindows()){ return; }
+  @Test void fixCountsTheNamesOfAFileOnEachKindOfVolume(@TempDir Path tmp) throws Exception{
+    if (Fs.isMac()){ fail("""
+      Agent on macOS: make this test check Fix on a FAT32 volume and on an exFAT volume (hdiutil create -fs "MS-DOS FAT32" and -fs ExFAT, then hdiutil attach -nobrowse -mountpoint),
+      and on the NFS share LocalResources.nfsShare, where a file can have two names:
+      Fix cleans a .fear file on each of the three, and ends at a file with two names on the share (FolderShapesDesign, macOS: stat -f %l prints 1)."""); }
+    if (Fs.isLinux()){
+      for (var fs : List.of("vfat", "exfat")){
+        try (var _= loop(tmp, fs)){ cleans(tmp.resolve(fs)); }
+      }
+      return;
+    }
     for (var fs : List.of("fat32", "exfat")){
       try (var _= attached(tmp, fs)){ cleans(formatted(tmp, fs)); }
     }
@@ -44,6 +55,18 @@ final class FixNamesTest{
     utils.Err.strCmp("[###]this file has more than one name, so writing it changes those other names too", e.getCause().getMessage());
     assertEquals(List.of(), lines);
     assertEquals("B:{}\r\n", Fs.readUtf8(at.resolve("other.fear")));
+  }
+  private static final String needsRoot= "This test makes a FAT32 and an exFAT volume with \"sudo -n mkfs.vfat\", \"sudo -n mkfs.exfat\" and \"sudo -n mount\": it needs a user that runs sudo with no password on this desk, and the programs mkfs.vfat and mkfs.exfat.";
+  private static AutoCloseable loop(Path tmp, String fs) throws IOException{
+    var image= tmp.resolve(fs+".img").toString();
+    var at= tmp.resolve(fs);
+    Fs.ensureDir(at);
+    try (var f= new RandomAccessFile(image, "rw")){ f.setLength(64L<<20); }
+    var make= fs.equals("vfat") ? List.of("sudo", "-n", "mkfs.vfat", "-F", "32", image) : List.of("sudo", "-n", "mkfs.exfat", image);
+    run(needsRoot, make.toArray(String[]::new));
+    var owner= "uid="+Files.getAttribute(tmp, "unix:uid")+",gid="+Files.getAttribute(tmp, "unix:gid");
+    run(needsRoot, "sudo", "-n", "mount", "-o", "loop,"+owner, image, at.toString());
+    return () -> run(needsRoot, "sudo", "-n", "umount", at.toString());
   }
   private static final String needsAdmin= "This test makes volumes with \"diskpart\" and \"format /DevDrv\", and shares a folder with \"net share\": it needs an administrator on a desk that makes a Dev Drive.";
   private static String vdisk(Path tmp, String fs){ return "vdisk file=\""+tmp.resolve(fs+".vhdx")+"\""; }

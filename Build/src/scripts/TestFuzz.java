@@ -6,5 +6,8 @@ public final class TestFuzz{
     ModularBuild.commons();
     ModularBuild.frontendMain();
     ModularBuild.runJUnit(args, ModularBuild.frontendTest(), "--include-package=fuzz");
+    if (args.length != 0){ return; }
+    ModularBuild.mainJars();
+    ModularBuild.runJUnit(args, ModularBuild.controllerTest(), "--include-package=fuzz");
   }
 }
