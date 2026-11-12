@@ -5,6 +5,7 @@ import static java.lang.foreign.ValueLayout.JAVA_CHAR;
 import static java.lang.foreign.ValueLayout.JAVA_INT;
 import static java.nio.charset.StandardCharsets.UTF_16LE;
 
+import java.io.File;
 import java.io.IOException;
 import java.lang.foreign.Arena;
 import java.lang.foreign.FunctionDescriptor;
@@ -37,6 +38,13 @@ public final class LongPath{
   private static final MethodHandle nextVolume= call("FindNextVolumeW", FunctionDescriptor.of(JAVA_INT, ADDRESS, ADDRESS, JAVA_INT));
   private static final MethodHandle closeVolumes= call("FindVolumeClose", FunctionDescriptor.of(JAVA_INT, ADDRESS));
   private static final MethodHandle volumePaths= call("GetVolumePathNamesForVolumeNameW", FunctionDescriptor.of(JAVA_INT, ADDRESS, ADDRESS, JAVA_INT, ADDRESS));
+  private static final MethodHandle queryDevice= call("QueryDosDeviceW", FunctionDescriptor.of(JAVA_INT, ADDRESS, ADDRESS, JAVA_INT));
+  private static final SymbolLookup netapi32= SymbolLookup.libraryLookup("netapi32.dll", Arena.global());
+  private static final MethodHandle shareEnum= linker.downcallHandle(netapi32.findOrThrow("NetShareEnum"), FunctionDescriptor.of(JAVA_INT, ADDRESS, JAVA_INT, ADDRESS, JAVA_INT, ADDRESS, ADDRESS, ADDRESS));
+  private static final MethodHandle bufferFree= linker.downcallHandle(netapi32.findOrThrow("NetApiBufferFree"), FunctionDescriptor.of(JAVA_INT, ADDRESS));
+  private static final MethodHandle openFile= call("CreateFileW", FunctionDescriptor.of(ADDRESS, ADDRESS, JAVA_INT, JAVA_INT, ADDRESS, JAVA_INT, JAVA_INT, ADDRESS));
+  private static final MethodHandle fileInfo= call("GetFileInformationByHandle", FunctionDescriptor.of(JAVA_INT, ADDRESS, ADDRESS));
+  private static final MethodHandle closeFile= call("CloseHandle", FunctionDescriptor.of(JAVA_INT, ADDRESS));
   private static MethodHandle call(String name, FunctionDescriptor d){ return linker.downcallHandle(kernel32.findOrThrow(name), d, Linker.Option.captureCallState("GetLastError")); }
   public static String of(Path folder, String name){
     var f= folder.toAbsolutePath().toString();
@@ -90,6 +98,21 @@ public final class LongPath{
     catch (IOException e){ throw e; }
     catch (Throwable t){ throw Bug.of(t); }
   }
+  public static int names(String path) throws IOException{
+    try (var arena= Arena.ofConfined()){
+      var state= arena.allocate(Linker.Option.captureStateLayout());
+      var file= (MemorySegment)openFile.invokeExact(state, wide(arena, path), 0, 7, MemorySegment.NULL, 3, 0, MemorySegment.NULL);
+      if (file.address() == -1L){ throw failed(shown(path), error(state)); }
+      try{
+        var info= arena.allocate(JAVA_INT, 13);
+        if ((int)fileInfo.invokeExact(state, file, info) == 0){ throw failed(shown(path), error(state)); }
+        return info.getAtIndex(JAVA_INT, 10);
+      }
+      finally{ var _= (int)closeFile.invokeExact(state, file); }
+    }
+    catch (IOException e){ throw e; }
+    catch (Throwable t){ throw Bug.of(t); }
+  }
   private static List<Path> paths(Arena arena, MemorySegment state, MemorySegment volume) throws Throwable{
     var names= arena.allocate(JAVA_CHAR, 32768);
     if ((int)volumePaths.invokeExact(state, volume, names, 32768, arena.allocate(JAVA_INT)) == 0){ throw failed(volume.getString(0, UTF_16LE), error(state)); }
@@ -101,6 +124,35 @@ public final class LongPath{
       at += 2L*(s.length()+1);
     }
     return res;
+  }
+  public static List<Path> shownFolders() throws IOException{
+    try (var arena= Arena.ofConfined()){
+      var state= arena.allocate(Linker.Option.captureStateLayout());
+      var target= arena.allocate(JAVA_CHAR, 32768);
+      var res= new ArrayList<Path>();
+      for (var root : File.listRoots()){
+        var drive= root.toString().substring(0, 2);
+        if ((int)queryDevice.invokeExact(state, wide(arena, drive), target, 32768) == 0){ throw failed(drive, error(state)); }
+        var t= target.getString(0, UTF_16LE);
+        if (t.startsWith("\\??\\")){ res.add(Path.of(shown("\\\\?\\"+t.substring(4)))); }
+      }
+      var shares= arena.allocate(ADDRESS);
+      var count= arena.allocate(JAVA_INT);
+      var status= (int)shareEnum.invokeExact(MemorySegment.NULL, 2, shares, -1, count, arena.allocate(JAVA_INT), MemorySegment.NULL);
+      if (status == 2114){ return res; }
+      if (status != 0){ throw failed("the shared folders of this machine", status); }
+      var n= count.get(JAVA_INT, 0L);
+      var all= shares.get(ADDRESS, 0L).reinterpret(56L*n);
+      try{
+        for (var i= 0; i < n; i += 1){
+          if ((all.get(JAVA_INT, 56L*i+8) & 0xFF) == 0){ res.add(Path.of(all.get(ADDRESS, 56L*i+40).reinterpret(Long.MAX_VALUE).getString(0, UTF_16LE))); }
+        }
+      }
+      finally{ var _= (int)bufferFree.invokeExact(all); }
+      return res;
+    }
+    catch (IOException e){ throw e; }
+    catch (Throwable t){ throw Bug.of(t); }
   }
   public static String shown(String path){ return path.startsWith("\\\\?\\UNC\\") ? "\\\\"+path.substring(8) : path.substring(4); }
   private static MemorySegment wide(Arena arena, String s){ return arena.allocateFrom(JAVA_CHAR, (s+"\0").toCharArray()); }

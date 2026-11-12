@@ -155,7 +155,8 @@ public final class Fix{
     }
     private static Path oneName(Path f) throws IOException{
       if (mountPoints().test(f) || holdsASource(f)){ throw new FileSystemException(f.toString(), null, "a file system is mounted here, or this file is also mounted at another place"); }
-      if (linkCount(f) != 1){ throw new FileSystemException(f.toString(), null, "this file has more than one name, so writing it changes those other names too"); }
+      var names= Fs.isWindows() ? LongPath.names(LongPath.of(f)) : (int)Files.getAttribute(f, "unix:nlink", NOFOLLOW_LINKS);
+      if (names != 1){ throw new FileSystemException(f.toString(), null, "this file has more than one name, so writing it changes those other names too"); }
       writable(f);
       return f;
     }
@@ -167,14 +168,6 @@ public final class Fix{
       var all= Files.getPosixFilePermissions(f, NOFOLLOW_LINKS);
       if (all.add(OWNER_WRITE)){ Files.setPosixFilePermissions(f, all); }
     }
-    private static int linkCount(Path f) throws IOException{
-      if (!Fs.isWindows()){ return (int)Files.getAttribute(f, "unix:nlink", NOFOLLOW_LINKS); }
-      if (Files.getFileStore(f).type().contains("FAT")){ return 1; }
-      var run= new ProcessBuilder("fsutil", "hardlink", "list", f.toString()).redirectErrorStream(true).start();
-      var out= new String(run.getInputStream().readAllBytes());
-      if (run.onExit().join().exitValue() != 0){ throw new FileSystemException(f.toString(), null, "fsutil hardlink list failed:\n"+out); }
-      return (int)out.lines().filter(l -> !l.isBlank()).count();
-    }
     private static Path noMountBelow(Path f) throws IOException{
       if (mountAtOrBelow(f)){ throw new FileSystemException(f.toString(), null, "a file system is mounted on this entry or inside it"); }
       if (holdsASource(f)){ throw new FileSystemException(f.toString(), null, "this entry, or an entry inside it, is also mounted at another place"); }
@@ -182,7 +175,8 @@ public final class Fix{
     }
     private static void remove(Path f) throws IOException{
       var folder= realFolder(f);
-      if (folder || Fs.isWindows()){ writable(f); }
+      if (Fs.isWindows()){ Files.setAttribute(f, "dos:readonly", false, NOFOLLOW_LINKS); }
+      if (folder){ writable(f); }
       if (!folder){ Files.delete(f); return; }
       try (var s= Files.list(f)){ for (var e : s.toList()){ remove(unreachable(e.getFileName().toString()) ? moveOut(f, e.getFileName().toString()) : e); } }
       Files.delete(f);
@@ -287,6 +281,10 @@ public final class Fix{
   }
   private static boolean holdsASource(Path f){
     if (Fs.isMac()){ return Fs.of(() -> exportedInside(f)); }
+    if (Fs.isWindows()){
+      var real= Fs.of(() -> f.getParent().toRealPath()).resolve(f.getFileName());
+      return Fs.of(LongPath::shownFolders).stream().filter(Files::exists).anyMatch(s -> Fs.of(s::toRealPath).startsWith(real));
+    }
     if (!Fs.isLinux()){ return false; }
     var all= mounts();
     var on= all.stream().filter(m -> f.startsWith(m.point)).reduce((a, b) -> b.point.getNameCount() >= a.point.getNameCount() ? b : a).orElseThrow();
