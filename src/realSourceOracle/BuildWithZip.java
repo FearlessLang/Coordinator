@@ -82,13 +82,10 @@ public final class BuildWithZip{
     var dirs= new LinkedHashSet<Path>();
     var nonEmpty= new LinkedHashSet<Path>();
     dirs.add(Path.of(""));
-    var mounted= Fix.mountPoints();
     Fs.walkV(root, s -> s.filter(p -> !p.equals(root)).forEach(abs -> {
       var rel= root.relativize(abs);
       nonEmpty.add(rel.resolveSibling(""));
-      if (!Fs.isDirectory(abs)){ return; }
-      if (mounted.test(abs)){ throw Report.mountPoint(abs); }
-      dirs.add(rel);
+      if (Fs.isDirectory(abs)){ dirs.add(rel); }
     }));
     dirs.removeAll(nonEmpty);
     for (var d : dirs){
