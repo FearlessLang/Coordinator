@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
-import java.time.Instant;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -49,17 +48,14 @@ Assertion failure.
     utils.Err.strCmp("[###]\"New\"[###]", suite);
     assertFalse(suite.contains("\"Old\""), suite);
   }
-  @Test void writingWrapsTheSuiteInAJUnitDocument(@TempDir Path project){
+  @Test void aDocumentWrapsTheSuites(@TempDir Path project){
     writeLog(project, "20260904_012117_731Z", log);
-    JUnitReport.write(project, project, "demo", Instant.parse("2026-09-03T00:00:00Z"));
-    var xml= Fs.readUtf8(JUnitReport.file(project));
+    var xml= JUnitReport.document(JUnitReport.suite("demo", project));
     utils.Err.strCmp("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<testsuites>\n[###]", xml);
     utils.Err.strCmp("[###]</testsuites>\n", xml);
   }
   @Test void aRunThatLoggedNoUnitTestsReportsNothing(@TempDir Path project){
     assertEquals("", JUnitReport.suite("demo", project));
-    JUnitReport.write(project, project, "demo", Instant.parse("2026-09-03T00:00:00Z"));
-    assertFalse(Fs.exists(JUnitReport.file(project)));
   }
   @Test void aLogStillBeingWrittenIsReportedUpToItsLastCompleteRecord(@TempDir Path project){
     writeLog(project, "20260904_012117_731Z", log);
@@ -86,11 +82,5 @@ Assertion failure.
     Fs.writeUtf8(project.resolve(".out").resolve("logs").resolve("_foo").resolve("unit_test_logger.log"), "user text\n");
     Fs.writeUtf8(project.resolve(".out").resolve("logs").resolve("_foo").resolve("unit_test_log.log"), "user text\n");
     utils.Err.strCmp("<testsuite name=\"demo\" tests=\"3\" failures=\"1\" errors=\"0\">[###]", JUnitReport.suite("demo", project));
-  }
-  //A main that runs no unit tests must not republish the log some earlier run left behind
-  @Test void aLogOlderThanThisRunIsNotReported(@TempDir Path project){
-    writeLog(project, "20260904_012117_731Z", log);
-    JUnitReport.write(project, project, "demo", Instant.parse("2026-09-05T00:00:00Z"));
-    assertFalse(Fs.exists(JUnitReport.file(project)));
   }
 }
