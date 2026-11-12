@@ -286,11 +286,26 @@ public final class Fix{
     return false;
   }
   private static boolean holdsASource(Path f){
+    if (Fs.isMac()){ return Fs.of(() -> exportedInside(f)); }
     if (!Fs.isLinux()){ return false; }
     var all= mounts();
     var on= all.stream().filter(m -> f.startsWith(m.point)).reduce((a, b) -> b.point.getNameCount() >= a.point.getNameCount() ? b : a).orElseThrow();
     var inside= on.root.resolve(on.point.relativize(f));
     return all.stream().anyMatch(m -> m != on && m.dev.equals(on.dev) && m.root.startsWith(inside));
+  }
+  private static boolean exportedInside(Path f) throws IOException{
+    if (!realFolder(f)){ return false; }
+    var own= Files.getFileStore(f);
+    var server= own.name().indexOf(":/")+1;
+    if (server == 0){ return false; }
+    var point= f;
+    while (Files.getFileStore(point.getParent()).equals(own)){ point= point.getParent(); }
+    var inside= Path.of(own.name().substring(server)).resolve(point.relativize(f));
+    for (var s : f.getFileSystem().getFileStores()){
+      var same= !s.equals(own) && s.name().startsWith(own.name().substring(0, server));
+      if (same && Path.of(s.name().substring(server)).startsWith(inside)){ return true; }
+    }
+    return false;
   }
   private static Path mountPath(String field){
     var res= new ByteArrayOutputStream();

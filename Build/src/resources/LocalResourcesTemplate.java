@@ -25,4 +25,5 @@ public class LocalResourcesTemplate{ //public class LocalResources {
   public static final Path badZipCorpous= prefix.resolve("Coordinator", "badZips");
   public static final Path packaging= prefix.resolve("Coordinator", "_fearless_packaging");
   public static final Path portableEclipse= prefix.resolve("eclipse");
+  public static final String nfsShare= "";
 }
