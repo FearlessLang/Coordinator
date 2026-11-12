@@ -379,6 +379,28 @@ failing terminated: the failing main throws
 starter ends
 """, main(freshIntegrationRoot("testProcessAttenuation"), List.of("-DfearlessAttenuators=base.NoManager")));
   }
+  @Test void aProcessTerminatedRightAfterItsStartLeavesOnlyItsOutput(@TempDir Path tmp){
+    var root= unitTestsProject(tmp, """
+use base.Main as Main;
+use base.InfoMain as InfoMain;
+use base.Infos as Infos;
+use base.Block as Block;
+use base.Nat as Nat;
+use base.Break as Break;
+use base.Continue as Continue;
+Writer: InfoMain{sys, arg -> Block#
+  .var[Nat] i = {0}
+  .loop(i, {c -> Block#(sys.out.print "x", Continue#)})
+  .return{ arg }
+  }
+Stopper: Main{sys -> Block#
+  .var[Nat] i = {0}
+  .loop(i, {c -> Block#(c.set((c.get) + 1), Block#(sys.process.start(Writer, Infos.msg "a", {}).terminate, (c.get) >= 20 ? {.then -> Break#; .else -> Continue#}))})
+  .return{ sys.out.println "terminated" }
+  }
+""");
+    utils.Err.strCmp("terminated\n", main(root, List.of()).replace("x", ""));
+  }
   @Test void aProcessWhoseCapRunningMainIsDroppedEnds(@TempDir Path tmp) throws InterruptedException{
     var root= tmp.resolve("root");
     UserError.root = root;
