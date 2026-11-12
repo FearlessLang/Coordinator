@@ -20,12 +20,14 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import javax.imageio.ImageIO;
 import javax.swing.JFrame;
+import javax.swing.JOptionPane;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.SwingUtilities;
@@ -36,6 +38,7 @@ import core.E.Literal;
 import core.OtherPackages;
 import fileAssociations.FileAssociations;
 import fileAssociations.Icon;
+import fileAssociations.WindowIcon;
 import fileSupport.NativeLocaleForcer;
 import naiveBackend.BackendTools;
 import realSourceOracle.RealSourceOracleWithZip;
@@ -47,6 +50,7 @@ import tools.Utf8Sink;
 import userMessages.Report;
 import userMessages.UserError;
 import userMessages.Violation;
+import utils.Bug;
 
 public final class Main{
   private static final AtomicInteger macSpawnOk= new AtomicInteger(0);
@@ -63,15 +67,13 @@ public final class Main{
   }
   private static void run(String[] args) throws InterruptedException{
     var appDir= JavacTool.reqAppDir(Violation::mustUseLauncher);
+    var launch= IntStream.range(0, args.length).filter(i -> !args[i].startsWith("-psn_")).boxed().findFirst().map(i -> normalize(args, i));
+    if (Fs.isMac() && (launch.isEmpty() || !hasConsoleFlag())){ Desktop.getDesktop().setOpenFileHandler(e -> e.getFiles().forEach(f -> spawnMac(f.toPath()))); }
+    if (Fs.isMac() && launch.isEmpty()){ Thread.sleep(1000); }
+    if (launch.isEmpty() && macSpawnOk.get() != 0){ return; }
     try{ offerAssociation(appDir); }
     catch (UserError e){ e.display(); System.exit(1); }
-    var launch= IntStream.range(0, args.length).filter(i -> !args[i].startsWith("-psn_")).boxed().findFirst().map(i -> normalize(args, i));
-    if (Fs.isMac() && !hasConsoleFlag()){ Desktop.getDesktop().setOpenFileHandler(e -> e.getFiles().forEach(f -> spawnMac(appDir, f.toPath()))); }
-    if (launch.isEmpty()){
-      if (Fs.isMac()){ Thread.sleep(1000); }
-      if (macSpawnOk.get() == 0){ InitialSupportGuiMain.main(new String[]{}); }
-      return;
-    }
+    if (launch.isEmpty()){ InitialSupportGuiMain.main(new String[]{}); return; }
     var l= launch.get();
     if (!Files.exists(l)){ throw Report.launchPathNotFound(l); }
     var stdLib= appDir.resolve("stdLib");
@@ -88,7 +90,9 @@ public final class Main{
     };
     c.main(project, base);
   }
-  private static final Predicate<String> belongsToFamily= s -> s.contains("earless");
+  public static final Predicate<String> belongsToFamily= s -> s.contains("earless");
+  ///The launcher names us: one identity per launcher, and the manager's own is not the portable one.
+  public static String identity(Path launcher){ return launcher.getFileName().toString().replaceFirst("\\.[^.]*$", ""); }
   /// The manager of that folder never sees the folder deleted in part: the folder is renamed in its folder, then deleted.
   private static void removeAtOnce(Path dir){
     if (!Fs.exists(dir)){ return; }
@@ -96,29 +100,46 @@ public final class Main{
     Fs.ofV(() -> Fs.move(dir, gone, StandardCopyOption.ATOMIC_MOVE));
     Fs.rmTree(gone);
   }
+  public static void replaced(Path launcher, Path command){
+    JavacTool.managerFolderOf(command).filter(d -> !JavacTool.managerFolderOf(launcher).equals(Optional.of(d))).ifPresent(Main::removeAtOnce);
+  }
+  public static void reconcile(Path launcher, String name, List<Icon> extensions, List<String> taken, List<WindowIcon> windows, Path icon, Function<String,RuntimeException> ambiguous){
+    FileAssociations.reconcile(identity(launcher), name, belongsToFamily, launcher, extensions, taken, windows, icon, c -> replaced(launcher, c),
+      ambiguous, Held::new, Violation::associationNotWritable, Violation::associationLeftHalfDone);
+  }
+  public static void eradicateAll(){ FileAssociations.eradicateAll(belongsToFamily, Violation::associationLeftHalfDone); }
   private static void offerAssociation(Path appDir){
-    if (Fs.isMac()){ return; }
     var launcher= ProcessHandle.current().info().command().map(Path::of);
-    if (launcher.isEmpty()){ return; }
+    if (launcher.isEmpty() || GraphicsEnvironment.isHeadless()){ return; }
     var l= launcher.get();
-    var identity= l.getFileName().toString().replaceFirst("\\.[^.]*$", "");
-    if (!belongsToFamily.test(identity)){ return; }
+    if (!belongsToFamily.test(identity(l))){ return; }
     var icon= appDir.resolve("icon.png");
-    FileAssociations.reconcile(identity, "Fearless Portable", belongsToFamily, l, List.of(new Icon(".fearless", l, icon)), List.of(), icon,
-      c -> JavacTool.managerFolderOf(c).ifPresent(Main::removeAtOnce),
-      reported -> Violation.associationsAmbiguous(reported).withRecovery(
-        "Remove all Fearless registrations", () -> FileAssociations.eradicateAll(belongsToFamily, Violation::associationLeftHalfDone)),
-      Main::chosen,
-      held -> Violation.associationNotOurs(held, e -> ""),
-      Violation::associationNotWritable,
-      Violation::associationLeftHalfDone);
+    hold(taken -> reconcile(l, "Fearless Portable", List.of(new Icon(".fearless", l, icon)), taken, List.of(), icon,
+      reported -> Violation.associationsAmbiguous(reported).withRecovery("Remove all Fearless registrations", Main::eradicateAll)),
+      h -> askOnDesktop(Violation.associationQuestion(h, e -> "", "ends Fearless")), h -> Violation.associationNotOurs(h, e -> ""));
   }
-  private static UserError chosen(Map<String,List<String>> choices){
-    return Violation.associationChosenByHand(choices, e -> "").withRecovery("Remove these choices", () -> FileAssociations.forgetChoices(choices, Violation::associationNotWritable));
+  public static void hold(Consumer<List<String>> reconcile, Predicate<Map<String,String>> ask, Function<Map<String,String>,RuntimeException> rejected){
+    try{ reconcile.accept(List.of()); }
+    catch (Held h){
+      if (!ask.test(h.held)){ throw rejected.apply(h.held); }
+      try{ reconcile.accept(List.copyOf(h.held.keySet())); }
+      catch (Held again){ throw rejected.apply(again.held); }
+    }
   }
-  private static void spawnMac(Path appDir, Path file){
-    var bundle= appDir.getParent().getParent();
-    Fs.ofV(() -> Fs.processBuilder(List.of("open", "-n", "-a", bundle.toString(), "--args", file.toString())).start());
+  /// A refusal of the reconcile: each extension, with its dot, mapped to the name of the program holding it.
+  @SuppressWarnings("serial") public static final class Held extends RuntimeException{
+    final Map<String,String> held;
+    public Held(Map<String,String> held){ this.held= held; }
+  }
+  private static boolean askOnDesktop(String question){
+    var asked= new FutureTask<>(() -> JOptionPane.showConfirmDialog(null, question, "Fearless", JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION);
+    try{ SwingUtilities.invokeAndWait(asked); return asked.get(); }
+    catch (InterruptedException|InvocationTargetException|ExecutionException e){ throw Bug.of(e); }
+  }
+  private static void spawnMac(Path file){
+    var launcher= Path.of(ProcessHandle.current().info().command().orElseThrow());
+    var windowed= hasConsoleFlag() ? launcher.resolveSibling(launcher.getFileName()+"w") : launcher;
+    Fs.ofV(() -> Fs.processBuilder(List.of(windowed.toString(), file.toString())).inheritIO().start());
     macSpawnOk.incrementAndGet();
   }
   private static void hookStd() throws InvocationTargetException, InterruptedException, ExecutionException{

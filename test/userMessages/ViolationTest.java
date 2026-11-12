@@ -79,7 +79,7 @@ If this keeps happening, report the problem.
 """, Violation.cacheMissingBaseApiFile(apiJson).getMessage());
   }
   @Test void associationsAmbiguous(){
-    var registered= "C:\\Program Files\\FearlessManaged0_006\\fearlessManaged0_006w.exe\nC:\\Users\\ada\\Downloads\\fearlessManaged0_007\\fearlessManaged0_007w.exe";
+    var registered= "fearlessManaged0_006w\nfearlessManaged0_007w";
     utils.Err.strCmp("""
 Fearless cannot tell which of your Fearless installs should open Fearless
 projects: more than one is registered with your system at once.
@@ -88,107 +88,49 @@ Fearless stopped before touching anything: your system is exactly as it
 was.
 
 What is registered:
-C:\\Program Files\\FearlessManaged0_006\\fearlessManaged0_006w.exe
-C:\\Users\\ada\\Downloads\\fearlessManaged0_007\\fearlessManaged0_007w.exe""", Violation.associationsAmbiguous(registered).getMessage());
+fearlessManaged0_006w
+fearlessManaged0_007w""", Violation.associationsAmbiguous(registered).getMessage());
   }
-  private static final String chosenByHand= """
-Fearless cannot become the program that opens Fearless projects and the
-other kinds of file it registers.
-
-Your system remembers the choices listed below. Each one is a choice
-made by hand of the program that opens a kind of file, for example with
-"Open with" and "Always". Fearless does not remove these choices on
-its own, and stopped before touching anything: your system is exactly
-as it was.
-
-Removing these choices clears the way. Each choice is listed under the
-place holding the choice: a file, or a kind of file standing for the
-registry key
-HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts\\<kind of file>\\UserChoice
-and the key UserChoiceLatest next to it.
-
-The choices:
-""";
-  @Test void associationChosenByHandForKindsOfFile(){
-    utils.Err.strCmp(chosenByHand+"""
-.foo claimed by "hello.Foo" of project "demo"
-  SomeApp.foo
-.fapp042 claimed by "hello.Bar" of project "demo"
-  SomeApp.fapp042""", Violation.associationChosenByHand(ordered(".foo", "SomeApp.foo", ".fapp042", "SomeApp.fapp042"), ViolationTest::claimedBy).getMessage());
-  }
-  @Test void associationChosenByHandInFiles(){
-    var choices= new LinkedHashMap<String,List<String>>();
-    choices.put("/home/me/.config/mimeapps.list", List.of("application/x-fearless-htm=firefox.desktop", "application/x-fearless=editor.desktop;"));
-    choices.put("/etc/xdg/mimeapps.list", List.of("text/plain=fearlessBin0_001.desktop"));
-    utils.Err.strCmp(chosenByHand+"""
-/home/me/.config/mimeapps.list
-  application/x-fearless-htm=firefox.desktop
-  application/x-fearless=editor.desktop;
-/etc/xdg/mimeapps.list
-  text/plain=fearlessBin0_001.desktop""", Violation.associationChosenByHand(choices, e -> "").getMessage());
-  }
-  private static Map<String,List<String>> ordered(String e1, String p1, String e2, String p2){
-    var res= new java.util.LinkedHashMap<String,List<String>>();
-    res.put(e1, List.of(p1));
-    res.put(e2, List.of(p2));
+  private static Map<String,String> ordered(String e1, String p1, String e2, String p2){
+    var res= new LinkedHashMap<String,String>();
+    res.put(e1, p1);
+    res.put(e2, p2);
     return res;
   }
   @Test void associationNotOurs(){
     utils.Err.strCmp("""
-Fearless cannot become the program that opens the kinds of file listed
-below.
-
-Another program already answers for these kinds of file. Fearless
-stopped before touching anything: your system is exactly as it was.
-
-What stood in the way:
-.fearless -> fearlessBin0_003""", Violation.associationNotOurs(Map.of(".fearless", List.of("fearlessBin0_003")), e -> "").getMessage());
-  }
-  @Test void associationNotOursSeveral(){
-    var held= new LinkedHashMap<String,List<String>>();
-    held.put(".ffile042", List.of("org.gnome.TextEditor", "text/plain"));
-    held.put(".fearless", List.of("OtherApp.fearless"));
-    utils.Err.strCmp("""
-Fearless cannot become the program that opens the kinds of file listed
-below.
-
-Another program already answers for these kinds of file. Fearless
-stopped before touching anything: your system is exactly as it was.
-
-What stood in the way:
-.ffile042 -> org.gnome.TextEditor
-.ffile042 -> text/plain
-.fearless -> OtherApp.fearless""", Violation.associationNotOurs(held, e -> "").getMessage());
+Fearless needs the desktop to open the files with the extensions listed below with Fearless.
+The desktop opens those files with other programs:
+  ".fearless" is opened with "Foo\"""", Violation.associationNotOurs(Map.of(".fearless", "Foo"), e -> "").getMessage());
   }
   @Test void associationNotOursSeveralClaimed(){
-    var held= new LinkedHashMap<String,List<String>>();
-    held.put(".ffile001", List.of("org.gnome.TextEditor", "vim"));
-    held.put(".fapp042", List.of("OtherApp.fapp042"));
     utils.Err.strCmp("""
-Fearless cannot become the program that opens the kinds of file listed
-below.
-
-Another program already answers for these kinds of file. Fearless
-stopped before touching anything: your system is exactly as it was.
-
-What stood in the way:
-.ffile001 claimed by "hello.Foo" of project "demo" -> org.gnome.TextEditor
-.ffile001 claimed by "hello.Foo" of project "demo" -> vim
-.fapp042 claimed by "hello.Bar" of project "demo" -> OtherApp.fapp042""", Violation.associationNotOurs(held, ViolationTest::claimedBy).getMessage());
+Fearless needs the desktop to open the files with the extensions listed below with Fearless.
+The desktop opens those files with other programs:
+  ".ffile001" claimed by "hello.Foo" of project "demo" is opened with "org.gnome.TextEditor"
+  ".htm" claimed by "hello.Bar" of project "demo" is opened with "Visual Studio Code\"""", Violation.associationNotOurs(ordered(".ffile001", "org.gnome.TextEditor", ".htm", "Visual Studio Code"), ViolationTest::claimedBy).getMessage());
+  }
+  @Test void associationQuestion(){
+    utils.Err.strCmp("""
+The desktop opens the files with the extensions listed below with other programs.
+Fearless needs the desktop to open those files with Fearless:
+  ".ffile001" claimed by "hello.Foo" of project "demo" is opened with "vim"
+  ".fapp042" claimed by "hello.Bar" of project "demo" is opened with "OtherApp"
+Let the desktop open the files with these extensions with Fearless?
+Answering No ends Fearless.""", Violation.associationQuestion(ordered(".ffile001", "vim", ".fapp042", "OtherApp"), ViolationTest::claimedBy, "ends Fearless"));
   }
   private static String claimedBy(String ext){ return " claimed by \"hello."+(List.of(".foo", ".ffile001").contains(ext) ? "Foo" : "Bar")+"\" of project \"demo\""; }
   @Test void associationNotWritable(){
-    var registered= "HKEY_CLASSES_ROOT\\.fearless (write denied: not running as the owning user)";
+    var registered= "RegDeleteTreeW HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts\\.pdf\\UserChoice\nAccess is denied.";
     utils.Err.strCmp("""
 Fearless cannot become the program that opens Fearless projects and the
 other kinds of file it registers.
 
 What Fearless would need to write, or remove, is not yours to change.
-Fearless stopped before touching anything: your system is exactly as it
-was.
 
 What stood in the way:
-HKEY_CLASSES_ROOT\\.fearless (write denied: not running as the owning user)""", Violation.associationNotWritable(registered).getMessage());
+RegDeleteTreeW HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts\\.pdf\\UserChoice
+Access is denied.""", Violation.associationNotWritable(registered).getMessage());
   }
   @Test void associationLeftHalfDone(){
     var failed= "update-mime-database /home/me/.local/share/mime\nThe program could not be started.";
@@ -196,10 +138,10 @@ HKEY_CLASSES_ROOT\\.fearless (write denied: not running as the owning user)""", 
 Fearless could not finish changing which programs open the kinds of file
 it registers.
 
-A step failed after the steps before it had changed your system, so your
-system is left part way: which program opens Fearless projects, and the
-other kinds of file Fearless registers, may now be wrong. The next start
-of Fearless does these changes again.
+A step failed, and the steps before it may have changed your system:
+which program opens Fearless projects, and the other kinds of file
+Fearless registers, may now be wrong. The next start of Fearless does
+these changes again.
 
 What failed:
 update-mime-database /home/me/.local/share/mime
