@@ -697,7 +697,7 @@ a_b/x.txt=x
   private static void refusedAt(Path root, Path elsewhere){
     var lines= new ArrayList<String>();
     var end= assertThrows(UncheckedIOException.class, () -> Fix.of(root, lines::add));
-    utils.Err.strCmp("[###]this entry, or an entry inside it, is also mounted at another place", end.getCause().getMessage());
+    utils.Err.strCmp("[###]this entry, or an entry inside it, is a mount point or is also mounted at another place", end.getCause().getMessage());
     assertEquals(List.of(), lines);
     assertEquals("c", Fs.readUtf8(elsewhere.resolve("c.txt")));
   }

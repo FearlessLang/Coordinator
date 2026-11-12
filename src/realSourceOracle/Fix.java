@@ -33,7 +33,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Consumer;
-import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -43,7 +42,6 @@ import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
 
 import tools.Fs;
-import tools.PathBytes;
 import userMessages.Report;
 import utils.Join;
 import utils.OneOr;
@@ -62,7 +60,7 @@ public final class Fix{
     void rename(String name, String to);
     String away(String name, Path into);
   }
-  private record Disk(Path p, Predicate<Path> mounted) implements Dir{
+  private record Disk(Path p) implements Dir{
     public List<String> names(){ return names(p); }
     static List<String> names(Path p){
       var order= Fs.isWindows() ? Comparator.comparing(Path::toString) : Comparator.<Path>naturalOrder();
@@ -72,7 +70,7 @@ public final class Fix{
       if (unreachable(name)){ return kindOf(Fs.of(() -> LongPath.attributes(LongPath.of(p, name))).orElseThrow()); }
       var at= at(name);
       var a= Fs.of(() -> Files.readAttributes(at, BasicFileAttributes.class, NOFOLLOW_LINKS));
-      if (a.isDirectory() && mounted.test(at) || Fs.isLink(at, a)){ return Kind.other; }
+      if (Fs.isLink(at, a)){ return Kind.other; }
       if (a.isDirectory()){ return Kind.folder; }
       return a.isRegularFile() || Fs.isWindows() && a.isOther() ? Kind.file : Kind.other;
     }
@@ -80,7 +78,7 @@ public final class Fix{
       if ((attributes & 0x10) == 0){ return Kind.file; }
       return (attributes & 0x400) == 0 ? Kind.folder : Kind.other;
     }
-    public Dir dir(String name){ return new Disk(at(name), mounted); }
+    public Dir dir(String name){ return new Disk(at(name)); }
     public byte[] read(String name){
       if (!unreachable(name)){ return Fs.of(() -> Files.readAllBytes(at(name))); }
       return Fs.of(() -> {
@@ -154,7 +152,7 @@ public final class Fix{
       Files.move(mid, to);
     }
     private static Path oneName(Path f) throws IOException{
-      if (mountPoints().test(f) || holdsASource(f)){ throw new FileSystemException(f.toString(), null, "a file system is mounted here, or this file is also mounted at another place"); }
+      noMountBelow(f);
       var names= Fs.isWindows() ? LongPath.names(LongPath.of(f)) : (int)Files.getAttribute(f, "unix:nlink", NOFOLLOW_LINKS);
       if (names != 1){ throw new FileSystemException(f.toString(), null, "this file has more than one name, so writing it changes those other names too"); }
       writable(f);
@@ -169,8 +167,7 @@ public final class Fix{
       if (all.add(OWNER_WRITE)){ Files.setPosixFilePermissions(f, all); }
     }
     private static Path noMountBelow(Path f) throws IOException{
-      if (mountAtOrBelow(f)){ throw new FileSystemException(f.toString(), null, "a file system is mounted on this entry or inside it"); }
-      if (holdsASource(f)){ throw new FileSystemException(f.toString(), null, "this entry, or an entry inside it, is also mounted at another place"); }
+      if (mountAtOrBelow(f) || holdsASource(f)){ throw new FileSystemException(f.toString(), null, "this entry, or an entry inside it, is a mount point or is also mounted at another place"); }
       return f;
     }
     private static void remove(Path f) throws IOException{
@@ -257,16 +254,10 @@ public final class Fix{
   private final int depth;
   private final Path fixFolder;
   private Fix(Consumer<String> out, int depth, Path fixFolder){ this.out= out; this.depth= depth; this.fixFolder= fixFolder; }
-  public static void of(Path folder, Consumer<String> out){ new Fix(out, 0, fixFolder(folder)).dir(new Disk(folder, mountPoints()), "", false); }
+  public static void of(Path folder, Consumer<String> out){ new Fix(out, 0, fixFolder(folder)).dir(new Disk(folder), "", false); }
   private record Mount(String dev, Path root, Path point){}
   private static List<Mount> mounts(){
-    return new String(Fs.of(() -> Files.readAllBytes(Path.of("/proc/self/mountinfo"))), ISO_8859_1).lines()
-      .map(l -> l.split(" ")).map(f -> new Mount(f[2], mountPath(f[3]), mountPath(f[4]))).toList();
-  }
-  public static Predicate<Path> mountPoints(){
-    if (Fs.isMac()){ return p -> !Fs.of(() -> Files.getFileStore(p)).equals(Fs.of(() -> Files.getFileStore(p.getParent()))); }
-    var all= mountSet();
-    return all::contains;
+    return Fs.mountInfo().map(f -> new Mount(f[2], Fs.mountPath(f[3]), Fs.mountPath(f[4]))).toList();
   }
   private static Set<Path> mountSet(){
     if (Fs.isWindows()){ return Fs.of(LongPath::mountPoints); }
@@ -274,8 +265,8 @@ public final class Fix{
   }
   private static boolean mountAtOrBelow(Path f) throws IOException{
     if (!Fs.isMac()){ return mountSet().stream().anyMatch(m -> m.startsWith(f)); }
-    if (!realFolder(f)){ return false; }
-    if (mountPoints().test(f)){ return true; }
+    if (!Files.isDirectory(f, NOFOLLOW_LINKS)){ return false; }
+    if (Fs.isLink(f)){ return true; }
     try (var s= Files.list(f)){ for (var e : s.toList()){ if (mountAtOrBelow(e)){ return true; } } }
     return false;
   }
@@ -304,15 +295,6 @@ public final class Fix{
       if (same && Path.of(s.name().substring(server)).startsWith(inside)){ return true; }
     }
     return false;
-  }
-  private static Path mountPath(String field){
-    var res= new ByteArrayOutputStream();
-    for (var i= 0; i<field.length(); i += 1){
-      var octal= field.charAt(i)=='\\' && i+3<field.length();
-      res.write(octal ? Integer.parseInt(field.substring(i+1, i+4), 8) : field.charAt(i));
-      if (octal){ i += 3; }
-    }
-    return PathBytes.path(res.toByteArray());
   }
   public static boolean realFolder(Path p){ return Files.isDirectory(p, NOFOLLOW_LINKS) && !Fs.isLink(p); }
   private static Path fixFolder(Path folder){

@@ -17,12 +17,14 @@ import realSourceOracle.Fix;
 import realSourceOracle.RealSourceOracleWithZip;
 import testHelperFs.FsDsl;
 import tools.Fs;
+import userMessages.Report;
 import userMessages.UserError;
 
 final class FixMountTest{
   @Test void aFolderWhereAFileSystemIsMountedMakesTheProjectInvalidAndEndsFix(@TempDir Path tmp) throws Exception{
     var root= tmp.resolve("root").toAbsolutePath().normalize();
     UserError.root = root;
+    Fs.onSymbolicLink = Report::symlinkForbidden;
     Fs.ensureDir(root);
     FsDsl.materialize(root, "a.txt\niii\na");
     var at= root.resolve("sub");
@@ -30,10 +32,10 @@ final class FixMountTest{
     try (var _= fileSystemAt(tmp, at)){
       Files.writeString(at.resolve("c.txt"), "c");
       var e= assertThrows(UserError.class, () -> new RealSourceOracleWithZip(root));
-      utils.Err.strCmp("[###]A file system is mounted on this folder[###]", e.getMessage());
+      utils.Err.strCmp("[###]This path is a symbolic link/junction/mount point.[###]", e.getMessage());
       var lines= new ArrayList<String>();
       var end= assertThrows(UncheckedIOException.class, () -> Fix.of(root, lines::add));
-      utils.Err.strCmp("[###]a file system is mounted on this entry or inside it", end.getCause().getMessage());
+      utils.Err.strCmp("[###]this entry, or an entry inside it, is a mount point or is also mounted at another place", end.getCause().getMessage());
       assertEquals(List.of(), lines);
       assertEquals("c", Fs.readUtf8(at.resolve("c.txt")));
     }

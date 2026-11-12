@@ -35,7 +35,7 @@ final class FixShareTest{
       try (var _= (AutoCloseable)() -> run(needsAdmin, "net", "use", drive, "/DELETE", "/Y")){
         var lines= new ArrayList<String>();
         var end= assertThrows(UncheckedIOException.class, () -> Fix.of(root, lines::add));
-        utils.Err.strCmp("[###]this entry, or an entry inside it, is also mounted at another place", end.getCause().getMessage());
+        utils.Err.strCmp("[###]this entry, or an entry inside it, is a mount point or is also mounted at another place", end.getCause().getMessage());
         assertEquals(List.of(), lines);
         assertEquals("c", Fs.readUtf8(Path.of(drive+"\\").resolve("c.txt")));
       }
