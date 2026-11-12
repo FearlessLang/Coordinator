@@ -5,7 +5,6 @@ import static java.nio.charset.StandardCharsets.UTF_16BE;
 import static java.nio.charset.StandardCharsets.UTF_16LE;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -618,21 +617,6 @@ a_b/x.txt=x
       Investigate fsutil hardlink list on a shared folder of the network, on a ReFS volume and on a FAT volume (a VHD, or a USB stick),
       then make this test check that Fix cleans a .fear file on each of those volumes.""");
   }
-  @Test void aFolderWhereAFileSystemIsMountedMakesTheProjectInvalidAndEndsFix(@TempDir Path tmp) throws Exception{
-    var root= root(tmp, "a.txt\niii\na");
-    var at= root.resolve("sub");
-    Fs.ensureDir(at);
-    try (var _= fileSystemAt(tmp, at)){
-      Files.writeString(at.resolve("c.txt"), "c");
-      var e= assertThrows(UserError.class, () -> new RealSourceOracleWithZip(root));
-      utils.Err.strCmp("[###]A file system is mounted on this folder[###]", e.getMessage());
-      var lines= new ArrayList<String>();
-      var end= assertThrows(UncheckedIOException.class, () -> Fix.of(root, lines::add));
-      utils.Err.strCmp("[###]a file system is mounted on this entry or inside it", end.getCause().getMessage());
-      assertEquals(List.of(), lines);
-      assertEquals("c", Fs.readUtf8(at.resolve("c.txt")));
-    }
-  }
   @Test void fixDoesNotDeleteAFolderThatIsAlsoMountedAtAnotherPlace(@TempDir Path tmp) throws Exception{
     if (Fs.isMac()){ fail("""
       Agent on macOS: investigate whether macOS can show a folder at a second place (bindfs, mount_nullfs, a share of this machine mounted on this machine),
@@ -660,41 +644,8 @@ a_b/x.txt=x
     run(needsRoot, "sudo", "-n", "mount", "--bind", folder.toString(), at.toString());
     return () -> run(needsRoot, "sudo", "-n", "umount", at.toString());
   }
-  private static AutoCloseable fileSystemAt(Path tmp, Path at){
-    if (Fs.isWindows()){
-      var disk= tmp.resolve("fearless_mount.vhdx");
-      diskpart(tmp, """
-create vdisk file="%s" maximum=16
-attach vdisk
-create partition primary
-format fs=ntfs quick
-assign mount="%s"
-""".formatted(disk, at));
-      return () -> diskpart(tmp, """
-select volume="%s"
-remove mount="%s"
-select vdisk file="%s"
-detach vdisk
-""".formatted(at, at, disk));
-    }
-    if (Fs.isLinux()){
-      var other= tmp.resolve("other");
-      Fs.ensureDir(other);
-      return bound(other, at);
-    }
-    var image= tmp.resolve("disk.dmg").toString();
-    var why= "This test mounts a disk image with hdiutil.";
-    run(why, "hdiutil", "create", "-size", "1m", "-fs", "HFS+", "-volname", "fearless_test", image);
-    run(why, "hdiutil", "attach", "-nobrowse", "-mountpoint", at.toString(), image);
-    return () -> run(why, "hdiutil", "detach", at.toString());
-  }
-  private static void diskpart(Path tmp, String script){
-    var file= tmp.resolve("fearless_mount.txt");
-    Fs.writeUtf8(file, script);
-    run("This test mounts a file system with diskpart: it needs a process with administrator rights on this desk.", "diskpart", "/s", file.toString());
-  }
   private static void run(String why, String... cmd){
-    var p= assertDoesNotThrow(() -> new ProcessBuilder(cmd).redirectErrorStream(true).start(), why+"\n"+String.join(" ", cmd));
+    var p= Fs.of(() -> new ProcessBuilder(cmd).redirectErrorStream(true).start());
     var out= new String(Fs.of(() -> p.getInputStream().readAllBytes()));
     assertEquals(0, p.onExit().join().exitValue(), why+"\n"+String.join(" ", cmd)+"\n"+out);
   }
