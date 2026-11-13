@@ -3381,7 +3381,7 @@ use base.CacheF as CacheF;
 Both:CacheF[Nat],CacheF[Nat,Nat]{ # -> 1; #(a) -> a.get + 1 }
 """);
     var ex= assertThrows(UserError.class, () -> compile(coordinator(root), root));
-    utils.Err.strCmp("[###]Ambiguous implementation for method \"._uniqueCache\" with 0 parameters.[###]", ex.getMessage());
+    utils.Err.strCmp("[###]Ambiguous implementation for method \"._uniqueCache\".[###]", ex.getMessage());
   }
   @Test void aSubtypeOfACacheHasACacheOfItsOwn(@TempDir Path tmp) throws InterruptedException{
     var root= tmp.resolve("root");
