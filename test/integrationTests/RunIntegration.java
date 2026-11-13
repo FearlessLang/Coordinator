@@ -1374,6 +1374,24 @@ a
 imm M.main(_) error line: 5 in file _p/_rank_app.fear
 """, coordinator(root).main(root, stLib));
   }
+  @Test void anUncaughtErrorShowsTheOperatorOfItsFrame(@TempDir Path tmp) throws InterruptedException{
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_p/_rank_app.fear
+iii
+use base.Main as Main;
+use base.Error as Error;
+use base.Void as Void;
+Ops:{+-*%/<>=!&|^~?#\\(x: Void): Void -> Error.msg "boom"}
+App:Main{s -> Ops +-*%/<>=!&|^~?#\\ Void}
+""");
+    utils.Err.strCmp("""
+boom
+imm Ops+-*%/<>=!&|^~?#\\(_) error line: 4 in file _p/_rank_app.fear
+imm App.main(_) error line: 5 in file _p/_rank_app.fear
+""", coordinator(root).main(root, stLib));
+  }
   @Test void anUncaughtRethrownErrorShowsTheFramesOfItsFirstThrow(@TempDir Path tmp) throws InterruptedException{
     var root= tmp.resolve("root");
     UserError.root = root;
