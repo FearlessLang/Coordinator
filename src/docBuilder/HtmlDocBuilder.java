@@ -51,6 +51,7 @@ public final class HtmlDocBuilder{
   final ArrayList<TypeDoc> types= new ArrayList<>();
   final IdentityHashMap<Src,TypeDoc> typeBySrc= new IdentityHashMap<>();
   final LinkedHashMap<URI,SourceDocs> sources= new LinkedHashMap<>();
+  final HashSet<String> namedLines= new HashSet<>();
   public HtmlDocBuilder(SourceOracle oracle, OtherPackages other, List<Literal> core, Optional<Path> baseDocLocation, String pkgName, Path htmlPath, boolean generatesTests){
     assert Require.nonNull(oracle, other, core, baseDocLocation, pkgName, htmlPath);
     this.oracle= oracle;
@@ -61,7 +62,12 @@ public final class HtmlDocBuilder{
     this.generatesTests= generatesTests;
     currentByName= core.stream().collect(Collectors.toUnmodifiableMap(Literal::name, l -> l));
   }
-  public void visitAll(E e){ visitAll(e, Optional.empty()); }
+  public void visitAll(E e){ addNamedLines(e); visitAll(e, Optional.empty()); }
+  void addNamedLines(E e){
+    if (e instanceof Literal l && !l.infName()){ namedLines.add(lineKey(l.pos())); }
+    e.children().forEach(this::addNamedLines);
+  }
+  static String lineKey(Pos p){ return p.fileName()+":"+p.line(); }
   void visitAll(E e, Optional<Scope> outer){
     if (!(e instanceof Literal l)){ e.children().forEach(c -> visitAll(c, outer)); return; }
     visitLiteral(l, outer);
@@ -70,9 +76,9 @@ public final class HtmlDocBuilder{
   void visitLiteral(Literal l, Optional<Scope> outer){
     assert Require.nonNull(l, outer);
     var t= typeBySrc.get(l.src());
-    var yields= l.infName() && namedOnLine(l, l.pos());
+    var yields= l.infName() && namedLines.contains(lineKey(l.pos()));
     if (t == null){
-      t = new TypeDoc(l, outer, yields ? List.of() : docsAt(l.pos(), true));
+      t = new TypeDoc(l, outer, yields ? List.of() : docsAt(anchor(l.pos(), outer), l.infName()));
       typeBySrc.put(l.src(), t);
       types.add(t);
     }
@@ -85,8 +91,9 @@ public final class HtmlDocBuilder{
       else{ t.imported(written(l, m, from), from); }
     }
   }
-  static boolean namedOnLine(E e, Pos p){ return e.children().anyMatch(c -> startsNamed(c, p) || namedOnLine(c, p)); }
-  static boolean startsNamed(E e, Pos p){ return e instanceof Literal n && !n.infName() && n.pos().fileName().equals(p.fileName()) && n.pos().line() == p.line(); }
+  static Pos anchor(Pos p, Optional<Scope> outer){
+    return outer.filter(s -> s.owner().infName() && lineKey(s.owner().pos()).equals(lineKey(p))).map(s -> anchor(s.owner().pos(), s.outer())).orElse(p);
+  }
   M written(Literal l, M m, List<MethodRef> from){
     var s= m.sig();
     var ws= OneOr.of("one origin", from.stream().filter(r -> r.provider().name().equals(s.origin())).map(r -> B.xs(r.method().sig().bs())).distinct());
@@ -162,7 +169,7 @@ public final class HtmlDocBuilder{
     var problems= new ArrayList<String>();
     types.stream().flatMap(t -> t.methods.stream()).flatMap(m -> m.directives().stream()).forEach(d -> problems.add(line(d, onMethod)));
     var parents= new LinkedHashMap<TypeDoc,List<Directive.Under>>();
-    var names= new HashMap<String,String>();
+    var names= new HashMap<String,String>(Map.of("public", "public", "private", "private"));
     types.stream().filter(TypeDoc::visible).forEach(t -> parents.put(t, checkType(resolver, t, names, problems)));
     if (!problems.isEmpty()){ return problems; }
     var done= new HashSet<TypeDoc>();
@@ -328,8 +335,8 @@ public final class HtmlDocBuilder{
       .filter(sm -> sm.sig().rc()==m.sig().rc() && sm.sig().m().equals(m.sig().m()))
       .map(sm -> new MethodRef(provider, sm));
   }
-  List<DocOcc> docsAt(Pos p, boolean literal){
+  List<DocOcc> docsAt(Pos p, boolean anonymous){
     if (p.line() == 0){ return List.of(); }
-    return sources.computeIfAbsent(p.fileName(), u -> new SourceDocs(u, oracle.loadString(u))).docsAt(p, literal);
+    return sources.computeIfAbsent(p.fileName(), u -> new SourceDocs(u, oracle.loadString(u))).docsAt(p, anonymous);
   }
 }

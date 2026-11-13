@@ -164,7 +164,7 @@ Maker:{
     A{ .m -> A };
   }
 """);
-    utils.Err.strCmp("[###]Maker\n  see also: Anon@_rank_app:5\n[###]anonymous literal at [###]\n  under: Maker\n[###]", docs.text());
+    utils.Err.strCmp("[###]Maker\n  see also: Anon@_rank_app:5\n[###]\nAnon@_rank_app:5 : A\n  under: Maker\n[###]", docs.text());
   }
   @Test void aPublicTypeCanNotBeInGroupPrivate(@TempDir Path tmp){
     utils.Err.strCmp("""

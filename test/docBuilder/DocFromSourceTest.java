@@ -178,7 +178,7 @@ Maker:{
     A{ .m -> A };
   }
 """);
-    utils.Err.strCmp("[###]anonymous literal at [###]\n  Doc of the anonymous A\n[###]", docs.text());
+    utils.Err.strCmp("[###]\nAnon@_rank_app:5 : A\n  Doc of the anonymous A\n[###]", docs.text());
   }
   @Test void aTrailingDocAfterAMethodReturningATypedAnonymousLiteralDocumentsTheMethod(@TempDir Path tmp){
     var docs= docs(tmp, a+"""
@@ -195,7 +195,7 @@ Maker:{
     { .m -> A }; /// makes an A
   }
 """);
-    utils.Err.strCmp("[###]anonymous literal at [###]\n  makes an A\n[###]", docs.text());
+    utils.Err.strCmp("[###]\nAnon@_rank_app:4 : A\n  makes an A\n[###]", docs.text());
   }
   @Test void aCommentLineOfSlashesOrDashesIsAPlainComment(@TempDir Path tmp){
     var docs= docs(tmp, a+"""
@@ -344,7 +344,7 @@ Maker:{
     };
   }
 """);
-    utils.Err.strCmp("[###]anonymous literal at fear:/_p/_rank_app.fear:3:[###]Early.[###]anonymous literal at fear:/_p/_rank_app.fear:11:[###]Late.[###]", docs.text());
+    utils.Err.strCmp("[###]\nAnon@_rank_app:3 : A\n[###]Early.[###]\nAnon@_rank_app:11 : A\n[###]Late.[###]", docs.text());
   }
   @Test void aNumberWrittenAsAReferenceIsReportedAsNotAName(@TempDir Path tmp){
     var ex= assertThrows(UserError.class, () -> docs(tmp, a+"""
@@ -950,5 +950,36 @@ Maker:{
   }
 """);
     utils.Err.strCmp("[###]\nInner : A\n  doc of Inner\n\t.m:A\n[###]", docs.text());
+  }
+  @Test void anAnonymousLiteralIsTitledInTheTextByTheNameItsGroupListsItWith(@TempDir Path tmp){
+    var docs= docs(tmp, a+"""
+Maker:{
+  .make: A ->
+    ///Doc.
+    A{ .m -> A };
+  }
+""");
+    utils.Err.strCmp("package p\n\ngroup public\n  A\n  Maker\ngroup private\n  Anon@_rank_app:5\n\n[###]\nAnon@_rank_app:5 : A\n  Doc.\n[###]", docs.text());
+  }
+  @Test void typedVariantsThatReadTheSameAreShownOnce(@TempDir Path tmp){
+    var html= docs(tmp, a+"""
+Sup:{ mut .foo: A; imm .foo: A; }
+Sub:Sup{ .foo -> A{
+  ///Doc.
+  .m -> A
+  }; }
+""").html();
+    utils.Err.strCmp("""
+[###]<p class="extends"><b>Extends:</b> <a href="#type-p_2e_A-0">A</a></p>
+<h3>Methods</h3>
+<details class="method" id="method-p_2e__5f_ASub-0-imm-_2e_m-0">
+<summary><span class="disclosure">&#9656;</span><span class="sig">.m:<a href="#type-p_2e_A-0">A</a></span></summary>
+<div class="doc">
+<p>Doc.</p>
+</div>
+<p class="doc from">From: <a href="#method-p_2e_A-0-imm-_2e_m-0">A.m</a>.</p>
+</details>
+</section>
+[###]""", html);
   }
 }

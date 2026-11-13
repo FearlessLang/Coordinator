@@ -141,7 +141,7 @@ final class HtmlDocRenderer{
     return lines.source(first.file());
   }
   void renderTypeText(StringBuilder sb, TypeDoc t){
-    sb.append(typeTitle(t)).append(Join.of(t.main().cs().stream().map(toStr::typeName), " : ", ", ", "", "")).append('\n');
+    sb.append(shortTitle(t)).append(Join.of(t.main().cs().stream().map(toStr::typeName), " : ", ", ", "", "")).append('\n');
     sb.append(Join.of(related(parents, t).stream().map(this::shortTitle), "  under: ", ", ", "\n", ""));
     sb.append(Join.of(related(children, t).stream().map(this::shortTitle), "  see also: ", ", ", "\n", ""));
     renderDocText(sb, "  ", t);
@@ -513,8 +513,7 @@ code{
     return sb.toString();
   }
   Optional<String> renderFirstParagraph(MethodDoc m){
-    return runs(m.visibleDocs(), HtmlDocRenderer::inParagraph).stream()
-      .dropWhile(r -> r.getFirst().kind()==DocKind.Example).findFirst().filter(r -> inParagraph(r.getFirst())).map(p -> renderParagraph(p, m.scope()));
+    return paragraphs(m.visibleDocs()).stream().findFirst().map(p -> renderParagraph(p, m.scope()));
   }
   String href(DocLink link){
     return switch (link){
@@ -528,9 +527,11 @@ code{
   }
   <V> void renderVariants(StringBuilder sb, String title, List<V> variants, Function<V,String> show){
     if (variants.size() <= 1){ return; }
+    var shown= variants.stream().map(show).distinct().toList();
+    if (shown.size() <= 1){ return; }
     sb.append("<details class=\"variants\"><summary>")
-      .append(h(title)).append(": ").append(variants.size()).append("</summary>\n");
-    variants.forEach(v -> sb.append("<pre class=\"variant\">").append(h(show.apply(v))).append("</pre>\n"));
+      .append(h(title)).append(": ").append(shown.size()).append("</summary>\n");
+    shown.forEach(v -> sb.append("<pre class=\"variant\">").append(h(v)).append("</pre>\n"));
     sb.append("</details>\n");
   }
   String typeTitle(TypeDoc t){
