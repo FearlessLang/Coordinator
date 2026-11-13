@@ -150,7 +150,7 @@ final class HtmlDocRenderer{
   }
   void renderMethodText(StringBuilder sb, MethodDoc m){
     m.variants.stream().map(this::sig).distinct().forEach(s -> sb.append('\t').append(s).append('\n'));
-    if (m.declared){ renderDocText(sb, "    ", m); }
+    if (m.declared()){ renderDocText(sb, "    ", m); }
     sb.append(Join.of(fromRefs(m).stream().map(this::fromName), "    from: ", ", ", "\n", ""));
   }
   void renderDocText(StringBuilder sb, String indent, DeclarationDoc d){
@@ -412,7 +412,7 @@ code{
       .append("<summary><span class=\"disclosure\">&#9656;</span>");
     ids.stream().skip(1).forEach(id -> sb.append("<span id=\"").append(id).append("\"></span>"));
     sb.append("<span class=\"sig\">").append(renderSig(m)).append("</span></summary>\n");
-    if (m.declared){ renderDoc(sb, m); }
+    if (m.declared()){ renderDoc(sb, m); }
     sb.append(Join.of(fromRefs(m).stream().map(this::fromLink), "<p class=\"doc from\">From: ", ", ", ".</p>\n", ""));
     renderVariants(sb, "Typed method variants", m.variants, this::sig);
     sb.append("</details>\n");
