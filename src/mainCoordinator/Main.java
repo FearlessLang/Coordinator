@@ -6,12 +6,19 @@ import java.awt.Desktop;
 import java.awt.Font;
 import java.awt.GraphicsEnvironment;
 import java.awt.Taskbar;
+import java.io.IOException;
 import java.io.PrintStream;
+import java.io.UncheckedIOException;
+import java.lang.ProcessBuilder.Redirect;
 import java.lang.reflect.InvocationTargetException;
+import java.nio.channels.FileChannel;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -93,19 +100,45 @@ public final class Main{
   public static final Predicate<String> belongsToFamily= s -> s.contains("earless");
   ///The launcher names us: one identity per launcher, and the manager's own is not the portable one.
   public static String identity(Path launcher){ return launcher.getFileName().toString().replaceFirst("\\.[^.]*$", ""); }
+  public static Consumer<Path> quit= Main::sendQuit;
+  private static void sendQuit(Path command){
+    var pb= Fs.processBuilder(List.of(command.toString(), "FearlessCommandQuit")).redirectOutput(Redirect.DISCARD).redirectError(Redirect.DISCARD);
+    try{ Fs.of(pb::start).waitFor(); }
+    catch (InterruptedException e){ throw Bug.of(e); }
+  }
   /// The manager of that folder never sees the folder deleted in part: the folder is renamed in its folder, then deleted.
-  private static void removeAtOnce(Path dir){
+  private static void removeAtOnce(Path dir, Path command){
     if (!Fs.exists(dir)){ return; }
-    var gone= dir.resolveSibling(dir.getFileName()+"_"+UUID.randomUUID().toString().replace("-", ""));
-    Fs.ofV(() -> Fs.move(dir, gone, StandardCopyOption.ATOMIC_MOVE));
-    Fs.rmTree(gone);
+    try (var ch= Fs.openChannel(dir.resolve("instance.lock"), StandardOpenOption.CREATE, StandardOpenOption.WRITE)){
+      if (ch.tryLock() == null){ quit.accept(command); if (!locked(ch)){ deleteWhatCan(dir); return; } }
+      var gone= dir.resolveSibling(dir.getFileName()+"_"+UUID.randomUUID().toString().replace("-", ""));
+      try{ Fs.move(dir, gone, StandardCopyOption.ATOMIC_MOVE); }
+      catch (IOException _){ deleteWhatCan(dir); return; }
+      Fs.rmTree(gone);
+    }
+    catch (IOException e){ throw new UncheckedIOException(e); }
+  }
+  public static long quitWaitMillis= 30_000;
+  private static boolean locked(FileChannel ch) throws IOException{
+    for (var end= System.currentTimeMillis()+quitWaitMillis; System.currentTimeMillis() < end; ){
+      if (ch.tryLock() != null){ return true; }
+      try{ Thread.sleep(100); }
+      catch (InterruptedException e){ throw Bug.of(e); }
+    }
+    return false;
+  }
+  private static void deleteWhatCan(Path dir){
+    for (var p : Fs.walk(dir, s -> s.sorted(Comparator.reverseOrder()).toList())){
+      try{ Fs.delete(p); }
+      catch (IOException _){}
+    }
   }
   public static void replaced(Path launcher, Path command){
-    JavacTool.managerFolderOf(command).filter(d -> !JavacTool.managerFolderOf(launcher).equals(Optional.of(d))).ifPresent(Main::removeAtOnce);
+    JavacTool.managerFolderOf(command).filter(d -> !JavacTool.managerFolderOf(launcher).equals(Optional.of(d))).ifPresent(d -> removeAtOnce(d, command));
   }
   public static void reconcile(Path launcher, String name, List<Icon> extensions, List<String> taken, List<WindowIcon> windows, Path icon, Function<String,RuntimeException> ambiguous){
     FileAssociations.reconcile(identity(launcher), name, belongsToFamily, launcher, extensions, taken, windows, icon, c -> replaced(launcher, c),
-      ambiguous, Held::new, Violation::associationNotWritable, Violation::associationLeftHalfDone);
+      ambiguous, h -> new Held(h, true), h -> new Held(h, false), Violation::associationNotWritable, Violation::associationLeftHalfDone);
   }
   public static void eradicateAll(){ FileAssociations.eradicateAll(belongsToFamily, Violation::associationLeftHalfDone); }
   private static void offerAssociation(Path appDir){
@@ -114,22 +147,27 @@ public final class Main{
     var l= launcher.get();
     if (!belongsToFamily.test(identity(l))){ return; }
     var icon= appDir.resolve("icon.png");
-    hold(taken -> reconcile(l, "Fearless Portable", List.of(new Icon(".fearless", l, icon)), taken, List.of(), icon,
+    try{ hold(taken -> reconcile(l, "Fearless Portable", List.of(new Icon(".fearless", l, icon)), taken, List.of(), icon,
       reported -> Violation.associationsAmbiguous(reported).withRecovery("Remove all Fearless registrations", Main::eradicateAll)),
-      h -> askOnDesktop(Violation.associationQuestion(h, e -> "", "ends Fearless")), h -> Violation.associationNotOurs(h, e -> ""));
+      h -> askOnDesktop(Violation.associationQuestion(h, e -> "", "ends Fearless")), new ArrayList<>()); }
+    catch (Held h){ throw h.error(e -> ""); }
   }
-  public static void hold(Consumer<List<String>> reconcile, Predicate<Map<String,String>> ask, Function<Map<String,String>,RuntimeException> rejected){
-    try{ reconcile.accept(List.of()); }
-    catch (Held h){
-      if (!ask.test(h.held)){ throw rejected.apply(h.held); }
-      try{ reconcile.accept(List.copyOf(h.held.keySet())); }
-      catch (Held again){ throw rejected.apply(again.held); }
+  public static void hold(Consumer<List<String>> reconcile, Predicate<Map<String,String>> ask, ArrayList<String> accepted){
+    while (true){
+      try{ reconcile.accept(List.copyOf(accepted)); return; }
+      catch (Held h){
+        if (!h.takeable || !ask.test(h.held)){ throw h; }
+        accepted.addAll(h.held.keySet());
+      }
     }
   }
-  /// A refusal of the reconcile: each extension, with its dot, mapped to the name of the program holding it.
+  /// A refusal of the reconcile: each extension, with its dot, mapped to the name of the program holding it (takeable),
+  /// or to the locations that stop reconcile from taking it.
   @SuppressWarnings("serial") public static final class Held extends RuntimeException{
-    final Map<String,String> held;
-    public Held(Map<String,String> held){ this.held= held; }
+    public final Map<String,String> held;
+    public final boolean takeable;
+    public Held(Map<String,String> held, boolean takeable){ this.held= held; this.takeable= takeable; }
+    public RuntimeException error(Function<String,String> claimedBy){ return takeable ? Violation.associationNotOurs(held, claimedBy) : Violation.associationNotTaken(held, claimedBy); }
   }
   private static boolean askOnDesktop(String question){
     var asked= new FutureTask<>(() -> JOptionPane.showConfirmDialog(null, question, "Fearless", JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION);

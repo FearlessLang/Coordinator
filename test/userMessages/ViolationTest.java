@@ -119,6 +119,15 @@ Fearless needs the desktop to open those files with Fearless:
 Let the desktop open the files with these extensions with Fearless?
 Answering No ends Fearless.""", Violation.associationQuestion(ordered(".ffile001", "vim", ".fapp042", "OtherApp"), ViolationTest::claimedBy, "ends Fearless"));
   }
+  @Test void associationNotTaken(){
+    var choice= "HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts\\.htm\\UserChoice";
+    utils.Err.strCmp("""
+Fearless needs the desktop to open the files with the extensions listed below with Fearless.
+The desktop does not let Fearless change the program opening those files:
+  ".htm" claimed by "hello.Bar" of project "demo" needs a change of
+    HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts\\.htm\\UserChoice
+    HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts\\.htm\\UserChoice\\Latest""", Violation.associationNotTaken(Map.of(".htm", choice+"\n"+choice+"\\Latest"), ViolationTest::claimedBy).getMessage());
+  }
   private static String claimedBy(String ext){ return " claimed by \"hello."+(List.of(".foo", ".ffile001").contains(ext) ? "Foo" : "Bar")+"\" of project \"demo\""; }
   @Test void associationNotWritable(){
     var registered= "RegDeleteTreeW HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts\\.pdf\\UserChoice\nAccess is denied.";
