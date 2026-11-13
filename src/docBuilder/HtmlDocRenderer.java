@@ -90,7 +90,7 @@ final class HtmlDocRenderer{
   }
   String renderText(){
     var sb= new StringBuilder(4_000).append("package ").append(pkgName).append("\n\n");
-    groups.forEach((g, ms) -> sb.append("group ").append(g).append('\n').append(Join.of(ms.stream().map(this::shortTitle), "  ", "\n  ", "\n")));
+    groups.forEach((g, ms) -> sb.append("group ").append(g).append('\n').append(Join.of(ms.stream().map(this::typeTitle), "  ", "\n  ", "\n")));
     sb.append('\n');
     shown.forEach(t -> renderTypeText(sb, t));
     return sb.toString();
@@ -141,9 +141,9 @@ final class HtmlDocRenderer{
     return lines.source(first.file());
   }
   void renderTypeText(StringBuilder sb, TypeDoc t){
-    sb.append(shortTitle(t)).append(Join.of(t.main().cs().stream().map(toStr::typeName), " : ", ", ", "", "")).append('\n');
-    sb.append(Join.of(related(parents, t).stream().map(this::shortTitle), "  under: ", ", ", "\n", ""));
-    sb.append(Join.of(related(children, t).stream().map(this::shortTitle), "  see also: ", ", ", "\n", ""));
+    sb.append(typeTitle(t)).append(Join.of(t.main().cs().stream().map(toStr::typeName), " : ", ", ", "", "")).append('\n');
+    sb.append(Join.of(related(parents, t).stream().map(this::typeTitle), "  under: ", ", ", "\n", ""));
+    sb.append(Join.of(related(children, t).stream().map(this::typeTitle), "  see also: ", ", ", "\n", ""));
     renderDocText(sb, "  ", t);
     visibleMethods(t).forEach(m -> renderMethodText(sb, m));
     sb.append('\n');
@@ -385,7 +385,7 @@ code{
     sb.append("<li class=\"group\">").append(h(group)).append("</li>\n");
     members.forEach(t -> sb.append("<li>").append(typeDocLink(t)).append("</li>\n"));
   }
-  String typeDocLink(TypeDoc t){ return "<a href=\"#"+typeId(t)+"\">"+wrap(shortTitle(t))+"</a>"; }
+  String typeDocLink(TypeDoc t){ return "<a href=\"#"+typeId(t)+"\">"+wrap(typeTitle(t))+"</a>"; }
   void renderType(StringBuilder sb, TypeDoc t){
     sb.append("<section class=\"type\" id=\"").append(typeId(t)).append("\">\n")
       .append("<h2>").append(wrap(typeTitle(t))).append("</h2>\n");
@@ -506,7 +506,7 @@ code{
     var anonymous= resolver.localTypeDoc(c.owner()).filter(t -> t.main().infName());
     var sb= new StringBuilder("<a href=\"").append(h(candidateHref(c))).append("\">")
       .append(c.sig().map(s -> s.rc().toStrSpace()).orElse(""))
-      .append(h(anonymous.map(this::shortTitle).orElseGet(() -> toStr.typeNameWithArity(c.owner()))));
+      .append(h(anonymous.map(this::typeTitle).orElseGet(() -> toStr.typeNameWithArity(c.owner()))));
     c.sig().ifPresent(s -> sb.append(h(s.m().s()+DocResolver.shape(OptionalInt.of(s.m().arity()), "(", ")"))));
     sb.append("</a>");
     c.localMethod().flatMap(this::renderFirstParagraph).ifPresent(p -> sb.append(" <span class=\"opt-doc\">\u2014 ").append(p.replace("\n", " ")).append("</span>"));
@@ -536,11 +536,8 @@ code{
   }
   String typeTitle(TypeDoc t){
     var l= t.main();
-    if (l.infName()){ return "anonymous literal at "+l.pos(); }
+    if (l.infName()){ return resolver.anonTitle(l); }
     return toStr.typeName(l.name())+Join.of(l.bs().stream().map(B::compactToString), "[", ",", "]", "");
-  }
-  String shortTitle(TypeDoc t){
-    return t.main().infName() ? resolver.anonTitle(t.main()) : typeTitle(t);
   }
   String typeLink(T.C c){
     return "<a href=\""+h(typeHref(c.name()))+"\">"+h(toStr.typeName(c))+"</a>";

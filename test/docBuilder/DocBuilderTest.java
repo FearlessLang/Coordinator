@@ -583,7 +583,7 @@ Foo: Bar {
     var text= renderedTextFixture();
     assertFalse(text.contains("Hidden"), "an undocumented anonymous literal must not reach the text doc either: "+text);
   }
-  @Test void aDocumentedAnonymousLiteralIsListedByItsFileAndLineAndTitledByItsPosition(){
+  @Test void aDocumentedAnonymousLiteralIsListedAndTitledByItsFileAndLine(){
     var at= Pos.of(file, 2, 1);
     var src= new Src(new Src.SrcObj(){
       @Override public Pos pos(){ return at; }
@@ -595,7 +595,7 @@ Foo: Bar {
     builder.visitLiteral(anon, Optional.empty());
     var html= new HtmlDocRenderer(Map.of(), new DocResolver("pkg", builder.types, OtherPackages.empty(), TName::s), Optional.empty()).render();
     utils.Err.strCmp("[###]>Anon@a:2<[###]", html);
-    utils.Err.strCmp("[###]anonymous literal at [###]", html);
+    utils.Err.strCmp("[###]<h2>Anon@a:2</h2>[###]", html);
   }
   @Test void renderTextProducesAPlainSignatureLineWithNoPlaceholderForMissingDocs(){
     var ownerName= new TName("pkg.Holder", 0, Pos.unknown);
@@ -1081,7 +1081,7 @@ documents, or turn it into a plain // comment.""", ex.getMessage());
     var page= (DocLink.Ambiguous)renderer.resolver.resolve(new DocRef.MethodName(Optional.empty(), ".bar", OptionalInt.empty()), scope(named.main())).get();
     var shown= page.options().stream().map(renderer::renderCandidate).map(s -> s.replaceAll("<[^>]*>", "")).toList();
     assertEquals(List.of("Anon@a:2.bar() \u2014 the anonymous bar", "Named.bar()"), shown);
-    assertEquals(List.of("Named", "Anon@a:2"), renderer.shown.stream().map(renderer::shortTitle).toList());
+    assertEquals(List.of("Named", "Anon@a:2"), renderer.shown.stream().map(renderer::typeTitle).toList());
   }
   @Test void aFencedBlockIsShownAsOneBlockOfCode(){
     var holder= new TypeDoc(namedType("pkg.Holder", List.of(), List.of()), Optional.empty(), List.of(

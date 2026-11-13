@@ -927,7 +927,11 @@ D:{ .m: A -> A; }
     var ex= assertThrows(UserError.class, () -> docs(tmp, a+"""
 B:{ .b: A -> A; } C:{ .c: A -> A; } /// about C
 """));
-    utils.Err.strCmp("Misplaced doc comment.[###]This documentation follows more than one declaration on the same line.[###]", ex.getMessage());
+    utils.Err.strCmp("""
+Misplaced doc comment.[###]
+While inspecting the documentation of package p
+This documentation follows more than one declaration on the same line.
+Put each declaration on its own line.""", ex.getMessage());
   }
   @Test void aNamedLiteralAfterAnAnonymousLiteralStartingOnTheSameLineTakesTheDocBlockAboveThatLine(@TempDir Path tmp){
     var docs= docs(tmp, a+"""
@@ -983,7 +987,7 @@ Sub:Sup{ .foo -> A{
 [###]""", html);
   }
   @Test void aDocBlockOnTheFirstLineOfAFileStartingWithAByteOrderMarkDocumentsTheDeclarationBelow(@TempDir Path tmp){
-    var docs= docs(tmp, "﻿///Doc of A.\n"+a);
+    var docs= docs(tmp, "\uFEFF///Doc of A.\n"+a);
     utils.Err.strCmp("""
 package p
 
@@ -997,7 +1001,7 @@ A
 """, docs.text());
   }
   @Test void aDocBlockAfterAUnicodeLineSeparatorDocumentsTheDeclarationBelow(@TempDir Path tmp){
-    var docs= docs(tmp, "A:{ .m: A -> this; } ///Doc of B.\nB:{}\n");
+    var docs= docs(tmp, "A:{ .m: A -> this; }\u2028///Doc of B.\nB:{}\n");
     utils.Err.strCmp("""
 package p
 

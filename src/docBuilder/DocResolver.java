@@ -109,7 +109,8 @@ record DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other, Fun
     "This is not a group directive.\n"
    +"A //@ line is either //@Group \"Name\", to put the type it documents in the\n"
    +"group Name, or //@Group `Type`, to put the type it documents under the type Type.\n"
-   +"A group name is not empty, and does not start or end with a space.";
+   +"A group name is not empty, and does not start or end with a space.\n"
+   +"Nothing follows the closing \" or `, not even a space.";
   static final String notAType=
     "This does not name a type.\n"
    +"In a //@Group `Type` line, the reference must name a type of this package.";

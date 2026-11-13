@@ -61,8 +61,9 @@ public final class HtmlDocBuilder{
     this.htmlPath= htmlPath;
     this.generatesTests= generatesTests;
     currentByName= core.stream().collect(Collectors.toUnmodifiableMap(Literal::name, l -> l));
+    core.forEach(this::addNamedLines);
   }
-  public void visitAll(E e){ addNamedLines(e); visitAll(e, Optional.empty()); }
+  public void visitAll(E e){ visitAll(e, Optional.empty()); }
   void addNamedLines(E e){
     if (e instanceof Literal l && !l.infName()){ namedLines.add(lineKey(l.pos())); }
     e.children().forEach(this::addNamedLines);
@@ -263,8 +264,7 @@ public final class HtmlDocBuilder{
    +"documentation to its own line, right above the declaration it documents.";
   static final String ambiguousTrailingDoc=
     "This documentation follows more than one declaration on the same line.\n"
-   +"Move it directly after the one declaration it documents, or put each declaration\n"
-   +"on its own line.";
+   +"Put each declaration on its own line.";
   static final String onMethod=
     "This //@Group line documents a method.\n"
    +"A //@Group line puts a type in a group or under another type, and a method is\n"

@@ -23,9 +23,10 @@ final class SourceDocs{
   final HashSet<Integer> visitedLines= new HashSet<>();
   SourceDocs(URI uri, String text){
     this.uri= uri;
-    lines= text.lines().toList();
+    lines= List.of(lineBreak.split(text.startsWith("\uFEFF") ? text.substring(1) : text, -1));
     scan();
   }
+  private static final Pattern lineBreak= Pattern.compile("\\r\\n|[\\r\\n\\u2028\\u2029\\u0085]");
   List<DocOcc> docsAt(Pos pos, boolean anonymous){
     assert pos.line()>0 && pos.line()<=lines.size() : pos;
     var first= visitedLines.add(pos.line());

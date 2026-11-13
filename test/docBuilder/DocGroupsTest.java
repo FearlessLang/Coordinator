@@ -297,7 +297,8 @@ B:{ .b: A -> A; }
 [###]This is not a group directive.
 A //@ line is either //@Group "Name", to put the type it documents in the
 group Name, or //@Group `Type`, to put the type it documents under the type Type.
-A group name is not empty, and does not start or end with a space.""", error(tmp, a+"""
+A group name is not empty, and does not start or end with a space.
+Nothing follows the closing " or `, not even a space.""", error(tmp, a+"""
 //@Grop "Tools"
 B:{ .b: A -> A; }
 """));
@@ -325,7 +326,7 @@ B:{ .b: A -> A; }
 """));
   }
   @Test void aBlankGroupNameIsAnError(@TempDir Path tmp){
-    utils.Err.strCmp("[###]This is not a group directive.[###]A group name is not empty, and does not start or end with a space.", error(tmp, a+"""
+    utils.Err.strCmp("[###]This is not a group directive.[###]A group name is not empty, and does not start or end with a space.[###]", error(tmp, a+"""
 //@Group "  "
 B:{ .b: A -> A; }
 """));
@@ -410,7 +411,7 @@ B:{ .b: A -> A; }
 """));
   }
   @Test void aSpaceAfterTheGroupNameIsAnError(@TempDir Path tmp){
-    utils.Err.strCmp("[###]This is not a group directive.[###]", error(tmp, a+"""
+    utils.Err.strCmp("[###]This is not a group directive.[###]Nothing follows the closing \" or `, not even a space.", error(tmp, a+"""
 //@Group "Tools"\s
 B:{ .b: A -> A; }
 """));
