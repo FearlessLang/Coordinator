@@ -506,19 +506,18 @@ code{
       .append("<h2>Several match ").append(h(p.title())).append("</h2>\n<ul class=\"options\">\n");
     p.options().stream()
       .sorted(Comparator.comparing((Candidate c) -> c.owner().s()).thenComparingInt(c -> c.owner().arity())
-        .thenComparingInt(c -> c.sig().map(s -> s.m().arity()).orElse(0)))
+        .thenComparingInt(c -> c instanceof Candidate.Method m ? m.sig().m().arity() : 0))
       .forEach(c -> sb.append("<li>").append(renderCandidate(c)).append("</li>\n"));
     sb.append("</ul>\n</section>\n");
   }
   String renderCandidate(Candidate c){
-    var anonymous= resolver.localTypeDoc(c.owner()).filter(t -> t.main().infName());
-    var sb= new StringBuilder("<a href=\"").append(h(candidateHref(c))).append("\">")
-      .append(c.sig().map(s -> s.rc().toStrSpace()).orElse(""))
-      .append(h(anonymous.map(this::typeTitle).orElseGet(() -> toStr.typeNameWithArity(c.owner()))));
-    c.sig().ifPresent(s -> sb.append(h(s.m().s()+DocResolver.shape(OptionalInt.of(s.m().arity()), "(", ")"))));
-    sb.append("</a>");
-    c.localMethod().flatMap(this::renderFirstParagraph).ifPresent(p -> sb.append(" <span class=\"opt-doc\">\u2014 ").append(p.replace("\n", " ")).append("</span>"));
-    return sb.toString();
+    var owner= h(resolver.localTypeDoc(c.owner()).filter(t -> t.main().infName()).map(this::typeTitle).orElseGet(() -> toStr.typeNameWithArity(c.owner())));
+    var link= "<a href=\""+h(candidateHref(c))+"\">";
+    return switch (c){
+      case Candidate.Type _ -> link+owner+"</a>";
+      case Candidate.Method(_, var s, var local) -> link+s.rc().toStrSpace()+owner+h(s.m().s()+DocResolver.shape(OptionalInt.of(s.m().arity()), "(", ")"))+"</a>"
+        +local.flatMap(this::renderFirstParagraph).map(p -> " <span class=\"opt-doc\">\u2014 "+p.replace("\n", " ")+"</span>").orElse("");
+    };
   }
   Optional<String> renderFirstParagraph(MethodDoc m){
     return paragraphs(m.visibleDocs()).stream().findFirst().map(p -> renderParagraph(p, m.scope()));
@@ -531,7 +530,10 @@ code{
     };
   }
   String candidateHref(Candidate c){
-    return c.sig().map(s -> methodHref(c.owner(), s)).orElseGet(() -> typeHref(c.owner()));
+    return switch (c){
+      case Candidate.Type t -> typeHref(t.owner());
+      case Candidate.Method m -> methodHref(m.owner(), m.sig());
+    };
   }
   <V> void renderVariants(StringBuilder sb, String title, List<V> variants, Function<V,String> show){
     if (variants.size() <= 1){ return; }
