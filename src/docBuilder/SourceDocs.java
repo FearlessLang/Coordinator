@@ -69,7 +69,6 @@ final class SourceDocs{
       .filter(e -> e.getValue()>1)
       .map(Map.Entry::getKey)
       .sorted(bySource)
-      .map(d -> dedent(List.of(d)).getFirst())
       .toList();
   }
   private static final Comparator<DocOcc> bySource= Comparator.comparingInt(DocOcc::line);

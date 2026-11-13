@@ -90,7 +90,7 @@ record DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other, Fun
     var under= underType.matcher(d.text());
     if (!exact || !under.matches()){ return new Directive.Broken(d, notADirective); }
     var ref= DocRefScanner.wholeRef(d.text(), new DocRefScanner.CodeSpan(under.start(1), under.end(1), 1));
-    if (!(ref.orElse(null) instanceof DocRef.TypeName t)){ return new Directive.Broken(d, notAType); }
+    if (!(ref.orElse(null) instanceof DocRef.TypeName t)){ return new Directive.Broken(d, notAType.formatted(under.group(1), ref.orElse(null) instanceof DocRef.MethodName ? "names a method, not a type" : "does not name a type")); }
     if (typeParameter(t, scope)){ return new Directive.Broken(d, typeParameterParent.formatted(t.simpleName())); }
     var link= resolveType(t);
     if (link.isEmpty()){ return new Directive.Broken(d, unresolved(t, scope).orElse("There is no type \""+shown(t)+"\".")); }
@@ -101,7 +101,7 @@ record DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other, Fun
       case DocLink.NoLink _ -> throw Bug.unreachable();
     };
   }
-  String named(TypeDoc t){ return t.main().infName() ? anonTitle(t.main()) : named(t.main().name()); }
+  String named(TypeDoc t){ return t.main().infName() ? "\""+anonTitle(t.main())+"\"" : named(t.main().name()); }
   String named(TName n){ return "\""+title(n)+(n.arity()==0 ? "" : shape(OptionalInt.of(n.arity()), "[", "]"))+"\""; }
   private static final Pattern namedGroup= Pattern.compile("Group \"([^\" ](?:[^\"]*[^\" ])?)\"");
   private static final Pattern underType= Pattern.compile("Group `([^`]+)`");
@@ -112,10 +112,10 @@ record DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other, Fun
    +"A group name is not empty, and does not start or end with a space.\n"
    +"Nothing follows the closing \" or `, not even a space.";
   static final String notAType=
-    "This does not name a type.\n"
+    "\"%s\" %s.\n"
    +"In a //@Group `Type` line, the reference must name a type of this package.";
   static final String typeParameterParent=
-    "\"%s\" is a type parameter.\n"
+    "\"%s\" is a generic type parameter.\n"
    +"In a //@Group `Type` line, the reference must name a type of this package.";
   static final String foreignParent=
     "%s is a type of package %s.\n"
@@ -141,7 +141,7 @@ record DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other, Fun
     return switch (ref){
       case DocRef.LocalName _ -> Optional.empty();
       case DocRef.TypeName t -> Optional.of(typeCandidates(new DocRef.TypeName(t.pkg(), t.simpleName(), OptionalInt.empty()))).filter(ns -> !ns.isEmpty())
-        .map(ns -> others("There is no type \""+shown(t)+"\".", "type", ns.stream().map(n -> shown(new DocRef.TypeName(t.pkg(), t.simpleName(), n.arity()==0 ? OptionalInt.empty() : OptionalInt.of(n.arity())))), "type parameters"));
+        .map(ns -> others("There is no type \""+shown(t)+"\".", "type", ns.stream().map(n -> shown(new DocRef.TypeName(t.pkg(), t.simpleName(), n.arity()==0 ? OptionalInt.empty() : OptionalInt.of(n.arity())))), "generic type parameters"));
       case DocRef.MethodName(var owner, var selector, var arity) when owner.isEmpty() -> Optional.of(bareCandidates(selector, OptionalInt.empty())).filter(cs -> !cs.isEmpty())
         .map(cs -> others("No type has a method \""+selector+shape(arity, "(", ")")+"\".", "method", cs.stream().map(c -> title(c.owner())+arities(selector, c)), "arguments"));
       case DocRef.MethodName(var owner, var selector, var arity) -> onOwner(owner.get(), selector, arity, scope);
@@ -149,7 +149,7 @@ record DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other, Fun
   }
   private Optional<String> onOwner(DocRef.Receiver r, String selector, OptionalInt arity, Scope scope){
     var o= owners(r, scope);
-    var noMethods= " is a type parameter, and a type parameter has no methods.";
+    var noMethods= " is a generic type parameter, and a generic type parameter has no methods.";
     if (o.names().isEmpty()){
       return switch (r){
         case DocRef.TypeName t when typeParameter(t, scope) -> Optional.of("\""+t.simpleName()+"\""+noMethods);

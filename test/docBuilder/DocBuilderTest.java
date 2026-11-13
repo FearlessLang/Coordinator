@@ -134,7 +134,7 @@ Foo: Bar {
     var text= ".aaa->1;  .bbb->2 /// first note\n.ccc->3;  .ddd->4 /// second note\n";
     var docs= new SourceDocs(file, text);
     List.of(Pos.of(file, 1, 1), Pos.of(file, 1, 11), Pos.of(file, 2, 1), Pos.of(file, 2, 11)).forEach(p -> docs.docsAt(p, false));
-    assertEquals(List.of("first note", "second note"), docs.ambiguousTrailing().stream().map(DocOcc::text).toList());
+    assertEquals(List.of(" first note", " second note"), docs.ambiguousTrailing().stream().map(DocOcc::text).toList());
   }
   //documentation that reaches no declaration is documentation nobody reads: the usual
   //cause is a /// or //> written with one mark too few, which ends the block silently.
@@ -884,9 +884,9 @@ In file: fear:/_pkg/_rank_pkg.fear
 
 While inspecting the documentation of package pkg
 This documentation is attached to nothing.
-A /// or //> block documents the declaration right below it, but no declaration
-starts right below this block. Move this block right above the declaration it
-documents, or turn it into a plain // comment.""", ex.getMessage());
+A ///, //>, //- or //@ block documents the declaration right below it, but no
+declaration starts right below this block. Move this block right above the
+declaration it documents, or turn it into a plain // comment.""", ex.getMessage());
   }
   @Test void aTrailingDocSharedByTwoDeclarationsOnOneLineIsAnAmbiguousReferenceError(@TempDir Path tmp){
     var ownerName= new TName("pkg.Holder", 0, Pos.unknown);

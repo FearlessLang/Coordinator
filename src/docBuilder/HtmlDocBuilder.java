@@ -240,28 +240,29 @@ public final class HtmlDocBuilder{
       last.line(), last.textColumn()+last.text().length()), msg);
   }
   String ambiguousTrailing(DocOcc occ){
-    return message(new Span(occ.file(), occ.line(), occ.textColumn(), occ.line(), occ.textColumn()+occ.text().length()), ambiguousTrailingDoc);
+    return line(occ, ambiguousTrailingDoc);
   }
   static final String notAttached=
     "This documentation is attached to nothing.\n"
-   +"A /// or //> block documents the declaration right below it, and nothing else\n"
-   +"may come between them. A line starting with // ends the block, so check whether\n"
-   +"one of these was meant to start with /// instead.";
+   +"A ///, //>, //- or //@ block documents the declaration right below it, and\n"
+   +"nothing else may come between them. A line starting with // ends the block, so\n"
+   +"check whether one of these was meant to start with /// instead.";
   static final String emptyLineEnds=
     "This documentation is attached to nothing.\n"
-   +"A /// or //> block documents the declaration right below it, and an empty line\n"
-   +"ends the block. Delete the empty line below this block, or write /// on it to\n"
-   +"keep an empty line in the documentation.";
+   +"A ///, //>, //- or //@ block documents the declaration right below it, and an\n"
+   +"empty line ends the block. Delete the empty line below this block, or write ///\n"
+   +"on it to keep an empty line in the documentation.";
   static final String nothingDeclaredBelow=
     "This documentation is attached to nothing.\n"
-   +"A /// or //> block documents the declaration right below it, but no declaration\n"
-   +"starts right below this block. Move this block right above the declaration it\n"
-   +"documents, or turn it into a plain // comment.";
+   +"A ///, //>, //- or //@ block documents the declaration right below it, but no\n"
+   +"declaration starts right below this block. Move this block right above the\n"
+   +"declaration it documents, or turn it into a plain // comment.";
   static final String trailingNotAttached=
     "This documentation is attached to nothing.\n"
-   +"A /// or //> written after code documents the declaration that starts earlier\n"
-   +"on the same line. No declaration starts earlier on this line, so move this\n"
-   +"documentation to its own line, right above the declaration it documents.";
+   +"A ///, //>, //- or //@ line written after code documents the declaration that\n"
+   +"starts earlier on the same line. No declaration starts earlier on this line, so\n"
+   +"move this documentation to its own line, right above the declaration it\n"
+   +"documents.";
   static final String ambiguousTrailingDoc=
     "This documentation follows more than one declaration on the same line.\n"
    +"Put each declaration on its own line.";
@@ -271,10 +272,10 @@ public final class HtmlDocBuilder{
    +"neither. Move this line above the declaration of the type.";
   static final String publicInPrivate=
     "%s is public, so it cannot be in the group \"private\".\n"
-   +"The group \"private\" holds only private types: the types whose name starts with _.";
+   +"The group \"private\" holds only private types: the anonymous literals and the types whose name starts with _.";
   static final String privateInPublic=
     "%s is private, so it cannot be in the group \"public\".\n"
-   +"The group \"public\" holds only public types: the types whose name does not start with _.";
+   +"The group \"public\" holds only public types: the types whose written name does not start with _.";
   static final String publicUnderPrivate=
     "%s is public, but every type it is under is private: %s.\n"
    +"A public type must be in a group, or under at least one public type.";

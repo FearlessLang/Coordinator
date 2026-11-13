@@ -143,7 +143,7 @@ _Child:{ .c: A -> A; }
 <p class="extends"><b>See also:</b> <a href="#type-p_2e__5f_Child-0">_Child</a></p>
 [###]<h2>_Child</h2>
 <p class="doc missing">No documentation yet.</p>
-<p class="extends"><b>Under:</b> <a href="#type-p_2e_A-0">A</a></p>
+<p class="extends under"><b>Under:</b> <a href="#type-p_2e_A-0">A</a></p>
 [###]""", html);
   }
   @Test void aGroupLineIsNotShownAsDocumentation(@TempDir Path tmp){
@@ -175,7 +175,7 @@ In file: fear:/_p/_rank_app.fear
 002| //@Group "private"
    | ^^^^^^^^^^^^^^^^^^
 [###]"B" is public, so it cannot be in the group "private".
-The group "private" holds only private types: the types whose name starts with _.""", error(tmp, a+"""
+The group "private" holds only private types: the anonymous literals and the types whose name starts with _.""", error(tmp, a+"""
 //@Group "private"
 B:{ .b: A -> A; }
 """));
@@ -183,7 +183,7 @@ B:{ .b: A -> A; }
   @Test void aPrivateTypeCanNotBeInGroupPublic(@TempDir Path tmp){
     utils.Err.strCmp("""
 [###]"_B" is private, so it cannot be in the group "public".
-The group "public" holds only public types: the types whose name does not start with _.""", error(tmp, a+"""
+The group "public" holds only public types: the types whose written name does not start with _.""", error(tmp, a+"""
 //@Group "public"
 _B:{ .b: A -> A; }
 """));
@@ -284,11 +284,50 @@ B:{ .b: A -> A; }
   }
   @Test void aGroupLineNamingAMethodIsAnError(@TempDir Path tmp){
     utils.Err.strCmp("""
-[###]This does not name a type.
+[###]"A.m" names a method, not a type.
 In a //@Group `Type` line, the reference must name a type of this package.""", error(tmp, a+"""
 //@Group `A.m`
 B:{ .b: A -> A; }
 """));
+  }
+  @Test void aGroupLineWithALowercaseNameIsAnError(@TempDir Path tmp){
+    utils.Err.strCmp("""
+[###]"x" does not name a type.
+In a //@Group `Type` line, the reference must name a type of this package.""", error(tmp, a+"""
+//@Group `x`
+B:{ .b: A -> A; }
+"""));
+  }
+  @Test void anAnonymousLiteralCanNotBeInGroupPublic(@TempDir Path tmp){
+    utils.Err.strCmp("""
+[###]"Anon@_rank_app:5" is private, so it cannot be in the group "public".
+The group "public" holds only public types: the types whose written name does not start with _.""", error(tmp, a+"""
+Maker:{
+  .make: A ->
+    //@Group "public"
+    A{ .m -> A };
+  }
+"""));
+  }
+  @Test void aGroupLineAboveAnEmptyLineIsAttachedToNothing(@TempDir Path tmp){
+    utils.Err.strCmp("""
+[###]002| //@Group "Tools"
+   | ^^^^^^^^^^^^^^^^[###]
+This documentation is attached to nothing.
+A ///, //>, //- or //@ block documents the declaration right below it, and an
+empty line ends the block. Delete the empty line below this block, or write ///
+on it to keep an empty line in the documentation.""", error(tmp, a+"""
+//@Group "Tools"
+
+B:{ .b: A -> A; }
+"""));
+  }
+  @Test void theUnderLineOfATypeIsMarkedForTheListToSelectTheParentOfTheType(@TempDir Path tmp){
+    var html= docs(tmp, a+"""
+//@Group `A`
+B:{ .b: A -> A; }
+""").html();
+    utils.Err.strCmp("[###]<p class=\"extends under\"><b>Under:</b> <a href=\"#type-p_2e_A-0\">A</a></p>[###]", html);
   }
   @Test void aMalformedGroupLineIsAnError(@TempDir Path tmp){
     utils.Err.strCmp("""

@@ -381,9 +381,9 @@ B:{
     utils.Err.strCmp("""
 Misplaced doc comment.[###]
 This documentation is attached to nothing.
-A /// or //> block documents the declaration right below it, but no declaration
-starts right below this block. Move this block right above the declaration it
-documents, or turn it into a plain // comment.""", ex.getMessage());
+A ///, //>, //- or //@ block documents the declaration right below it, but no
+declaration starts right below this block. Move this block right above the
+declaration it documents, or turn it into a plain // comment.""", ex.getMessage());
   }
   @Test void aDocAboveAPlainCommentLineIsToldThatThePlainCommentEndsTheBlock(@TempDir Path tmp){
     var ex= assertThrows(UserError.class, () -> docs(tmp, a+"""
@@ -391,7 +391,7 @@ documents, or turn it into a plain // comment.""", ex.getMessage());
 // a plain comment
 B:{ .m: A -> A; }
 """));
-    utils.Err.strCmp("Misplaced doc comment.[###]A line starting with // ends the block, so check whether[###]", ex.getMessage());
+    utils.Err.strCmp("Misplaced doc comment.[###]A line starting with // ends the block, so\ncheck whether one of these was meant to start with /// instead.", ex.getMessage());
   }
   @Test void aDisambiguationPageOnAnAnonymousLiteralIsTitledByTheNameTheListShows(@TempDir Path tmp){
     var html= docs(tmp, """
@@ -442,9 +442,9 @@ In file: fear:/_p/_rank_app.fear
 
 While inspecting the documentation of package p
 This documentation is attached to nothing.
-A /// or //> block documents the declaration right below it, and an empty line
-ends the block. Delete the empty line below this block, or write /// on it to
-keep an empty line in the documentation.""", ex.getMessage());
+A ///, //>, //- or //@ block documents the declaration right below it, and an
+empty line ends the block. Delete the empty line below this block, or write ///
+on it to keep an empty line in the documentation.""", ex.getMessage());
   }
   @Test void anEmptyDocLineBetweenTwoParagraphsKeepsThemInOneBlock(@TempDir Path tmp){
     var docs= docs(tmp, a+"""
@@ -474,9 +474,9 @@ In file: fear:/_p/_rank_app.fear
 
 While inspecting the documentation of package p
 This documentation is attached to nothing.
-A /// or //> block documents the declaration right below it, but no declaration
-starts right below this block. Move this block right above the declaration it
-documents, or turn it into a plain // comment.""", ex.getMessage());
+A ///, //>, //- or //@ block documents the declaration right below it, but no
+declaration starts right below this block. Move this block right above the
+declaration it documents, or turn it into a plain // comment.""", ex.getMessage());
   }
   @Test void aTrailingDocAfterTheBraceClosingItsTypeDocumentsTheMethodStartingOnItsLine(@TempDir Path tmp){
     var docs= docs(tmp, a+"""
@@ -728,9 +728,9 @@ B:{
     utils.Err.strCmp("""
 Misplaced doc comment.[###]
 This documentation is attached to nothing.
-A /// or //> block documents the declaration right below it, but no declaration
-starts right below this block. Move this block right above the declaration it
-documents, or turn it into a plain // comment.""", ex.getMessage());
+A ///, //>, //- or //@ block documents the declaration right below it, but no
+declaration starts right below this block. Move this block right above the
+declaration it documents, or turn it into a plain // comment.""", ex.getMessage());
   }
   @Test void twoOptionsForTheInheritedMethodsOfAnAnonymousLiteralShowTheirReceiverCapabilities(@TempDir Path tmp){
     var html= docs(tmp, a+"""
@@ -752,7 +752,18 @@ Maker:{
   @Test void theWelcomeTextCountsOneTypeAndDoesNotPlaceTheListOfTypesOnTheLeftWhenANarrowWindowShowsItAbove(@TempDir Path tmp){
     var html= docs(tmp, a).html();
     utils.Err.strCmp("[###]@media (max-width:48em){\n  .layout{display:block}[###]", html);
-    utils.Err.strCmp("[###]<p id=\"welcome\" class=\"welcome\">Types: 1. Pick one from the list.</p>[###]", html);
+    utils.Err.strCmp("[###]<p id=\"welcome\" class=\"welcome\">Types in the list: 1. Pick one.</p>[###]", html);
+  }
+  @Test void theWelcomeTextDoesNotCountATypeThatIsOnlyUnderAnotherType(@TempDir Path tmp){
+    var html= docs(tmp, a+"""
+//@Group `A`
+B:{ .b: A -> A; }
+""").html();
+    utils.Err.strCmp("[###]<p id=\"welcome\" class=\"welcome\">Types in the list: 1. Pick one.</p>[###]", html);
+  }
+  @Test void aTypeWithNoMethodsHasNoMethodsHeading(@TempDir Path tmp){
+    var html= docs(tmp, a+"Foo:{}\n").html();
+    utils.Err.strCmp("[###]<section class=\"type\" id=\"type-p_2e_Foo-0\">\n<h2>Foo</h2>\n<p class=\"doc missing\">No documentation yet.</p>\n</section>\n[###]", html);
   }
   @Test void aReferenceWithAnArityTheMethodDoesNotHaveIsToldTheArityTheMethodHas(@TempDir Path tmp){
     var ex= assertThrows(UserError.class, () -> docs(tmp, a+"""

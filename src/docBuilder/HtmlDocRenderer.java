@@ -177,7 +177,7 @@ final class HtmlDocRenderer{
       .append("<div><p class=\"eyebrow\">package</p><h1>").append(h(pkgName)).append("</h1></div>")
       .append("</header>\n")
       .append("<p id=\"welcome\" class=\"welcome\">")
-      .append("Types: ").append(shown.size()).append(". Pick one from the list.</p>\n");
+      .append("Types in the list: ").append(groups.values().stream().flatMap(List::stream).distinct().count()).append(". Pick one.</p>\n");
   }
   static final String mark= ""
     +"<svg class=\"mark\" viewBox=\"0 0 64 64\" width=\"38\" height=\"38\" aria-hidden=\"true\">"
@@ -316,9 +316,8 @@ code{
     var target= hash ? document.getElementById(hash) : null;
     var active= target && (target.classList.contains('type') ? target : target.closest('.type'));
     secs.forEach(function(el){ el.classList.toggle('active', el===active); });
-    links.forEach(function(a){
-      a.classList.toggle('sel', !!active && a.getAttribute('href')==='#'+active.id);
-    });
+    var sel= active ? inToc([active]) : [];
+    links.forEach(function(a){ a.classList.toggle('sel', sel.indexOf(a.getAttribute('href'))>=0); });
     showSel();
     welcome.style.display= active ? 'none' : '';
     var opened= target && target.closest('details');
@@ -326,6 +325,14 @@ code{
     if (history.state){ window.scrollTo(0, history.state.y); }
     else if (active && target!==active){ target.scrollIntoView(); }
     else { window.scrollTo(0,0); }
+  }
+  function inToc(ts){
+    var hrefs= ts.map(function(t){ return '#'+t.id; });
+    var hit= hrefs.filter(function(h){ return document.querySelector('#toclist a[href="'+h+'"]'); });
+    if (hit.length || !ts.length){ return hit; }
+    var up= [];
+    ts.forEach(function(t){ t.querySelectorAll('.under a').forEach(function(a){ up.push(document.getElementById(a.getAttribute('href').slice(1))); }); });
+    return inToc(up);
   }
   function showSel(){
     var sel= document.querySelector('#toclist a.sel');
@@ -390,12 +397,13 @@ code{
     sb.append("<section class=\"type\" id=\"").append(typeId(t)).append("\">\n")
       .append("<h2>").append(wrap(typeTitle(t))).append("</h2>\n");
     renderDoc(sb, t);
-    sb.append(Join.of(related(parents, t).stream().map(this::typeDocLink), "<p class=\"extends\"><b>Under:</b> ", ", ", "</p>\n", ""));
+    sb.append(Join.of(related(parents, t).stream().map(this::typeDocLink), "<p class=\"extends under\"><b>Under:</b> ", ", ", "</p>\n", ""));
     sb.append(Join.of(related(children, t).stream().map(this::typeDocLink), "<p class=\"extends\"><b>See also:</b> ", ", ", "</p>\n", ""));
     sb.append(Join.of(t.main().cs().stream().map(this::typeLink), "<p class=\"extends\"><b>Extends:</b> ", ", ", "</p>\n", ""));
     renderVariants(sb, "Typed literal variants", t.variants, toStr::lit);
-    sb.append("<h3>Methods</h3>\n");
-    visibleMethods(t).forEach(m -> renderMethod(sb, m));
+    var ms= visibleMethods(t);
+    if (!ms.isEmpty()){ sb.append("<h3>Methods</h3>\n"); }
+    ms.forEach(m -> renderMethod(sb, m));
     sb.append("</section>\n");
   }
   void renderMethod(StringBuilder sb, MethodDoc m){
@@ -431,7 +439,7 @@ code{
     var from= 0;
     for (var n : Stream.concat(sig.ts().stream(), Stream.of(sig.ret())).flatMap(HtmlDocRenderer::typeNames).toList()){
       var printed= toStr.typeName(n);
-      var at= namePatterns.computeIfAbsent(printed, p -> Pattern.compile("(?<![\\p{L}\\p{Nd}_.])"+Pattern.quote(p)+"(?![\\p{L}\\p{Nd}_])")).matcher(text);
+      var at= namePatterns.computeIfAbsent(printed, p -> Pattern.compile("(?<![\\p{L}\\p{Nd}_.])"+Pattern.quote(p)+"(?![\\p{L}\\p{Nd}_'])")).matcher(text);
       var found= at.find(from);
       assert found;
       from = at.end();
