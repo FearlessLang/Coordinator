@@ -296,7 +296,8 @@ B:{ .b: A -> A; }
    | ^^^^^^^^^^^^^^^
 [###]This is not a group directive.
 A //@ line is either //@Group "Name", to put the type it documents in the
-group Name, or //@Group `Type`, to put the type it documents under the type Type.""", error(tmp, a+"""
+group Name, or //@Group `Type`, to put the type it documents under the type Type.
+A group name is not empty, and does not start or end with a space.""", error(tmp, a+"""
 //@Grop "Tools"
 B:{ .b: A -> A; }
 """));
@@ -312,6 +313,52 @@ B:{
   //@Group "Tools"
   .b: A -> A;
   }
+"""));
+  }
+  @Test void aGroupLineWithNothingAfterTheMarkIsAnError(@TempDir Path tmp){
+    utils.Err.strCmp("""
+[###]002| //@
+   | ^^^
+[###]This is not a group directive.[###]""", error(tmp, a+"""
+//@
+B:{ .b: A -> A; }
+"""));
+  }
+  @Test void aBlankGroupNameIsAnError(@TempDir Path tmp){
+    utils.Err.strCmp("[###]This is not a group directive.[###]A group name is not empty, and does not start or end with a space.", error(tmp, a+"""
+//@Group "  "
+B:{ .b: A -> A; }
+"""));
+  }
+  @Test void aGroupNameStartingWithASpaceIsAnError(@TempDir Path tmp){
+    utils.Err.strCmp("[###]This is not a group directive.[###]", error(tmp, a+"""
+//@Group " Tools"
+B:{ .b: A -> A; }
+"""));
+  }
+  @Test void groupsAreSortedIgnoringCaseAndGroupsDifferingByCaseStayApart(@TempDir Path tmp){
+    var docs= docs(tmp, a+"""
+//@Group "UI"
+B:{ .b: A -> A; }
+//@Group "algebra"
+C:{ .c: A -> A; }
+//@Group "Algebra"
+D:{ .d: A -> A; }
+""");
+    utils.Err.strCmp("package p\n\ngroup Algebra\n  D\ngroup algebra\n  C\ngroup UI\n  B\ngroup public\n  A\n[###]", docs.text());
+  }
+  @Test void aGroupLineAfterTheDeclarationOnTheSameLineDocumentsThatDeclaration(@TempDir Path tmp){
+    var docs= docs(tmp, a+"""
+B:{ .b: A -> A; } //@Group "Tools"
+""");
+    utils.Err.strCmp("package p\n\ngroup Tools\n  B\ngroup public\n  A\n[###]", docs.text());
+  }
+  @Test void aTypeCanNotBeUnderATypeParameter(@TempDir Path tmp){
+    utils.Err.strCmp("""
+[###]"X" is a type parameter.
+In a //@Group `Type` line, the reference must name a type of this package.""", error(tmp, a+"""
+//@Group `X`
+B[X:imm]:{ .b: A -> A; }
 """));
   }
 }

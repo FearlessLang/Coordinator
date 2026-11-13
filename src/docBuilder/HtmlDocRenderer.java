@@ -37,7 +37,7 @@ final class HtmlDocRenderer{
   final ExportedToStr toStr;
   final DocResolver resolver;
   final HashMap<String,Pattern> namePatterns= new HashMap<>();
-  final TreeMap<String,ArrayList<TypeDoc>> groups= new TreeMap<>(Comparator.comparing(HtmlDocRenderer::groupKey));
+  final TreeMap<String,ArrayList<TypeDoc>> groups= new TreeMap<>(Comparator.comparing(HtmlDocRenderer::groupKey, String.CASE_INSENSITIVE_ORDER).thenComparing(Comparator.naturalOrder()));
   final HashMap<TypeDoc,ArrayList<TypeDoc>> parents= new HashMap<>();
   final HashMap<TypeDoc,ArrayList<TypeDoc>> children= new HashMap<>();
   final List<TypeDoc> shown;

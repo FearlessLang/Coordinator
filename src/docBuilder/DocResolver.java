@@ -90,6 +90,7 @@ record DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other, Fun
     if (!under.matches()){ return new Directive.Broken(d, notADirective); }
     var ref= DocRefScanner.wholeRef(d.text(), new DocRefScanner.CodeSpan(under.start(1), under.end(1), 1));
     if (!(ref.orElse(null) instanceof DocRef.TypeName t)){ return new Directive.Broken(d, notAType); }
+    if (typeParameter(t, scope)){ return new Directive.Broken(d, typeParameterParent.formatted(t.simpleName())); }
     var link= resolveType(t);
     if (link.isEmpty()){ return new Directive.Broken(d, unresolved(t, scope).orElse("There is no type \""+shown(t)+"\".")); }
     return switch (link.get()){
@@ -101,14 +102,18 @@ record DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other, Fun
   }
   String named(TypeDoc t){ return t.main().infName() ? anonTitle(t.main()) : named(t.main().name()); }
   String named(TName n){ return "\""+title(n)+(n.arity()==0 ? "" : shape(OptionalInt.of(n.arity()), "[", "]"))+"\""; }
-  private static final Pattern namedGroup= Pattern.compile(" *Group \"([^\"]+)\" *");
+  private static final Pattern namedGroup= Pattern.compile(" *Group \"([^\" ](?:[^\"]*[^\" ])?)\" *");
   private static final Pattern underType= Pattern.compile(" *Group `([^`]+)` *");
   static final String notADirective=
     "This is not a group directive.\n"
    +"A //@ line is either //@Group \"Name\", to put the type it documents in the\n"
-   +"group Name, or //@Group `Type`, to put the type it documents under the type Type.";
+   +"group Name, or //@Group `Type`, to put the type it documents under the type Type.\n"
+   +"A group name is not empty, and does not start or end with a space.";
   static final String notAType=
     "This does not name a type.\n"
+   +"In a //@Group `Type` line, the reference must name a type of this package.";
+  static final String typeParameterParent=
+    "\"%s\" is a type parameter.\n"
    +"In a //@Group `Type` line, the reference must name a type of this package.";
   static final String foreignParent=
     "%s is a type of package %s.\n"
