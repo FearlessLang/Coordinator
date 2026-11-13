@@ -424,7 +424,7 @@ B:{ .b: A -> A; } //@Group "Tools"
   }
   @Test void aTypeCanNotBeUnderATypeParameter(@TempDir Path tmp){
     utils.Err.strCmp("""
-[###]"X" is a type parameter.
+[###]"X" is a generic type parameter.
 In a //@Group `Type` line, the reference must name a type of this package.""", error(tmp, a+"""
 //@Group `X`
 B[X:imm]:{ .b: A -> A; }
@@ -454,5 +454,17 @@ B:{ .b: A -> A; }
 B:{ .b: A -> A; }
 """);
     utils.Err.strCmp("[###]\nB\n  Doc.\n\t.b:A\n[###]", docs.text());
+  }
+  @Test void aGroupLineAfterTwoDeclarationsOnOneLineIsMarkedFromItsSlashes(@TempDir Path tmp){
+    utils.Err.strCmp("""
+Misplaced doc comment.
+
+In file: fear:/_p/_rank_app.fear
+
+002| B:{ .b: A -> A; } C:{ .c: A -> A; } //@Group "X"
+   |                                     ^^^^^^^^^^^^
+[###]""", error(tmp, a+"""
+B:{ .b: A -> A; } C:{ .c: A -> A; } //@Group "X"
+"""));
   }
 }

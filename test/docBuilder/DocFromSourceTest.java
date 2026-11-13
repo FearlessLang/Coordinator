@@ -286,7 +286,7 @@ B:{
   .f[X:imm](x: X): A -> A;
   }
 """));
-    utils.Err.strCmp("Broken reference in a doc comment.[###]`x.nonexistent`[###]The type of \"x\" is a type parameter, and a type parameter has no methods.[###]", ex.getMessage());
+    utils.Err.strCmp("Broken reference in a doc comment.[###]`x.nonexistent`[###]The type of \"x\" is a generic type parameter, and a generic type parameter has no methods.[###]", ex.getMessage());
   }
   @Test void aMethodAnAnonymousLiteralInheritsIsANameInScopeThroughItsSelfName(@TempDir Path tmp){
     var docs= docs(tmp, """
@@ -848,7 +848,7 @@ Broken reference in a doc comment.[###]
 While inspecting the documentation of package p
 There is no type "A[_]".
 There is a type "A",
-but with a different number of type parameters.[###]""", ex.getMessage());
+but with a different number of generic type parameters.[###]""", ex.getMessage());
   }
   @Test void aMethodOnATypeParameterIsToldThatATypeParameterHasNoMethods(@TempDir Path tmp){
     var ex= assertThrows(UserError.class, () -> docs(tmp, a+"""
@@ -857,7 +857,7 @@ B:{
   .f[X:imm](x: X): A -> A;
   }
 """));
-    utils.Err.strCmp("Broken reference in a doc comment.[###]`X.m`[###]\"X\" is a type parameter, and a type parameter has no methods.[###]", ex.getMessage());
+    utils.Err.strCmp("Broken reference in a doc comment.[###]`X.m`[###]\"X\" is a generic type parameter, and a generic type parameter has no methods.[###]", ex.getMessage());
   }
   @Test void aReferenceToAMethodOfAnotherPackageWithTwoReceiverCapabilitiesOffersBoth(@TempDir Path tmp){
     var q= compiled("q", "Thing:{ read .n: read Thing -> this; mut .n: mut Thing -> this; }\n", OtherPackages.empty());
@@ -1053,5 +1053,12 @@ Sub:Sup{ .foo -> A; }
 User:{ .m: User -> this; }
 """).html();
     utils.Err.strCmp("[###]<p>See <code><a href=\"q.html#method-q_2e_Sub-0-[###]-_2e_foo-0\">q.Sub.foo</a></code>.</p>[###]", html);
+  }
+  @Test void aTypeWhoseNameStartsTheNameOfAPrimedGenericTypeParameterIsLinkedWhereTheTypeIsWritten(@TempDir Path tmp){
+    var html= docs(tmp, a+"""
+Foo:{}
+B[Foo':imm]:{ .m(x: Foo'): Foo -> Foo; }
+""").html();
+    utils.Err.strCmp("[###]<span class=\"sig\">.m(x:Foo'):<a href=\"#type-p_2e_Foo-0\">Foo</a></span>[###]", html);
   }
 }
