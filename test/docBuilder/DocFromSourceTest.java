@@ -908,4 +908,47 @@ Q:q.P{ .own: A -> A; }
 """);
     utils.Err.strCmp("[###]Q : q.P\n\t.own:A\n\t.pipe[_AA:imm](_AA):_AA\n[###]", docs.text());
   }
+  @Test void aSeveralMatchPageShowsTheFirstParagraphOfADocStartingWithACodeBlock(@TempDir Path tmp){
+    var html= docs(tmp, a+"""
+B:{
+  ///```
+  ///B.f
+  ///```
+  ///Gives an A.
+  .f: A -> A;
+  }
+C:{ .f: A -> A; }
+///See `.f`.
+D:{ .m: A -> A; }
+""").html();
+    utils.Err.strCmp("[###]<li><a href=\"#method-p_2e_B-0-imm-_2e_f-0\">B.f()</a> <span class=\"opt-doc\">[###] Gives an A.</span></li>[###]", html);
+  }
+  @Test void aTrailingDocAfterTwoTypesOnOneLineFollowsMoreThanOneDeclaration(@TempDir Path tmp){
+    var ex= assertThrows(UserError.class, () -> docs(tmp, a+"""
+B:{ .b: A -> A; } C:{ .c: A -> A; } /// about C
+"""));
+    utils.Err.strCmp("Misplaced doc comment.[###]This documentation follows more than one declaration on the same line.[###]", ex.getMessage());
+  }
+  @Test void aNamedLiteralAfterAnAnonymousLiteralStartingOnTheSameLineTakesTheDocBlockAboveThatLine(@TempDir Path tmp){
+    var docs= docs(tmp, a+"""
+Both:{ #(a: A, b: A): A -> a; }
+Maker:{
+  .two: A ->
+    ///Doc of Named.
+    Both#(A{ .m -> A }, Named: A{ .m -> A });
+  }
+""");
+    utils.Err.strCmp("[###]\nNamed : A\n  Doc of Named.\n\t.m:A\n[###]", docs.text());
+  }
+  @Test void aTrailingDocAfterALambdaHoldingANamedLiteralDocumentsTheNamedLiteral(@TempDir Path tmp){
+    var docs= docs(tmp, a+"""
+Mk:{ #: A }
+Use:{ .k(f: Mk): A -> f#; }
+Maker:{
+  .make: A -> Use
+    .k {Inner: A{ .m -> A }}; /// doc of Inner
+  }
+""");
+    utils.Err.strCmp("[###]\nInner : A\n  doc of Inner\n\t.m:A\n[###]", docs.text());
+  }
 }

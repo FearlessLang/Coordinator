@@ -429,4 +429,29 @@ In a //@Group `Type` line, the reference must name a type of this package.""", e
 B[X:imm]:{ .b: A -> A; }
 """));
   }
+  @Test void aGroupDifferingFromGroupPublicOnlyByCaseIsAnError(@TempDir Path tmp){
+    utils.Err.strCmp("""
+[###]002| //@Group "Public"
+   | ^^^^^^^^^^^^^^^^^
+[###]The group "Public" differs from the group "public" only by case.
+Write the name of a group the same way every time.""", error(tmp, a+"""
+//@Group "Public"
+B:{ .b: A -> A; }
+"""));
+  }
+  @Test void aPublicTypeCanNotBeInGroupPrivateWrittenWithACapital(@TempDir Path tmp){
+    utils.Err.strCmp("Broken group in a doc comment.[###]002| //@Group \"Private\"[###]", error(tmp, a+"""
+//@Group "Private"
+B:{ .b: A -> A; }
+"""));
+  }
+  @Test void anEmptyDocLineRightAfterTheGroupLinesIsTrimmed(@TempDir Path tmp){
+    var docs= docs(tmp, a+"""
+//@Group "Tools"
+///
+///Doc.
+B:{ .b: A -> A; }
+""");
+    utils.Err.strCmp("[###]\nB\n  Doc.\n\t.b:A\n[###]", docs.text());
+  }
 }
