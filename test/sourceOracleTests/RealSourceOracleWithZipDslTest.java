@@ -1505,7 +1505,7 @@ We check this so that you[###]
     try{ Files.createSymbolicLink(link, target); }
     catch (AccessDeniedException e){
       if (!Fs.isWindows()){ throw e; }
-      fail("Agent on Windows: this process can not create symbolic links, so this test can not check them. Turn on Developer Mode (Settings, System, For developers), or run the tests with the privilege to create symbolic links.");
+      fail("Agent on Windows: this process cannot create symbolic links, so this test cannot check them. Turn on Developer Mode (Settings, System, For developers), or run the tests with the privilege to create symbolic links.");
     }
     linkForbidden(root, shown);
   }

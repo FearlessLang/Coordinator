@@ -255,7 +255,7 @@ Child: InfoMain{ sys, arg -> arg }
     p.getOutputStream().flush();
     var out= new String(p.getInputStream().readAllBytes(), UTF_8);
     assertEquals(1, p.waitFor(), out);
-    utils.Err.strCmp("The argument of the main p.Child holds the character .u`00E9`, which a Str can not hold.", out.strip());
+    utils.Err.strCmp("The argument of the main p.Child holds the character .u`00E9`, which a Str cannot hold.", out.strip());
   }
   @Test void aFailureTextLineStartingWithAPlanLineIsNotAPlanLine(@TempDir Path tmp){
     var root= unitTestsProject(tmp, """
@@ -3902,7 +3902,7 @@ In file: fear:/_app/_rank_app.fear
    |                           ^^^^^^^^^^^^^^^^^^^^^
 
 While inspecting a type name
-Source code inside folders named "_app" can not use package name "webserver_v12".
+Source code inside folders named "_app" cannot use package name "webserver_v12".
 Did you mean "webserver" ?
 Visible package names: "base", "webserver".
 Source code inside folders named "_app" uses package name "webserver" to refer to the code inside folders named "_webserver_v12", because of "map webserver as _webserver_v12 in _app", written in fear:/_app/_rank_app.fear.
@@ -3932,7 +3932,7 @@ Hello:Main{s->base.Debug#(a.A.text)}
 """);
     var ex= assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib));
     utils.Err.strCmp("""
-A map can not give package name "a", because folders named "_a" exist:
+A map cannot give package name "a", because folders named "_a" exist:
 - "map a as _c in _b;"; written in fear:/_b/_rank_app.fear
 With no map, package name "a" refers to the code inside folders named "_a".
 Error 7 WellFormedness
@@ -3976,7 +3976,7 @@ Hello:Main{s->base.Debug#(`b`)}
 """);
     var ex= assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib));
     utils.Err.strCmp("""
-A map can not refer to the code inside folders named "_b" for source code inside folders named "_b":
+A map cannot refer to the code inside folders named "_b" for source code inside folders named "_b":
 - "map me as _b in _b;"; written in fear:/_b/_rank_app.fear
 Source code inside folders named "_b" uses the simple names of its own types.
 Error 7 WellFormedness
@@ -4023,7 +4023,7 @@ Hello:Main{s->base.Debug#(`hi`)}
 """);
     var ex= assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib));
     utils.Err.strCmp("""
-A map can not apply to source code inside folders named "_base":
+A map cannot apply to source code inside folders named "_base":
 - "map a as _pka in _base;"; written in fear:/_pka/_rank_app999.fear
 Error 7 WellFormedness
 """, ex.getMessage());
@@ -4204,7 +4204,7 @@ jjj
   }
   @Test void aMapCanNotGiveThePackageNameBase(@TempDir Path tmp){
     utils.Err.strCmp("""
-A map can not give package name "base", because folders named "_base" exist:
+A map cannot give package name "base", because folders named "_base" exist:
 - "map base as _foo_v4 in _lib;"; written in fear:/_lib/_rank_driver.fear
 With no map, package name "base" refers to the code inside folders named "_base".
 Error 7 WellFormedness
@@ -4293,7 +4293,7 @@ Source code inside folders named "_lib" uses package name "foo" to refer to the 
   }
   @Test void aMapCanNotGiveTheNameOfAnotherVersionFolder(@TempDir Path tmp){
     utils.Err.strCmp("""
-A map can not give package name "foo_v4", because folders named "_foo_v4" exist:
+A map cannot give package name "foo_v4", because folders named "_foo_v4" exist:
 - "map foo_v4 as _foo_v5 in _lib;"; written in fear:/_app/_rank_app.fear
 With no map, package name "foo_v4" refers to the code inside folders named "_foo_v4".
 Error 7 WellFormedness
@@ -4699,7 +4699,7 @@ In file: fear:/_shop/_rank_framework100.fear
    |           ^^^^^^^^^^^^^^^^
 
 While inspecting a type name
-Source code inside folders named "_shop" can not use package name "http_v2".
+Source code inside folders named "_shop" cannot use package name "http_v2".
 Did you mean "web" ?
 Visible package names: "base", "http_v1", "web".
 """+shopWebNote+"""
@@ -4715,7 +4715,7 @@ In file: fear:/_blog/_rank_framework200.fear
    |           ^^^^^^^^^^^^^^^^
 
 While inspecting a type name
-Source code inside folders named "_blog" can not use package name "http_v2".
+Source code inside folders named "_blog" cannot use package name "http_v2".
 Did you mean "http" ?
 Visible package names: "base", "http", "http_v1", "shop".
 """+blogHttpNote+"""
@@ -4865,7 +4865,7 @@ In file: fear:/_app/_rank_app.fear
    |     ^^^^^^^^
 
 While inspecting package header
-Source code inside folders named "_app" can not use package name "base".
+Source code inside folders named "_app" cannot use package name "base".
 Did you mean "bb" ?
 Visible package names: "bb".
 Source code inside folders named "_app" uses package name "bb" to refer to the code inside folders named "_base", because of "map bb as _base in _app", written in fear:/_app/_rank_app.fear.
@@ -4936,7 +4936,7 @@ Hello:Main{s->base.Debug#(f.Foo.version)}
     utils.Err.strCmp("""
 In file: fear:/_app/_rank_app.fear
 [###]
-Source code inside folders named "_app" can not use package name "f".
+Source code inside folders named "_app" cannot use package name "f".
 [###]""", assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib)).getMessage());
   }
   @Test void aNewVersionFolderIsUsedOnceAMapChoosesIt(@TempDir Path tmp) throws IOException, InterruptedException{
