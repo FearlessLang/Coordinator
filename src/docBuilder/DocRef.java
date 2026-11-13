@@ -26,3 +26,9 @@ sealed interface DocLink{
   record Ambiguous(String title, List<Candidate> options) implements DocLink{}
   record NoLink() implements DocLink{}
 }
+sealed interface Directive{
+  DocOcc at();
+  record Named(DocOcc at, String group) implements Directive{}
+  record Under(DocOcc at, TypeDoc parent) implements Directive{}
+  record Broken(DocOcc at, String problem) implements Directive{}
+}

@@ -646,6 +646,10 @@ Misplaced doc comment.
 Broken backticks in a doc comment.
 
 %s""".formatted(Join.of(problems, "", "\n\n", ""))); }
+  public static UserError docGroups(List<String> problems){ return new UserError("""
+Broken group in a doc comment.
+
+%s""".formatted(Join.of(problems, "", "\n\n", ""))); }
   public static UserError docReferences(List<String> problems){ return new UserError("""
 Broken reference in a doc comment.
 
