@@ -110,6 +110,13 @@ Fearless needs the desktop to open the files with the extensions listed below wi
 The desktop opens those files with other programs:
 %s""".formatted(held(held, claimedBy)));
   }
+  public static UserError associationNotTaken(Map<String,String> blocked, Function<String,String> claimedBy){
+    var listed= Join.of(blocked.entrySet().stream().map(e -> "  "+UserError.disp(e.getKey())+claimedBy.apply(e.getKey())+" needs a change of\n    "+e.getValue().replace("\n", "\n    ")), "", "\n", "");
+    return new UserError("""
+Fearless needs the desktop to open the files with the extensions listed below with Fearless.
+The desktop does not let Fearless change the program opening those files:
+%s""".formatted(listed));
+  }
   public static UserError associationNotWritable(String reported){
     return new UserError("""
 Fearless cannot become the program that opens Fearless projects and the
