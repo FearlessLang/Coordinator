@@ -38,7 +38,7 @@ public final class TestBuildBase{
       var core= frontend(pkgName, rich.sources(stLib.allFiles()), rich.oracle(), other, Map.of(), capabilities, Runnable::run);
       backend(pkgName, core, rich.oracle(), other, capabilities);
       var jars= Push.of(debugOut, sharedClasspath());
-      return Coordinator.runMains(Coordinator.runData(debugOut.getParent(), base), jars, "_"+pkgName+".Main");
+      return Coordinator.runMains(Coordinator.runData(debugOut.getParent(), base), jars, "_"+pkgName+".Main", _ -> {});
     }
   };}
   public static String run(Path base, Path debugOut){

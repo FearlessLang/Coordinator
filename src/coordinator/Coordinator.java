@@ -17,6 +17,7 @@ import java.util.Optional;
 import java.util.TreeMap;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.IntConsumer;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -50,11 +51,12 @@ import utils.OneOr;
 import utils.Push;
 
 public interface Coordinator{
-  static String runMains(List<String> jvmArgs, List<Path> jarDirs, String mainClass) throws InterruptedException{
+  static String runMains(List<String> jvmArgs, List<Path> jarDirs, String mainClass, IntConsumer ended) throws InterruptedException{
     var sb= new StringBuilder();
     var jvm= startProgram(jvmArgs, jarDirs, mainClass, s -> { sb.append(s); System.out.print(s); });
     var ec= jvm.await();
     Require.check(ec==0 || ec==1, "Exit code "+ec+" from\n"+Join.of(jvm.cmd(), "", "\n", "")+"\nOutput:\n"+sb);
+    ended.accept(ec);
     return sb.toString();
   }
   static List<String> runData(Path project, Path base){
@@ -145,8 +147,9 @@ public interface Coordinator{
     return sb.toString();
   }
   default String runAllMains(Path project, Path stdLibBase, String pkgName) throws InterruptedException{
-    return runMains(Push.of(runData(project, stdLibBase), "-Dapple.awt.application.name="+project.getFileName()), Push.of(project.resolve(outDir), sharedClasspath()), "_"+pkgName+".Main");
+    return runMains(Push.of(runData(project, stdLibBase), "-Dapple.awt.application.name="+project.getFileName()), Push.of(project.resolve(outDir), sharedClasspath()), "_"+pkgName+".Main", this::mainEnded);
   }
+  default void mainEnded(int exitCode){}
   /// Writes base.json, base.jar, base.html and base.txt into baseCache; the backend of this Coordinator writes base into out.
   default void buildBaseCache(Path stdLibBase, Path out, Path baseCache){
     Fs.ensureDir(baseCache);
@@ -168,7 +171,7 @@ public interface Coordinator{
       throw UserError.cacheCorruptedOrCrash(e);
     }
   }
-  default String drawing() throws InterruptedException{ return runMains(List.of("--enable-native-access=ALL-UNNAMED"), sharedClasspath(), "_base.Vk").strip(); }
+  default String drawing() throws InterruptedException{ return runMains(List.of("--enable-native-access=ALL-UNNAMED"), sharedClasspath(), "_base.Vk", _ -> {}).strip(); }
   static ChildJvm startMain(Path project, Path base, String main, Optional<Path> input, Map<String,Path> mounts, Map<String,Path> locks, List<String> attenuators, List<String> desk, List<Path> sharedClasspath, Consumer<String> out){
     var jvmArgs= new ArrayList<>(runData(project, base));
     input.ifPresent(i -> jvmArgs.add("-DfearlessInput.file="+PathClassLoader.argOf(i)));

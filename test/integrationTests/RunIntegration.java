@@ -90,6 +90,7 @@ final class RunIntegration{
   static final Path reportsFile= reportsDir.resolve("all_auto_tests.xml");
   static final ArrayList<String> suites= new ArrayList<>();
   static final Path stLib= ResolveResource.stLibPath;
+  final ArrayList<Integer> exitCodes= new ArrayList<>();
   @BeforeAll static void buildBaseOnce(){
     BaseCacheBuilder.buildInto(ResolveResource.coordinatorJars, ResolveResource.stLibDebugOut, true);
     Fs.rmTree(reportsDir);
@@ -106,8 +107,9 @@ final class RunIntegration{
         return BackendTools.of(pkgName, oracle, other, core, project.resolve(Coordinator.outDir), baseCachePath(), ResolveResource.stLibRTPath, capabilities);
       }
       @Override public String runAllMains(Path p, Path stdLibBase, String pkgName) throws InterruptedException{
-        return Coordinator.runMains(Push.of(Coordinator.runData(p, stdLibBase), jvmArgs), Push.of(p.resolve(Coordinator.outDir), sharedClasspath()), "_"+pkgName+".Main");
+        return Coordinator.runMains(Push.of(Coordinator.runData(p, stdLibBase), jvmArgs), Push.of(p.resolve(Coordinator.outDir), sharedClasspath()), "_"+pkgName+".Main", this::mainEnded);
       }
+      @Override public void mainEnded(int exitCode){ exitCodes.add(exitCode); }
     };
   }
   static void compile(Coordinator c, Path root){
@@ -443,7 +445,7 @@ Dropper: Main{sys -> Block#
     return p.descendants().filter(ProcessHandle::isAlive).anyMatch(h -> h.info().command().map(c -> Path.of(c).getFileName().toString().startsWith("java")).orElse(false));
   }
   @Test void baseGeneratedExamples(@TempDir Path tmp) throws InterruptedException{
-    var out= Coordinator.runMains(Coordinator.runData(tmp, ResolveResource.stLibPath), List.of(ResolveResource.coordinatorJars, baseCache), "_base.Main");
+    var out= Coordinator.runMains(Coordinator.runData(tmp, ResolveResource.stLibPath), List.of(ResolveResource.coordinatorJars, baseCache), "_base.Main", _ -> {});
     writeJUnitReport("baseGeneratedExamples", tmp);
     utils.Err.strCmp("", out);
   }
@@ -1391,6 +1393,33 @@ boom
 imm Ops+-*%/<>=!&|^~?#\\(_) error line: 4 in file _p/_rank_app.fear
 imm App.main(_) error line: 5 in file _p/_rank_app.fear
 """, coordinator(root).main(root, stLib));
+  }
+  @Test void aMainEndingWithAnErrorEndsItsProgramWithExitCode1(@TempDir Path tmp) throws InterruptedException{
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_p/_rank_app.fear
+iii
+use base.Main as Main;
+use base.Error as Error;
+App:Main{s -> Error.msg "boom"}
+""");
+    coordinator(root).main(root, stLib);
+    assertEquals(List.of(1), exitCodes);
+  }
+  @Test void mainsEndingWithoutErrorsEndTheirProgramWithExitCode0(@TempDir Path tmp) throws InterruptedException{
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_p/_rank_app.fear
+iii
+use base.Main as Main;
+use base.Void as Void;
+A:Main{s -> Void}
+B:Main{s -> Void}
+""");
+    coordinator(root).main(root, stLib);
+    assertEquals(List.of(0), exitCodes);
   }
   @Test void anUncaughtRethrownErrorShowsTheFramesOfItsFirstThrow(@TempDir Path tmp) throws InterruptedException{
     var root= tmp.resolve("root");
