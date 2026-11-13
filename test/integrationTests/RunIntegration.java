@@ -1165,8 +1165,8 @@ In file: fear:/_col/_rank_app.fear
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 While inspecting type declaration "Hello[_]"
-Type declaration "Hello[_]" implements "Main" and has generic parameters.
-A type implementing "Main" must have zero generic parameters.
+Type declaration "Hello[_]" implements "Main" and has generic type parameters.
+A type implementing "Main" must have zero generic type parameters.
 Error 7 WellFormedness""", ex.getMessage());
   }
   @Test void aSourceFileThatIsNotUtf8IsAUserError(@TempDir Path tmp) throws IOException{
@@ -2236,7 +2236,7 @@ In file: fear:/_col/_rank_app.fear
 While inspecting type declaration "A[_]"
 Type declaration "A[_]" implements `OpenWith[X,"q"]`.
 "X" is not a valid icon.
-Only concrete types with zero generic arguments are valid icons.
+Only concrete types with zero generic type arguments are valid icons.
 Error 7 WellFormedness"""); }
   @Test void aClaimWithAGenericIconIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 Box[X:imm]:{}
@@ -2250,7 +2250,7 @@ In file: fear:/_col/_rank_app.fear
 While inspecting type declaration "A"
 Type declaration "A" implements "Shortcut[Box[IconsFoo]]".
 "Box[IconsFoo]" is not a valid icon.
-Only concrete types with zero generic arguments are valid icons.
+Only concrete types with zero generic type arguments are valid icons.
 Error 7 WellFormedness"""); }
   @Test void aClaimWithATypeVariableExtensionIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 A[X:imm]:Main,OpenWith[IconsFoo,X]{}
