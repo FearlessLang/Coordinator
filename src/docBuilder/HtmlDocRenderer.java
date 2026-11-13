@@ -37,7 +37,7 @@ final class HtmlDocRenderer{
   final ExportedToStr toStr;
   final DocResolver resolver;
   final HashMap<String,Pattern> namePatterns= new HashMap<>();
-  final TreeMap<String,ArrayList<TypeDoc>> groups= new TreeMap<>(Comparator.comparing(HtmlDocRenderer::groupKey));
+  final TreeMap<String,ArrayList<TypeDoc>> groups= new TreeMap<>(Comparator.comparing(HtmlDocRenderer::groupKey, String.CASE_INSENSITIVE_ORDER));
   final HashMap<TypeDoc,ArrayList<TypeDoc>> parents= new HashMap<>();
   final HashMap<TypeDoc,ArrayList<TypeDoc>> children= new HashMap<>();
   final List<TypeDoc> shown;
@@ -66,12 +66,12 @@ final class HtmlDocRenderer{
     }
     var standard= named.isEmpty() && !parents.containsKey(t);
     if (standard){ named.add(t.main().name().isPublic() ? "public" : "private"); }
-    named.stream().distinct().forEach(g -> groups.computeIfAbsent(g, _ -> new ArrayList<>()).add(t));
+    named.forEach(g -> groups.computeIfAbsent(g, _ -> new ArrayList<>()).add(t));
   }
   void visit(TypeDoc t, LinkedHashSet<TypeDoc> res){
     if (res.add(t)){ related(children, t).forEach(c -> visit(c, res)); }
   }
-  static List<TypeDoc> related(HashMap<TypeDoc,ArrayList<TypeDoc>> m, TypeDoc t){ return m.getOrDefault(t, new ArrayList<>()).stream().distinct().toList(); }
+  static List<TypeDoc> related(HashMap<TypeDoc,ArrayList<TypeDoc>> m, TypeDoc t){ return m.getOrDefault(t, new ArrayList<>()); }
   static String groupKey(String g){ return g.equals("public") ? "1" : g.equals("private") ? "2" : "0"+g; }
   String render(){
     var sb= new StringBuilder(16_000)
@@ -224,8 +224,11 @@ a:hover{text-decoration:underline}
 .toc input:focus{outline:none; border-color:var(--blue)}
 .toc ul{list-style:none; margin:0; padding:0; overflow:auto; flex:1}
 .toc li{margin:1px 0}
-.toc li.group{margin:.9em 0 .2em; padding-left:.55em; font-size:.78em; font-weight:600; letter-spacing:.06em; color:var(--fg-faint)}
-.toc li.group:first-child{margin-top:0}
+.toc li.group{
+  margin:.9em 0 .25em; padding:.55em .55em 0; border-top:1px solid var(--border);
+  font-size:.74em; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--orange);
+}
+.toc li.group:first-child{margin-top:0; padding-top:0; border-top:none}
 .toc a{
   display:block; padding:.28em .55em; border-radius:.35em; border-left:3px solid transparent;
   color:var(--fg-muted); font-size:.93em; padding-left:1.4em; text-indent:-.85em; overflow-wrap:anywhere;
@@ -305,6 +308,7 @@ code{
   var secs= document.querySelectorAll('.type');
   var links= document.querySelectorAll('#toclist a');
   var items= document.querySelectorAll('#toclist li:not(.group)');
+  var groups= document.querySelectorAll('#toclist li.group');
   var filter= document.getElementById('filter');
   var welcome= document.getElementById('welcome');
   function route(){
@@ -338,6 +342,11 @@ code{
     var q= filter.value.toLowerCase();
     items.forEach(function(li){
       li.style.display= li.textContent.split('[')[0].toLowerCase().indexOf(q) < 0 ? 'none' : '';
+    });
+    groups.forEach(function(g){
+      var n= g.nextElementSibling;
+      while (n && !n.classList.contains('group') && n.style.display==='none'){ n= n.nextElementSibling; }
+      g.style.display= n && !n.classList.contains('group') ? '' : 'none';
     });
     document.getElementById('toclist').scrollTop= 0;
     showSel();

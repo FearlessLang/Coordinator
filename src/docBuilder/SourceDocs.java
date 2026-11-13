@@ -96,11 +96,12 @@ final class SourceDocs{
       .mapToInt(o -> o.text().length()-o.text().stripLeading().length())
       .min().orElse(0);
   }
+  static boolean blank(DocOcc d){ return d.text().isBlank() && d.kind()!=DocKind.Group; }
   static List<DocOcc> trimBlanks(List<DocOcc> ds){
     var from= 0;
     var to= ds.size();
-    while (from<to && ds.get(from).text().isBlank()){ from += 1; }
-    while (to>from && ds.get(to-1).text().isBlank()){ to -= 1; }
+    while (from<to && blank(ds.get(from))){ from += 1; }
+    while (to>from && blank(ds.get(to-1))){ to -= 1; }
     return ds.subList(from, to);
   }
   Optional<DocOcc> trailingAfter(int line, int column){
