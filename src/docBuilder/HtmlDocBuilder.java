@@ -160,8 +160,9 @@ public final class HtmlDocBuilder{
     var text= HtmlDocRenderer.joined(p);
     DocRefScanner.unclosed(text).forEach(r -> markup.add(problem(p, r.start(), r.end()-1, unclosedSpan)));
     for (var sp : DocRefScanner.refSpans(text)){
-      if (text.substring(sp.start(), sp.end()).contains("\n")){ markup.add(problem(p, sp.start()-1, sp.end(), referenceOverLines)); continue; }
-      var ref= DocRefScanner.wholeRef(text, sp);
+      var written= text.substring(sp.start(), sp.end());
+      if (written.contains("\n")){ markup.add(problem(p, sp.start()-1, sp.end(), referenceOverLines)); continue; }
+      var ref= DocRefScanner.wholeRef(written);
       if (ref.isEmpty()){ problems.add(problem(p, sp.start(), sp.end()-1, notAName)); continue; }
       if (resolver.resolve(ref.get(), scope).isEmpty()){ problems.add(problem(p, sp.start(), sp.end()-1, resolver.unresolved(ref.get(), scope).orElse(noSuchName))); }
     }

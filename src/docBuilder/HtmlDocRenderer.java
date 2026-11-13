@@ -495,9 +495,10 @@ code{
     return sb.toString();
   }
   String renderCode(String text, DocRefScanner.CodeSpan cs, Scope scope){
-    var body= h(text.substring(cs.start(), cs.end()));
+    var written= text.substring(cs.start(), cs.end());
+    var body= h(written);
     if (cs.fence()!=1){ return body; }
-    return href(resolver.resolve(DocRefScanner.wholeRef(text, cs).orElseThrow(), scope).orElseThrow())
+    return href(resolver.resolve(DocRefScanner.wholeRef(written).orElseThrow(), scope).orElseThrow())
       .map(href -> "<a href=\""+h(href)+"\">"+body+"</a>").orElse(body);
   }
   void renderPage(StringBuilder sb, DocLink.Ambiguous p, String anchor){

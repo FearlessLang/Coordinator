@@ -3,6 +3,7 @@ package docBuilder;
 import java.util.List;
 import java.util.Optional;
 import java.util.OptionalInt;
+import java.util.regex.MatchResult;
 import java.util.regex.Pattern;
 
 import core.MName;
@@ -18,18 +19,17 @@ final class DocRefScanner{
   static List<CodeSpan> codeSpans(String text){
     return fenced.matcher(text).results().map(m -> new CodeSpan(m.start(2), m.end(2), m.group(1).length())).toList();
   }
-  static List<CodeSpan> unclosed(String text){
+  static List<MatchResult> unclosed(String text){
     var spans= codeSpans(text);
     return backticks.matcher(text).results()
       .filter(m -> spans.stream().noneMatch(s -> s.covers(m.start())))
-      .map(m -> new CodeSpan(m.start(), m.end(), m.end()-m.start()))
       .toList();
   }
   static List<CodeSpan> refSpans(String text){
     return codeSpans(text).stream().filter(sp -> sp.fence() == 1).toList();
   }
-  static Optional<DocRef> wholeRef(String text, CodeSpan sp){
-    var p= new Parse(text.substring(sp.start(), sp.end()));
+  static Optional<DocRef> wholeRef(String written){
+    var p= new Parse(written);
     return p.ref().filter(_ -> p.i==p.s.length());
   }
   private static final Pattern word= Pattern.compile("[\\p{L}\\p{Nd}_']+");
