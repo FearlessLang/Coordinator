@@ -17,7 +17,6 @@ import core.OtherPackages;
 import core.T;
 import core.TName;
 import tools.Fs;
-import utils.Bug;
 import utils.DistinctBy;
 import utils.Join;
 import utils.OneOr;
@@ -92,14 +91,12 @@ record DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other, Fun
     var ref= DocRefScanner.wholeRef(d.text(), new DocRefScanner.CodeSpan(under.start(1), under.end(1), 1));
     if (!(ref.orElse(null) instanceof DocRef.TypeName t)){ return new Directive.Broken(d, notAType.formatted(under.group(1), ref.orElse(null) instanceof DocRef.MethodName ? "names a method, not a type" : "does not name a type")); }
     if (typeParameter(t, scope)){ return new Directive.Broken(d, typeParameterParent.formatted(t.simpleName())); }
-    var link= resolveType(t);
-    if (link.isEmpty()){ return new Directive.Broken(d, unresolved(t, scope).orElse("There is no type \""+shown(t)+"\".")); }
-    return switch (link.get()){
-      case DocLink.Resolved r -> localTypeDoc(r.hit().owner()).<Directive>map(p -> new Directive.Under(d, p))
-        .orElseGet(() -> new Directive.Broken(d, foreignParent.formatted(named(r.hit().owner()), r.hit().owner().pkgName(), pkgName)));
-      case DocLink.Ambiguous a -> new Directive.Broken(d, ambiguousParent.formatted(shown(t), choices(a.options().stream().map(c -> "\""+c.owner().simpleName()+shape(OptionalInt.of(c.owner().arity()), "[", "]")+"\"").toList())));
-      case DocLink.NoLink _ -> throw Bug.unreachable();
-    };
+    var cands= typeCandidates(t);
+    if (cands.isEmpty()){ return new Directive.Broken(d, unresolved(t, scope).orElse("There is no type \""+shown(t)+"\".")); }
+    if (cands.size() > 1){ return new Directive.Broken(d, ambiguousParent.formatted(shown(t), choices(cands.stream().map(n -> "\""+n.simpleName()+shape(OptionalInt.of(n.arity()), "[", "]")+"\"").toList()))); }
+    var parent= cands.getFirst();
+    return localTypeDoc(parent).<Directive>map(p -> new Directive.Under(d, p))
+      .orElseGet(() -> new Directive.Broken(d, foreignParent.formatted(named(parent), parent.pkgName(), pkgName)));
   }
   String named(TypeDoc t){ return t.main().infName() ? "\""+anonTitle(t.main())+"\"" : named(t.main().name()); }
   String named(TName n){ return "\""+title(n)+(n.arity()==0 ? "" : shape(OptionalInt.of(n.arity()), "[", "]"))+"\""; }

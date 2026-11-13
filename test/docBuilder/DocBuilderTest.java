@@ -997,7 +997,7 @@ declaration it documents, or turn it into a plain // comment.""", ex.getMessage(
     var renderer= new HtmlDocRenderer(Map.of(), new DocResolver("pkg", List.of(), other, TName::s), Optional.empty());
     var ref= new DocRef.MethodName(Optional.of(new DocRef.TypeName(Optional.of("other"), "Sup", OptionalInt.empty())), ".bar", OptionalInt.empty());
     var link= renderer.resolver.resolve(ref, scope(namedType("pkg.Z", List.of(), List.of()))).get();
-    assertEquals("other.html#method-other_2e_Sup-0-imm-_2e_bar-0", renderer.href(link));
+    assertEquals(Optional.of("other.html#method-other_2e_Sup-0-imm-_2e_bar-0"), renderer.href(link));
   }
   @Test void twoArityVariantsOfATypeGiveTheirMethodsDistinctAnchors(){
     var oneName= new TName("pkg.Pair", 0, Pos.unknown);

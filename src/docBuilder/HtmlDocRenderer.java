@@ -497,9 +497,8 @@ code{
   String renderCode(String text, DocRefScanner.CodeSpan cs, Scope scope){
     var body= h(text.substring(cs.start(), cs.end()));
     if (cs.fence()!=1){ return body; }
-    var link= resolver.resolve(DocRefScanner.wholeRef(text, cs).orElseThrow(), scope).orElseThrow();
-    if (link instanceof DocLink.NoLink){ return body; }
-    return "<a href=\""+h(href(link))+"\">"+body+"</a>";
+    return href(resolver.resolve(DocRefScanner.wholeRef(text, cs).orElseThrow(), scope).orElseThrow())
+      .map(href -> "<a href=\""+h(href)+"\">"+body+"</a>").orElse(body);
   }
   void renderPage(StringBuilder sb, DocLink.Ambiguous p, String anchor){
     sb.append("<section class=\"type disambig\" id=\"").append(anchor).append("\">\n")
@@ -522,11 +521,11 @@ code{
   Optional<String> renderFirstParagraph(MethodDoc m){
     return paragraphs(m.visibleDocs()).stream().findFirst().map(p -> renderParagraph(p, m.scope()));
   }
-  String href(DocLink link){
+  Optional<String> href(DocLink link){
     return switch (link){
-      case DocLink.Ambiguous a -> "#"+pages.computeIfAbsent(a, _ -> "disambig-"+id(a.title())+"-"+pages.size());
-      case DocLink.Resolved r -> candidateHref(r.hit());
-      case DocLink.NoLink _ -> throw Bug.unreachable();
+      case DocLink.Ambiguous a -> Optional.of("#"+pages.computeIfAbsent(a, _ -> "disambig-"+id(a.title())+"-"+pages.size()));
+      case DocLink.Resolved r -> Optional.of(candidateHref(r.hit()));
+      case DocLink.NoLink _ -> Optional.empty();
     };
   }
   String candidateHref(Candidate c){
