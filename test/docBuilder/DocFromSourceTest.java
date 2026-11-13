@@ -89,6 +89,45 @@ Named : A
     assertEquals(List.of("_Cases_Examples: base.Test {::", "AllAutoTests_p: base.UnitTests {::"),
       docs.tests().stream().map(t -> t.text().lines().findFirst().orElseThrow()).toList());
   }
+  @Test void aNamedLiteralInsideALambdaStartingOnTheSameLineTakesTheDocBlockAboveThatLine(@TempDir Path tmp){
+    var docs= docs(tmp, a+"""
+Mk:{ #: A }
+Use:{ .k(f: Mk): A -> f#; }
+Maker:{
+  .make: A -> Use
+    ///Doc of Inner.
+    .k {Inner: A{ .m -> A }};
+  }
+""");
+    utils.Err.strCmp("""
+package p
+
+group public
+  A
+  Inner
+  Maker
+  Mk
+  Use
+
+A
+\t.m:A
+
+Inner : A
+  Doc of Inner.
+\t.m:A
+    from: A.m
+
+Maker
+\t.make:A
+
+Mk
+\t#:A
+
+Use
+\t.k(f:Mk):A
+
+""", docs.text());
+  }
   @Test void aNamedLiteralOnTheLineOfADocumentedTypeTakesNoneOfItsDocumentation(@TempDir Path tmp){
     var docs= docs(tmp, a+"""
 ///Holds an Inner.

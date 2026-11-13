@@ -42,8 +42,8 @@ _Hidden
   }
   @Test void aNamedGroupComesBeforePublicAndPrivateAndAChildFollowsItsParent(@TempDir Path tmp){
     var docs= docs(tmp, a+"""
-///Many things.
 //@Group "Collections"
+///Many things.
 Lst:{ .size: A -> A; }
 //@Group `Lst`
 _Node:{ .next: A -> A; }
@@ -148,12 +148,12 @@ _Child:{ .c: A -> A; }
   }
   @Test void aGroupLineIsNotShownAsDocumentation(@TempDir Path tmp){
     var docs= docs(tmp, a+"""
-///Before.
 //@Group "Tools"
-///After.
+///First.
+///Second.
 B:{ .b: A -> A; }
 """);
-    utils.Err.strCmp("[###]\nB\n  Before.\n  After.\n\t.b:A\n[###]", docs.text());
+    utils.Err.strCmp("[###]\nB\n  First.\n  Second.\n\t.b:A\n[###]", docs.text());
     assertFalse(docs.html().contains("@Group"));
   }
   @Test void anAnonymousLiteralWithOnlyAGroupLineIsShownUnderItsParent(@TempDir Path tmp){
@@ -336,16 +336,84 @@ B:{ .b: A -> A; }
 B:{ .b: A -> A; }
 """));
   }
-  @Test void groupsAreSortedIgnoringCaseAndGroupsDifferingByCaseStayApart(@TempDir Path tmp){
+  @Test void groupsAreSortedIgnoringCase(@TempDir Path tmp){
     var docs= docs(tmp, a+"""
 //@Group "UI"
 B:{ .b: A -> A; }
 //@Group "algebra"
 C:{ .c: A -> A; }
+""");
+    utils.Err.strCmp("package p\n\ngroup algebra\n  C\ngroup UI\n  B\ngroup public\n  A\n[###]", docs.text());
+  }
+  @Test void twoGroupsDifferingOnlyByCaseAreAnError(@TempDir Path tmp){
+    utils.Err.strCmp("""
+[###]004| //@Group "Algebra"
+   | ^^^^^^^^^^^^^^^^^^
+[###]The group "Algebra" differs from the group "algebra" only by case.
+Write the name of a group the same way every time.""", error(tmp, a+"""
+//@Group "algebra"
+C:{ .c: A -> A; }
 //@Group "Algebra"
 D:{ .d: A -> A; }
-""");
-    utils.Err.strCmp("package p\n\ngroup Algebra\n  D\ngroup algebra\n  C\ngroup UI\n  B\ngroup public\n  A\n[###]", docs.text());
+"""));
+  }
+  @Test void aGroupLineAfterProseIsAnError(@TempDir Path tmp){
+    utils.Err.strCmp("""
+[###]003| //@Group "Tools"
+   | ^^^^^^^^^^^^^^^^
+[###]This //@Group line comes after other documentation of the same declaration.
+Move every //@Group line above the first ///, //> and //- line of the documentation.""", error(tmp, a+"""
+///Doc.
+//@Group "Tools"
+B:{ .b: A -> A; }
+"""));
+  }
+  @Test void aGroupLineBetweenExamplesIsAnError(@TempDir Path tmp){
+    utils.Err.strCmp("[###]004| //@Group \"Tools\"\n[###]This //@Group line comes after other documentation of the same declaration.[###]", error(tmp, a+"""
+///Doc.
+//> A.m
+//@Group "Tools"
+//> A.m
+B:{ .b: A -> A; }
+"""));
+  }
+  @Test void aGroupLineInsideACodeBlockIsAnError(@TempDir Path tmp){
+    utils.Err.strCmp("[###]This //@Group line comes after other documentation of the same declaration.[###]", error(tmp, a+"""
+///```
+//@Group "Tools"
+///```
+B:{ .b: A -> A; }
+"""));
+  }
+  @Test void aRepeatedGroupLineIsAnError(@TempDir Path tmp){
+    utils.Err.strCmp("""
+[###]003| //@Group "Tools"
+   | ^^^^^^^^^^^^^^^^
+[###]This //@Group line repeats an earlier //@Group line of the same type.
+Delete this line.""", error(tmp, a+"""
+//@Group "Tools"
+//@Group "Tools"
+B:{ .b: A -> A; }
+"""));
+  }
+  @Test void aRepeatedParentIsAnError(@TempDir Path tmp){
+    utils.Err.strCmp("[###]003| //@Group `A`\n[###]This //@Group line repeats an earlier //@Group line of the same type.[###]", error(tmp, a+"""
+//@Group `A`
+//@Group `A`
+B:{ .b: A -> A; }
+"""));
+  }
+  @Test void aSpaceAfterTheMarkIsAnError(@TempDir Path tmp){
+    utils.Err.strCmp("[###]This is not a group directive.[###]", error(tmp, a+"""
+//@ Group "Tools"
+B:{ .b: A -> A; }
+"""));
+  }
+  @Test void aSpaceAfterTheGroupNameIsAnError(@TempDir Path tmp){
+    utils.Err.strCmp("[###]This is not a group directive.[###]", error(tmp, a+"""
+//@Group "Tools"\s
+B:{ .b: A -> A; }
+"""));
   }
   @Test void aGroupLineAfterTheDeclarationOnTheSameLineDocumentsThatDeclaration(@TempDir Path tmp){
     var docs= docs(tmp, a+"""

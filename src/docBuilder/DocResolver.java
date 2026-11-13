@@ -84,10 +84,11 @@ record DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other, Fun
       .toList();
   }
   Directive directive(DocOcc d, Scope scope){
+    var exact= d.textColumn() == d.column()+3;
     var named= namedGroup.matcher(d.text());
-    if (named.matches()){ return new Directive.Named(d, named.group(1)); }
+    if (exact && named.matches()){ return new Directive.Named(d, named.group(1)); }
     var under= underType.matcher(d.text());
-    if (!under.matches()){ return new Directive.Broken(d, notADirective); }
+    if (!exact || !under.matches()){ return new Directive.Broken(d, notADirective); }
     var ref= DocRefScanner.wholeRef(d.text(), new DocRefScanner.CodeSpan(under.start(1), under.end(1), 1));
     if (!(ref.orElse(null) instanceof DocRef.TypeName t)){ return new Directive.Broken(d, notAType); }
     if (typeParameter(t, scope)){ return new Directive.Broken(d, typeParameterParent.formatted(t.simpleName())); }
@@ -102,8 +103,8 @@ record DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other, Fun
   }
   String named(TypeDoc t){ return t.main().infName() ? anonTitle(t.main()) : named(t.main().name()); }
   String named(TName n){ return "\""+title(n)+(n.arity()==0 ? "" : shape(OptionalInt.of(n.arity()), "[", "]"))+"\""; }
-  private static final Pattern namedGroup= Pattern.compile(" *Group \"([^\" ](?:[^\"]*[^\" ])?)\" *");
-  private static final Pattern underType= Pattern.compile(" *Group `([^`]+)` *");
+  private static final Pattern namedGroup= Pattern.compile("Group \"([^\" ](?:[^\"]*[^\" ])?)\"");
+  private static final Pattern underType= Pattern.compile("Group `([^`]+)`");
   static final String notADirective=
     "This is not a group directive.\n"
    +"A //@ line is either //@Group \"Name\", to put the type it documents in the\n"
