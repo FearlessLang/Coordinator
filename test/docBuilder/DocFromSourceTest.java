@@ -982,4 +982,72 @@ Sub:Sup{ .foo -> A{
 </section>
 [###]""", html);
   }
+  @Test void aDocBlockOnTheFirstLineOfAFileStartingWithAByteOrderMarkDocumentsTheDeclarationBelow(@TempDir Path tmp){
+    var docs= docs(tmp, "﻿///Doc of A.\n"+a);
+    utils.Err.strCmp("""
+package p
+
+group public
+  A
+
+A
+  Doc of A.
+\t.m:A
+
+""", docs.text());
+  }
+  @Test void aDocBlockAfterAUnicodeLineSeparatorDocumentsTheDeclarationBelow(@TempDir Path tmp){
+    var docs= docs(tmp, "A:{ .m: A -> this; } ///Doc of B.\nB:{}\n");
+    utils.Err.strCmp("""
+package p
+
+group public
+  A
+  B
+
+A
+\t.m:A
+
+B
+  Doc of B.
+
+""", docs.text());
+  }
+  @Test void anAnonymousLiteralLeavesTheDocBlockAboveItsLineToANamedLiteralOfALaterTypeStartingOnThatLine(@TempDir Path tmp){
+    var docs= docs(tmp, a+"""
+Maker:{ .make: A ->
+  ///Doc of Named.
+  A{ .m -> A } } Named:{}
+""");
+    utils.Err.strCmp("""
+package p
+
+group public
+  A
+  Maker
+  Named
+
+A
+\t.m:A
+
+Maker
+\t.make:A
+
+Named
+  Doc of Named.
+
+""", docs.text());
+  }
+  @Test void aReferenceToAMethodOfAnotherPackageDeclaredOnceForTwoReceiverCapabilitiesLinksToThatMethod(@TempDir Path tmp){
+    var q= compiled("q", """
+A:{}
+Sup:{ mut .foo: A; imm .foo: A; }
+Sub:Sup{ .foo -> A; }
+""", OtherPackages.empty());
+    var html= docs(tmp, OtherPackages.start(Map.of(), q, 0L), """
+///See `q.Sub.foo`.
+User:{ .m: User -> this; }
+""").html();
+    utils.Err.strCmp("[###]<p>See <code><a href=\"q.html#method-q_2e_Sub-0-[###]-_2e_foo-0\">q.Sub.foo</a></code>.</p>[###]", html);
+  }
 }
