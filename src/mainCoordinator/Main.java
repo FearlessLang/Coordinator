@@ -25,6 +25,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -84,18 +85,22 @@ public final class Main{
     var l= launch.get();
     if (!Files.exists(l)){ throw Report.launchPathNotFound(l); }
     var stdLib= appDir.resolve("stdLib");
-    run(Fs.of((Files.isDirectory(l) ? l : l.getParent())::toRealPath), stdLib.resolve("base"), stdLib.resolve("rt"));
+    var ok= run(Fs.of((Files.isDirectory(l) ? l : l.getParent())::toRealPath), stdLib.resolve("base"), stdLib.resolve("rt"));
+    if (!ok && hasConsoleFlag()){ System.exit(1); }
   }
-  public static void run(Path project, Path base, Path rt) throws InterruptedException{
+  public static boolean run(Path project, Path base, Path rt) throws InterruptedException{
     UserError.root = project;
     Fs.onSymbolicLink = Report::symlinkForbidden;
+    var failed= new AtomicBoolean();
     var c= new Coordinator(){
       @Override public Optional<Path> baseCachePath(){ return Optional.of(base.getParent().resolve("baseCache")); }
       @Override public BackendTools backendTools(String pkgName, SourceOracle oracle, OtherPackages other, List<Literal> core, CapabilityEnvironment capabilities){
         return BackendTools.of(pkgName, oracle, other, core, project.resolve(Coordinator.outDir), baseCachePath(), rt, capabilities);
       }
+      @Override public void mainEnded(int exitCode){ if (exitCode != 0){ failed.set(true); } }
     };
     c.main(project, base);
+    return !failed.get();
   }
   public static final Predicate<String> belongsToFamily= s -> s.contains("earless");
   ///The launcher names us: one identity per launcher, and the manager's own is not the portable one.
