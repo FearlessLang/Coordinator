@@ -3,6 +3,7 @@ package docBuilder;
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -10,6 +11,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import java.util.function.Consumer;
 
@@ -31,6 +33,7 @@ import tools.Fs;
 import tools.SourceOracle;
 import userMessages.Report;
 import utils.Bug;
+import utils.Join;
 import utils.OneOr;
 import utils.Pos;
 import utils.Streams;
@@ -107,6 +110,8 @@ public final class HtmlDocBuilder{
     types.stream().flatMap(t -> Stream.<DeclarationDoc>concat(Stream.of(t), t.methods.stream())).forEach(d -> checkDeclaration(resolver, d, markup, problems));
     if (!markup.isEmpty()){ throw Report.docBackticks(markup); }
     if (!problems.isEmpty()){ throw Report.docReferences(problems); }
+    var groups= checkGroups(resolver);
+    if (!groups.isEmpty()){ throw Report.docGroups(groups); }
     var renderer= new HtmlDocRenderer(DocNames.uses(Stream.concat(currentByName.keySet().stream(), other.dom().stream()), pkgNames), resolver, baseDocLocation);
     var html= renderer.render();
     var txt= renderer.renderText();
@@ -147,6 +152,53 @@ public final class HtmlDocBuilder{
       if (resolver.resolve(ref.get(), scope).isEmpty()){ problems.add(problem(p, sp.start(), sp.end()-1, resolver.unresolved(ref.get(), scope).orElse(noSuchName))); }
     }
   }
+  List<String> checkGroups(DocResolver resolver){
+    var problems= new ArrayList<String>();
+    types.stream().flatMap(t -> t.methods.stream()).flatMap(m -> m.directives().stream()).forEach(d -> problems.add(line(d, onMethod)));
+    var parents= new LinkedHashMap<TypeDoc,List<Directive.Under>>();
+    types.stream().filter(TypeDoc::visible).forEach(t -> parents.put(t, checkType(resolver, t, problems)));
+    if (!problems.isEmpty()){ return problems; }
+    var done= new HashSet<TypeDoc>();
+    parents.keySet().forEach(t -> cycles(resolver, t, new ArrayList<>(), done, parents, problems));
+    return problems;
+  }
+  List<Directive.Under> checkType(DocResolver resolver, TypeDoc t, ArrayList<String> problems){
+    var ds= t.directives().stream().map(d -> resolver.directive(d, t.scope())).toList();
+    ds.forEach(d -> checkDirective(resolver, t, d, problems));
+    var unders= ds.stream().<Directive.Under>mapMulti((d, out) -> { if (d instanceof Directive.Under u){ out.accept(u); } }).toList();
+    var named= ds.stream().anyMatch(Directive.Named.class::isInstance);
+    var onlyPrivate= t.main().name().isPublic() && !named && !unders.isEmpty() && unders.stream().noneMatch(u -> u.parent().main().name().isPublic());
+    if (onlyPrivate){ problems.add(line(unders.getFirst().at(), publicUnderPrivate.formatted(resolver.named(t), Join.of(unders.stream().map(u -> resolver.named(u.parent())), "", ", ", "")))); }
+    return unders;
+  }
+  void checkDirective(DocResolver resolver, TypeDoc t, Directive d, ArrayList<String> problems){
+    var isPublic= t.main().name().isPublic();
+    var wrong= switch (d){
+      case Directive.Broken b -> Optional.of(b.problem());
+      case Directive.Named(_, var g) when g.equals("private") && isPublic -> Optional.of(publicInPrivate.formatted(resolver.named(t)));
+      case Directive.Named(_, var g) when g.equals("public") && !isPublic -> Optional.of(privateInPublic.formatted(resolver.named(t)));
+      case Directive.Named _, Directive.Under _ -> Optional.<String>empty();
+    };
+    wrong.ifPresent(w -> problems.add(line(d.at(), w)));
+  }
+  void cycles(DocResolver resolver, TypeDoc t, ArrayList<TypeDoc> path, HashSet<TypeDoc> done, Map<TypeDoc,List<Directive.Under>> parents, ArrayList<String> problems){
+    if (done.contains(t)){ return; }
+    var at= path.indexOf(t);
+    if (at >= 0){ problems.add(cycle(resolver, path.subList(at, path.size()), parents)); return; }
+    path.add(t);
+    parents.get(t).forEach(u -> cycles(resolver, u.parent(), path, done, parents, problems));
+    path.removeLast();
+    done.add(t);
+  }
+  String cycle(DocResolver resolver, List<TypeDoc> ring, Map<TypeDoc,List<Directive.Under>> parents){
+    var n= ring.size();
+    var steps= IntStream.range(0, n).mapToObj(i -> "  "+resolver.named(ring.get(i))+" is under "+resolver.named(ring.get((i+1) % n)));
+    var first= parents.get(ring.getFirst()).stream().filter(u -> u.parent() == ring.get(1 % n)).findFirst().orElseThrow();
+    return line(first.at(), underItself.formatted(resolver.named(ring.getFirst()), Join.of(steps, "", "\n", "")));
+  }
+  String line(DocOcc d, String msg){
+    return message(new Span(d.file(), d.line(), d.column(), d.line(), d.textColumn()+d.text().length()-1), msg);
+  }
   String orphan(List<DocOcc> run){
     var first= run.getFirst();
     var last= run.getLast();
@@ -183,6 +235,23 @@ public final class HtmlDocBuilder{
     "This documentation follows more than one declaration on the same line.\n"
    +"Move it directly after the one declaration it documents, or put each declaration\n"
    +"on its own line.";
+  static final String onMethod=
+    "This //@Group line documents a method.\n"
+   +"A //@Group line puts a type in a group or under another type, and a method is\n"
+   +"neither. Move this line above the declaration of the type.";
+  static final String publicInPrivate=
+    "%s is public, so it can not be in the group \"private\".\n"
+   +"The group \"private\" holds only private types: the types whose name starts with _.";
+  static final String privateInPublic=
+    "%s is private, so it can not be in the group \"public\".\n"
+   +"The group \"public\" holds only public types: the types whose name does not start with _.";
+  static final String publicUnderPrivate=
+    "%s is public, but every type it is under is private: %s.\n"
+   +"A public type must be in a group, or under at least one public type.";
+  static final String underItself=
+    "These //@Group lines put %s under itself:\n"
+   +"%s\n"
+   +"A type can not be under itself, not even through other types.";
   static final String notAName=
     "This is written as a reference, but it is not a name.\n"
    +"Use two backticks or more to show it as code instead.";

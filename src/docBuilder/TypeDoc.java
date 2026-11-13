@@ -19,7 +19,8 @@ import utils.Pos;
 sealed abstract class DeclarationDoc permits TypeDoc, MethodDoc{
   final List<DocOcc> docs;
   DeclarationDoc(List<DocOcc> docs){ this.docs= docs; }
-  List<DocOcc> visibleDocs(){ return docs.stream().filter(o -> o.kind()!=DocKind.TestOnly).toList(); }
+  List<DocOcc> visibleDocs(){ return docs.stream().filter(o -> o.kind()!=DocKind.TestOnly && o.kind()!=DocKind.Group).toList(); }
+  List<DocOcc> directives(){ return docs.stream().filter(o -> o.kind()==DocKind.Group).toList(); }
   boolean hasDocs(){ return !visibleDocs().isEmpty(); }
   abstract Scope scope();
 }
@@ -35,7 +36,7 @@ final class TypeDoc extends DeclarationDoc{
   }
   Literal main(){ return variants.getFirst(); }
   Scope scope(){ return new Scope(main(), Optional.empty(), outer); }
-  boolean visible(){ return !main().infName() || hasDocs() || methods.stream().anyMatch(MethodDoc::hasDocs); }
+  boolean visible(){ return !main().infName() || hasDocs() || !directives().isEmpty() || methods.stream().anyMatch(MethodDoc::hasDocs); }
   void addVariant(Literal l){
     assert variants.stream().noneMatch(v -> v.name().equals(l.name())) :
       "Repeated literal source with same name: "+l.pos()+" "+l.name();
@@ -72,13 +73,14 @@ record MethodRef(T.C provider, M method){}
 record DeclaredMethodKey(URI file, int line, int column, MName m){}
 record ImportedKey(TName origin, RC rc, MName m){}
 enum DocKind{
-  Prose, Fence, Fenced, Example, TestOnly;
+  Prose, Fence, Fenced, Example, TestOnly, Group;
   boolean tested(){ return this==Example || this==TestOnly; }
   static Optional<DocKind> ofMark(char mark){
     return switch (mark){
       case '/' -> Optional.of(Prose);
       case '>' -> Optional.of(Example);
       case '-' -> Optional.of(TestOnly);
+      case '@' -> Optional.of(Group);
       default -> Optional.empty();
     };
   }

@@ -67,6 +67,11 @@ Cases:{
     utils.Err.strCmp("""
 package p
 
+group public
+  A
+  Cases
+  Named
+
 A
 \t.m:A
 
@@ -773,7 +778,7 @@ Maker:{
     };
   }
 """);
-    utils.Err.strCmp("package p\n\nA\n\t.m:A\n\nMaker\n\t.make:A\n\n", docs.text());
+    utils.Err.strCmp("package p\n\ngroup public\n  A\n  Maker\n\nA\n\t.m:A\n\nMaker\n\t.make:A\n\n", docs.text());
     assertEquals(2, docs.tests().size());
   }
   @Test void aBareSelectorWithAnArityNoMethodHasIsToldTheArityTheMethodHas(@TempDir Path tmp){

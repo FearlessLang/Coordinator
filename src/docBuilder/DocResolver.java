@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.function.Function;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -16,6 +17,7 @@ import core.OtherPackages;
 import core.T;
 import core.TName;
 import tools.Fs;
+import utils.Bug;
 import utils.DistinctBy;
 import utils.Join;
 import utils.OneOr;
@@ -81,6 +83,40 @@ record DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other, Fun
       .filter(n -> ref.arity().isEmpty() || n.arity()==ref.arity().getAsInt())
       .toList();
   }
+  Directive directive(DocOcc d, Scope scope){
+    var named= namedGroup.matcher(d.text());
+    if (named.matches()){ return new Directive.Named(d, named.group(1)); }
+    var under= underType.matcher(d.text());
+    if (!under.matches()){ return new Directive.Broken(d, notADirective); }
+    var ref= DocRefScanner.wholeRef(d.text(), new DocRefScanner.CodeSpan(under.start(1), under.end(1), 1));
+    if (!(ref.orElse(null) instanceof DocRef.TypeName t)){ return new Directive.Broken(d, notAType); }
+    var link= resolveType(t);
+    if (link.isEmpty()){ return new Directive.Broken(d, unresolved(t, scope).orElse("There is no type \""+shown(t)+"\".")); }
+    return switch (link.get()){
+      case DocLink.Resolved r -> localTypeDoc(r.hit().owner()).<Directive>map(p -> new Directive.Under(d, p))
+        .orElseGet(() -> new Directive.Broken(d, foreignParent.formatted(named(r.hit().owner()), r.hit().owner().pkgName(), pkgName)));
+      case DocLink.Ambiguous a -> new Directive.Broken(d, ambiguousParent.formatted(shown(t), choices(a.options().stream().map(c -> "\""+c.owner().simpleName()+shape(OptionalInt.of(c.owner().arity()), "[", "]")+"\"").toList())));
+      case DocLink.NoLink _ -> throw Bug.unreachable();
+    };
+  }
+  String named(TypeDoc t){ return t.main().infName() ? anonTitle(t.main()) : named(t.main().name()); }
+  String named(TName n){ return "\""+title(n)+(n.arity()==0 ? "" : shape(OptionalInt.of(n.arity()), "[", "]"))+"\""; }
+  private static final Pattern namedGroup= Pattern.compile(" *Group \"([^\"]+)\" *");
+  private static final Pattern underType= Pattern.compile(" *Group `([^`]+)` *");
+  static final String notADirective=
+    "This is not a group directive.\n"
+   +"A //@ line is either //@Group \"Name\", to put the type it documents in the\n"
+   +"group Name, or //@Group `Type`, to put the type it documents under the type Type.";
+  static final String notAType=
+    "This does not name a type.\n"
+   +"In a //@Group `Type` line, the reference must name a type of this package.";
+  static final String foreignParent=
+    "%s is a type of package %s.\n"
+   +"A //@Group line can only put a type under a type of the same package, %s.";
+  static String choices(List<String> fs){ return Join.of(fs.subList(0, fs.size()-1), "", ", ", " and ", "")+fs.getLast(); }
+  static final String ambiguousParent=
+    "Several types match \"%s\": %s.\n"
+   +"Write one of these to say which one.";
   private Optional<DocLink> resolveMethod(DocRef.MethodName ref, Scope scope){
     if (ref.owner().isEmpty()){ return resolveBareSelector(ref.selector(), ref.arity()); }
     var o= owners(ref.owner().get(), scope);
@@ -121,8 +157,7 @@ record DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other, Fun
   private static String others(String missing, String kind, Stream<String> forms, String counted){
     var fs= forms.map(f -> "\""+f+"\"").distinct().sorted(Comparator.comparingInt(String::length).thenComparing(Comparator.naturalOrder())).toList();
     if (fs.isEmpty()){ return missing; }
-    var list= Join.of(fs.subList(0, fs.size()-1), "", ", ", " and ", "")+fs.getLast();
-    return missing+"\n"+(fs.size()==1 ? "There is a "+kind+" " : "There are "+kind+"s ")+list+",\nbut with a different number of "+counted+".";
+    return missing+"\n"+(fs.size()==1 ? "There is a "+kind+" " : "There are "+kind+"s ")+choices(fs)+",\nbut with a different number of "+counted+".";
   }
   private String title(TName n){
     return localTypeDoc(n).map(t -> t.main().infName() ? anonTitle(t.main()) : n.simpleName()).orElseGet(() -> names.apply(n));

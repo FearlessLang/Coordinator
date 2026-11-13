@@ -608,6 +608,9 @@ Foo: Bar {
     assertEquals("""
 package pkg
 
+group public
+  Holder
+
 Holder
 \t.bar:base.Void
 
@@ -625,6 +628,9 @@ Holder
     var text= new HtmlDocRenderer(Map.of(), new DocResolver("pkg", List.of(typeDoc), OtherPackages.empty(), TName::s), Optional.empty()).renderText();
     assertEquals("""
 package pkg
+
+group public
+  Holder
 
 Holder
 \t.bar:base.Void
@@ -645,6 +651,9 @@ Holder
     var text= new HtmlDocRenderer(Map.of(), new DocResolver("pkg", List.of(typeDoc), OtherPackages.empty(), TName::s), Optional.empty()).renderText();
     assertEquals("""
 package pkg
+
+group public
+  Holder
 
 Holder
   .bar is drawn at this very indent
@@ -740,6 +749,9 @@ Holder
     var text= new HtmlDocRenderer(Map.of(), new DocResolver("pkg", List.of(typeDoc), OtherPackages.empty(), TName::s), Optional.empty()).renderText();
     assertEquals("""
 package pkg
+
+group public
+  Holder
 
 Holder
 \t.bar:base.Void

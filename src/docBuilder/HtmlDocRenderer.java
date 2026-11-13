@@ -5,10 +5,12 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
+import java.util.TreeMap;
 import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
@@ -35,6 +37,9 @@ final class HtmlDocRenderer{
   final ExportedToStr toStr;
   final DocResolver resolver;
   final HashMap<String,Pattern> namePatterns= new HashMap<>();
+  final TreeMap<String,ArrayList<TypeDoc>> groups= new TreeMap<>(Comparator.comparing(HtmlDocRenderer::groupKey));
+  final HashMap<TypeDoc,ArrayList<TypeDoc>> parents= new HashMap<>();
+  final HashMap<TypeDoc,ArrayList<TypeDoc>> children= new HashMap<>();
   final List<TypeDoc> shown;
   HtmlDocRenderer(Map<String,String> uses, DocResolver resolver, Optional<Path> baseDocLocation){
     assert Require.nonNull(uses, resolver, baseDocLocation);
@@ -43,8 +48,31 @@ final class HtmlDocRenderer{
     this.baseDocLocation= baseDocLocation;
     toStr= new ExportedToStr(pkgName, uses);
     this.resolver= resolver;
-    shown= sortedTypes().stream().filter(TypeDoc::visible).toList();
+    var visible= sortedTypes().stream().filter(TypeDoc::visible).toList();
+    visible.forEach(this::place);
+    var res= new LinkedHashSet<TypeDoc>();
+    groups.values().forEach(ms -> ms.forEach(m -> visit(m, res)));
+    shown= List.copyOf(res);
+    assert shown.size() == visible.size();
   }
+  void place(TypeDoc t){
+    var named= new ArrayList<String>();
+    for (var d : t.directives()){
+      switch (resolver.directive(d, t.scope())){
+        case Directive.Named n -> named.add(n.group());
+        case Directive.Under u -> { parents.computeIfAbsent(t, _ -> new ArrayList<>()).add(u.parent()); children.computeIfAbsent(u.parent(), _ -> new ArrayList<>()).add(t); }
+        case Directive.Broken _ -> throw Bug.unreachable();
+      }
+    }
+    var standard= named.isEmpty() && !parents.containsKey(t);
+    if (standard){ named.add(t.main().name().isPublic() ? "public" : "private"); }
+    named.stream().distinct().forEach(g -> groups.computeIfAbsent(g, _ -> new ArrayList<>()).add(t));
+  }
+  void visit(TypeDoc t, LinkedHashSet<TypeDoc> res){
+    if (res.add(t)){ related(children, t).forEach(c -> visit(c, res)); }
+  }
+  static List<TypeDoc> related(HashMap<TypeDoc,ArrayList<TypeDoc>> m, TypeDoc t){ return m.getOrDefault(t, new ArrayList<>()).stream().distinct().toList(); }
+  static String groupKey(String g){ return g.equals("public") ? "1" : g.equals("private") ? "2" : "0"+g; }
   String render(){
     var sb= new StringBuilder(16_000)
       .append("<!doctype html>\n<html>\n<head>\n<meta charset=\"utf-8\">\n")
@@ -62,6 +90,8 @@ final class HtmlDocRenderer{
   }
   String renderText(){
     var sb= new StringBuilder(4_000).append("package ").append(pkgName).append("\n\n");
+    groups.forEach((g, ms) -> sb.append("group ").append(g).append('\n').append(Join.of(ms.stream().map(this::shortTitle), "  ", "\n  ", "\n")));
+    sb.append('\n');
     shown.forEach(t -> renderTypeText(sb, t));
     return sb.toString();
   }
@@ -112,6 +142,8 @@ final class HtmlDocRenderer{
   }
   void renderTypeText(StringBuilder sb, TypeDoc t){
     sb.append(typeTitle(t)).append(Join.of(t.main().cs().stream().map(toStr::typeName), " : ", ", ", "", "")).append('\n');
+    sb.append(Join.of(related(parents, t).stream().map(this::shortTitle), "  under: ", ", ", "\n", ""));
+    sb.append(Join.of(related(children, t).stream().map(this::shortTitle), "  see also: ", ", ", "\n", ""));
     renderDocText(sb, "  ", t);
     visibleMethods(t).forEach(m -> renderMethodText(sb, m));
     sb.append('\n');
@@ -192,6 +224,8 @@ a:hover{text-decoration:underline}
 .toc input:focus{outline:none; border-color:var(--blue)}
 .toc ul{list-style:none; margin:0; padding:0; overflow:auto; flex:1}
 .toc li{margin:1px 0}
+.toc li.group{margin:.9em 0 .2em; padding-left:.55em; font-size:.78em; font-weight:600; letter-spacing:.06em; color:var(--fg-faint)}
+.toc li.group:first-child{margin-top:0}
 .toc a{
   display:block; padding:.28em .55em; border-radius:.35em; border-left:3px solid transparent;
   color:var(--fg-muted); font-size:.93em; padding-left:1.4em; text-indent:-.85em; overflow-wrap:anywhere;
@@ -270,7 +304,7 @@ code{
 (function(){
   var secs= document.querySelectorAll('.type');
   var links= document.querySelectorAll('#toclist a');
-  var items= document.querySelectorAll('#toclist li');
+  var items= document.querySelectorAll('#toclist li:not(.group)');
   var filter= document.getElementById('filter');
   var welcome= document.getElementById('welcome');
   function route(){
@@ -335,15 +369,20 @@ code{
     sb.append("<nav class=\"toc\">\n")
       .append("<input id=\"filter\" type=\"search\" placeholder=\"Filter types\" autocomplete=\"off\">\n")
       .append("<ul id=\"toclist\">\n");
-    shown.forEach(t -> sb.append("<li><a href=\"#")
-      .append(typeId(t)).append("\">")
-      .append(wrap(shortTitle(t))).append("</a></li>\n"));
+    groups.forEach((g, ms) -> renderTocGroup(sb, g, ms));
     sb.append("</ul>\n</nav>\n");
   }
+  void renderTocGroup(StringBuilder sb, String group, List<TypeDoc> members){
+    sb.append("<li class=\"group\">").append(h(group)).append("</li>\n");
+    members.forEach(t -> sb.append("<li>").append(typeDocLink(t)).append("</li>\n"));
+  }
+  String typeDocLink(TypeDoc t){ return "<a href=\"#"+typeId(t)+"\">"+wrap(shortTitle(t))+"</a>"; }
   void renderType(StringBuilder sb, TypeDoc t){
     sb.append("<section class=\"type\" id=\"").append(typeId(t)).append("\">\n")
       .append("<h2>").append(wrap(typeTitle(t))).append("</h2>\n");
     renderDoc(sb, t);
+    sb.append(Join.of(related(parents, t).stream().map(this::typeDocLink), "<p class=\"extends\"><b>Under:</b> ", ", ", "</p>\n", ""));
+    sb.append(Join.of(related(children, t).stream().map(this::typeDocLink), "<p class=\"extends\"><b>See also:</b> ", ", ", "</p>\n", ""));
     sb.append(Join.of(t.main().cs().stream().map(this::typeLink), "<p class=\"extends\"><b>Extends:</b> ", ", ", "</p>\n", ""));
     renderVariants(sb, "Typed literal variants", t.variants, toStr::lit);
     sb.append("<h3>Methods</h3>\n");
