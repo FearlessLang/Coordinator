@@ -5,7 +5,6 @@ import static userMessages.UserError.path;
 
 import java.nio.file.FileSystemException;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -94,40 +93,22 @@ was.
 What is registered:
 %s""".formatted(reported));
   }
-  public static UserError associationChosenByHand(Map<String,List<String>> choices, Function<String,String> claimedBy){
-    var lines= new ArrayList<String>();
-    choices.forEach((k,cs) -> lines.add(k+claimedBy.apply(k)+Join.of(cs, "\n  ", "\n  ", "")));
-    return new UserError("""
-Fearless cannot become the program that opens Fearless projects and the
-other kinds of file it registers.
-
-Your system remembers the choices listed below. Each one is a choice
-made by hand of the program that opens a kind of file, for example with
-"Open with" and "Always". Fearless does not remove these choices on
-its own, and stopped before touching anything: your system is exactly
-as it was.
-
-Removing these choices clears the way. Each choice is listed under the
-place holding the choice: a file, or a kind of file standing for the
-registry key
-HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts\\<kind of file>\\UserChoice
-and the key UserChoiceLatest next to it.
-
-The choices:
-%s""".formatted(Join.of(lines, "", "\n", "")));
+  private static String held(Map<String,String> held, Function<String,String> claimedBy){
+    return Join.of(held.entrySet().stream().map(e -> "  "+UserError.disp(e.getKey())+claimedBy.apply(e.getKey())+" is opened with "+UserError.disp(e.getValue())), "", "\n", "");
   }
-  public static UserError associationNotOurs(Map<String,List<String>> held, Function<String,String> claimedBy){
-    var lines= new ArrayList<String>();
-    held.forEach((e,cs) -> cs.forEach(c -> lines.add(e+claimedBy.apply(e)+" -> "+c)));
+  public static String associationQuestion(Map<String,String> held, Function<String,String> claimedBy, String no){
+    return """
+The desktop opens the files with the extensions listed below with other programs.
+Fearless needs the desktop to open those files with Fearless:
+%s
+Let the desktop open the files with these extensions with Fearless?
+Answering No %s.""".formatted(held(held, claimedBy), no);
+  }
+  public static UserError associationNotOurs(Map<String,String> held, Function<String,String> claimedBy){
     return new UserError("""
-Fearless cannot become the program that opens the kinds of file listed
-below.
-
-Another program already answers for these kinds of file. Fearless
-stopped before touching anything: your system is exactly as it was.
-
-What stood in the way:
-%s""".formatted(Join.of(lines, "", "\n", "")));
+Fearless needs the desktop to open the files with the extensions listed below with Fearless.
+The desktop opens those files with other programs:
+%s""".formatted(held(held, claimedBy)));
   }
   public static UserError associationNotWritable(String reported){
     return new UserError("""
@@ -135,8 +116,6 @@ Fearless cannot become the program that opens Fearless projects and the
 other kinds of file it registers.
 
 What Fearless would need to write, or remove, is not yours to change.
-Fearless stopped before touching anything: your system is exactly as it
-was.
 
 What stood in the way:
 %s""".formatted(reported));
@@ -146,10 +125,10 @@ What stood in the way:
 Fearless could not finish changing which programs open the kinds of file
 it registers.
 
-A step failed after the steps before it had changed your system, so your
-system is left part way: which program opens Fearless projects, and the
-other kinds of file Fearless registers, may now be wrong. The next start
-of Fearless does these changes again.
+A step failed, and the steps before it may have changed your system:
+which program opens Fearless projects, and the other kinds of file
+Fearless registers, may now be wrong. The next start of Fearless does
+these changes again.
 
 What failed:
 %s""".formatted(reported));
