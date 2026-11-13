@@ -174,7 +174,7 @@ In file: fear:/_p/_rank_app.fear
 
 002| //@Group "private"
    | ^^^^^^^^^^^^^^^^^^
-[###]"B" is public, so it can not be in the group "private".
+[###]"B" is public, so it cannot be in the group "private".
 The group "private" holds only private types: the types whose name starts with _.""", error(tmp, a+"""
 //@Group "private"
 B:{ .b: A -> A; }
@@ -182,7 +182,7 @@ B:{ .b: A -> A; }
   }
   @Test void aPrivateTypeCanNotBeInGroupPublic(@TempDir Path tmp){
     utils.Err.strCmp("""
-[###]"_B" is private, so it can not be in the group "public".
+[###]"_B" is private, so it cannot be in the group "public".
 The group "public" holds only public types: the types whose name does not start with _.""", error(tmp, a+"""
 //@Group "public"
 _B:{ .b: A -> A; }
@@ -228,7 +228,7 @@ In file: fear:/_p/_rank_app.fear
 [###]These //@Group lines put "B" under itself:
   "B" is under "C"
   "C" is under "B"
-A type can not be under itself, not even through other types.""", error(tmp, a+"""
+A type cannot be under itself, not even through other types.""", error(tmp, a+"""
 //@Group `C`
 B:{ .b: A -> A; }
 //@Group `B`

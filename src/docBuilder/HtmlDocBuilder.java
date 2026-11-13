@@ -263,10 +263,10 @@ public final class HtmlDocBuilder{
    +"A //@Group line puts a type in a group or under another type, and a method is\n"
    +"neither. Move this line above the declaration of the type.";
   static final String publicInPrivate=
-    "%s is public, so it can not be in the group \"private\".\n"
+    "%s is public, so it cannot be in the group \"private\".\n"
    +"The group \"private\" holds only private types: the types whose name starts with _.";
   static final String privateInPublic=
-    "%s is private, so it can not be in the group \"public\".\n"
+    "%s is private, so it cannot be in the group \"public\".\n"
    +"The group \"public\" holds only public types: the types whose name does not start with _.";
   static final String publicUnderPrivate=
     "%s is public, but every type it is under is private: %s.\n"
@@ -283,7 +283,7 @@ public final class HtmlDocBuilder{
   static final String underItself=
     "These //@Group lines put %s under itself:\n"
    +"%s\n"
-   +"A type can not be under itself, not even through other types.";
+   +"A type cannot be under itself, not even through other types.";
   static final String notAName=
     "This is written as a reference, but it is not a name.\n"
    +"Use two backticks or more to show it as code instead.";
