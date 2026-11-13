@@ -33,6 +33,7 @@ import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileTime;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.util.ArrayList;
@@ -615,8 +616,17 @@ a_b/x.txt=x
     Fs.writeUtf8(mid.resolve(name.substring(top.length()).replaceFirst("^/", "")), text);
     Fs.ofV(() -> LongPath.move(LongPath.of(mid), LongPath.of(root, top)));
   }
-  @Test void aWindowsPlaceholderIsAFileAndALinkOfWslIsAnOther(@TempDir Path tmp) throws Exception{
-    if (!Fs.isWindows()){ return; }
+  @Test void anEntryOfAnotherKindMovesToTheFixFolderAndAWindowsPlaceholderIsAFile(@TempDir Path tmp) throws Exception{
+    if (!Fs.isWindows()){
+      var root= root(tmp, "a.txt\niii\na");
+      assertEquals(0, new ProcessBuilder("mkfifo", root.resolve("b.txt").toString()).inheritIO().start().waitFor());
+      var moved= tmp.resolve("root_fix").resolve("b.txt");
+      assertEquals("Moved b.txt to "+moved+"\n", fix(root));
+      assertTrue(Files.readAttributes(moved, BasicFileAttributes.class, LinkOption.NOFOLLOW_LINKS).isOther());
+      assertEquals("a.txt=a\n", dump(root));
+      assertEquals("", fix(root));
+      return;
+    }
     var root= root(tmp);
     try (var a= Arena.ofConfined(); var _= syncRoot(a, root)){
       placeholder(a, root, "a.txt");
