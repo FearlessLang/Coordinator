@@ -77,7 +77,7 @@ public final class HtmlDocBuilder{
   void visitLiteral(Literal l, Optional<Scope> outer){
     assert Require.nonNull(l, outer);
     var t= typeBySrc.get(l.src());
-    var yields= l.infName() && namedLines.contains(lineKey(l.pos()));
+    var yields= l.infName() ? namedLines.contains(lineKey(l.pos())) : inClaimingMethod(l.pos(), outer);
     if (t == null){
       t = new TypeDoc(l, outer, yields ? List.of() : docsAt(anchor(l.pos(), outer), l.infName()));
       typeBySrc.put(l.src(), t);
@@ -87,10 +87,19 @@ public final class HtmlDocBuilder{
     for (var m : l.ms()){
       var p= m.sig().span().pos();
       var from= inheritedMethods(l, m);
-      var mute= yields && p.line() == l.pos().line();
-      if (m.sig().origin().equals(l.name())){ t.declared(p, m, () -> mute ? List.of() : docsAt(p, false), from); }
+      if (m.sig().origin().equals(l.name())){ t.declared(p, m, () -> claims(l, m) ? docsAt(p, false) : List.of(), from); }
       else{ t.imported(written(l, m, from), from); }
     }
+  }
+  boolean claims(Literal l, M m){
+    var muted= l.infName() && namedLines.contains(lineKey(l.pos())) && m.sig().span().pos().line() == l.pos().line();
+    return m.sig().origin().equals(l.name()) && !muted;
+  }
+  boolean inClaimingMethod(Pos p, Optional<Scope> outer){
+    return outer.filter(s -> claimsOnLine(s, p) || inClaimingMethod(p, s.outer())).isPresent();
+  }
+  boolean claimsOnLine(Scope s, Pos p){
+    return s.method().filter(m -> lineKey(m.sig().span().pos()).equals(lineKey(p)) && claims(s.owner(), m)).isPresent();
   }
   static Pos anchor(Pos p, Optional<Scope> outer){
     return outer.filter(s -> s.owner().infName() && lineKey(s.owner().pos()).equals(lineKey(p))).map(s -> anchor(s.owner().pos(), s.outer())).orElse(p);

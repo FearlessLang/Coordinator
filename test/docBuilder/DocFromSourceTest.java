@@ -144,6 +144,36 @@ Outer
 \t.get:A
 """, docs.text());
   }
+  @Test void aTrailingDocAfterAMethodReturningANamedLiteralDocumentsTheMethod(@TempDir Path tmp){
+    var docs= docs(tmp, a+"""
+Outer:{
+  .get: A -> Inner: A{ .m -> A }; /// Doc of get.
+  }
+""");
+    utils.Err.strCmp("""
+[###]
+Inner : A
+\t.m:A
+    from: A.m
+
+Outer
+\t.get:A
+    Doc of get.
+""", docs.text());
+  }
+  @Test void aDocLineBelowAMethodReturningANamedLiteralIsAttachedToNothing(@TempDir Path tmp){
+    var ex= assertThrows(UserError.class, () -> docs(tmp, a+"""
+Outer:{
+  .get: A -> Inner: A{ .m -> A };
+  /// Doc of nothing.
+  }
+"""));
+    utils.Err.strCmp("""
+Misplaced doc comment.[###]
+This documentation is attached to nothing.
+A ///, //>, //- or //@ block documents the declaration right below it, but no
+declaration starts right below this block.[###]""", ex.getMessage());
+  }
   @Test void aReferenceMayNameATypeByTheNameAUseGivesIt(@TempDir Path tmp){
     var q= compiled("q", "Thing:{}\n", OtherPackages.empty());
     var docs= docs(tmp, OtherPackages.start(Map.of(), q, 0L), """
