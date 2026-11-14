@@ -381,6 +381,32 @@ failing terminated: the failing main throws
 starter ends
 """, main(freshIntegrationRoot("testProcessAttenuation"), List.of("-DfearlessAttenuators=base.NoManager,proc.NoDownloadHere")));
   }
+  @Test void testNoButton(){
+    utils.Err.strCmp("""
+child: NoButton: RegionFiller.button is revoked.
+Frame.content: NoButton: RegionFiller.button is revoked.
+Frame chained: NoButton: RegionFiller.button is revoked.
+Pane: NoButton: Pane.button is revoked.
+Pane chained: NoButton: Pane.button is revoked.
+Pane.self: NoButton: Pane.button is revoked.
+Pane.style: NoButton: Pane.button is revoked.
+Pane.changeDetached: NoButton: Pane.button is revoked.
+Pane.pane: NoButton: Pane.button is revoked.
+Pane.split: NoButton: RegionFiller.button is revoked.
+Border: NoButton: RegionFiller.button is revoked.
+Border chained: NoButton: RegionFiller.button is revoked.
+RegionFiller.split: NoButton: RegionFiller.button is revoked.
+And: NoButton: RegionFiller.button is revoked.
+SplitAnd: NoButton: RegionFiller.button is revoked.
+Split.region: NoButton: RegionFiller.button is revoked.
+Sections.section: NoButton: RegionFiller.button is revoked.
+Sections And: NoButton: RegionFiller.button is revoked.
+Sections.title: NoButton: RegionFiller.button is revoked.
+Sections.content: NoButton: RegionFiller.button is revoked.
+label: the window opened and closed
+child: NoButton: RegionFiller.button is revoked.
+""", main(freshIntegrationRoot("testNoButton"), List.of("-DfearlessAttenuators=nobutton.NoButton")));
+  }
   @Test void aProcessTerminatedRightAfterItsStartLeavesOnlyItsOutput(@TempDir Path tmp){
     var root= unitTestsProject(tmp, """
 use base.Main as Main;
