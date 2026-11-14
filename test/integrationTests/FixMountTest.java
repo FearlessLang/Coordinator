@@ -87,7 +87,7 @@ detach vdisk
       if (!Fs.isWindows()){
         var elsewhere= tmp.resolve("elsewhere");
         Fs.ensureDir(elsewhere);
-        try (var _= Fs.isMac() ? mounted(LocalResources.nfsShare+"/"+share.relativize(b), elsewhere) : bound(b, elsewhere)){ refusedAt(root, elsewhere, elsewhere); }
+        try (var _= Fs.isMac() ? mounted(LocalResources.nfsShare+"/"+share.relativize(b), elsewhere) : bound(b, elsewhere)){ refusedAt(root, elsewhere, elsewhere.toRealPath()); }
         return;
       }
       var drive= Stream.of("ZYXWVUTSRQPONMLKJIHGFED".split("")).filter(l -> Stream.of(File.listRoots()).noneMatch(r -> r.toString().startsWith(l))).findFirst().orElseThrow()+":";

@@ -264,7 +264,14 @@ public final class Fix{
   public static void of(Path folder, Consumer<String> out){ new Fix(out, 0, fixFolder(folder)).dir(new Disk(folder), "", false); }
   private record Mount(String dev, Path root, Path point){}
   private static List<Mount> mounts(){
+    if (Fs.isMac()){ return new String(Fs.of(() -> new ProcessBuilder("mount").start().getInputStream().readAllBytes()), UTF_8).lines().map(Fix::macMount).toList(); }
     return Fs.mountInfo().map(f -> new Mount(f[2], Fs.mountPath(f[3]), Fs.mountPath(f[4]))).toList();
+  }
+  private static Mount macMount(String line){
+    var dev= line.substring(0, line.indexOf(" on "));
+    var server= dev.indexOf(":/")+1;
+    var point= Path.of(line.substring(dev.length()+4, line.lastIndexOf(" (")));
+    return server == 0 ? new Mount(dev, Path.of("/"), point) : new Mount(dev.substring(0, server), Path.of(dev.substring(server)), point);
   }
   private static Set<Path> mountSet(){
     if (Fs.isWindows()){ return Fs.of(LongPath::mountPoints); }
@@ -284,31 +291,15 @@ public final class Fix{
     return Optional.empty();
   }
   private static Optional<Path> source(Path f){
-    if (Fs.isMac()){ return Optional.of(f).filter(_ -> Fs.of(() -> exportedInside(f))); }
+    var real= Fs.of(() -> f.getParent().toRealPath()).resolve(f.getFileName());
     if (Fs.isWindows()){
-      var real= Fs.of(() -> f.getParent().toRealPath()).resolve(f.getFileName());
       var shown= Fs.of(LongPath::shownFolders).entrySet().stream().filter(e -> Files.exists(e.getValue()) && Fs.of(e.getValue()::toRealPath).startsWith(real));
       return shown.findFirst().map(e -> Fs.of(e.getValue()::toRealPath).equals(real) ? f : e.getKey());
     }
-    if (!Fs.isLinux()){ return Optional.empty(); }
     var all= mounts();
-    var on= all.stream().filter(m -> f.startsWith(m.point)).reduce((a, b) -> b.point.getNameCount() >= a.point.getNameCount() ? b : a).orElseThrow();
-    var inside= on.root.resolve(on.point.relativize(f));
+    var on= all.stream().filter(m -> real.startsWith(m.point)).reduce((a, b) -> b.point.getNameCount() >= a.point.getNameCount() ? b : a).orElseThrow();
+    var inside= on.root.resolve(on.point.relativize(real));
     return all.stream().filter(m -> m != on && m.dev.equals(on.dev) && m.root.startsWith(inside)).findFirst().map(m -> m.root.equals(inside) ? f : m.point);
-  }
-  private static boolean exportedInside(Path f) throws IOException{
-    if (!realFolder(f)){ return false; }
-    var own= Files.getFileStore(f);
-    var server= own.name().indexOf(":/")+1;
-    if (server == 0){ return false; }
-    var point= f;
-    while (Files.getFileStore(point.getParent()).equals(own)){ point= point.getParent(); }
-    var inside= Path.of(own.name().substring(server)).resolve(point.relativize(f));
-    for (var s : f.getFileSystem().getFileStores()){
-      var same= !s.equals(own) && s.name().startsWith(own.name().substring(0, server));
-      if (same && Path.of(s.name().substring(server)).startsWith(inside)){ return true; }
-    }
-    return false;
   }
   public static boolean realFolder(Path p){ return Files.isDirectory(p, NOFOLLOW_LINKS) && !Fs.isLink(p); }
   private static Path fixFolder(Path folder){
