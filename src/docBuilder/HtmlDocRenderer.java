@@ -226,10 +226,10 @@ a:hover{text-decoration:underline}
 .toc ul{list-style:none; margin:0; padding:0; overflow:auto; flex:1}
 .toc li{margin:1px 0}
 .toc li.group{
-  margin:.9em 0 .25em; padding:.55em .55em 0; border-top:1px solid var(--border);
+  margin:0 0 .25em; padding:0 .55em;
   font-size:.74em; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--orange);
 }
-.toc li.group:first-child{margin-top:0; padding-top:0; border-top:none}
+.toc li:not([hidden])~li.group{margin-top:.9em; padding-top:.55em; border-top:1px solid var(--border)}
 .toc a{
   display:block; padding:.28em .55em; border-radius:.35em; border-left:3px solid transparent;
   color:var(--fg-muted); font-size:.93em; padding-left:1.4em; text-indent:-.85em; overflow-wrap:anywhere;
@@ -349,12 +349,12 @@ code{
   filter.addEventListener('input', function(){
     var q= filter.value.toLowerCase();
     items.forEach(function(li){
-      li.style.display= li.textContent.split('[')[0].toLowerCase().indexOf(q) < 0 ? 'none' : '';
+      li.hidden= li.textContent.split('[')[0].toLowerCase().indexOf(q) < 0;
     });
     groups.forEach(function(g){
       var n= g.nextElementSibling;
-      while (n && !n.classList.contains('group') && n.style.display==='none'){ n= n.nextElementSibling; }
-      g.style.display= n && !n.classList.contains('group') ? '' : 'none';
+      while (n && !n.classList.contains('group') && n.hidden){ n= n.nextElementSibling; }
+      g.hidden= !n || n.classList.contains('group');
     });
     document.getElementById('toclist').scrollTop= 0;
     showSel();
