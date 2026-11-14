@@ -1,11 +1,9 @@
 package integrationTests;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -19,12 +17,12 @@ import resources.LocalResources;
 import tools.Fs;
 
 final class FixNamesTest{
-  @Test void fixCountsTheNamesOfAFileOnEachKindOfVolume(@TempDir Path tmp) throws Exception{
+  @Test void fixCleansAFileOnEachKindOfVolume(@TempDir Path tmp) throws Exception{
     if (Fs.isMac()){
       for (var fs : List.of("fat32", "exfat")){
         try (var _= image(tmp, fs)){ cleans(tmp.resolve(fs)); }
       }
-      try (var _= nfs(tmp)){ endsAtASecondName(cleans(tmp.resolve("share").resolve(tmp.getFileName().toString()))); }
+      try (var _= nfs(tmp)){ changesTheFileAtASecondName(cleans(tmp.resolve("share").resolve(tmp.getFileName().toString()))); }
       return;
     }
     if (Fs.isLinux()){
@@ -36,9 +34,9 @@ final class FixNamesTest{
     for (var fs : List.of("fat32", "exfat")){
       try (var _= attached(tmp, fs)){ cleans(formatted(tmp, fs)); }
     }
-    try (var _= attached(tmp, "refs")){ endsAtASecondName(cleans(formatted(tmp, "refs"))); }
+    try (var _= attached(tmp, "refs")){ changesTheFileAtASecondName(cleans(formatted(tmp, "refs"))); }
     var name= "fearless_test_"+tmp.getFileName().toString().replace("-", "");
-    try (var _= shared(name, tmp.resolve("share"))){ endsAtASecondName(cleans(Path.of("\\\\localhost\\"+name))); }
+    try (var _= shared(name, tmp.resolve("share"))){ changesTheFileAtASecondName(cleans(Path.of("\\\\localhost\\"+name))); }
   }
   private static Path cleans(Path at){
     var root= at.resolve("root");
@@ -49,15 +47,14 @@ final class FixNamesTest{
     assertEquals("A:{}\n", Fs.readUtf8(root.resolve("a.fear")));
     return at;
   }
-  private static void endsAtASecondName(Path at) throws IOException{
+  private static void changesTheFileAtASecondName(Path at) throws IOException{
     var root= at.resolve("root");
     Fs.writeUtf8(root.resolve("b.fear"), "B:{}\r\n");
     Files.createLink(at.resolve("other.fear"), root.resolve("b.fear"));
     var lines= new ArrayList<String>();
-    var e= assertThrows(UncheckedIOException.class, () -> Fix.of(root, lines::add));
-    utils.Err.strCmp("[###]this file has more than one name, so writing it changes those other names too", e.getCause().getMessage());
-    assertEquals(List.of(), lines);
-    assertEquals("B:{}\r\n", Fs.readUtf8(at.resolve("other.fear")));
+    Fix.of(root, lines::add);
+    assertEquals(List.of("Fixed the line endings of b.fear"), lines);
+    assertEquals("B:{}\n", Fs.readUtf8(at.resolve("other.fear")));
   }
   private static final String needsRoot= "This test makes a FAT32 and an exFAT volume with \"sudo -n mkfs.vfat\", \"sudo -n mkfs.exfat\" and \"sudo -n mount\": it needs a user that runs sudo with no password on this desk, and the programs mkfs.vfat and mkfs.exfat.";
   private static AutoCloseable loop(Path tmp, String fs) throws IOException{

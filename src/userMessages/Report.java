@@ -232,6 +232,13 @@ when deciding what needs compiling, so such a date cannot be trusted.
     +"  Examples: \"foo_bar2\", \"src1\", \"_cache\"."
     );
   }
+  public static UserError visibleNameTooLong(RefParent kid){
+    return fail(showRel(kid),
+      "- A visible folder/file name is too long.\n"
+    +"  A visible folder name, and a visible file name before its first dot, have at most 191 characters.",
+      "- Rename it to use at most 191 characters before the first dot."
+    );
+  }
   public static UserError windowsReservedName(RefParent kid){
     return fail(showRel(kid),
       "- A visible folder/file name is reserved on Windows (device name).\n"
@@ -381,6 +388,7 @@ Invalid entry names (based on the exact text of the entry name):
 - empty name: some tools ignore it, others reject the archive
 - name starts with "/" (example: "/a.fear"): dangerous, some tools may unpack it outside the destination (zip slip)
 - name contains "//" (example: "a//b.txt"): confusing, there is nothing between the two "/" characters, and tools disagree on the real location
+- name contains "\\" (example: "a\\b.txt"): confusing, some tools take "\\" as a folder separator, others as a character of the name
 - name is "." or "..", or starts with "./" or "../", or contains "/./" or "/../", or ends with "/." or "/.."
   (examples: "../a", "a/../b", "./a", "a/./b", "a/..", "a/."):
   dangerous, can escape the zip when unpacked (zip slip)

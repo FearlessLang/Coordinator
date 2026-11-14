@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 
 import org.junit.jupiter.api.Assertions;
@@ -89,7 +88,7 @@ was.
 
 What is registered:
 fearlessManaged0_006w
-fearlessManaged0_007w""", Violation.associationsAmbiguous(registered).getMessage());
+fearlessManaged0_007w""", Violation.associationsAmbiguous(registered));
   }
   private static Map<String,String> ordered(String e1, String p1, String e2, String p2){
     var res= new LinkedHashMap<String,String>();
@@ -101,34 +100,24 @@ fearlessManaged0_007w""", Violation.associationsAmbiguous(registered).getMessage
     utils.Err.strCmp("""
 Fearless needs the desktop to open the files with the extensions listed below with Fearless.
 The desktop opens those files with other programs:
-  ".fearless" is opened with "Foo\"""", Violation.associationNotOurs(Map.of(".fearless", "Foo"), e -> "").getMessage());
+  ".fearless" is opened with "Foo\"""", Violation.associationNotOurs(Map.of(".fearless", "Foo")));
   }
-  @Test void associationNotOursSeveralClaimed(){
+  @Test void associationNotOursSeveral(){
     utils.Err.strCmp("""
 Fearless needs the desktop to open the files with the extensions listed below with Fearless.
 The desktop opens those files with other programs:
-  ".ffile001" claimed by "hello.Foo" of project "demo" is opened with "org.gnome.TextEditor"
-  ".htm" claimed by "hello.Bar" of project "demo" is opened with "Visual Studio Code\"""", Violation.associationNotOurs(ordered(".ffile001", "org.gnome.TextEditor", ".htm", "Visual Studio Code"), ViolationTest::claimedBy).getMessage());
-  }
-  @Test void associationQuestion(){
-    utils.Err.strCmp("""
-The desktop opens the files with the extensions listed below with other programs.
-Fearless needs the desktop to open those files with Fearless:
-  ".ffile001" claimed by "hello.Foo" of project "demo" is opened with "vim"
-  ".fapp042" claimed by "hello.Bar" of project "demo" is opened with "OtherApp"
-Let the desktop open the files with these extensions with Fearless?
-Answering No ends Fearless.""", Violation.associationQuestion(ordered(".ffile001", "vim", ".fapp042", "OtherApp"), ViolationTest::claimedBy, "ends Fearless"));
+  ".ffile001" is opened with "org.gnome.TextEditor"
+  ".htm" is opened with "Visual Studio Code\"""", Violation.associationNotOurs(ordered(".ffile001", "org.gnome.TextEditor", ".htm", "Visual Studio Code")));
   }
   @Test void associationNotTaken(){
     var choice= "HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts\\.htm\\UserChoice";
     utils.Err.strCmp("""
 Fearless needs the desktop to open the files with the extensions listed below with Fearless.
 The desktop does not let Fearless change the program opening those files:
-  ".htm" claimed by "hello.Bar" of project "demo" needs a change of
+  ".htm" needs a change of
     HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts\\.htm\\UserChoice
-    HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts\\.htm\\UserChoice\\Latest""", Violation.associationNotTaken(Map.of(".htm", choice+"\n"+choice+"\\Latest"), ViolationTest::claimedBy).getMessage());
+    HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts\\.htm\\UserChoice\\Latest""", Violation.associationNotTaken(Map.of(".htm", choice+"\n"+choice+"\\Latest")));
   }
-  private static String claimedBy(String ext){ return " claimed by \"hello."+(List.of(".foo", ".ffile001").contains(ext) ? "Foo" : "Bar")+"\" of project \"demo\""; }
   @Test void associationNotWritable(){
     var registered= "RegDeleteTreeW HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts\\.pdf\\UserChoice\nAccess is denied.";
     utils.Err.strCmp("""
@@ -139,7 +128,7 @@ What Fearless would need to write, or remove, is not yours to change.
 
 What stood in the way:
 RegDeleteTreeW HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts\\.pdf\\UserChoice
-Access is denied.""", Violation.associationNotWritable(registered).getMessage());
+Access is denied.""", Violation.associationNotWritable(registered));
   }
   @Test void associationLeftHalfDone(){
     var failed= "update-mime-database /home/me/.local/share/mime\nThe program could not be started.";

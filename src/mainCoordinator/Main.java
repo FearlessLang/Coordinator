@@ -3,39 +3,47 @@ package mainCoordinator;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 import java.awt.Desktop;
+import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.GraphicsEnvironment;
+import java.awt.GridLayout;
 import java.awt.Taskbar;
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.io.UncheckedIOException;
-import java.lang.ProcessBuilder.Redirect;
 import java.lang.reflect.InvocationTargetException;
-import java.nio.channels.FileChannel;
+import java.net.InetAddress;
+import java.net.ServerSocket;
+import java.net.SocketTimeoutException;
 import java.net.URI;
+import java.nio.channels.FileChannel;
+import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
-import java.util.ArrayList;
-import java.util.Comparator;
+import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.IntStream;
-import java.util.stream.Stream;
 
 import javax.imageio.ImageIO;
+import javax.swing.JCheckBox;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
+import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.SwingUtilities;
@@ -105,45 +113,105 @@ public final class Main{
   public static final Predicate<String> belongsToFamily= s -> s.contains("earless");
   ///The launcher names us: one identity per launcher, and the manager's own is not the portable one.
   public static String identity(Path launcher){ return launcher.getFileName().toString().replaceFirst("\\.[^.]*$", ""); }
-  public static Consumer<Path> quit= Main::sendQuit;
-  private static void sendQuit(Path command){
-    var pb= Fs.processBuilder(List.of(command.toString(), "FearlessCommandQuit")).redirectOutput(Redirect.DISCARD).redirectError(Redirect.DISCARD);
-    try{ Fs.of(pb::start).waitFor(); }
-    catch (InterruptedException e){ throw Bug.of(e); }
+  //Write to a .tmp name, then atomically rename it to .msg: the owner drains
+  //only *.msg, so it can never observe a half written file.
+  //A name already taken gets another id: the rename never replaces a file.
+  public static void leave(Path msgDir, String message) throws IOException{
+    var name= String.format(Locale.ROOT, "%020d-%s", System.currentTimeMillis(), UUID.randomUUID());
+    var tmp= msgDir.resolve(name+".tmp");
+    try{
+      Fs.writeString(tmp, message, StandardOpenOption.CREATE_NEW);
+      try{ Fs.move(tmp, msgDir.resolve(name+".msg")); }
+      catch (FileAlreadyExistsException e){ Fs.deleteIfExists(tmp); throw e; }
+    }
+    catch (FileAlreadyExistsException e){ leave(msgDir, message); }
   }
   /// The manager of that folder never sees the folder deleted in part: the folder is renamed in its folder, then deleted.
-  private static void removeAtOnce(Path dir, Path command){
+  private static void removeAtOnce(Path dir){
     if (!Fs.exists(dir)){ return; }
     try (var ch= Fs.openChannel(dir.resolve("instance.lock"), StandardOpenOption.CREATE, StandardOpenOption.WRITE)){
-      if (ch.tryLock() == null){ quit.accept(command); if (!locked(ch)){ deleteWhatCan(dir); return; } }
+      if (ch.tryLock() == null){ quitted(dir, ch); }
       var gone= dir.resolveSibling(dir.getFileName()+"_"+UUID.randomUUID().toString().replace("-", ""));
-      try{ Fs.move(dir, gone, StandardCopyOption.ATOMIC_MOVE); }
-      catch (IOException _){ deleteWhatCan(dir); return; }
+      Fs.move(dir, gone, StandardCopyOption.ATOMIC_MOVE);
       Fs.rmTree(gone);
     }
     catch (IOException e){ throw new UncheckedIOException(e); }
   }
-  public static long quitWaitMillis= 30_000;
-  private static boolean locked(FileChannel ch) throws IOException{
-    for (var end= System.currentTimeMillis()+quitWaitMillis; System.currentTimeMillis() < end; ){
-      if (ch.tryLock() != null){ return true; }
-      try{ Thread.sleep(100); }
-      catch (InterruptedException e){ throw Bug.of(e); }
+  private static void quitted(Path dir, FileChannel ch) throws IOException{
+    try (var server= new ServerSocket(0, 1, InetAddress.getLoopbackAddress())){
+      leave(dir.resolve("messages"), "Quit\nPort:"+server.getLocalPort());
+      Thread.startVirtualThread(() -> ended(server));
+      ch.lock();
     }
-    return false;
   }
-  private static void deleteWhatCan(Path dir){
-    for (var p : Fs.walk(dir, s -> s.sorted(Comparator.reverseOrder()).toList())){
-      try{ Fs.delete(p); }
-      catch (IOException _){}
+  private static void ended(ServerSocket server){
+    try (var s= server.accept(); var in= new BufferedReader(new InputStreamReader(s.getInputStream(), UTF_8))){
+      s.setSoTimeout(stalled);
+      var process= ProcessHandle.of(Long.parseLong(in.readLine()));
+      if (!progressing(in)){ process.ifPresent(ProcessHandle::destroyForcibly); }
     }
+    catch (IOException _){}
+  }
+  private static final int stalled= 10_000;
+  private static boolean progressing(BufferedReader in) throws IOException{
+    var last= "";
+    var since= System.currentTimeMillis();
+    try{
+      for (var line= in.readLine(); line != null; line = in.readLine()){
+        if (!line.equals(last)){ last = line; since = System.currentTimeMillis(); }
+        if (System.currentTimeMillis()-since >= stalled){ return false; }
+      }
+      return true;
+    }
+    catch (SocketTimeoutException _){ return false; }
   }
   public static void replaced(Path launcher, Path command){
-    JavacTool.managerFolderOf(command).filter(d -> !JavacTool.managerFolderOf(launcher).equals(Optional.of(d))).ifPresent(d -> removeAtOnce(d, command));
+    JavacTool.managerFolderOf(command).filter(d -> !JavacTool.managerFolderOf(launcher).equals(Optional.of(d))).ifPresent(Main::removeAtOnce);
   }
-  public static void reconcile(Path launcher, String name, List<Icon> extensions, List<String> taken, List<WindowIcon> windows, Path icon, Function<String,RuntimeException> ambiguous){
-    FileAssociations.reconcile(identity(launcher), name, belongsToFamily, launcher, extensions, taken, windows, icon, c -> replaced(launcher, c),
-      ambiguous, h -> new Held(h, true), h -> new Held(h, false), Violation::associationNotWritable, Violation::associationLeftHalfDone);
+  public record Answer(List<String> taken, List<String> givenUp){}
+  @SuppressWarnings("serial") public static final class Refusal extends RuntimeException{
+    private final String todo;
+    private final List<String> held;
+    public Refusal(String error, String todo, List<String> held){ super(error); this.todo= todo; this.held= held; }
+    public RuntimeException error(){ return new UserError(getMessage()); }
+  }
+  public static Optional<Refusal> reconcile(Path launcher, String name, List<Icon> extensions, List<String> taken, List<WindowIcon> windows, Path icon){
+    try{
+      FileAssociations.reconcile(identity(launcher), name, belongsToFamily, launcher, extensions, taken, windows, icon, c -> replaced(launcher, c),
+        s -> new Refusal(Violation.associationsAmbiguous(s), Violation.removeAllButOne, List.of()),
+        h -> new Refusal(Violation.associationNotOurs(h), Violation.tickToHold, List.copyOf(h.keySet())),
+        h -> new Refusal(Violation.associationNotTaken(h), Violation.tickToTake, List.copyOf(h.keySet())),
+        s -> new Refusal(Violation.associationNotWritable(s), Violation.givePermission, List.of()),
+        Violation::associationLeftHalfDone);
+      return Optional.empty();
+    }
+    catch (Refusal r){ return Optional.of(r); }
+  }
+  public static final int asks= 3;
+  public static void hold(Function<List<String>,Optional<Refusal>> reconcile, Function<Refusal,Answer> ask, BiConsumer<Refusal,List<String>> givenUp){
+    var taken= new LinkedHashSet<String>();
+    var asked= 0;
+    for (var r= reconcile.apply(List.of()); r.isPresent(); r = reconcile.apply(List.copyOf(taken))){
+      if (asked == asks){ throw r.get().error(); }
+      asked += 1;
+      var a= ask.apply(r.get());
+      taken.addAll(a.taken());
+      a.givenUp().forEach(taken::remove);
+      if (!a.givenUp().isEmpty()){ givenUp.accept(r.get(), a.givenUp()); }
+    }
+  }
+  public static Answer ask(Refusal r){
+    var text= new JTextArea(r.getMessage()+"\n\n"+r.todo);
+    text.setEditable(false);
+    text.setRows(Math.min(20, text.getLineCount()));
+    var boxes= r.held.stream().map(e -> new JCheckBox(e, true)).toList();
+    var column= new JPanel(new GridLayout(0, 1));
+    boxes.forEach(column::add);
+    var ticks= new JScrollPane(column);
+    ticks.getViewport().setPreferredSize(new Dimension(column.getPreferredSize().width, Math.min(300, column.getPreferredSize().height)));
+    var shown= boxes.isEmpty() ? new Object[]{new JScrollPane(text)} : new Object[]{new JScrollPane(text), ticks};
+    var ok= JOptionPane.showConfirmDialog(null, shown, "Fearless", boxes.isEmpty() ? JOptionPane.DEFAULT_OPTION : JOptionPane.OK_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE) == JOptionPane.OK_OPTION;
+    return new Answer(boxes.stream().filter(b -> ok && b.isSelected()).map(JCheckBox::getText).toList(), boxes.stream().filter(b -> !ok || !b.isSelected()).map(JCheckBox::getText).toList());
   }
   public static void eradicateAll(){ FileAssociations.eradicateAll(belongsToFamily, Violation::associationLeftHalfDone); }
   private static void offerAssociation(Path appDir){
@@ -152,30 +220,10 @@ public final class Main{
     var l= launcher.get();
     if (!belongsToFamily.test(identity(l))){ return; }
     var icon= appDir.resolve("icon.png");
-    try{ hold(taken -> reconcile(l, "Fearless Portable", List.of(new Icon(".fearless", l, icon)), taken, List.of(), icon,
-      reported -> Violation.associationsAmbiguous(reported).withRecovery("Remove all Fearless registrations", Main::eradicateAll)),
-      h -> askOnDesktop(Violation.associationQuestion(h, e -> "", "ends Fearless")), new ArrayList<>()); }
-    catch (Held h){ throw h.error(e -> ""); }
+    hold(taken -> reconcile(l, "Fearless Portable", List.of(new Icon(".fearless", l, icon)), taken, List.of(), icon), Main::askOnDesktop, (r, _) -> { throw r.error(); });
   }
-  public static void hold(Consumer<List<String>> reconcile, Predicate<Map<String,String>> ask, ArrayList<String> accepted){
-    while (true){
-      try{ reconcile.accept(List.copyOf(accepted)); return; }
-      catch (Held h){
-        if (!h.takeable || !ask.test(h.held)){ throw h; }
-        accepted.addAll(h.held.keySet());
-      }
-    }
-  }
-  /// A refusal of the reconcile: each extension, with its dot, mapped to the name of the program holding it (takeable),
-  /// or to the locations that stop reconcile from taking it.
-  @SuppressWarnings("serial") public static final class Held extends RuntimeException{
-    public final Map<String,String> held;
-    public final boolean takeable;
-    public Held(Map<String,String> held, boolean takeable){ this.held= held; this.takeable= takeable; }
-    public RuntimeException error(Function<String,String> claimedBy){ return takeable ? Violation.associationNotOurs(held, claimedBy) : Violation.associationNotTaken(held, claimedBy); }
-  }
-  private static boolean askOnDesktop(String question){
-    var asked= new FutureTask<>(() -> JOptionPane.showConfirmDialog(null, question, "Fearless", JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION);
+  private static Answer askOnDesktop(Refusal r){
+    var asked= new FutureTask<>(() -> ask(r));
     try{ SwingUtilities.invokeAndWait(asked); return asked.get(); }
     catch (InterruptedException|InvocationTargetException|ExecutionException e){ throw Bug.of(e); }
   }
