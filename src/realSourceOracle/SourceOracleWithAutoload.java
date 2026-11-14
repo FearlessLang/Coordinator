@@ -71,7 +71,7 @@ public record SourceOracleWithAutoload(SourceOracle base, Ref autoload, URI auto
         var prev= declaredBy.putIfAbsent(type, ref);
         if (prev != null){ throw Report.autoloadedNamesCollide(ref, prev.fearPath(), ref.fearPath(), type); }
         var t= AutoloadHandler.triple(ref);
-        sb.append(h.generate(t, p, type, names));
+        sb.append(h.generate(t, pkgName, p, type, names));
         assets.put(type, t);
       }
     }
