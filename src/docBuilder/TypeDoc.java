@@ -14,7 +14,6 @@ import core.MName;
 import core.RC;
 import core.T;
 import core.TName;
-import utils.Pos;
 
 sealed abstract class DeclarationDoc permits TypeDoc, MethodDoc{
   final List<DocOcc> docs;
@@ -42,8 +41,8 @@ final class TypeDoc extends DeclarationDoc{
       "Repeated literal source with same name: "+l.pos()+" "+l.name();
     variants.add(l);
   }
-  void declared(Pos pos, M m, Supplier<List<DocOcc>> docs, List<MethodRef> inheritedFrom){
-    oneOf(new MethodKey.Declared(pos.fileName(), pos.line(), pos.column(), m.sig().m()), docs, inheritedFrom).add(m);
+  void declared(M m, Supplier<List<DocOcc>> docs, List<MethodRef> inheritedFrom){
+    oneOf(new MethodKey.Declared(m.sig().rc(), m.sig().m()), docs, inheritedFrom).add(m);
   }
   void imported(M m, List<MethodRef> from){
     oneOf(new MethodKey.Imported(m.sig().origin(), m.sig().rc(), m.sig().m()), List::of, from).add(m);
@@ -72,7 +71,7 @@ final class MethodDoc extends DeclarationDoc{
 }
 record MethodRef(T.C provider, M method){}
 sealed interface MethodKey{
-  record Declared(URI file, int line, int column, MName m) implements MethodKey{}
+  record Declared(RC rc, MName m) implements MethodKey{}
   record Imported(TName origin, RC rc, MName m) implements MethodKey{}
 }
 enum DocKind{

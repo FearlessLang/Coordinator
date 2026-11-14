@@ -1083,17 +1083,50 @@ Named
 
 """, docs.text());
   }
-  @Test void aReferenceToAMethodOfAnotherPackageDeclaredOnceForTwoReceiverCapabilitiesLinksToThatMethod(@TempDir Path tmp){
-    var q= compiled("q", """
-A:{}
-Sup:{ mut .foo: A; imm .foo: A; }
-Sub:Sup{ .foo -> A; }
-""", OtherPackages.empty());
-    var html= docs(tmp, OtherPackages.start(Map.of(), q, 0L), """
-///See `q.Sub.foo`.
-User:{ .m: User -> this; }
+  static final String shapes= """
+Num:{}
+Shape:{ mut .area: Num; imm .area: Num; }
+Circle:Shape{
+  ///The area of a circle.
+  //> .check{Num}
+  .area -> Num;
+  }
+""";
+  @Test void aMethodDeclaredOnceForTwoReceiverCapabilitiesHasAnEntryForEachWithTheSameDoc(@TempDir Path tmp){
+    var docs= docs(tmp, shapes);
+    utils.Err.strCmp("""
+[###]
+Circle : Shape
+\t.area:Num
+    The area of a circle.
+    example:
+      .check{Num}
+    from: Shape.area
+\tmut .area:Num
+    The area of a circle.
+    example:
+      .check{Num}
+    from: Shape.area
+[###]""", docs.text());
+    assertEquals(List.of(".check{Num}"), docs.tests().getFirst().text().lines().filter(l -> l.contains(".check")).toList());
+  }
+  @Test void aMethodDeclaredOnceOrTwiceForTwoReceiverCapabilitiesGivesTheSameEntries(@TempDir Path tmp){
+    var once= docs(tmp, "Num:{}\nShape:{ mut .area: Num; imm .area: Num; }\nCircle:Shape{ .area -> Num; }\n");
+    var twice= docs(tmp, "Num:{}\nShape:{ mut .area: Num; imm .area: Num; }\nCircle:Shape{ mut .area -> Num; imm .area -> Num; }\n");
+    assertEquals(once.text(), twice.text());
+  }
+  @Test void aReferenceToAMethodOfAnotherPackageWithTwoReceiverCapabilitiesListsBoth(@TempDir Path tmp){
+    var shapesCore= compiled("shapes", shapes, OtherPackages.empty());
+    var html= docs(tmp, OtherPackages.start(Map.of(), shapesCore, 0L), """
+///See `shapes.Circle.area`.
+Canvas:{ .m: Canvas -> this; }
 """).html();
-    utils.Err.strCmp("[###]<p>See <code><a href=\"q.html#method-q_2e_Sub-0-[###]-_2e_foo-0\">q.Sub.foo</a></code>.</p>[###]", html);
+    utils.Err.strCmp("""
+[###]<h2>Several match shapes.Circle.area</h2>
+<ul class="options">
+<li><a href="shapes.html#method-shapes_2e_Circle-0-mut-_2e_area-0">mut shapes.Circle.area()</a></li>
+<li><a href="shapes.html#method-shapes_2e_Circle-0-imm-_2e_area-0">shapes.Circle.area()</a></li>
+</ul>[###]""", html);
   }
   @Test void aTypeWhoseNameStartsTheNameOfAPrimedGenericTypeParameterIsLinkedWhereTheTypeIsWritten(@TempDir Path tmp){
     var html= docs(tmp, a+"""

@@ -35,6 +35,7 @@ import tools.Fs;
 import tools.SourceOracle;
 import userMessages.Report;
 import utils.Bug;
+import utils.DistinctBy;
 import utils.Join;
 import utils.OneOr;
 import utils.Pos;
@@ -52,6 +53,7 @@ public final class HtmlDocBuilder{
   final IdentityHashMap<Src,TypeDoc> typeBySrc= new IdentityHashMap<>();
   final LinkedHashMap<URI,SourceDocs> sources= new LinkedHashMap<>();
   final HashSet<String> namedLines= new HashSet<>();
+  final HashMap<String,List<DocOcc>> methodDocs= new HashMap<>();
   public HtmlDocBuilder(SourceOracle oracle, OtherPackages other, List<Literal> core, Optional<Path> baseDocLocation, String pkgName, Path htmlPath, boolean generatesTests){
     assert Require.nonNull(oracle, other, core, baseDocLocation, pkgName, htmlPath);
     this.oracle= oracle;
@@ -87,7 +89,7 @@ public final class HtmlDocBuilder{
     for (var m : l.ms()){
       var p= m.sig().span().pos();
       var from= inheritedMethods(l, m);
-      if (m.sig().origin().equals(l.name())){ t.declared(p, m, () -> claims(l, m) ? docsAt(p, false) : List.of(), from); }
+      if (m.sig().origin().equals(l.name())){ t.declared(m, () -> methodDocs.computeIfAbsent(lineKey(p)+":"+p.column(), _ -> claims(l, m) ? docsAt(p, false) : List.of()), from); }
       else{ t.imported(written(l, m, from), from); }
     }
   }
@@ -130,7 +132,7 @@ public final class HtmlDocBuilder{
     if (!misplaced.isEmpty()){ throw Report.docMisplaced(misplaced); }
     var markup= new ArrayList<String>();
     var problems= new ArrayList<String>();
-    types.stream().flatMap(t -> Stream.<DeclarationDoc>concat(Stream.of(t), t.methods.stream())).forEach(d -> checkDeclaration(resolver, d, markup, problems));
+    types.stream().flatMap(t -> Stream.<DeclarationDoc>concat(Stream.of(t), t.methods.stream())).gather(DistinctBy.of(d -> d.docs)).forEach(d -> checkDeclaration(resolver, d, markup, problems));
     if (!markup.isEmpty()){ throw Report.docBackticks(markup); }
     if (!problems.isEmpty()){ throw Report.docReferences(problems); }
     var groups= checkGroups(resolver);
@@ -178,7 +180,7 @@ public final class HtmlDocBuilder{
   }
   List<String> checkGroups(DocResolver resolver){
     var problems= new ArrayList<String>();
-    types.stream().flatMap(t -> t.methods.stream()).flatMap(m -> m.directives().stream()).forEach(d -> problems.add(line(d, onMethod)));
+    types.stream().flatMap(t -> t.methods.stream()).flatMap(m -> m.directives().stream()).distinct().forEach(d -> problems.add(line(d, onMethod)));
     var parents= new LinkedHashMap<TypeDoc,List<Directive.Under>>();
     var names= new HashMap<String,String>(Map.of("public", "public", "private", "private"));
     types.stream().filter(TypeDoc::visible).forEach(t -> parents.put(t, checkType(resolver, t, names, problems)));

@@ -107,6 +107,7 @@ final class HtmlDocRenderer{
     return declarations(t)
       .map(d -> d.docs.stream().filter(o -> o.kind().tested()).toList())
       .filter(g -> !g.isEmpty())
+      .distinct()
       .sorted(Comparator.comparingInt((List<DocOcc> g) -> g.getFirst().line()))
       .toList();
   }
