@@ -1701,6 +1701,10 @@ jjj
 _assets/z.zip/baz.txt
 iii
 zip
+jjj
+_assets/z.zip/beer/qux.txt
+iii
+in a folder of the zip
 """);
     var base= new RealSourceOracleWithZip(root);
     var generated= SourceOracleWithAutoload.of(base, "_assets", TName::s).newRefs().getFirst().loadString();
@@ -1709,7 +1713,9 @@ Foo: base.TxtFile{[###]
 //@Group "small"
 IconsSmallBar: base.TxtFile{[###]
 //@Group "z"
-ZBaz: base.TxtFile{[###]""", generated);
+ZBaz: base.TxtFile{[###]
+//@Group "beer"
+ZBeerQux: base.TxtFile{[###]""", generated);
   }
   @Test void okBaseAssetAutoload(@TempDir Path tmp){
     var root= tmp.resolve("root");
