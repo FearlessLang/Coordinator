@@ -15,9 +15,12 @@ import utils.Bug;
 import utils.Join;
 
 public record AutoloadHandler(Predicate<String> matches, TName baseType){
-  String generate(SourceOracleWithAutoload.Triple t, String path, String type, Function<TName,String> names){
+  String generate(SourceOracleWithAutoload.Triple t, String pkgName, String path, String type, Function<TName,String> names){
     var str= names.apply(LiteralDeclarations.baseStr);
-    return type+": "+names.apply(baseType)+"{\n"
+    var all= components(path);
+    var folders= all.subList(all.indexOf(pkgName)+1, all.size()-1);
+    var group= folders.isEmpty() ? "" : "//@Group \""+folders.getLast()+"\"\n";
+    return group+type+": "+names.apply(baseType)+"{\n"
       +"  .path: "+str+" -> \""+path+"\";\n"
       +"  .diskPath: "+str+" -> \""+t.diskPath()+"\";\n"
       +"  .zipSteps: "+str+" -> \""+t.zipSteps()+"\";\n"

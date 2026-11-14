@@ -143,7 +143,7 @@ _Child:{ .c: A -> A; }
 <p class="extends"><b>See also:</b> <a href="#type-p_2e__5f_Child-0">_Child</a></p>
 [###]<h2>_Child</h2>
 <p class="doc missing">No documentation yet.</p>
-<p class="extends"><b>Under:</b> <a href="#type-p_2e_A-0">A</a></p>
+<p class="extends under"><b>Under:</b> <a href="#type-p_2e_A-0">A</a></p>
 [###]""", html);
   }
   @Test void aGroupLineIsNotShownAsDocumentation(@TempDir Path tmp){
@@ -164,7 +164,7 @@ Maker:{
     A{ .m -> A };
   }
 """);
-    utils.Err.strCmp("[###]Maker\n  see also: Anon@_rank_app:5\n[###]anonymous literal at [###]\n  under: Maker\n[###]", docs.text());
+    utils.Err.strCmp("[###]Maker\n  see also: Anon@_rank_app:5\n[###]\nAnon@_rank_app:5 : A\n  under: Maker\n[###]", docs.text());
   }
   @Test void aPublicTypeCanNotBeInGroupPrivate(@TempDir Path tmp){
     utils.Err.strCmp("""
@@ -175,7 +175,7 @@ In file: fear:/_p/_rank_app.fear
 002| //@Group "private"
    | ^^^^^^^^^^^^^^^^^^
 [###]"B" is public, so it cannot be in the group "private".
-The group "private" holds only private types: the types whose name starts with _.""", error(tmp, a+"""
+The group "private" holds only private types: the anonymous literals and the types whose name starts with _.""", error(tmp, a+"""
 //@Group "private"
 B:{ .b: A -> A; }
 """));
@@ -183,7 +183,7 @@ B:{ .b: A -> A; }
   @Test void aPrivateTypeCanNotBeInGroupPublic(@TempDir Path tmp){
     utils.Err.strCmp("""
 [###]"_B" is private, so it cannot be in the group "public".
-The group "public" holds only public types: the types whose name does not start with _.""", error(tmp, a+"""
+The group "public" holds only public types: the types whose written name does not start with _.""", error(tmp, a+"""
 //@Group "public"
 _B:{ .b: A -> A; }
 """));
@@ -284,11 +284,50 @@ B:{ .b: A -> A; }
   }
   @Test void aGroupLineNamingAMethodIsAnError(@TempDir Path tmp){
     utils.Err.strCmp("""
-[###]This does not name a type.
+[###]"A.m" names a method, not a type.
 In a //@Group `Type` line, the reference must name a type of this package.""", error(tmp, a+"""
 //@Group `A.m`
 B:{ .b: A -> A; }
 """));
+  }
+  @Test void aGroupLineWithALowercaseNameIsAnError(@TempDir Path tmp){
+    utils.Err.strCmp("""
+[###]"x" does not name a type.
+In a //@Group `Type` line, the reference must name a type of this package.""", error(tmp, a+"""
+//@Group `x`
+B:{ .b: A -> A; }
+"""));
+  }
+  @Test void anAnonymousLiteralCanNotBeInGroupPublic(@TempDir Path tmp){
+    utils.Err.strCmp("""
+[###]"Anon@_rank_app:5" is private, so it cannot be in the group "public".
+The group "public" holds only public types: the types whose written name does not start with _.""", error(tmp, a+"""
+Maker:{
+  .make: A ->
+    //@Group "public"
+    A{ .m -> A };
+  }
+"""));
+  }
+  @Test void aGroupLineAboveAnEmptyLineIsAttachedToNothing(@TempDir Path tmp){
+    utils.Err.strCmp("""
+[###]002| //@Group "Tools"
+   | ^^^^^^^^^^^^^^^^[###]
+This documentation is attached to nothing.
+A ///, //>, //- or //@ block documents the declaration right below it, and an
+empty line ends the block. Delete the empty line below this block, or write ///
+on it to keep an empty line in the documentation.""", error(tmp, a+"""
+//@Group "Tools"
+
+B:{ .b: A -> A; }
+"""));
+  }
+  @Test void theUnderLineOfATypeIsMarkedForTheListToSelectTheParentOfTheType(@TempDir Path tmp){
+    var html= docs(tmp, a+"""
+//@Group `A`
+B:{ .b: A -> A; }
+""").html();
+    utils.Err.strCmp("[###]<p class=\"extends under\"><b>Under:</b> <a href=\"#type-p_2e_A-0\">A</a></p>[###]", html);
   }
   @Test void aMalformedGroupLineIsAnError(@TempDir Path tmp){
     utils.Err.strCmp("""
@@ -297,7 +336,8 @@ B:{ .b: A -> A; }
 [###]This is not a group directive.
 A //@ line is either //@Group "Name", to put the type it documents in the
 group Name, or //@Group `Type`, to put the type it documents under the type Type.
-A group name is not empty, and does not start or end with a space.""", error(tmp, a+"""
+A group name is not empty, and does not start or end with a space.
+Nothing follows the closing " or `, not even a space.""", error(tmp, a+"""
 //@Grop "Tools"
 B:{ .b: A -> A; }
 """));
@@ -325,7 +365,7 @@ B:{ .b: A -> A; }
 """));
   }
   @Test void aBlankGroupNameIsAnError(@TempDir Path tmp){
-    utils.Err.strCmp("[###]This is not a group directive.[###]A group name is not empty, and does not start or end with a space.", error(tmp, a+"""
+    utils.Err.strCmp("[###]This is not a group directive.[###]A group name is not empty, and does not start or end with a space.[###]", error(tmp, a+"""
 //@Group "  "
 B:{ .b: A -> A; }
 """));
@@ -410,7 +450,7 @@ B:{ .b: A -> A; }
 """));
   }
   @Test void aSpaceAfterTheGroupNameIsAnError(@TempDir Path tmp){
-    utils.Err.strCmp("[###]This is not a group directive.[###]", error(tmp, a+"""
+    utils.Err.strCmp("[###]This is not a group directive.[###]Nothing follows the closing \" or `, not even a space.", error(tmp, a+"""
 //@Group "Tools"\s
 B:{ .b: A -> A; }
 """));
@@ -423,10 +463,47 @@ B:{ .b: A -> A; } //@Group "Tools"
   }
   @Test void aTypeCanNotBeUnderATypeParameter(@TempDir Path tmp){
     utils.Err.strCmp("""
-[###]"X" is a type parameter.
+[###]"X" is a generic type parameter.
 In a //@Group `Type` line, the reference must name a type of this package.""", error(tmp, a+"""
 //@Group `X`
 B[X:imm]:{ .b: A -> A; }
+"""));
+  }
+  @Test void aGroupDifferingFromGroupPublicOnlyByCaseIsAnError(@TempDir Path tmp){
+    utils.Err.strCmp("""
+[###]002| //@Group "Public"
+   | ^^^^^^^^^^^^^^^^^
+[###]The group "Public" differs from the group "public" only by case.
+Write the name of a group the same way every time.""", error(tmp, a+"""
+//@Group "Public"
+B:{ .b: A -> A; }
+"""));
+  }
+  @Test void aPublicTypeCanNotBeInGroupPrivateWrittenWithACapital(@TempDir Path tmp){
+    utils.Err.strCmp("Broken group in a doc comment.[###]002| //@Group \"Private\"[###]", error(tmp, a+"""
+//@Group "Private"
+B:{ .b: A -> A; }
+"""));
+  }
+  @Test void anEmptyDocLineRightAfterTheGroupLinesIsTrimmed(@TempDir Path tmp){
+    var docs= docs(tmp, a+"""
+//@Group "Tools"
+///
+///Doc.
+B:{ .b: A -> A; }
+""");
+    utils.Err.strCmp("[###]\nB\n  Doc.\n\t.b:A\n[###]", docs.text());
+  }
+  @Test void aGroupLineAfterTwoDeclarationsOnOneLineIsMarkedFromItsSlashes(@TempDir Path tmp){
+    utils.Err.strCmp("""
+Misplaced doc comment.
+
+In file: fear:/_p/_rank_app.fear
+
+002| B:{ .b: A -> A; } C:{ .c: A -> A; } //@Group "X"
+   |                                     ^^^^^^^^^^^^
+[###]""", error(tmp, a+"""
+B:{ .b: A -> A; } C:{ .c: A -> A; } //@Group "X"
 """));
   }
 }

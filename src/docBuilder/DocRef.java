@@ -13,12 +13,11 @@ sealed interface DocRef{
   record LocalName(String name) implements Receiver{}
   record MethodName(Optional<Receiver> owner, String selector, OptionalInt arity) implements DocRef{}
 }
-record Candidate(TName owner, Optional<Sig> sig, Optional<MethodDoc> localMethod){
-  static Candidate ofType(TName owner){
-    return new Candidate(owner, Optional.empty(), Optional.empty());
-  }
-  static Candidate ofLocalMethod(TName owner, MethodDoc method){
-    return new Candidate(owner, Optional.of(method.main().sig()), Optional.of(method));
+sealed interface Candidate{
+  TName owner();
+  record Type(TName owner) implements Candidate{}
+  record Method(TName owner, Sig sig, Optional<MethodDoc> localMethod) implements Candidate{
+    static Method ofLocal(TName owner, MethodDoc method){ return new Method(owner, method.main().sig(), Optional.of(method)); }
   }
 }
 sealed interface DocLink{

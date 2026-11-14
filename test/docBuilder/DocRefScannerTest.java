@@ -13,7 +13,8 @@ final class DocRefScannerTest{
   private static Optional<DocRef> only(String text){
     var spans= DocRefScanner.refSpans(text);
     assertEquals(1, spans.size(), "expected exactly one single-backtick span in: "+text);
-    return DocRefScanner.wholeRef(text, spans.getFirst());
+    var sp= spans.getFirst();
+    return DocRefScanner.wholeRef(text.substring(sp.start(), sp.end()));
   }
   @Test void aBareTypeNameIsAReference(){
     assertEquals(Optional.of(new DocRef.TypeName(Optional.empty(), "Foo", OptionalInt.empty())), only("see `Foo` here"));
@@ -112,7 +113,7 @@ final class DocRefScannerTest{
     assertEquals(
       List.of(new DocRef.TypeName(Optional.empty(), "Foo", OptionalInt.empty()),
               new DocRef.TypeName(Optional.empty(), "Bar", OptionalInt.empty())),
-      spans.stream().map(sp -> DocRefScanner.wholeRef(text, sp).get()).toList());
+      spans.stream().map(sp -> DocRefScanner.wholeRef(text.substring(sp.start(), sp.end())).get()).toList());
   }
   @Test void anArityMarkerMayHaveASpaceAfterEachComma(){
     var owner= new DocRef.TypeName(Optional.empty(), "Foo", OptionalInt.of(2));

@@ -14,7 +14,6 @@ import core.MName;
 import core.RC;
 import core.T;
 import core.TName;
-import utils.Pos;
 
 sealed abstract class DeclarationDoc permits TypeDoc, MethodDoc{
   final List<DocOcc> docs;
@@ -27,7 +26,7 @@ sealed abstract class DeclarationDoc permits TypeDoc, MethodDoc{
 final class TypeDoc extends DeclarationDoc{
   final ArrayList<Literal> variants= new ArrayList<>();
   final Optional<Scope> outer;
-  final LinkedHashMap<Object,MethodDoc> byKey= new LinkedHashMap<>();
+  final LinkedHashMap<MethodKey,MethodDoc> byKey= new LinkedHashMap<>();
   final SequencedCollection<MethodDoc> methods= byKey.sequencedValues();
   TypeDoc(Literal l, Optional<Scope> outer, List<DocOcc> docs){
     super(docs);
@@ -42,36 +41,39 @@ final class TypeDoc extends DeclarationDoc{
       "Repeated literal source with same name: "+l.pos()+" "+l.name();
     variants.add(l);
   }
-  void declared(Pos pos, M m, Supplier<List<DocOcc>> docs, List<MethodRef> inheritedFrom){
-    oneOf(new DeclaredMethodKey(pos.fileName(), pos.line(), pos.column(), m.sig().m()), true, docs, inheritedFrom).add(m);
+  void declared(M m, Supplier<List<DocOcc>> docs, List<MethodRef> inheritedFrom){
+    oneOf(new MethodKey.Declared(m.sig().rc(), m.sig().m()), docs, inheritedFrom).add(m);
   }
   void imported(M m, List<MethodRef> from){
-    oneOf(new ImportedKey(m.sig().origin(), m.sig().rc(), m.sig().m()), false, List::of, from).add(m);
+    oneOf(new MethodKey.Imported(m.sig().origin(), m.sig().rc(), m.sig().m()), List::of, from).add(m);
   }
-  private MethodDoc oneOf(Object k, boolean declared, Supplier<List<DocOcc>> docs, List<MethodRef> inheritedFrom){
-    var d= byKey.computeIfAbsent(k, _ -> new MethodDoc(this, declared, docs.get()));
+  private MethodDoc oneOf(MethodKey k, Supplier<List<DocOcc>> docs, List<MethodRef> inheritedFrom){
+    var d= byKey.computeIfAbsent(k, _ -> new MethodDoc(this, k, docs.get()));
     d.inheritedFrom.addAll(inheritedFrom);
     return d;
   }
 }
 final class MethodDoc extends DeclarationDoc{
   final TypeDoc owner;
-  final boolean declared;
+  final MethodKey key;
   final ArrayList<M> variants= new ArrayList<>();
   final ArrayList<MethodRef> inheritedFrom= new ArrayList<>();
-  MethodDoc(TypeDoc owner, boolean declared, List<DocOcc> docs){
+  MethodDoc(TypeDoc owner, MethodKey key, List<DocOcc> docs){
     super(docs);
     this.owner= owner;
-    this.declared= declared;
+    this.key= key;
   }
   M main(){ return variants.getFirst(); }
   Scope scope(){ return new Scope(owner.main(), Optional.of(main()), owner.outer); }
-  boolean visible(){ return declared || !owner.main().infName(); }
+  boolean declared(){ return key instanceof MethodKey.Declared; }
+  boolean visible(){ return declared() || !owner.main().infName(); }
   void add(M m){ variants.add(m); }
 }
 record MethodRef(T.C provider, M method){}
-record DeclaredMethodKey(URI file, int line, int column, MName m){}
-record ImportedKey(TName origin, RC rc, MName m){}
+sealed interface MethodKey{
+  record Declared(RC rc, MName m) implements MethodKey{}
+  record Imported(TName origin, RC rc, MName m) implements MethodKey{}
+}
 enum DocKind{
   Prose, Fence, Fenced, Example, TestOnly, Group;
   boolean tested(){ return this==Example || this==TestOnly; }

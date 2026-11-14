@@ -3,6 +3,7 @@ package docBuilder;
 import java.util.List;
 import java.util.Optional;
 import java.util.OptionalInt;
+import java.util.regex.MatchResult;
 import java.util.regex.Pattern;
 
 import core.MName;
@@ -18,38 +19,35 @@ final class DocRefScanner{
   static List<CodeSpan> codeSpans(String text){
     return fenced.matcher(text).results().map(m -> new CodeSpan(m.start(2), m.end(2), m.group(1).length())).toList();
   }
-  static List<CodeSpan> unclosed(String text){
+  static List<MatchResult> unclosed(String text){
     var spans= codeSpans(text);
     return backticks.matcher(text).results()
       .filter(m -> spans.stream().noneMatch(s -> s.covers(m.start())))
-      .map(m -> new CodeSpan(m.start(), m.end(), m.end()-m.start()))
       .toList();
   }
   static List<CodeSpan> refSpans(String text){
     return codeSpans(text).stream().filter(sp -> sp.fence() == 1).toList();
   }
-  static Optional<DocRef> wholeRef(String text, CodeSpan sp){
-    var p= new Parse(text.substring(sp.start(), sp.end()));
-    var res= p.ref();
-    return (p.ok && p.i==p.s.length()) ? res : Optional.empty();
+  static Optional<DocRef> wholeRef(String written){
+    var p= new Parse(written);
+    return p.ref().filter(_ -> p.i==p.s.length());
   }
   private static final Pattern word= Pattern.compile("[\\p{L}\\p{Nd}_']+");
   private static final class Parse{
     final String s;
     int i= 0;
-    boolean ok= true;
     Parse(String s){ this.s= s; }
     Optional<DocRef> ref(){
-      var receiver= startsSelector() ? Optional.<DocRef.Receiver>empty() : receiver();
-      var sel= selector();
-      if (sel.isEmpty()){ return receiver.map(r -> (DocRef)r); }
-      return Optional.of(new DocRef.MethodName(receiver, sel.get(), arity(callArity)));
+      if (startsSelector()){ return method(Optional.empty()); }
+      return receiver().flatMap(r -> startsSelector() ? method(Optional.of(r)) : Optional.of(r));
+    }
+    Optional<DocRef> method(Optional<DocRef.Receiver> owner){
+      return selector().map(sel -> new DocRef.MethodName(owner, sel, arity(callArity)));
     }
     boolean startsSelector(){ return s.startsWith(".", i) || !ops(i).isEmpty(); }
     Optional<String> selector(){
-      if (!startsSelector()){ return Optional.empty(); }
       var sel= s.charAt(i)=='.' ? "."+word(i+1) : ops(i);
-      if (!MName.isMethodName(sel)){ ok = false; return Optional.empty(); }
+      if (!MName.isMethodName(sel)){ return Optional.empty(); }
       i += sel.length();
       return Optional.of(sel);
     }
@@ -60,7 +58,7 @@ final class DocRefScanner{
       if (TName.isTypeName(first)){ return Optional.of(new DocRef.TypeName(Optional.empty(), first, arity(typeArity))); }
       var second= s.startsWith(".", i) ? word(i+1) : "";
       var named= TName.isTypeName(second) ? TName.isPkgName(first) : MName.isMethodName("."+first);
-      if (!named){ ok = false; return Optional.empty(); }
+      if (!named){ return Optional.empty(); }
       if (!TName.isTypeName(second)){ return Optional.of(new DocRef.LocalName(first)); }
       i += 1+second.length();
       return Optional.of(new DocRef.TypeName(Optional.of(first), second, arity(typeArity)));

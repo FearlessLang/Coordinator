@@ -1686,6 +1686,37 @@ world
     utils.Err.strCmp("[###].originalFileName: base.Str -> \"foo.txt\";[###]", generated);
     utils.Err.strCmp("[###].originalFileName: base.Str -> \"bar.txt\";[###]", generated);
   }
+  @Test void anAutoloadedTypeIsInTheGroupOfTheFolderHoldingItsFile(@TempDir Path tmp){
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_assets/foo.txt
+iii
+hello
+jjj
+_assets/icons/small/bar.txt
+iii
+world
+jjj
+_assets/z.zip/baz.txt
+iii
+zip
+jjj
+_assets/z.zip/beer/qux.txt
+iii
+in a folder of the zip
+""");
+    var base= new RealSourceOracleWithZip(root);
+    var generated= SourceOracleWithAutoload.of(base, "_assets", TName::s).newRefs().getFirst().loadString();
+    utils.Err.strCmp("""
+Foo: base.TxtFile{[###]
+//@Group "small"
+IconsSmallBar: base.TxtFile{[###]
+//@Group "z"
+ZBaz: base.TxtFile{[###]
+//@Group "beer"
+ZBeerQux: base.TxtFile{[###]""", generated);
+  }
   @Test void okBaseAssetAutoload(@TempDir Path tmp){
     var root= tmp.resolve("root");
     UserError.root = root;
@@ -1705,6 +1736,7 @@ iii
     var base= new RealSourceOracleWithZip(root);
     var res= SourceOracleWithAutoload.ofBase(base);
     utils.Err.strCmp("""
+//@Group "icons"
 IconsConflict: ImageFile{
   .path: Str -> "fear:/_base/icons/conflict.png";
   .diskPath: Str -> "icons/conflict.png";

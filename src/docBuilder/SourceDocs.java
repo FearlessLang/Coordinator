@@ -23,13 +23,14 @@ final class SourceDocs{
   final HashSet<Integer> visitedLines= new HashSet<>();
   SourceDocs(URI uri, String text){
     this.uri= uri;
-    lines= text.lines().toList();
+    lines= List.of(lineBreak.split(text.startsWith("\uFEFF") ? text.substring(1) : text, -1));
     scan();
   }
-  List<DocOcc> docsAt(Pos pos, boolean literal){
+  private static final Pattern lineBreak= Pattern.compile("\\r\\n|[\\r\\n\\u2028\\u2029\\u0085]");
+  List<DocOcc> docsAt(Pos pos, boolean anonymous){
     assert pos.line()>0 && pos.line()<=lines.size() : pos;
     var first= visitedLines.add(pos.line());
-    if (literal && !first){ return List.of(); }
+    if (anonymous && !first){ return List.of(); }
     var before= first ? collectBefore(pos.line()) : List.<DocOcc>of();
     var trailing= trailingAfter(pos.line(), pos.column())
       .filter(occ -> Math.max(depthAt(occ.line(), occ.column()), depthAt(pos.line(), 1)) >= depthAt(pos.line(), pos.column()))
@@ -68,7 +69,6 @@ final class SourceDocs{
       .filter(e -> e.getValue()>1)
       .map(Map.Entry::getKey)
       .sorted(bySource)
-      .map(d -> dedent(List.of(d)).getFirst())
       .toList();
   }
   private static final Comparator<DocOcc> bySource= Comparator.comparingInt(DocOcc::line);
@@ -98,11 +98,12 @@ final class SourceDocs{
   }
   static boolean blank(DocOcc d){ return d.text().isBlank() && d.kind()!=DocKind.Group; }
   static List<DocOcc> trimBlanks(List<DocOcc> ds){
-    var from= 0;
+    var groups= (int)ds.stream().takeWhile(d -> d.kind()==DocKind.Group).count();
+    var from= groups;
     var to= ds.size();
     while (from<to && blank(ds.get(from))){ from += 1; }
     while (to>from && blank(ds.get(to-1))){ to -= 1; }
-    return ds.subList(from, to);
+    return Stream.concat(ds.subList(0, groups).stream(), ds.subList(from, to).stream()).toList();
   }
   Optional<DocOcc> trailingAfter(int line, int column){
     return Optional.ofNullable(docByLine.get(line)).filter(d -> d.trailing() && d.column()>=column);
