@@ -117,7 +117,6 @@ final class Project{
   static Optional<UserError> compile(Coordinator c, Path folder, Path stdLibBase, String projectName, TakeFreeExtension take){
     var out= folder.resolve(Coordinator.outDir);
     var unfinished= out.resolve(unfinishedFile);
-    var cached= Fs.exists(out);
     if (Fs.exists(unfinished)){
       try (var s= Fs.of(() -> Fs.list(out))){ s.filter(f -> f.getFileName().toString().endsWith(".jar")).toList().forEach(Fs::rmTree); }
     }
@@ -136,10 +135,7 @@ final class Project{
     try{ for (var p : project.ownPackages){ if (!project.upToDate(p, previous)){ project.compilePackage(p, stLib, stdLibBase, projectName, take); } } }
     catch (UserError e){ error = Optional.of(e); }
     catch (UncheckedIOException e){ throw e; }
-    catch (RuntimeException|AssertionError e){
-      if (!cached){ throw e; }
-      error = Optional.of(UserError.cacheCorruptedOrCrash(e));
-    }
+    catch (RuntimeException|AssertionError e){ error = Optional.of(UserError.cacheCorruptedOrCrash(e)); }
     if (error.isPresent()){ return project.fail(error.get()); }
     Fs.ofV(() -> Fs.deleteIfExists(out.resolve(errorFile)));
     return Optional.empty();

@@ -889,6 +889,23 @@ How to fix
 
 We check this so that you[###]
 """);}
+  @Test void errVisibleNameLongerThan191Characters(@TempDir Path tmp){
+    runErrIOE(tmp, "a".repeat(191)+".txt\niii\nX\njjj\n"+"b".repeat(192)+".txt\niii\nX\n", """
+Invalid path in this project folder.
+
+Root: [###]
+Path: "%s.txt"
+
+What went wrong
+- A visible folder/file name is too long.
+  A visible folder name, and a visible file name before its first dot, have at most 191 characters.
+
+How to fix
+- Rename it to use at most 191 characters before the first dot.
+
+We check this so that you[###]
+""".formatted("b".repeat(192)));
+  }
   @Test void errWindowsReservedVisibleNameInZip(@TempDir Path tmp){ runErrIOE(tmp, """
 _pkg/z.zip/con.fear
 iii
@@ -1208,6 +1225,20 @@ This entry name cannot be handled safely and consistently across systems and too
 
 Invalid entry names[###]
 """);}
+  @Test void errZipBadEntryBackslash(@TempDir Path tmp){ runErrIOE(tmp, """
+_pkg/z.zip/a\\b.fear
+iii
+X
+""", """
+Root: [###]
+Path: "_pkg/z.zip"
+Entry: "a\\b.fear"
+
+There is a zip entry named "a\\b.fear"
+This entry name cannot be handled safely and consistently across systems and tools.
+
+Invalid entry names[###]
+""");}
   @Test void errZipBadEntryNul(@TempDir Path tmp){ runErrIOE(tmp, """
 _pkg/z.zip/a\u0000b.fear
 iii
@@ -1225,6 +1256,7 @@ Invalid entry names (based on the exact text of the entry name):
 - empty name: some tools ignore it, others reject the archive
 - name starts with "/" (example: "/a.fear"): dangerous, some tools may unpack it outside the destination (zip slip)
 - name contains "//" (example: "a//b.txt"): confusing, there is nothing between the two "/" characters, and tools disagree on the real location
+- name contains "\\" (example: "a\\b.txt"): confusing, some tools take "\\" as a folder separator, others as a character of the name
 - name is "." or "..", or starts with "./" or "../", or contains "/./" or "/../", or ends with "/." or "/.."
   (examples: "../a", "a/../b", "./a", "a/./b", "a/..", "a/."):
   dangerous, can escape the zip when unpacked (zip slip)

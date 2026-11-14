@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.File;
-import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -41,8 +40,8 @@ final class FixMountTest{
       var e= assertThrows(UserError.class, () -> new RealSourceOracleWithZip(root));
       utils.Err.strCmp("[###]This path is a symbolic link/junction/mount point.[###]", e.getMessage());
       var lines= new ArrayList<String>();
-      var end= assertThrows(UncheckedIOException.class, () -> Fix.of(root, lines::add));
-      utils.Err.strCmp("[###]this entry, or an entry inside it, is a mount point or is also mounted at another place", end.getCause().getMessage());
+      var end= assertThrows(UserError.class, () -> Fix.of(root, lines::add));
+      assertEquals(at+" is a drive: remove the drive, then run Fix again.", end.getMessage());
       assertEquals(List.of(), lines);
       assertEquals("c", Fs.readUtf8(at.resolve("c.txt")));
     }
@@ -88,25 +87,24 @@ detach vdisk
       if (!Fs.isWindows()){
         var elsewhere= tmp.resolve("elsewhere");
         Fs.ensureDir(elsewhere);
-        try (var _= Fs.isMac() ? mounted(LocalResources.nfsShare+"/"+share.relativize(b), elsewhere) : bound(b, elsewhere)){ refusedAt(root, elsewhere); }
+        try (var _= Fs.isMac() ? mounted(LocalResources.nfsShare+"/"+share.relativize(b), elsewhere) : bound(b, elsewhere)){ refusedAt(root, elsewhere, elsewhere); }
         return;
       }
       var drive= Stream.of("ZYXWVUTSRQPONMLKJIHGFED".split("")).filter(l -> Stream.of(File.listRoots()).noneMatch(r -> r.toString().startsWith(l))).findFirst().orElseThrow()+":";
       var why= "This test shows a folder at a second place with \"subst\", and with \"net share\" and \"net use\": \"net share\" needs administrator rights on this desk.";
       run(why, "subst", drive, b.toString());
-      try (var _= (AutoCloseable)() -> run(why, "subst", drive, "/D")){ refusedAt(root, Path.of(drive+"\\")); }
+      try (var _= (AutoCloseable)() -> run(why, "subst", drive, "/D")){ refusedAt(root, Path.of(drive+"\\"), Path.of(drive+"\\")); }
       var name= "fearless_shown_"+ProcessHandle.current().pid();
       run(why, "net", "share", name+"="+b, "/GRANT:"+System.getProperty("user.name")+",READ");
       try (var _= (AutoCloseable)() -> run(why, "net", "share", name, "/DELETE", "/Y")){
         run(why, "net", "use", drive, "\\\\localhost\\"+name);
-        try (var _= (AutoCloseable)() -> run(why, "net", "use", drive, "/DELETE", "/Y")){ refusedAt(root, Path.of(drive+"\\")); }
+        try (var _= (AutoCloseable)() -> run(why, "net", "use", drive, "/DELETE", "/Y")){ refusedAt(root, Path.of(drive+"\\"), Path.of("\\\\localhost\\"+name+"\\")); }
       }
     }
   }
-  private static void refusedAt(Path root, Path elsewhere){
+  private static void refusedAt(Path root, Path elsewhere, Path drive){
     var lines= new ArrayList<String>();
-    var end= assertThrows(UncheckedIOException.class, () -> Fix.of(root, lines::add));
-    utils.Err.strCmp("[###]this entry, or an entry inside it, is a mount point or is also mounted at another place", end.getCause().getMessage());
+    assertEquals(drive+" is a drive: remove the drive, then run Fix again.", assertThrows(UserError.class, () -> Fix.of(root, lines::add)).getMessage());
     assertEquals(List.of(), lines);
     assertEquals("c", Fs.readUtf8(elsewhere.resolve("c.txt")));
   }

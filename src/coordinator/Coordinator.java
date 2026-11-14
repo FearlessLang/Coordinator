@@ -95,15 +95,17 @@ public interface Coordinator{
   }
   /// Answered by the manager: the first candidate no claim uses, if any.
   interface TakeFreeExtension{ Optional<String> take(List<String> candidates); }
-  default State check(Path folder){ return guarded(folder, () -> Project.of(this, folder, Since.anyTime).check()); }
+  default State check(Path folder){ return guarded(() -> Project.of(this, folder, Since.anyTime).check()); }
   default Optional<UserError> compile(Path folder, Path stdLibBase, String projectName, TakeFreeExtension take){
-    return guarded(folder, () -> Project.compile(this, folder, stdLibBase, projectName, take));
+    return guarded(() -> Project.compile(this, folder, stdLibBase, projectName, take));
   }
-  static void finish(Path folder){
+  static void finish(Path folder){ guarded(() -> finished(folder)); }
+  private static Void finished(Path folder){
     var icons= folder.resolve(outDir).resolve(Project.iconsDir);
-    var kept= cachedMains(folder).values().stream().flatMap(m -> m.icons().stream()).flatMap(i -> iconFiles(folder, i).stream()).toList();
+    var kept= mains(folder).values().stream().flatMap(m -> m.icons().stream()).flatMap(i -> iconFiles(folder, i).stream()).toList();
     if (Fs.isDirectory(icons)){ Fs.walk(icons, s -> s.filter(f -> Fs.isRegularFile(f) && !kept.contains(f)).toList()).forEach(Fs::rmTree); }
     Fs.ofV(() -> Fs.deleteIfExists(folder.resolve(outDir).resolve(Project.unfinishedFile)));
+    return null;
   }
   static void dropUnfinished(Path folder){ if (Fs.exists(folder.resolve(outDir).resolve(Project.unfinishedFile))){ deleteCache(folder); } }
   static void writeError(Path folder, String error){ Project.writeError(folder, error); }
@@ -124,12 +126,13 @@ public interface Coordinator{
     return Fs.isWindows() ? List.of(png, png.resolveSibling(name.substring(0, name.lastIndexOf('.'))+".ico")) : List.of(png);
   }
   /// The mains of every <pkg>.json of .fearless_out, by name.
-  static Map<String,MainsInfo.Main> cachedMains(Path folder){
+  static Map<String,MainsInfo.Main> cachedMains(Path folder){ return guarded(() -> mains(folder)); }
+  private static Map<String,MainsInfo.Main> mains(Path folder){
     var out= folder.resolve(outDir);
     if (!Fs.isDirectory(out)){ return Map.of(); }
     try (var s= Fs.of(() -> Fs.list(out))){
       var jsons= s.filter(f -> f.getFileName().toString().endsWith(".json")).sorted().toList();
-      return guarded(folder, () -> MainsInfo.merge(jsons.stream().map(j -> new LimitedJsonParser(OutputHelper.read(j).orElseThrow(), j).api().manifest())).mains());
+      return MainsInfo.merge(jsons.stream().map(j -> new LimitedJsonParser(OutputHelper.read(j).orElseThrow(), j).api().manifest())).mains();
     }
   }
   default Path docs(Path folder, String packageName){
@@ -162,14 +165,10 @@ public interface Coordinator{
     Project.replace(baseCache.resolve("base.json"), OutputHelper.apiJson(core, "", new MainsInfo(Map.of(), MainsInfo.attenuators(core), List.of(), List.of())));
     for (var x : List.of(".jar", ".html", ".txt")){ Fs.ofV(() -> Fs.move(out.resolve("base"+x), baseCache.resolve("base"+x), StandardCopyOption.REPLACE_EXISTING)); }
   }
-  static <R> R guarded(Path project, Supplier<R> f){
-    var cached= Fs.exists(project.resolve(outDir));
+  static <R> R guarded(Supplier<R> f){
     try{ return f.get(); }
     catch (UserError|UncheckedIOException e){ throw e; }
-    catch (RuntimeException | AssertionError e){
-      if (!cached){ throw e; }
-      throw UserError.cacheCorruptedOrCrash(e);
-    }
+    catch (RuntimeException | AssertionError e){ throw UserError.cacheCorruptedOrCrash(e); }
   }
   default String drawing() throws InterruptedException{ return runMains(List.of("--enable-native-access=ALL-UNNAMED"), sharedClasspath(), "_base.Vk", _ -> {}).strip(); }
   static ChildJvm startMain(Path project, Path base, String main, Optional<Path> input, Map<String,Path> mounts, Map<String,Path> locks, List<String> attenuators, List<String> desk, List<Path> sharedClasspath, Consumer<String> out){
