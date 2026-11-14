@@ -144,6 +144,36 @@ Outer
 \t.get:A
 """, docs.text());
   }
+  @Test void aTrailingDocAfterAMethodReturningANamedLiteralDocumentsTheMethod(@TempDir Path tmp){
+    var docs= docs(tmp, a+"""
+Outer:{
+  .get: A -> Inner: A{ .m -> A }; /// Doc of get.
+  }
+""");
+    utils.Err.strCmp("""
+[###]
+Inner : A
+\t.m:A
+    from: A.m
+
+Outer
+\t.get:A
+    Doc of get.
+""", docs.text());
+  }
+  @Test void aDocLineBelowAMethodReturningANamedLiteralIsAttachedToNothing(@TempDir Path tmp){
+    var ex= assertThrows(UserError.class, () -> docs(tmp, a+"""
+Outer:{
+  .get: A -> Inner: A{ .m -> A };
+  /// Doc of nothing.
+  }
+"""));
+    utils.Err.strCmp("""
+Misplaced doc comment.[###]
+This documentation is attached to nothing.
+A ///, //>, //- or //@ block documents the declaration right below it, but no
+declaration starts right below this block.[###]""", ex.getMessage());
+  }
   @Test void aReferenceMayNameATypeByTheNameAUseGivesIt(@TempDir Path tmp){
     var q= compiled("q", "Thing:{}\n", OtherPackages.empty());
     var docs= docs(tmp, OtherPackages.start(Map.of(), q, 0L), """
@@ -178,7 +208,7 @@ Maker:{
     A{ .m -> A };
   }
 """);
-    utils.Err.strCmp("[###]anonymous literal at [###]\n  Doc of the anonymous A\n[###]", docs.text());
+    utils.Err.strCmp("[###]\nAnon@_rank_app:5 : A\n  Doc of the anonymous A\n[###]", docs.text());
   }
   @Test void aTrailingDocAfterAMethodReturningATypedAnonymousLiteralDocumentsTheMethod(@TempDir Path tmp){
     var docs= docs(tmp, a+"""
@@ -195,7 +225,7 @@ Maker:{
     { .m -> A }; /// makes an A
   }
 """);
-    utils.Err.strCmp("[###]anonymous literal at [###]\n  makes an A\n[###]", docs.text());
+    utils.Err.strCmp("[###]\nAnon@_rank_app:4 : A\n  makes an A\n[###]", docs.text());
   }
   @Test void aCommentLineOfSlashesOrDashesIsAPlainComment(@TempDir Path tmp){
     var docs= docs(tmp, a+"""
@@ -286,7 +316,7 @@ B:{
   .f[X:imm](x: X): A -> A;
   }
 """));
-    utils.Err.strCmp("Broken reference in a doc comment.[###]`x.nonexistent`[###]The type of \"x\" is a type parameter, and a type parameter has no methods.[###]", ex.getMessage());
+    utils.Err.strCmp("Broken reference in a doc comment.[###]`x.nonexistent`[###]The type of \"x\" is a generic type parameter, and a generic type parameter has no methods.[###]", ex.getMessage());
   }
   @Test void aMethodAnAnonymousLiteralInheritsIsANameInScopeThroughItsSelfName(@TempDir Path tmp){
     var docs= docs(tmp, """
@@ -344,7 +374,7 @@ Maker:{
     };
   }
 """);
-    utils.Err.strCmp("[###]anonymous literal at fear:/_p/_rank_app.fear:3:[###]Early.[###]anonymous literal at fear:/_p/_rank_app.fear:11:[###]Late.[###]", docs.text());
+    utils.Err.strCmp("[###]\nAnon@_rank_app:3 : A\n[###]Early.[###]\nAnon@_rank_app:11 : A\n[###]Late.[###]", docs.text());
   }
   @Test void aNumberWrittenAsAReferenceIsReportedAsNotAName(@TempDir Path tmp){
     var ex= assertThrows(UserError.class, () -> docs(tmp, a+"""
@@ -381,9 +411,9 @@ B:{
     utils.Err.strCmp("""
 Misplaced doc comment.[###]
 This documentation is attached to nothing.
-A /// or //> block documents the declaration right below it, but no declaration
-starts right below this block. Move this block right above the declaration it
-documents, or turn it into a plain // comment.""", ex.getMessage());
+A ///, //>, //- or //@ block documents the declaration right below it, but no
+declaration starts right below this block. Move this block right above the
+declaration it documents, or turn it into a plain // comment.""", ex.getMessage());
   }
   @Test void aDocAboveAPlainCommentLineIsToldThatThePlainCommentEndsTheBlock(@TempDir Path tmp){
     var ex= assertThrows(UserError.class, () -> docs(tmp, a+"""
@@ -391,7 +421,7 @@ documents, or turn it into a plain // comment.""", ex.getMessage());
 // a plain comment
 B:{ .m: A -> A; }
 """));
-    utils.Err.strCmp("Misplaced doc comment.[###]A line starting with // ends the block, so check whether[###]", ex.getMessage());
+    utils.Err.strCmp("Misplaced doc comment.[###]A line starting with // ends the block, so\ncheck whether one of these was meant to start with /// instead.", ex.getMessage());
   }
   @Test void aDisambiguationPageOnAnAnonymousLiteralIsTitledByTheNameTheListShows(@TempDir Path tmp){
     var html= docs(tmp, """
@@ -442,9 +472,9 @@ In file: fear:/_p/_rank_app.fear
 
 While inspecting the documentation of package p
 This documentation is attached to nothing.
-A /// or //> block documents the declaration right below it, and an empty line
-ends the block. Delete the empty line below this block, or write /// on it to
-keep an empty line in the documentation.""", ex.getMessage());
+A ///, //>, //- or //@ block documents the declaration right below it, and an
+empty line ends the block. Delete the empty line below this block, or write ///
+on it to keep an empty line in the documentation.""", ex.getMessage());
   }
   @Test void anEmptyDocLineBetweenTwoParagraphsKeepsThemInOneBlock(@TempDir Path tmp){
     var docs= docs(tmp, a+"""
@@ -474,9 +504,9 @@ In file: fear:/_p/_rank_app.fear
 
 While inspecting the documentation of package p
 This documentation is attached to nothing.
-A /// or //> block documents the declaration right below it, but no declaration
-starts right below this block. Move this block right above the declaration it
-documents, or turn it into a plain // comment.""", ex.getMessage());
+A ///, //>, //- or //@ block documents the declaration right below it, but no
+declaration starts right below this block. Move this block right above the
+declaration it documents, or turn it into a plain // comment.""", ex.getMessage());
   }
   @Test void aTrailingDocAfterTheBraceClosingItsTypeDocumentsTheMethodStartingOnItsLine(@TempDir Path tmp){
     var docs= docs(tmp, a+"""
@@ -728,9 +758,9 @@ B:{
     utils.Err.strCmp("""
 Misplaced doc comment.[###]
 This documentation is attached to nothing.
-A /// or //> block documents the declaration right below it, but no declaration
-starts right below this block. Move this block right above the declaration it
-documents, or turn it into a plain // comment.""", ex.getMessage());
+A ///, //>, //- or //@ block documents the declaration right below it, but no
+declaration starts right below this block. Move this block right above the
+declaration it documents, or turn it into a plain // comment.""", ex.getMessage());
   }
   @Test void twoOptionsForTheInheritedMethodsOfAnAnonymousLiteralShowTheirReceiverCapabilities(@TempDir Path tmp){
     var html= docs(tmp, a+"""
@@ -752,7 +782,18 @@ Maker:{
   @Test void theWelcomeTextCountsOneTypeAndDoesNotPlaceTheListOfTypesOnTheLeftWhenANarrowWindowShowsItAbove(@TempDir Path tmp){
     var html= docs(tmp, a).html();
     utils.Err.strCmp("[###]@media (max-width:48em){\n  .layout{display:block}[###]", html);
-    utils.Err.strCmp("[###]<p id=\"welcome\" class=\"welcome\">Types: 1. Pick one from the list.</p>[###]", html);
+    utils.Err.strCmp("[###]<p id=\"welcome\" class=\"welcome\">Types in the list: 1. Pick one.</p>[###]", html);
+  }
+  @Test void theWelcomeTextDoesNotCountATypeThatIsOnlyUnderAnotherType(@TempDir Path tmp){
+    var html= docs(tmp, a+"""
+//@Group `A`
+B:{ .b: A -> A; }
+""").html();
+    utils.Err.strCmp("[###]<p id=\"welcome\" class=\"welcome\">Types in the list: 1. Pick one.</p>[###]", html);
+  }
+  @Test void aTypeWithNoMethodsHasNoMethodsHeading(@TempDir Path tmp){
+    var html= docs(tmp, a+"Foo:{}\n").html();
+    utils.Err.strCmp("[###]<section class=\"type\" id=\"type-p_2e_Foo-0\">\n<h2>Foo</h2>\n<p class=\"doc missing\">No documentation yet.</p>\n</section>\n[###]", html);
   }
   @Test void aReferenceWithAnArityTheMethodDoesNotHaveIsToldTheArityTheMethodHas(@TempDir Path tmp){
     var ex= assertThrows(UserError.class, () -> docs(tmp, a+"""
@@ -848,7 +889,7 @@ Broken reference in a doc comment.[###]
 While inspecting the documentation of package p
 There is no type "A[_]".
 There is a type "A",
-but with a different number of type parameters.[###]""", ex.getMessage());
+but with a different number of generic type parameters.[###]""", ex.getMessage());
   }
   @Test void aMethodOnATypeParameterIsToldThatATypeParameterHasNoMethods(@TempDir Path tmp){
     var ex= assertThrows(UserError.class, () -> docs(tmp, a+"""
@@ -857,7 +898,7 @@ B:{
   .f[X:imm](x: X): A -> A;
   }
 """));
-    utils.Err.strCmp("Broken reference in a doc comment.[###]`X.m`[###]\"X\" is a type parameter, and a type parameter has no methods.[###]", ex.getMessage());
+    utils.Err.strCmp("Broken reference in a doc comment.[###]`X.m`[###]\"X\" is a generic type parameter, and a generic type parameter has no methods.[###]", ex.getMessage());
   }
   @Test void aReferenceToAMethodOfAnotherPackageWithTwoReceiverCapabilitiesOffersBoth(@TempDir Path tmp){
     var q= compiled("q", "Thing:{ read .n: read Thing -> this; mut .n: mut Thing -> this; }\n", OtherPackages.empty());
@@ -907,5 +948,191 @@ Q[R:imm]:P{ .own(r: R): R -> r; }
 Q:q.P{ .own: A -> A; }
 """);
     utils.Err.strCmp("[###]Q : q.P\n\t.own:A\n\t.pipe[_AA:imm](_AA):_AA\n[###]", docs.text());
+  }
+  @Test void aSeveralMatchPageShowsTheFirstParagraphOfADocStartingWithACodeBlock(@TempDir Path tmp){
+    var html= docs(tmp, a+"""
+B:{
+  ///```
+  ///B.f
+  ///```
+  ///Gives an A.
+  .f: A -> A;
+  }
+C:{ .f: A -> A; }
+///See `.f`.
+D:{ .m: A -> A; }
+""").html();
+    utils.Err.strCmp("[###]<li><a href=\"#method-p_2e_B-0-imm-_2e_f-0\">B.f()</a> <span class=\"opt-doc\">[###] Gives an A.</span></li>[###]", html);
+  }
+  @Test void aTrailingDocAfterTwoTypesOnOneLineFollowsMoreThanOneDeclaration(@TempDir Path tmp){
+    var ex= assertThrows(UserError.class, () -> docs(tmp, a+"""
+B:{ .b: A -> A; } C:{ .c: A -> A; } /// about C
+"""));
+    utils.Err.strCmp("""
+Misplaced doc comment.[###]
+While inspecting the documentation of package p
+This documentation follows more than one declaration on the same line.
+Put each declaration on its own line.""", ex.getMessage());
+  }
+  @Test void aNamedLiteralAfterAnAnonymousLiteralStartingOnTheSameLineTakesTheDocBlockAboveThatLine(@TempDir Path tmp){
+    var docs= docs(tmp, a+"""
+Both:{ #(a: A, b: A): A -> a; }
+Maker:{
+  .two: A ->
+    ///Doc of Named.
+    Both#(A{ .m -> A }, Named: A{ .m -> A });
+  }
+""");
+    utils.Err.strCmp("[###]\nNamed : A\n  Doc of Named.\n\t.m:A\n[###]", docs.text());
+  }
+  @Test void aTrailingDocAfterALambdaHoldingANamedLiteralDocumentsTheNamedLiteral(@TempDir Path tmp){
+    var docs= docs(tmp, a+"""
+Mk:{ #: A }
+Use:{ .k(f: Mk): A -> f#; }
+Maker:{
+  .make: A -> Use
+    .k {Inner: A{ .m -> A }}; /// doc of Inner
+  }
+""");
+    utils.Err.strCmp("[###]\nInner : A\n  doc of Inner\n\t.m:A\n[###]", docs.text());
+  }
+  @Test void anAnonymousLiteralIsTitledInTheTextByTheNameItsGroupListsItWith(@TempDir Path tmp){
+    var docs= docs(tmp, a+"""
+Maker:{
+  .make: A ->
+    ///Doc.
+    A{ .m -> A };
+  }
+""");
+    utils.Err.strCmp("package p\n\ngroup public\n  A\n  Maker\ngroup private\n  Anon@_rank_app:5\n\n[###]\nAnon@_rank_app:5 : A\n  Doc.\n[###]", docs.text());
+  }
+  @Test void typedVariantsThatReadTheSameAreShownOnce(@TempDir Path tmp){
+    var html= docs(tmp, a+"""
+Sup:{ mut .foo: A; imm .foo: A; }
+Sub:Sup{ .foo -> A{
+  ///Doc.
+  .m -> A
+  }; }
+""").html();
+    utils.Err.strCmp("""
+[###]<p class="extends"><b>Extends:</b> <a href="#type-p_2e_A-0">A</a></p>
+<h3>Methods</h3>
+<details class="method" id="method-p_2e__5f_ASub-0-imm-_2e_m-0">
+<summary><span class="disclosure">&#9656;</span><span class="sig">.m:<a href="#type-p_2e_A-0">A</a></span></summary>
+<div class="doc">
+<p>Doc.</p>
+</div>
+<p class="doc from">From: <a href="#method-p_2e_A-0-imm-_2e_m-0">A.m</a>.</p>
+</details>
+</section>
+[###]""", html);
+  }
+  @Test void aDocBlockOnTheFirstLineOfAFileStartingWithAByteOrderMarkDocumentsTheDeclarationBelow(@TempDir Path tmp){
+    var docs= docs(tmp, "\uFEFF///Doc of A.\n"+a);
+    utils.Err.strCmp("""
+package p
+
+group public
+  A
+
+A
+  Doc of A.
+\t.m:A
+
+""", docs.text());
+  }
+  @Test void aDocBlockAfterAUnicodeLineSeparatorDocumentsTheDeclarationBelow(@TempDir Path tmp){
+    var docs= docs(tmp, "A:{ .m: A -> this; }\u2028///Doc of B.\nB:{}\n");
+    utils.Err.strCmp("""
+package p
+
+group public
+  A
+  B
+
+A
+\t.m:A
+
+B
+  Doc of B.
+
+""", docs.text());
+  }
+  @Test void anAnonymousLiteralLeavesTheDocBlockAboveItsLineToANamedLiteralOfALaterTypeStartingOnThatLine(@TempDir Path tmp){
+    var docs= docs(tmp, a+"""
+Maker:{ .make: A ->
+  ///Doc of Named.
+  A{ .m -> A } } Named:{}
+""");
+    utils.Err.strCmp("""
+package p
+
+group public
+  A
+  Maker
+  Named
+
+A
+\t.m:A
+
+Maker
+\t.make:A
+
+Named
+  Doc of Named.
+
+""", docs.text());
+  }
+  static final String shapes= """
+Num:{}
+Shape:{ mut .area: Num; imm .area: Num; }
+Circle:Shape{
+  ///The area of a circle.
+  //> .check{Num}
+  .area -> Num;
+  }
+""";
+  @Test void aMethodDeclaredOnceForTwoReceiverCapabilitiesHasAnEntryForEachWithTheSameDoc(@TempDir Path tmp){
+    var docs= docs(tmp, shapes);
+    utils.Err.strCmp("""
+[###]
+Circle : Shape
+\t.area:Num
+    The area of a circle.
+    example:
+      .check{Num}
+    from: Shape.area
+\tmut .area:Num
+    The area of a circle.
+    example:
+      .check{Num}
+    from: Shape.area
+[###]""", docs.text());
+    assertEquals(List.of(".check{Num}"), docs.tests().getFirst().text().lines().filter(l -> l.contains(".check")).toList());
+  }
+  @Test void aMethodDeclaredOnceOrTwiceForTwoReceiverCapabilitiesGivesTheSameEntries(@TempDir Path tmp){
+    var once= docs(tmp, "Num:{}\nShape:{ mut .area: Num; imm .area: Num; }\nCircle:Shape{ .area -> Num; }\n");
+    var twice= docs(tmp, "Num:{}\nShape:{ mut .area: Num; imm .area: Num; }\nCircle:Shape{ mut .area -> Num; imm .area -> Num; }\n");
+    assertEquals(once.text(), twice.text());
+  }
+  @Test void aReferenceToAMethodOfAnotherPackageWithTwoReceiverCapabilitiesListsBoth(@TempDir Path tmp){
+    var shapesCore= compiled("shapes", shapes, OtherPackages.empty());
+    var html= docs(tmp, OtherPackages.start(Map.of(), shapesCore, 0L), """
+///See `shapes.Circle.area`.
+Canvas:{ .m: Canvas -> this; }
+""").html();
+    utils.Err.strCmp("""
+[###]<h2>Several match shapes.Circle.area</h2>
+<ul class="options">
+<li><a href="shapes.html#method-shapes_2e_Circle-0-mut-_2e_area-0">mut shapes.Circle.area()</a></li>
+<li><a href="shapes.html#method-shapes_2e_Circle-0-imm-_2e_area-0">shapes.Circle.area()</a></li>
+</ul>[###]""", html);
+  }
+  @Test void aTypeWhoseNameStartsTheNameOfAPrimedGenericTypeParameterIsLinkedWhereTheTypeIsWritten(@TempDir Path tmp){
+    var html= docs(tmp, a+"""
+Foo:{}
+B[Foo':imm]:{ .m(x: Foo'): Foo -> Foo; }
+""").html();
+    utils.Err.strCmp("[###]<span class=\"sig\">.m(x:Foo'):<a href=\"#type-p_2e_Foo-0\">Foo</a></span>[###]", html);
   }
 }

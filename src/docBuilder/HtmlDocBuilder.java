@@ -35,6 +35,7 @@ import tools.Fs;
 import tools.SourceOracle;
 import userMessages.Report;
 import utils.Bug;
+import utils.DistinctBy;
 import utils.Join;
 import utils.OneOr;
 import utils.Pos;
@@ -51,6 +52,8 @@ public final class HtmlDocBuilder{
   final ArrayList<TypeDoc> types= new ArrayList<>();
   final IdentityHashMap<Src,TypeDoc> typeBySrc= new IdentityHashMap<>();
   final LinkedHashMap<URI,SourceDocs> sources= new LinkedHashMap<>();
+  final HashSet<String> namedLines= new HashSet<>();
+  final HashMap<String,List<DocOcc>> methodDocs= new HashMap<>();
   public HtmlDocBuilder(SourceOracle oracle, OtherPackages other, List<Literal> core, Optional<Path> baseDocLocation, String pkgName, Path htmlPath, boolean generatesTests){
     assert Require.nonNull(oracle, other, core, baseDocLocation, pkgName, htmlPath);
     this.oracle= oracle;
@@ -60,8 +63,14 @@ public final class HtmlDocBuilder{
     this.htmlPath= htmlPath;
     this.generatesTests= generatesTests;
     currentByName= core.stream().collect(Collectors.toUnmodifiableMap(Literal::name, l -> l));
+    core.forEach(this::addNamedLines);
   }
   public void visitAll(E e){ visitAll(e, Optional.empty()); }
+  void addNamedLines(E e){
+    if (e instanceof Literal l && !l.infName()){ namedLines.add(lineKey(l.pos())); }
+    e.children().forEach(this::addNamedLines);
+  }
+  static String lineKey(Pos p){ return p.fileName()+":"+p.line(); }
   void visitAll(E e, Optional<Scope> outer){
     if (!(e instanceof Literal l)){ e.children().forEach(c -> visitAll(c, outer)); return; }
     visitLiteral(l, outer);
@@ -70,9 +79,9 @@ public final class HtmlDocBuilder{
   void visitLiteral(Literal l, Optional<Scope> outer){
     assert Require.nonNull(l, outer);
     var t= typeBySrc.get(l.src());
-    var yields= l.infName() && namedOnLine(l, l.pos());
+    var yields= l.infName() ? namedLines.contains(lineKey(l.pos())) : inClaimingMethod(l.pos(), outer);
     if (t == null){
-      t = new TypeDoc(l, outer, yields ? List.of() : docsAt(l.pos(), true));
+      t = new TypeDoc(l, outer, yields ? List.of() : docsAt(anchor(l.pos(), outer), l.infName()));
       typeBySrc.put(l.src(), t);
       types.add(t);
     }
@@ -80,13 +89,23 @@ public final class HtmlDocBuilder{
     for (var m : l.ms()){
       var p= m.sig().span().pos();
       var from= inheritedMethods(l, m);
-      var mute= yields && p.line() == l.pos().line();
-      if (m.sig().origin().equals(l.name())){ t.declared(p, m, () -> mute ? List.of() : docsAt(p, false), from); }
+      if (m.sig().origin().equals(l.name())){ t.declared(m, () -> methodDocs.computeIfAbsent(lineKey(p)+":"+p.column(), _ -> claims(l, m) ? docsAt(p, false) : List.of()), from); }
       else{ t.imported(written(l, m, from), from); }
     }
   }
-  static boolean namedOnLine(E e, Pos p){ return e.children().anyMatch(c -> startsNamed(c, p) || namedOnLine(c, p)); }
-  static boolean startsNamed(E e, Pos p){ return e instanceof Literal n && !n.infName() && n.pos().fileName().equals(p.fileName()) && n.pos().line() == p.line(); }
+  boolean claims(Literal l, M m){
+    var muted= l.infName() && namedLines.contains(lineKey(l.pos())) && m.sig().span().pos().line() == l.pos().line();
+    return m.sig().origin().equals(l.name()) && !muted;
+  }
+  boolean inClaimingMethod(Pos p, Optional<Scope> outer){
+    return outer.filter(s -> claimsOnLine(s, p) || inClaimingMethod(p, s.outer())).isPresent();
+  }
+  boolean claimsOnLine(Scope s, Pos p){
+    return s.method().filter(m -> lineKey(m.sig().span().pos()).equals(lineKey(p)) && claims(s.owner(), m)).isPresent();
+  }
+  static Pos anchor(Pos p, Optional<Scope> outer){
+    return outer.filter(s -> s.owner().infName() && lineKey(s.owner().pos()).equals(lineKey(p))).map(s -> anchor(s.owner().pos(), s.outer())).orElse(p);
+  }
   M written(Literal l, M m, List<MethodRef> from){
     var s= m.sig();
     var ws= OneOr.of("one origin", from.stream().filter(r -> r.provider().name().equals(s.origin())).map(r -> B.xs(r.method().sig().bs())).distinct());
@@ -113,7 +132,7 @@ public final class HtmlDocBuilder{
     if (!misplaced.isEmpty()){ throw Report.docMisplaced(misplaced); }
     var markup= new ArrayList<String>();
     var problems= new ArrayList<String>();
-    types.stream().flatMap(t -> Stream.<DeclarationDoc>concat(Stream.of(t), t.methods.stream())).forEach(d -> checkDeclaration(resolver, d, markup, problems));
+    types.stream().flatMap(t -> Stream.<DeclarationDoc>concat(Stream.of(t), t.methods.stream())).gather(DistinctBy.of(d -> d.docs)).forEach(d -> checkDeclaration(resolver, d, markup, problems));
     if (!markup.isEmpty()){ throw Report.docBackticks(markup); }
     if (!problems.isEmpty()){ throw Report.docReferences(problems); }
     var groups= checkGroups(resolver);
@@ -152,17 +171,18 @@ public final class HtmlDocBuilder{
     var text= HtmlDocRenderer.joined(p);
     DocRefScanner.unclosed(text).forEach(r -> markup.add(problem(p, r.start(), r.end()-1, unclosedSpan)));
     for (var sp : DocRefScanner.refSpans(text)){
-      if (text.substring(sp.start(), sp.end()).contains("\n")){ markup.add(problem(p, sp.start()-1, sp.end(), referenceOverLines)); continue; }
-      var ref= DocRefScanner.wholeRef(text, sp);
+      var written= text.substring(sp.start(), sp.end());
+      if (written.contains("\n")){ markup.add(problem(p, sp.start()-1, sp.end(), referenceOverLines)); continue; }
+      var ref= DocRefScanner.wholeRef(written);
       if (ref.isEmpty()){ problems.add(problem(p, sp.start(), sp.end()-1, notAName)); continue; }
       if (resolver.resolve(ref.get(), scope).isEmpty()){ problems.add(problem(p, sp.start(), sp.end()-1, resolver.unresolved(ref.get(), scope).orElse(noSuchName))); }
     }
   }
   List<String> checkGroups(DocResolver resolver){
     var problems= new ArrayList<String>();
-    types.stream().flatMap(t -> t.methods.stream()).flatMap(m -> m.directives().stream()).forEach(d -> problems.add(line(d, onMethod)));
+    types.stream().flatMap(t -> t.methods.stream()).flatMap(m -> m.directives().stream()).distinct().forEach(d -> problems.add(line(d, onMethod)));
     var parents= new LinkedHashMap<TypeDoc,List<Directive.Under>>();
-    var names= new HashMap<String,String>();
+    var names= new HashMap<String,String>(Map.of("public", "public", "private", "private"));
     types.stream().filter(TypeDoc::visible).forEach(t -> parents.put(t, checkType(resolver, t, names, problems)));
     if (!problems.isEmpty()){ return problems; }
     var done= new HashSet<TypeDoc>();
@@ -232,42 +252,42 @@ public final class HtmlDocBuilder{
       last.line(), last.textColumn()+last.text().length()), msg);
   }
   String ambiguousTrailing(DocOcc occ){
-    return message(new Span(occ.file(), occ.line(), occ.textColumn(), occ.line(), occ.textColumn()+occ.text().length()), ambiguousTrailingDoc);
+    return line(occ, ambiguousTrailingDoc);
   }
   static final String notAttached=
     "This documentation is attached to nothing.\n"
-   +"A /// or //> block documents the declaration right below it, and nothing else\n"
-   +"may come between them. A line starting with // ends the block, so check whether\n"
-   +"one of these was meant to start with /// instead.";
+   +"A ///, //>, //- or //@ block documents the declaration right below it, and\n"
+   +"nothing else may come between them. A line starting with // ends the block, so\n"
+   +"check whether one of these was meant to start with /// instead.";
   static final String emptyLineEnds=
     "This documentation is attached to nothing.\n"
-   +"A /// or //> block documents the declaration right below it, and an empty line\n"
-   +"ends the block. Delete the empty line below this block, or write /// on it to\n"
-   +"keep an empty line in the documentation.";
+   +"A ///, //>, //- or //@ block documents the declaration right below it, and an\n"
+   +"empty line ends the block. Delete the empty line below this block, or write ///\n"
+   +"on it to keep an empty line in the documentation.";
   static final String nothingDeclaredBelow=
     "This documentation is attached to nothing.\n"
-   +"A /// or //> block documents the declaration right below it, but no declaration\n"
-   +"starts right below this block. Move this block right above the declaration it\n"
-   +"documents, or turn it into a plain // comment.";
+   +"A ///, //>, //- or //@ block documents the declaration right below it, but no\n"
+   +"declaration starts right below this block. Move this block right above the\n"
+   +"declaration it documents, or turn it into a plain // comment.";
   static final String trailingNotAttached=
     "This documentation is attached to nothing.\n"
-   +"A /// or //> written after code documents the declaration that starts earlier\n"
-   +"on the same line. No declaration starts earlier on this line, so move this\n"
-   +"documentation to its own line, right above the declaration it documents.";
+   +"A ///, //>, //- or //@ line written after code documents the declaration that\n"
+   +"starts earlier on the same line. No declaration starts earlier on this line, so\n"
+   +"move this documentation to its own line, right above the declaration it\n"
+   +"documents.";
   static final String ambiguousTrailingDoc=
     "This documentation follows more than one declaration on the same line.\n"
-   +"Move it directly after the one declaration it documents, or put each declaration\n"
-   +"on its own line.";
+   +"Put each declaration on its own line.";
   static final String onMethod=
     "This //@Group line documents a method.\n"
    +"A //@Group line puts a type in a group or under another type, and a method is\n"
    +"neither. Move this line above the declaration of the type.";
   static final String publicInPrivate=
     "%s is public, so it cannot be in the group \"private\".\n"
-   +"The group \"private\" holds only private types: the types whose name starts with _.";
+   +"The group \"private\" holds only private types: the anonymous literals and the types whose name starts with _.";
   static final String privateInPublic=
     "%s is private, so it cannot be in the group \"public\".\n"
-   +"The group \"public\" holds only public types: the types whose name does not start with _.";
+   +"The group \"public\" holds only public types: the types whose written name does not start with _.";
   static final String publicUnderPrivate=
     "%s is public, but every type it is under is private: %s.\n"
    +"A public type must be in a group, or under at least one public type.";
@@ -328,8 +348,8 @@ public final class HtmlDocBuilder{
       .filter(sm -> sm.sig().rc()==m.sig().rc() && sm.sig().m().equals(m.sig().m()))
       .map(sm -> new MethodRef(provider, sm));
   }
-  List<DocOcc> docsAt(Pos p, boolean literal){
+  List<DocOcc> docsAt(Pos p, boolean anonymous){
     if (p.line() == 0){ return List.of(); }
-    return sources.computeIfAbsent(p.fileName(), u -> new SourceDocs(u, oracle.loadString(u))).docsAt(p, literal);
+    return sources.computeIfAbsent(p.fileName(), u -> new SourceDocs(u, oracle.loadString(u))).docsAt(p, anonymous);
   }
 }

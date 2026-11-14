@@ -90,7 +90,7 @@ final class HtmlDocRenderer{
   }
   String renderText(){
     var sb= new StringBuilder(4_000).append("package ").append(pkgName).append("\n\n");
-    groups.forEach((g, ms) -> sb.append("group ").append(g).append('\n').append(Join.of(ms.stream().map(this::shortTitle), "  ", "\n  ", "\n")));
+    groups.forEach((g, ms) -> sb.append("group ").append(g).append('\n').append(Join.of(ms.stream().map(this::typeTitle), "  ", "\n  ", "\n")));
     sb.append('\n');
     shown.forEach(t -> renderTypeText(sb, t));
     return sb.toString();
@@ -107,6 +107,7 @@ final class HtmlDocRenderer{
     return declarations(t)
       .map(d -> d.docs.stream().filter(o -> o.kind().tested()).toList())
       .filter(g -> !g.isEmpty())
+      .distinct()
       .sorted(Comparator.comparingInt((List<DocOcc> g) -> g.getFirst().line()))
       .toList();
   }
@@ -142,15 +143,15 @@ final class HtmlDocRenderer{
   }
   void renderTypeText(StringBuilder sb, TypeDoc t){
     sb.append(typeTitle(t)).append(Join.of(t.main().cs().stream().map(toStr::typeName), " : ", ", ", "", "")).append('\n');
-    sb.append(Join.of(related(parents, t).stream().map(this::shortTitle), "  under: ", ", ", "\n", ""));
-    sb.append(Join.of(related(children, t).stream().map(this::shortTitle), "  see also: ", ", ", "\n", ""));
+    sb.append(Join.of(related(parents, t).stream().map(this::typeTitle), "  under: ", ", ", "\n", ""));
+    sb.append(Join.of(related(children, t).stream().map(this::typeTitle), "  see also: ", ", ", "\n", ""));
     renderDocText(sb, "  ", t);
     visibleMethods(t).forEach(m -> renderMethodText(sb, m));
     sb.append('\n');
   }
   void renderMethodText(StringBuilder sb, MethodDoc m){
     m.variants.stream().map(this::sig).distinct().forEach(s -> sb.append('\t').append(s).append('\n'));
-    if (m.declared){ renderDocText(sb, "    ", m); }
+    if (m.declared()){ renderDocText(sb, "    ", m); }
     sb.append(Join.of(fromRefs(m).stream().map(this::fromName), "    from: ", ", ", "\n", ""));
   }
   void renderDocText(StringBuilder sb, String indent, DeclarationDoc d){
@@ -177,7 +178,7 @@ final class HtmlDocRenderer{
       .append("<div><p class=\"eyebrow\">package</p><h1>").append(h(pkgName)).append("</h1></div>")
       .append("</header>\n")
       .append("<p id=\"welcome\" class=\"welcome\">")
-      .append("Types: ").append(shown.size()).append(". Pick one from the list.</p>\n");
+      .append("Types in the list: ").append(groups.values().stream().flatMap(List::stream).distinct().count()).append(". Pick one.</p>\n");
   }
   static final String mark= ""
     +"<svg class=\"mark\" viewBox=\"0 0 64 64\" width=\"38\" height=\"38\" aria-hidden=\"true\">"
@@ -316,9 +317,8 @@ code{
     var target= hash ? document.getElementById(hash) : null;
     var active= target && (target.classList.contains('type') ? target : target.closest('.type'));
     secs.forEach(function(el){ el.classList.toggle('active', el===active); });
-    links.forEach(function(a){
-      a.classList.toggle('sel', !!active && a.getAttribute('href')==='#'+active.id);
-    });
+    var sel= active ? inToc([active]) : [];
+    links.forEach(function(a){ a.classList.toggle('sel', sel.indexOf(a.getAttribute('href'))>=0); });
     showSel();
     welcome.style.display= active ? 'none' : '';
     var opened= target && target.closest('details');
@@ -326,6 +326,14 @@ code{
     if (history.state){ window.scrollTo(0, history.state.y); }
     else if (active && target!==active){ target.scrollIntoView(); }
     else { window.scrollTo(0,0); }
+  }
+  function inToc(ts){
+    var hrefs= ts.map(function(t){ return '#'+t.id; });
+    var hit= hrefs.filter(function(h){ return document.querySelector('#toclist a[href="'+h+'"]'); });
+    if (hit.length || !ts.length){ return hit; }
+    var up= [];
+    ts.forEach(function(t){ t.querySelectorAll('.under a').forEach(function(a){ up.push(document.getElementById(a.getAttribute('href').slice(1))); }); });
+    return inToc(up);
   }
   function showSel(){
     var sel= document.querySelector('#toclist a.sel');
@@ -385,17 +393,18 @@ code{
     sb.append("<li class=\"group\">").append(h(group)).append("</li>\n");
     members.forEach(t -> sb.append("<li>").append(typeDocLink(t)).append("</li>\n"));
   }
-  String typeDocLink(TypeDoc t){ return "<a href=\"#"+typeId(t)+"\">"+wrap(shortTitle(t))+"</a>"; }
+  String typeDocLink(TypeDoc t){ return "<a href=\"#"+typeId(t)+"\">"+wrap(typeTitle(t))+"</a>"; }
   void renderType(StringBuilder sb, TypeDoc t){
     sb.append("<section class=\"type\" id=\"").append(typeId(t)).append("\">\n")
       .append("<h2>").append(wrap(typeTitle(t))).append("</h2>\n");
     renderDoc(sb, t);
-    sb.append(Join.of(related(parents, t).stream().map(this::typeDocLink), "<p class=\"extends\"><b>Under:</b> ", ", ", "</p>\n", ""));
+    sb.append(Join.of(related(parents, t).stream().map(this::typeDocLink), "<p class=\"extends under\"><b>Under:</b> ", ", ", "</p>\n", ""));
     sb.append(Join.of(related(children, t).stream().map(this::typeDocLink), "<p class=\"extends\"><b>See also:</b> ", ", ", "</p>\n", ""));
     sb.append(Join.of(t.main().cs().stream().map(this::typeLink), "<p class=\"extends\"><b>Extends:</b> ", ", ", "</p>\n", ""));
     renderVariants(sb, "Typed literal variants", t.variants, toStr::lit);
-    sb.append("<h3>Methods</h3>\n");
-    visibleMethods(t).forEach(m -> renderMethod(sb, m));
+    var ms= visibleMethods(t);
+    if (!ms.isEmpty()){ sb.append("<h3>Methods</h3>\n"); }
+    ms.forEach(m -> renderMethod(sb, m));
     sb.append("</section>\n");
   }
   void renderMethod(StringBuilder sb, MethodDoc m){
@@ -404,7 +413,7 @@ code{
       .append("<summary><span class=\"disclosure\">&#9656;</span>");
     ids.stream().skip(1).forEach(id -> sb.append("<span id=\"").append(id).append("\"></span>"));
     sb.append("<span class=\"sig\">").append(renderSig(m)).append("</span></summary>\n");
-    if (m.declared){ renderDoc(sb, m); }
+    if (m.declared()){ renderDoc(sb, m); }
     sb.append(Join.of(fromRefs(m).stream().map(this::fromLink), "<p class=\"doc from\">From: ", ", ", ".</p>\n", ""));
     renderVariants(sb, "Typed method variants", m.variants, this::sig);
     sb.append("</details>\n");
@@ -431,7 +440,7 @@ code{
     var from= 0;
     for (var n : Stream.concat(sig.ts().stream(), Stream.of(sig.ret())).flatMap(HtmlDocRenderer::typeNames).toList()){
       var printed= toStr.typeName(n);
-      var at= namePatterns.computeIfAbsent(printed, p -> Pattern.compile("(?<![\\p{L}\\p{Nd}_.])"+Pattern.quote(p)+"(?![\\p{L}\\p{Nd}_])")).matcher(text);
+      var at= namePatterns.computeIfAbsent(printed, p -> Pattern.compile("(?<![\\p{L}\\p{Nd}_.])"+Pattern.quote(p)+"(?![\\p{L}\\p{Nd}_'])")).matcher(text);
       var found= at.find(from);
       assert found;
       from = at.end();
@@ -487,59 +496,59 @@ code{
     return sb.toString();
   }
   String renderCode(String text, DocRefScanner.CodeSpan cs, Scope scope){
-    var body= h(text.substring(cs.start(), cs.end()));
+    var written= text.substring(cs.start(), cs.end());
+    var body= h(written);
     if (cs.fence()!=1){ return body; }
-    var link= resolver.resolve(DocRefScanner.wholeRef(text, cs).orElseThrow(), scope).orElseThrow();
-    if (link instanceof DocLink.NoLink){ return body; }
-    return "<a href=\""+h(href(link))+"\">"+body+"</a>";
+    return href(resolver.resolve(DocRefScanner.wholeRef(written).orElseThrow(), scope).orElseThrow())
+      .map(href -> "<a href=\""+h(href)+"\">"+body+"</a>").orElse(body);
   }
   void renderPage(StringBuilder sb, DocLink.Ambiguous p, String anchor){
     sb.append("<section class=\"type disambig\" id=\"").append(anchor).append("\">\n")
       .append("<h2>Several match ").append(h(p.title())).append("</h2>\n<ul class=\"options\">\n");
     p.options().stream()
       .sorted(Comparator.comparing((Candidate c) -> c.owner().s()).thenComparingInt(c -> c.owner().arity())
-        .thenComparingInt(c -> c.sig().map(s -> s.m().arity()).orElse(0)))
+        .thenComparingInt(c -> c instanceof Candidate.Method m ? m.sig().m().arity() : 0))
       .forEach(c -> sb.append("<li>").append(renderCandidate(c)).append("</li>\n"));
     sb.append("</ul>\n</section>\n");
   }
   String renderCandidate(Candidate c){
-    var anonymous= resolver.localTypeDoc(c.owner()).filter(t -> t.main().infName());
-    var sb= new StringBuilder("<a href=\"").append(h(candidateHref(c))).append("\">")
-      .append(c.sig().map(s -> s.rc().toStrSpace()).orElse(""))
-      .append(h(anonymous.map(this::shortTitle).orElseGet(() -> toStr.typeNameWithArity(c.owner()))));
-    c.sig().ifPresent(s -> sb.append(h(s.m().s()+DocResolver.shape(OptionalInt.of(s.m().arity()), "(", ")"))));
-    sb.append("</a>");
-    c.localMethod().flatMap(this::renderFirstParagraph).ifPresent(p -> sb.append(" <span class=\"opt-doc\">\u2014 ").append(p.replace("\n", " ")).append("</span>"));
-    return sb.toString();
+    var owner= h(resolver.localTypeDoc(c.owner()).filter(t -> t.main().infName()).map(this::typeTitle).orElseGet(() -> toStr.typeNameWithArity(c.owner())));
+    var link= "<a href=\""+h(candidateHref(c))+"\">";
+    return switch (c){
+      case Candidate.Type _ -> link+owner+"</a>";
+      case Candidate.Method(_, var s, var local) -> link+s.rc().toStrSpace()+owner+h(s.m().s()+DocResolver.shape(OptionalInt.of(s.m().arity()), "(", ")"))+"</a>"
+        +local.flatMap(this::renderFirstParagraph).map(p -> " <span class=\"opt-doc\">\u2014 "+p.replace("\n", " ")+"</span>").orElse("");
+    };
   }
   Optional<String> renderFirstParagraph(MethodDoc m){
-    return runs(m.visibleDocs(), HtmlDocRenderer::inParagraph).stream()
-      .dropWhile(r -> r.getFirst().kind()==DocKind.Example).findFirst().filter(r -> inParagraph(r.getFirst())).map(p -> renderParagraph(p, m.scope()));
+    return paragraphs(m.visibleDocs()).stream().findFirst().map(p -> renderParagraph(p, m.scope()));
   }
-  String href(DocLink link){
+  Optional<String> href(DocLink link){
     return switch (link){
-      case DocLink.Ambiguous a -> "#"+pages.computeIfAbsent(a, _ -> "disambig-"+id(a.title())+"-"+pages.size());
-      case DocLink.Resolved r -> candidateHref(r.hit());
-      case DocLink.NoLink _ -> throw Bug.unreachable();
+      case DocLink.Ambiguous a -> Optional.of("#"+pages.computeIfAbsent(a, _ -> "disambig-"+id(a.title())+"-"+pages.size()));
+      case DocLink.Resolved r -> Optional.of(candidateHref(r.hit()));
+      case DocLink.NoLink _ -> Optional.empty();
     };
   }
   String candidateHref(Candidate c){
-    return c.sig().map(s -> methodHref(c.owner(), s)).orElseGet(() -> typeHref(c.owner()));
+    return switch (c){
+      case Candidate.Type t -> typeHref(t.owner());
+      case Candidate.Method m -> methodHref(m.owner(), m.sig());
+    };
   }
   <V> void renderVariants(StringBuilder sb, String title, List<V> variants, Function<V,String> show){
     if (variants.size() <= 1){ return; }
+    var shown= variants.stream().map(show).distinct().toList();
+    if (shown.size() <= 1){ return; }
     sb.append("<details class=\"variants\"><summary>")
-      .append(h(title)).append(": ").append(variants.size()).append("</summary>\n");
-    variants.forEach(v -> sb.append("<pre class=\"variant\">").append(h(show.apply(v))).append("</pre>\n"));
+      .append(h(title)).append(": ").append(shown.size()).append("</summary>\n");
+    shown.forEach(v -> sb.append("<pre class=\"variant\">").append(h(v)).append("</pre>\n"));
     sb.append("</details>\n");
   }
   String typeTitle(TypeDoc t){
     var l= t.main();
-    if (l.infName()){ return "anonymous literal at "+l.pos(); }
+    if (l.infName()){ return resolver.anonTitle(l); }
     return toStr.typeName(l.name())+Join.of(l.bs().stream().map(B::compactToString), "[", ",", "]", "");
-  }
-  String shortTitle(TypeDoc t){
-    return t.main().infName() ? resolver.anonTitle(t.main()) : typeTitle(t);
   }
   String typeLink(T.C c){
     return "<a href=\""+h(typeHref(c.name()))+"\">"+h(toStr.typeName(c))+"</a>";
