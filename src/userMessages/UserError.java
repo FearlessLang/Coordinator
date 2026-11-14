@@ -44,17 +44,11 @@ import utils.Join;
 /// really used, the path rendering helpers, and how the text reaches a human.
 @SuppressWarnings("serial")
 public final class UserError extends RuntimeException{
-  private String recoveryLabel;
-  private Runnable recovery;
   private boolean bare;
   public UserError(String msg){ super(msg); }
   public UserError(String msg, Throwable cause){ super(msg, cause); }
-  public UserError withRecovery(String label, Runnable action){
-    recoveryLabel = label; recovery = action;
-    return this;
-  }
   public UserError bare(){ bare = true; return this; }
-  public UserError followedBy(String more){ var res= new UserError(getMessage()+more, this).withRecovery(recoveryLabel, recovery); res.bare = bare; return res; }
+  public UserError followedBy(String more){ var res= new UserError(getMessage()+more, this); res.bare = bare; return res; }
   //The project root this run actually used, so that a message always shows the folder
   //that was really involved. Tests set it to whatever fake root they use; a real run
   //keeps the default, since Fearless is launched from inside the project folder.
@@ -138,8 +132,7 @@ Fearless crashed: either this project's compilation cache was corrupted, or this
     catch (InvocationTargetException e){ displayStderr(e.getCause()); }//Rare, could be a memory overflow or other JVM stuff?
   }
   private void displayNow(){
-    var options= recovery==null ? null : new Object[]{"OK", recoveryLabel};
-    var pane= new JOptionPane(displayText(), JOptionPane.ERROR_MESSAGE, JOptionPane.DEFAULT_OPTION, null, options, null);
+    var pane= new JOptionPane(displayText(), JOptionPane.ERROR_MESSAGE, JOptionPane.DEFAULT_OPTION);
     var dialog= new JDialog(owner, "Fearless", Dialog.ModalityType.APPLICATION_MODAL);
     dialog.setUndecorated(bare);
     dialog.setContentPane(pane);
@@ -147,7 +140,6 @@ Fearless crashed: either this project's compilation cache was corrupted, or this
     dialog.pack();
     dialog.setLocationRelativeTo(owner);
     dialog.setVisible(true);
-    if (recovery!=null && recoveryLabel.equals(pane.getValue())){ recovery.run(); }
   }
   public void displayStderr(Throwable displayFailure){
     System.err.print(displayText()+"\n\n");
