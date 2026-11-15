@@ -56,18 +56,16 @@ final class HtmlDocRenderer{
     assert shown.size() == visible.size();
   }
   void place(TypeDoc t){
-    var named= new ArrayList<String>();
+    if (t.directives().isEmpty()){ add(groups, t.main().name().isPublic() ? "public" : "private", t); }
     for (var d : t.directives()){
       switch (resolver.directive(d, t.scope())){
-        case Directive.Named n -> named.add(n.group());
-        case Directive.Under u -> { parents.computeIfAbsent(t, _ -> new ArrayList<>()).add(u.parent()); children.computeIfAbsent(u.parent(), _ -> new ArrayList<>()).add(t); }
+        case Directive.Named n -> add(groups, n.group(), t);
+        case Directive.Under u -> { add(parents, t, u.parent()); add(children, u.parent(), t); }
         case Directive.Broken _ -> throw Bug.unreachable();
       }
     }
-    var standard= named.isEmpty() && !parents.containsKey(t);
-    if (standard){ named.add(t.main().name().isPublic() ? "public" : "private"); }
-    named.forEach(g -> groups.computeIfAbsent(g, _ -> new ArrayList<>()).add(t));
   }
+  static <K> void add(Map<K,ArrayList<TypeDoc>> m, K k, TypeDoc t){ m.computeIfAbsent(k, _ -> new ArrayList<>()).add(t); }
   void visit(TypeDoc t, LinkedHashSet<TypeDoc> res){
     if (res.add(t)){ related(children, t).forEach(c -> visit(c, res)); }
   }

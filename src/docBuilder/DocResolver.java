@@ -83,11 +83,10 @@ record DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other, Fun
       .toList();
   }
   Directive directive(DocOcc d, Scope scope){
-    var exact= d.textColumn() == d.column()+3;
     var named= namedGroup.matcher(d.text());
-    if (exact && named.matches()){ return new Directive.Named(d, named.group(1)); }
+    if (named.matches()){ return new Directive.Named(d, named.group(1)); }
     var under= underType.matcher(d.text());
-    if (!exact || !under.matches()){ return new Directive.Broken(d, notADirective); }
+    if (!under.matches()){ return new Directive.Broken(d, notADirective); }
     var ref= DocRefScanner.wholeRef(under.group(1));
     if (!(ref.orElse(null) instanceof DocRef.TypeName t)){ return new Directive.Broken(d, notAType.formatted(under.group(1), ref.orElse(null) instanceof DocRef.MethodName ? "names a method, not a type" : "does not name a type")); }
     if (typeParameter(t, scope)){ return new Directive.Broken(d, typeParameterParent.formatted(t.simpleName())); }

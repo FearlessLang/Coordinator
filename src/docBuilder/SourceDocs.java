@@ -88,7 +88,7 @@ final class SourceDocs{
     return visitedLines.contains(l);
   }
   static List<DocOcc> dedent(List<DocOcc> ds){
-    return ds.stream().map(d -> d.drop(indent(ds, d))).toList();
+    return ds.stream().map(d -> d.kind()==DocKind.Group ? d : d.drop(indent(ds, d))).toList();
   }
   static int indent(List<DocOcc> ds, DocOcc d){
     return ds.stream()
