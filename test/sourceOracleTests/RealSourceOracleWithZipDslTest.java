@@ -1717,6 +1717,41 @@ ZBaz: base.TxtFile{[###]
 //@Group "beer"
 ZBeerQux: base.TxtFile{[###]""", generated);
   }
+  @Test void anAutoloadedTypeInAFolderNamedPublicOrPrivateHasNoGroupLine(@TempDir Path tmp){
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_assets/_x/public/k.txt
+iii
+hello
+jjj
+_assets/private/key.txt
+iii
+world
+jjj
+_assets/public/small/dot.txt
+iii
+dot
+jjj
+_assets/z.zip/private/deep.txt
+iii
+zip
+""");
+    var base= new RealSourceOracleWithZip(root);
+    var generated= SourceOracleWithAutoload.of(base, "_assets", TName::s).newRefs().getFirst().loadString();
+    utils.Err.strCmp("""
+_XPublicK: base.TxtFile{[###]
+  .originalFileName: base.Str -> "k.txt";
+}
+PrivateKey: base.TxtFile{[###]
+  .originalFileName: base.Str -> "key.txt";
+}
+//@Group "small"
+PublicSmallDot: base.TxtFile{[###]
+  .originalFileName: base.Str -> "dot.txt";
+}
+ZPrivateDeep: base.TxtFile{[###]""", generated);
+  }
   @Test void okBaseAssetAutoload(@TempDir Path tmp){
     var root= tmp.resolve("root");
     UserError.root = root;
