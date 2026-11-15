@@ -20,91 +20,122 @@ final class DocGroupsTest{
   static{ utils.Err.setUp(AssertionFailedError.class, Assertions::assertEquals, Assertions::assertTrue); }
   private static final String a= "A:{ .m: A -> this; }\n";
   static String error(Path tmp, String source){ return assertThrows(UserError.class, () -> docs(tmp, source)).getMessage(); }
-  @Test void withNoGroupLinesPublicTypesAreInGroupPublicAndPrivateTypesInGroupPrivate(@TempDir Path tmp){
+  @Test void withNoGroupLinesEveryPublicNameIsListedRightUnderThePackageAndAPrivateTypeIsLeftOut(@TempDir Path tmp){
     var docs= docs(tmp, a+"""
 _Hidden:{ .h: A -> A; }
 """);
     utils.Err.strCmp("""
 package p
-
-group public
   A
-group private
-  _Hidden
+
+A
+\t.m:A
+""", docs.text());
+    assertFalse(docs.html().contains("_Hidden"));
+  }
+  @Test void aPrivateTypeIsShownWhenAMethodOfAShownTypeHasItInItsSignature(@TempDir Path tmp){
+    var docs= docs(tmp, a+"""
+B:{ .b: _C -> _C; }
+_C:{ .c(d: _D): A -> A; }
+_D:{ .d: A -> A; }
+_E:{ .e: _F -> _F; }
+_F:{ .f: A -> A; }
+""");
+    utils.Err.strCmp("""
+package p
+  A
+  B
+  _C
+  _D
 
 A
 \t.m:A
 
-_Hidden
-\t.h:A
+B
+\t.b:_C
 
+_C
+\t.c(d:_D):A
+
+_D
+\t.d:A
 """, docs.text());
+    utils.Err.strCmp("""
+[###]<span class="sig">.b:<a href="#type-p_2e__5f_C-0">_C</a></span>[###]""", docs.html());
   }
-  @Test void aNamedGroupComesBeforePublicAndPrivateAndAChildFollowsItsParent(@TempDir Path tmp){
+  @Test void aShownPrivateTypeTakesGroupLinesAndHasTypesUnderIt(@TempDir Path tmp){
+    var docs= docs(tmp, a+"""
+B:{ .b: _C -> _C; }
+//@Group `B`
+_C:{ .c: A -> A; }
+//@Group `_C`
+D:{ .d: A -> A; }
+""");
+    utils.Err.strCmp("""
+package p
+  A
+  B
+    _C
+      D
+
+[###]""", docs.text());
+  }
+  @Test void aGroupListsItsNamesAndANameUnderANameFollowsThatName(@TempDir Path tmp){
     var docs= docs(tmp, a+"""
 //@Group "Collections"
 ///Many things.
 Lst:{ .size: A -> A; }
 //@Group `Lst`
-_Node:{ .next: A -> A; }
+Node:{ .next: A -> A; }
 """);
     utils.Err.strCmp("""
 package p
-
-group Collections
-  Lst
-group public
+  "Collections"
+    Lst: Many things.
+      Node
   A
-
-Lst
-  see also: _Node
-  Many things.
-\t.size:A
-
-_Node
-  under: Lst
-\t.next:A
 
 A
 \t.m:A
 
+Lst
+  Many things.
+\t.size:A
+
+Node
+\t.next:A
 """, docs.text());
   }
-  @Test void aChildOfTwoParentsIsRenderedOnceAndListedByBoth(@TempDir Path tmp){
+  @Test void aNameUnderTwoNamesIsListedUnderBoth(@TempDir Path tmp){
     var docs= docs(tmp, a+"""
 Foo:{ .f: A -> A; }
 Bar:{ .b: A -> A; }
 //@Group `Foo`
 //@Group `Bar`
-_Shared:{ .s: A -> A; }
+Shared:{ .s: A -> A; }
 """);
     utils.Err.strCmp("""
 package p
-
-group public
   A
   Bar
+    Shared
   Foo
+    Shared
 
 A
 \t.m:A
 
 Bar
-  see also: _Shared
 \t.b:A
 
-_Shared
-  under: Foo
-  under: Bar
-\t.s:A
-
 Foo
-  see also: _Shared
 \t.f:A
 
+Shared
+\t.s:A
 """, docs.text());
   }
-  @Test void aTypeInAGroupAndUnderATypeIsListedInTheGroupAndUnderTheType(@TempDir Path tmp){
+  @Test void aNameInAGroupAndUnderANameIsListedInTheGroupAndUnderTheName(@TempDir Path tmp){
     var docs= docs(tmp, a+"""
 //@Group "Gui"
 //@Group `A`
@@ -112,40 +143,150 @@ Button:{ .b: A -> A; }
 """);
     utils.Err.strCmp("""
 package p
-
-group Gui
-  Button
-group public
+  "Gui"
+    Button
   A
-
-Button
-  under: A
-\t.b:A
+    Button
 
 A
-  see also: Button
 \t.m:A
 
+Button
+\t.b:A
 """, docs.text());
   }
-  @Test void theTableOfContentsShowsTheGroupsAndHidesTheChildren(@TempDir Path tmp){
+  @Test void aNameInTwoGroupsIsListedInBoth(@TempDir Path tmp){
+    var docs= docs(tmp, a+"""
+//@Group "Gui"
+//@Group "Tools"
+Button:{ .b: A -> A; }
+""");
+    utils.Err.strCmp("package p\n  \"Gui\"\n    Button\n  \"Tools\"\n    Button\n  A\n[###]", docs.text());
+  }
+  @Test void theTypesOfOneNameAreOneEntryOfTheGroupOfAnyOfThem(@TempDir Path tmp){
+    var docs= docs(tmp, a+"""
+Box:{ .b: A -> A; }
+//@Group "Tools"
+Box[X:imm]:{ .c: A -> A; }
+""");
+    utils.Err.strCmp("""
+package p
+  "Tools"
+    Box
+  A
+
+A
+\t.m:A
+
+Box
+\t.b:A
+
+Box[X:imm]
+\t.c:A
+""", docs.text());
+  }
+  @Test void aTypeNameWithOrWithoutItsTypeParametersPutsATypeUnderThatName(@TempDir Path tmp){
+    var docs= docs(tmp, a+"""
+Box:{ .b: A -> A; }
+Box[X:imm]:{ .b: A -> A; }
+//@Group `Box`
+B:{ .b: A -> A; }
+//@Group `Box[_]`
+C:{ .c: A -> A; }
+""");
+    utils.Err.strCmp("package p\n  A\n  Box\n    B\n    C\n[###]", docs.text());
+  }
+  @Test void aTypeCanNotBeUnderATypeWithItsOwnName(@TempDir Path tmp){
+    utils.Err.strCmp("""
+[###]003| //@Group `Box`
+   | ^^^^^^^^^^^^^^
+[###]These //@Group lines put "Box" under itself:
+  "Box" is under "Box"
+A type cannot be under itself, not even through other types.
+The documentation shows together all the types with the same name, whatever the number of their generic type parameters.""", error(tmp, a+"""
+Box:{ .b: A -> A; }
+//@Group `Box`
+Box[X:imm]:{ .b: A -> A; }
+"""));
+  }
+  @Test void theTreeHasAFolderForEachGroupAndForEachNameWithNamesUnderIt(@TempDir Path tmp){
     var html= docs(tmp, a+"""
-//@Group `A`
-_Child:{ .c: A -> A; }
+//@Group "Tools"
+B:{ .b: A -> A; }
+//@Group `B`
+C:{ .c: A -> A; }
 """).html();
     utils.Err.strCmp("""
-[###]<ul id="toclist">
-<li class="group">public</li>
+[###]<ul id="tree">
+<li class="folder"><a href="#group-Tools">Tools</a><ul>
+<li class="folder"><a href="#type-p_2e_B-0">B</a><ul>
+<li><a href="#type-p_2e_C-0">C</a></li>
+</ul></li>
+</ul></li>
 <li><a href="#type-p_2e_A-0">A</a></li>
+</ul>
+<ul id="found" hidden>
+<li><a href="#type-p_2e_A-0">A</a></li>
+<li><a href="#type-p_2e_B-0">B</a></li>
+<li><a href="#type-p_2e_C-0">C</a></li>
 </ul>[###]""", html);
+  }
+  @Test void theTextBoxHasAListOfTheMethodsEachUnderTheTypeWhoseViewShowsTheMethod(@TempDir Path tmp){
+    var html= docs(tmp, a+"""
+B:{ .b: A -> A; .b(x: A): A -> A; }
+C:B{ .b -> A; .c: A -> A; }
+""").html();
     utils.Err.strCmp("""
-[###]<h2>A</h2>
-<p class="doc missing">No documentation yet.</p>
-<p class="extends also"><b>See also:</b> <a href="#type-p_2e__5f_Child-0">_Child</a></p>
-[###]<h2>_Child</h2>
-<p class="doc missing">No documentation yet.</p>
-<p class="extends under"><b>Under:</b> <a href="#type-p_2e_A-0">A</a></p>
+[###]<ul id="methods" hidden>
+<li><a href="#method-p_2e_B-0-_2e_b-0">B<b>.b()</b></a></li>
+<li><a href="#method-p_2e_C-0-_2e_b-0">C<b>.b()</b></a></li>
+<li><a href="#method-p_2e_B-0-_2e_b-1">B<b>.b(_)</b></a></li>
+<li><a href="#method-p_2e_C-0-_2e_c-0">C<b>.c()</b></a></li>
+<li><a href="#method-p_2e_A-0-_2e_m-0">A<b>.m()</b></a></li>
+</ul>
+</nav>[###]""", html);
+  }
+  @Test void theViewOfANameSaysWhereTheNameIsAndListsTheNamesUnderIt(@TempDir Path tmp){
+    var html= docs(tmp, a+"""
+//@Group "Tools"
+B:{ .b: A -> A; }
+//@Group `B`
+///Doc of C.
+C:{ .c: A -> A; }
+""").html();
+    utils.Err.strCmp("""
+[###]<section class="view" id="type-p_2e_B-0">
+<p class="where">In: <a href="#group-Tools">Tools</a></p>
+<h2>B</h2>
+<h3>Methods</h3>
+[###]<h3>Under B</h3>
+<p class="entry"><a href="#type-p_2e_C-0">C</a><span class="brief">Doc of C.</span></p>
+</section>
+<section class="view" id="type-p_2e_C-0">
+<p class="where">In: <a href="#type-p_2e_B-0">B</a></p>
+<h2>C</h2>
 [###]""", html);
+  }
+  @Test void theFirstViewListsTheGroupsAndTheViewOfAGroupListsItsNamesWithTheFirstParagraphOfTheirDocumentation(@TempDir Path tmp){
+    var docs= docs(tmp, a+"""
+//@Group "Tools"
+///First
+///line.
+///
+///Second paragraph.
+B:{ .b: A -> A; }
+""");
+    utils.Err.strCmp("""
+[###]<section class="view" id="top">
+<p class="entry"><a href="#group-Tools">Tools</a><span class="brief">B</span></p>
+<p class="entry"><a href="#type-p_2e_A-0">A</a></p>
+</section>
+<section class="view" id="group-Tools">
+<h2 class="plain">Tools</h2>
+<p class="entry"><a href="#type-p_2e_B-0">B</a><span class="brief">First line.</span></p>
+</section>
+[###]""", docs.html());
+    utils.Err.strCmp("package p\n  \"Tools\"\n    B: First line.\n  A\n[###]", docs.text());
   }
   @Test void aGroupLineIsNotShownAsDocumentation(@TempDir Path tmp){
     var docs= docs(tmp, a+"""
@@ -154,69 +295,87 @@ _Child:{ .c: A -> A; }
 ///Second.
 B:{ .b: A -> A; }
 """);
-    utils.Err.strCmp("[###]\nB\n  First.\n  Second.\n\t.b:A\n[###]", docs.text());
+    utils.Err.strCmp("[###]\nB\n  First.\n  Second.\n\t.b:A", docs.text());
     assertFalse(docs.html().contains("@Group"));
   }
-  @Test void anAnonymousLiteralWithOnlyAGroupLineIsShownUnderItsParent(@TempDir Path tmp){
+  @Test void anEmptyDocLineRightAfterTheGroupLinesIsTrimmed(@TempDir Path tmp){
     var docs= docs(tmp, a+"""
-Maker:{
-  .make: A ->
-    //@Group `Maker`
-    A{ .m -> A };
-  }
+//@Group "Tools"
+///
+///Doc.
+B:{ .b: A -> A; }
 """);
-    utils.Err.strCmp("[###]Maker\n  see also: Anon@_rank_app:5\n[###]\nAnon@_rank_app:5 : A\n  under: Maker\n[###]", docs.text());
+    utils.Err.strCmp("[###]\nB\n  Doc.\n\t.b:A", docs.text());
   }
-  @Test void aPublicTypeCanNotBeInGroupPrivate(@TempDir Path tmp){
+  @Test void groupsAreSortedIgnoringCase(@TempDir Path tmp){
+    var docs= docs(tmp, a+"""
+//@Group "UI"
+B:{ .b: A -> A; }
+//@Group "algebra"
+C:{ .c: A -> A; }
+""");
+    utils.Err.strCmp("package p\n  \"algebra\"\n    C\n  \"UI\"\n    B\n  A\n[###]", docs.text());
+  }
+  @Test void noGroupNameIsSpecial(@TempDir Path tmp){
+    var docs= docs(tmp, a+"""
+//@Group "private"
+B:{ .b: A -> A; }
+//@Group "Public"
+C:{ .c: A -> A; }
+""");
+    utils.Err.strCmp("package p\n  \"private\"\n    B\n  \"Public\"\n    C\n  A\n[###]", docs.text());
+  }
+  @Test void aGroupLineAfterTheDeclarationOnTheSameLineDocumentsThatDeclaration(@TempDir Path tmp){
+    var docs= docs(tmp, a+"""
+B:{ .b: A -> A; } //@Group "Tools"
+""");
+    utils.Err.strCmp("package p\n  \"Tools\"\n    B\n  A\n[###]", docs.text());
+  }
+  @Test void aGroupLineOnAPrivateTypeThatTheDocumentationDoesNotShowIsAnError(@TempDir Path tmp){
     utils.Err.strCmp("""
 Broken group in a doc comment.
 
 In file: fear:/_p/_rank_app.fear
 
-002| //@Group "private"
-   | ^^^^^^^^^^^^^^^^^^
-[###]"B" is public, so it cannot be in the group "private".
-The group "private" holds only private types: the anonymous literals and the types whose name starts with _.""", error(tmp, a+"""
-//@Group "private"
-B:{ .b: A -> A; }
-"""));
-  }
-  @Test void aPrivateTypeCanNotBeInGroupPublic(@TempDir Path tmp){
-    utils.Err.strCmp("""
-[###]"_B" is private, so it cannot be in the group "public".
-The group "public" holds only public types: the types whose written name does not start with _.""", error(tmp, a+"""
-//@Group "public"
+002| //@Group "Tools"
+   | ^^^^^^^^^^^^^^^^
+[###]This //@Group line documents the private type "_B".
+The documentation shows the public types: the named types whose name does not start with _.
+The documentation shows a private type only when a method of a type that the
+documentation shows has that private type in its signature.
+A //@Group line says where the documentation shows a type, so delete this line.""", error(tmp, a+"""
+//@Group "Tools"
 _B:{ .b: A -> A; }
 """));
   }
-  @Test void aPublicTypeUnderOnlyPrivateTypesIsAnError(@TempDir Path tmp){
+  @Test void aGroupLineOnAnAnonymousLiteralIsAnError(@TempDir Path tmp){
+    utils.Err.strCmp("""
+[###]004|     //@Group `Maker`
+   |     ^^^^^^^^^^^^^^^^
+[###]This //@Group line documents an anonymous literal.
+The documentation shows the public types: the named types whose name does not start with _.
+The documentation shows a private type only when a method of a type that the
+documentation shows has that private type in its signature.
+A //@Group line says where the documentation shows a type, so delete this line.""", error(tmp, a+"""
+Maker:{
+  .make: A ->
+    //@Group `Maker`
+    A{ .m -> A };
+  }
+"""));
+  }
+  @Test void aTypeCanNotBeUnderAPrivateTypeThatTheDocumentationDoesNotShow(@TempDir Path tmp){
     utils.Err.strCmp("""
 [###]003| //@Group `_P`
    | ^^^^^^^^^^^^^
-[###]"B" is public, but every type it is under is private: "_P".
-A public type must be in a group, or under at least one public type.""", error(tmp, a+"""
+[###]The documentation does not show the private type "_P".
+The documentation shows a private type only when a method of a type that the
+documentation shows has that private type in its signature.
+A //@Group line can only put a type under a type that the documentation shows.""", error(tmp, a+"""
 _P:{ .p: A -> A; }
 //@Group `_P`
 B:{ .b: A -> A; }
 """));
-  }
-  @Test void aPublicTypeUnderAPrivateTypeAndAPublicTypeIsListedUnderBoth(@TempDir Path tmp){
-    var docs= docs(tmp, a+"""
-_P:{ .p: A -> A; }
-//@Group `_P`
-//@Group `A`
-B:{ .b: A -> A; }
-""");
-    utils.Err.strCmp("[###]B\n  under: _P\n  under: A\n[###]", docs.text());
-  }
-  @Test void aPublicTypeUnderAPrivateTypeAndInAGroupIsListedInTheGroup(@TempDir Path tmp){
-    var docs= docs(tmp, a+"""
-_P:{ .p: A -> A; }
-//@Group `_P`
-//@Group "Tools"
-B:{ .b: A -> A; }
-""");
-    utils.Err.strCmp("[###]group Tools\n  B\n[###]", docs.text());
   }
   @Test void typesUnderEachOtherAreACycle(@TempDir Path tmp){
     utils.Err.strCmp("""
@@ -229,7 +388,7 @@ In file: fear:/_p/_rank_app.fear
 [###]These //@Group lines put "B" under itself:
   "B" is under "C"
   "C" is under "B"
-A type cannot be under itself, not even through other types.""", error(tmp, a+"""
+A type cannot be under itself, not even through other types.[###]""", error(tmp, a+"""
 //@Group `C`
 B:{ .b: A -> A; }
 //@Group `B`
@@ -254,25 +413,6 @@ User:{ .m: User -> this; }
     utils.Err.strCmp("""
 [###]"q.Thing" is a type of package q.
 A //@Group line can only put a type under a type of the same package, p.""", ex.getMessage());
-  }
-  @Test void aTypeNameMatchingSeveralTypesNeedsItsTypeParameters(@TempDir Path tmp){
-    utils.Err.strCmp("""
-[###]Several types match "Box": "Box[]" and "Box[_]".
-Write one of these to say which one.""", error(tmp, a+"""
-Box:{ .b: A -> A; }
-Box[X:imm]:{ .b: A -> A; }
-//@Group `Box`
-B:{ .b: A -> A; }
-"""));
-  }
-  @Test void aTypeParameterCountSelectsOneOfSeveralTypes(@TempDir Path tmp){
-    var docs= docs(tmp, a+"""
-Box:{ .b: A -> A; }
-Box[X:imm]:{ .b: A -> A; }
-//@Group `Box[_]`
-B:{ .b: A -> A; }
-""");
-    utils.Err.strCmp("[###]B\n  under: Box[X:imm]\n[###]", docs.text());
   }
   @Test void aGroupLineNamingNoTypeIsAnError(@TempDir Path tmp){
     utils.Err.strCmp("""
@@ -299,17 +439,6 @@ In a //@Group `Type` line, the reference must name a type of this package.""", e
 B:{ .b: A -> A; }
 """));
   }
-  @Test void anAnonymousLiteralCanNotBeInGroupPublic(@TempDir Path tmp){
-    utils.Err.strCmp("""
-[###]"Anon@_rank_app:5" is private, so it cannot be in the group "public".
-The group "public" holds only public types: the types whose written name does not start with _.""", error(tmp, a+"""
-Maker:{
-  .make: A ->
-    //@Group "public"
-    A{ .m -> A };
-  }
-"""));
-  }
   @Test void aGroupLineAboveAnEmptyLineIsAttachedToNothing(@TempDir Path tmp){
     utils.Err.strCmp("""
 [###]002| //@Group "Tools"
@@ -322,13 +451,6 @@ on it to keep an empty line in the documentation.""", error(tmp, a+"""
 
 B:{ .b: A -> A; }
 """));
-  }
-  @Test void theUnderLineOfATypeIsMarkedForTheListToSelectTheParentOfTheType(@TempDir Path tmp){
-    var html= docs(tmp, a+"""
-//@Group `A`
-B:{ .b: A -> A; }
-""").html();
-    utils.Err.strCmp("[###]<p class=\"extends under\"><b>Under:</b> <a href=\"#type-p_2e_A-0\">A</a></p>[###]", html);
   }
   @Test void aMalformedGroupLineIsAnError(@TempDir Path tmp){
     utils.Err.strCmp("""
@@ -376,15 +498,6 @@ B:{ .b: A -> A; }
 //@Group " Tools"
 B:{ .b: A -> A; }
 """));
-  }
-  @Test void groupsAreSortedIgnoringCase(@TempDir Path tmp){
-    var docs= docs(tmp, a+"""
-//@Group "UI"
-B:{ .b: A -> A; }
-//@Group "algebra"
-C:{ .c: A -> A; }
-""");
-    utils.Err.strCmp("package p\n\ngroup algebra\n  C\ngroup UI\n  B\ngroup public\n  A\n[###]", docs.text());
   }
   @Test void twoGroupsDifferingOnlyByCaseAreAnError(@TempDir Path tmp){
     utils.Err.strCmp("""
@@ -456,12 +569,6 @@ B:{ .b: A -> A; }
 B:{ .b: A -> A; }
 """));
   }
-  @Test void aGroupLineAfterTheDeclarationOnTheSameLineDocumentsThatDeclaration(@TempDir Path tmp){
-    var docs= docs(tmp, a+"""
-B:{ .b: A -> A; } //@Group "Tools"
-""");
-    utils.Err.strCmp("package p\n\ngroup Tools\n  B\ngroup public\n  A\n[###]", docs.text());
-  }
   @Test void aTypeCanNotBeUnderATypeParameter(@TempDir Path tmp){
     utils.Err.strCmp("""
 [###]"X" is a generic type parameter.
@@ -469,31 +576,6 @@ In a //@Group `Type` line, the reference must name a type of this package.""", e
 //@Group `X`
 B[X:imm]:{ .b: A -> A; }
 """));
-  }
-  @Test void aGroupDifferingFromGroupPublicOnlyByCaseIsAnError(@TempDir Path tmp){
-    utils.Err.strCmp("""
-[###]002| //@Group "Public"
-   | ^^^^^^^^^^^^^^^^^
-[###]The group "Public" differs from the group "public" only by case.
-Write the name of a group the same way every time.""", error(tmp, a+"""
-//@Group "Public"
-B:{ .b: A -> A; }
-"""));
-  }
-  @Test void aPublicTypeCanNotBeInGroupPrivateWrittenWithACapital(@TempDir Path tmp){
-    utils.Err.strCmp("Broken group in a doc comment.[###]002| //@Group \"Private\"[###]", error(tmp, a+"""
-//@Group "Private"
-B:{ .b: A -> A; }
-"""));
-  }
-  @Test void anEmptyDocLineRightAfterTheGroupLinesIsTrimmed(@TempDir Path tmp){
-    var docs= docs(tmp, a+"""
-//@Group "Tools"
-///
-///Doc.
-B:{ .b: A -> A; }
-""");
-    utils.Err.strCmp("[###]\nB\n  Doc.\n\t.b:A\n[###]", docs.text());
   }
   @Test void aGroupLineAfterTwoDeclarationsOnOneLineIsMarkedFromItsSlashes(@TempDir Path tmp){
     utils.Err.strCmp("""

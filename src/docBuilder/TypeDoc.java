@@ -35,7 +35,6 @@ final class TypeDoc extends DeclarationDoc{
   }
   Literal main(){ return variants.getFirst(); }
   Scope scope(){ return new Scope(main(), Optional.empty(), outer); }
-  boolean visible(){ return !main().infName() || hasDocs() || !directives().isEmpty() || methods.stream().anyMatch(MethodDoc::hasDocs); }
   void addVariant(Literal l){
     assert variants.stream().noneMatch(v -> v.name().equals(l.name())) :
       "Repeated literal source with same name: "+l.pos()+" "+l.name();
@@ -65,8 +64,6 @@ final class MethodDoc extends DeclarationDoc{
   }
   M main(){ return variants.getFirst(); }
   Scope scope(){ return new Scope(owner.main(), Optional.of(main()), owner.outer); }
-  boolean declared(){ return key instanceof MethodKey.Declared; }
-  boolean visible(){ return declared() || !owner.main().infName(); }
   void add(M m){ variants.add(m); }
 }
 record MethodRef(T.C provider, M method){}

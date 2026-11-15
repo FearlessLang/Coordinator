@@ -28,6 +28,6 @@ sealed interface DocLink{
 sealed interface Directive{
   DocOcc at();
   record Named(DocOcc at, String group) implements Directive{}
-  record Under(DocOcc at, TypeDoc parent) implements Directive{}
+  record Under(DocOcc at, String parent) implements Directive{}
   record Broken(DocOcc at, String problem) implements Directive{}
 }

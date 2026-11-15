@@ -19,7 +19,7 @@ public record AutoloadHandler(Predicate<String> matches, TName baseType){
     var str= names.apply(LiteralDeclarations.baseStr);
     var all= components(path);
     var folders= all.subList(all.indexOf(pkgName)+1, all.size()-1);
-    var standard= folders.isEmpty() || List.of("public", "private").contains(folders.getLast());
+    var standard= folders.isEmpty() || type.startsWith("_");
     var group= standard ? "" : "//@Group \""+folders.getLast()+"\"\n";
     return group+type+": "+names.apply(baseType)+"{\n"
       +"  .path: "+str+" -> \""+path+"\";\n"

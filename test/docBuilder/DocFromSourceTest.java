@@ -66,8 +66,6 @@ Cases:{
 """);
     utils.Err.strCmp("""
 package p
-
-group public
   A
   Cases
   Named
@@ -101,10 +99,8 @@ Maker:{
 """);
     utils.Err.strCmp("""
 package p
-
-group public
   A
-  Inner
+  Inner: Doc of Inner.
   Maker
   Mk
   Use
@@ -200,7 +196,7 @@ Box[X:imm]:{ .get: X; }
 """);
     utils.Err.strCmp("[###]Box[X:imm]\n  Holds one `X`.\n[###]", docs.text());
   }
-  @Test void aDocBlockRightAboveAnAnonymousLiteralDocumentsThatLiteral(@TempDir Path tmp){
+  @Test void aDocBlockRightAboveAnAnonymousLiteralIsAcceptedAndNotShown(@TempDir Path tmp){
     var docs= docs(tmp, a+"""
 Maker:{
   .make: A ->
@@ -208,7 +204,7 @@ Maker:{
     A{ .m -> A };
   }
 """);
-    utils.Err.strCmp("[###]\nAnon@_rank_app:5 : A\n  Doc of the anonymous A\n[###]", docs.text());
+    utils.Err.strCmp("package p\n  A\n  Maker\n\nA\n\t.m:A\n\nMaker\n\t.make:A\n\n", docs.text());
   }
   @Test void aTrailingDocAfterAMethodReturningATypedAnonymousLiteralDocumentsTheMethod(@TempDir Path tmp){
     var docs= docs(tmp, a+"""
@@ -218,14 +214,14 @@ Maker:{
 """);
     utils.Err.strCmp("[###]Maker\n\t.make:A\n    makes an A[###]", docs.text());
   }
-  @Test void aTrailingDocAfterAnUntypedAnonymousLiteralOnItsOwnLineDocumentsThatLiteral(@TempDir Path tmp){
+  @Test void aTrailingDocAfterAnUntypedAnonymousLiteralOnItsOwnLineIsAcceptedAndNotShown(@TempDir Path tmp){
     var docs= docs(tmp, a+"""
 Maker:{
   .make: A ->
     { .m -> A }; /// makes an A
   }
 """);
-    utils.Err.strCmp("[###]\nAnon@_rank_app:4 : A\n  makes an A\n[###]", docs.text());
+    utils.Err.strCmp("package p\n  A\n  Maker\n\nA\n\t.m:A\n\nMaker\n\t.make:A\n\n", docs.text());
   }
   @Test void aCommentLineOfSlashesOrDashesIsAPlainComment(@TempDir Path tmp){
     var docs= docs(tmp, a+"""
@@ -268,7 +264,7 @@ Maker:{
     };
   }
 """);
-    utils.Err.strCmp("[###]\t.m:A\n    Gives back `seed`.[###]", docs.text());
+    utils.Err.strCmp("package p\n  A\n  Maker\n\nA\n\t.m:A\n\nMaker\n\t.make(seed:A):A\n\n", docs.text());
   }
   @Test void aParameterOfAnAbstractMethodIsANameInScope(@TempDir Path tmp){
     var docs= docs(tmp, a+"""
@@ -307,7 +303,7 @@ Box[X:imm]:{
     };
   }
 """);
-    utils.Err.strCmp("[###]\t.m:A\n    Ignores the `X`.[###]", docs.text());
+    utils.Err.strCmp("package p\n  A\n  Box\n\nA\n\t.m:A\n\nBox[X:imm]\n\t.wrap(x:X):A\n\n", docs.text());
   }
   @Test void aMethodOfAParameterWhoseTypeIsATypeParameterIsToldThatATypeParameterHasNoMethods(@TempDir Path tmp){
     var ex= assertThrows(UserError.class, () -> docs(tmp, a+"""
@@ -328,7 +324,7 @@ Maker:{
     };
   }
 """);
-    utils.Err.strCmp("[###]\t.n:A\n    Same as `self.m`.[###]", docs.text());
+    utils.Err.strCmp("package p\n  A\n  Maker\n\nA\n\t.m:A\n\t.n:A\n\nMaker\n\t.make:A\n\n", docs.text());
   }
   @Test void aFenceAroundAnExampleIsACodeBlockNeverClosed(@TempDir Path tmp){
     var ex= assertThrows(UserError.class, () -> docs(tmp, a+"""
@@ -357,25 +353,6 @@ B:{
 """);
     utils.Err.strCmp("[###]B\n\t.f(a1:A,a2:A):A\n\t.f(a1:A,a2:A,a3:A,a4:A,a5:A,a6:A,a7:A,a8:A,a9:A,a10:A):A", docs.text());
   }
-  @Test void anonymousLiteralsOfOneFileAreListedByLineAsANumber(@TempDir Path tmp){
-    var docs= docs(tmp, a+"""
-Maker:{
-  .early: A -> A{
-    ///Early.
-    .m -> A;
-    };
-  //
-  //
-  //
-  //
-  .late: A -> A{
-    ///Late.
-    .m -> A;
-    };
-  }
-""");
-    utils.Err.strCmp("[###]\nAnon@_rank_app:3 : A\n[###]Early.[###]\nAnon@_rank_app:11 : A\n[###]Late.[###]", docs.text());
-  }
   @Test void aNumberWrittenAsAReferenceIsReportedAsNotAName(@TempDir Path tmp){
     var ex= assertThrows(UserError.class, () -> docs(tmp, a+"""
 ///Counts from `0`.
@@ -383,22 +360,65 @@ B:{ .m: A -> A; }
 """));
     utils.Err.strCmp("Broken reference in a doc comment.[###]`0`[###]This is written as a reference, but it is not a name.[###]", ex.getMessage());
   }
-  @Test void aReferenceToTheSelfNameOfAnUndocumentedEnclosingLiteralLinksToSomethingOnThePage(@TempDir Path tmp){
-    var html= docs(tmp, """
-A:{ .m: A -> this; .n: A -> this; }
-Maker:{
-  .make: A -> A{'outer
-    .m -> A{
-      ///Same as `outer.n`.
-      .m -> outer.n;
-      };
-    .n -> A;
-    };
+  @Test void everyLinkOfThePageReachesAnElementOfThePage(@TempDir Path tmp){
+    var html= docs(tmp, a+"""
+_Base:{
+  ///Doc of k.
+  .k: A -> A;
   }
+//@Group "Tools"
+///See `.go` and `B.k`.
+B:_Base,A{ .go: A -> A; .go(a: A): A -> a; }
+//@Group `B`
+C:B{ .go -> A; }
 """).html();
     var ids= Pattern.compile(" id=\"([^\"]*)\"").matcher(html).results().map(m -> m.group(1)).collect(Collectors.toSet());
     var linked= Pattern.compile("href=\"#([^\"]*)\"").matcher(html).results().map(m -> m.group(1)).distinct().toList();
     assertEquals(List.of(), linked.stream().filter(l -> !ids.contains(l)).toList());
+  }
+  @Test void aMethodWithNoDocumentationShowsTheDocumentationOfTheMethodItImplements(@TempDir Path tmp){
+    var docs= docs(tmp, a+"""
+Sup:{
+  ///Gives an A.
+  .foo: A;
+  }
+Sub:Sup{ .foo -> A; }
+""");
+    utils.Err.strCmp("[###]\nSub : Sup\n\t.foo:A\n    Gives an A.\n    from: Sup.foo\n\nSup\n\t.foo:A\n    Gives an A.\n\n", docs.text());
+    utils.Err.strCmp("""
+[###]<section class="view" id="type-p_2e_Sub-0">
+<h2>Sub</h2>
+<h3>Methods</h3>
+<details class="method" id="method-p_2e_Sub-0-_2e_foo-0"><summary><span class="disclosure">&#9656;</span><span class="sig">.foo:<a href="#type-p_2e_A-0">A</a></span><span class="brief">Gives an A.</span></summary>
+<div class="doc">
+<p>Gives an A.</p>
+</div>
+<p class="doc from">From: <a href="#method-p_2e_Sup-0-_2e_foo-0">Sup.foo</a>.</p>
+</details>
+<h3>Extends</h3>
+<p class="extends"><a href="#type-p_2e_Sup-0">Sup</a></p>
+</section>[###]""", docs.html());
+  }
+  @Test void theMethodsOfAPrivateSupertypeAreShownOnThePublicTypeWithTheirDocumentation(@TempDir Path tmp){
+    var docs= docs(tmp, a+"""
+_Base:{
+  ///Gives an A.
+  .k: A -> A;
+  }
+B:_Base{ .j: A -> A; }
+""");
+    utils.Err.strCmp("package p\n  A\n  B\n\nA\n\t.m:A\n\nB\n\t.j:A\n\t.k:A\n    Gives an A.\n\n", docs.text());
+    utils.Err.strCmp("""
+[###]<section class="view" id="type-p_2e_B-0">
+<h2>B</h2>
+<h3>Methods</h3>
+<div class="method" id="method-p_2e_B-0-_2e_j-0"><span></span><span class="sig">.j:<a href="#type-p_2e_A-0">A</a></span></div>
+<details class="method" id="method-p_2e_B-0-_2e_k-0"><summary><span class="disclosure">&#9656;</span><span class="sig">.k:<a href="#type-p_2e_A-0">A</a></span><span class="brief">Gives an A.</span></summary>
+<div class="doc">
+<p>Gives an A.</p>
+</div>
+</details>
+</section>[###]""", docs.html());
   }
   @Test void aDocAboveALineThatDeclaresNothingDoesNotBlameAPlainCommentLine(@TempDir Path tmp){
     var ex= assertThrows(UserError.class, () -> docs(tmp, a+"""
@@ -423,23 +443,11 @@ B:{ .m: A -> A; }
 """));
     utils.Err.strCmp("Misplaced doc comment.[###]A line starting with // ends the block, so\ncheck whether one of these was meant to start with /// instead.", ex.getMessage());
   }
-  @Test void aDisambiguationPageOnAnAnonymousLiteralIsTitledByTheNameTheListShows(@TempDir Path tmp){
-    var html= docs(tmp, """
-A:{ .m: A -> this; .m(a: A): A -> a; }
-Maker:{
-  .make: A -> A{'self
-    ///Same as `self.m`.
-    .m -> self.m(A);
-    };
-  }
-""").html();
-    utils.Err.strCmp("[###]<h2>Several match Anon@_rank_app:3.m</h2>[###]", html);
-  }
-  @Test void aTypeInTheListOfTypesMayWrapAfterEachComma(@TempDir Path tmp){
+  @Test void theTitleOfATypeMayWrapAfterEachComma(@TempDir Path tmp){
     var docs= docs(tmp, "Pair[X:imm,Y:imm]:{}\n");
-    utils.Err.strCmp("[###]<li><a href=\"#type-p_2e_Pair-2\">Pair[X:imm,<wbr>Y:imm]</a></li>[###]", docs.html());
+    utils.Err.strCmp("[###]<h2>Pair[X:imm,<wbr>Y:imm]</h2>[###]", docs.html());
   }
-  @Test void aDisambiguationPageListsItsOptionsByTypeNameThenByArity(@TempDir Path tmp){
+  @Test void aSeveralMatchViewListsItsOptionsByTypeNameThenByArity(@TempDir Path tmp){
     var html= docs(tmp, a+"""
 Zed:{ .go: A -> A; .go(a: A): A -> a; }
 Ace:{ .go(a: A): A -> a; .go: A -> A; }
@@ -447,13 +455,12 @@ Ace:{ .go(a: A): A -> a; .go: A -> A; }
 User:{ .m: A -> A; }
 """).html();
     utils.Err.strCmp("""
-[###]<h2>Several match .go</h2>
-<ul class="options">
-<li><a href="#method-p_2e_Ace-0-imm-_2e_go-0">Ace.go()</a></li>
-<li><a href="#method-p_2e_Ace-0-imm-_2e_go-1">Ace.go(_)</a></li>
-<li><a href="#method-p_2e_Zed-0-imm-_2e_go-0">Zed.go()</a></li>
-<li><a href="#method-p_2e_Zed-0-imm-_2e_go-1">Zed.go(_)</a></li>
-</ul>[###]""", html);
+[###]<h2 class="plain">Several match .go</h2>
+<p class="entry"><a href="#method-p_2e_Ace-0-_2e_go-0">Ace.go()</a></p>
+<p class="entry"><a href="#method-p_2e_Ace-0-_2e_go-1">Ace.go(_)</a></p>
+<p class="entry"><a href="#method-p_2e_Zed-0-_2e_go-0">Zed.go()</a></p>
+<p class="entry"><a href="#method-p_2e_Zed-0-_2e_go-1">Zed.go(_)</a></p>
+</section>[###]""", html);
   }
   @Test void anEmptyLineBetweenTwoDocBlocksLeavesTheUpperOneAttachedToNothing(@TempDir Path tmp){
     var ex= assertThrows(UserError.class, () -> docs(tmp, a+"""
@@ -514,7 +521,7 @@ B:{
   .k: A -> A;
   .j: A -> A; } /// the j
 """);
-    utils.Err.strCmp("[###]B\n\t.j:A\n    the j\n\t.k:A[###]", docs.text());
+    utils.Err.strCmp("[###]B\n\t.k:A\n\t.j:A\n    the j[###]", docs.text());
   }
   @Test void aBareSelectorNeverOffersAPrivateTypeOfAnotherPackage(@TempDir Path tmp){
     var q= compiled("q", """
@@ -525,7 +532,7 @@ _Hidden:{ .orValue(a: _Hidden): _Hidden -> a; }
 ///Same as `.orValue`.
 User:{ .m: User -> this; }
 """);
-    utils.Err.strCmp("[###]<p>Same as <code><a href=\"q.html#method-q_2e_Thing-0-imm-_2e_orValue-1\">.orValue</a></code>.</p>[###]", docs.html());
+    utils.Err.strCmp("[###]<p>Same as <code><a href=\"q.html#method-q_2e_Thing-0-_2e_orValue-1\">.orValue</a></code>.</p>[###]", docs.html());
   }
   @Test void aLongSignatureMayWrapAfterEachComma(@TempDir Path tmp){
     var docs= docs(tmp, a+"""
@@ -543,7 +550,7 @@ Thing:_Base{}
 ///Same as `.reset`.
 User:{ .m: User -> this; }
 """);
-    utils.Err.strCmp("[###]<p>Same as <code><a href=\"q.html#method-q_2e_[###]-0-imm-_2e_reset-0\">.reset</a></code>.</p>[###]", docs.html());
+    utils.Err.strCmp("[###]<p>Same as <code><a href=\"q.html#method-q_2e_Thing-0-_2e_reset-0\">.reset</a></code>.</p>[###]", docs.html());
   }
   @Test void aBareSelectorDeclaredInThisPackageWinsOverASameNamedMethodOfAnotherPackage(@TempDir Path tmp){
     var q= compiled("q", "Thing:{ .reset(a: Thing): Thing -> a; }\n", OtherPackages.empty());
@@ -551,7 +558,7 @@ User:{ .m: User -> this; }
 ///Call `.reset` first.
 User:{ .reset: User -> this; }
 """);
-    utils.Err.strCmp("[###]<p>Call <code><a href=\"#method-p_2e_User-0-imm-_2e_reset-0\">.reset</a></code> first.</p>[###]", docs.html());
+    utils.Err.strCmp("[###]<p>Call <code><a href=\"#method-p_2e_User-0-_2e_reset-0\">.reset</a></code> first.</p>[###]", docs.html());
   }
   @Test void aBaseTypeIsShownQualifiedWhereAUseGivesItsSimpleNameToAnotherType(@TempDir Path tmp){
     var base= compiled("base", "Map:{}\n", OtherPackages.empty());
@@ -719,7 +726,7 @@ In file: fear:/_p/_rank_app.fear
    |    ^^^
 [###]""", ex.getMessage());
   }
-  @Test void theFirstParagraphOnASeveralMatchPageLinksAReferenceOnItsSecondLine(@TempDir Path tmp){
+  @Test void theFirstParagraphOnASeveralMatchViewLinksAReferenceOnItsSecondLine(@TempDir Path tmp){
     var docs= docs(tmp, a+"""
 B:{
   ///Calls ``this
@@ -730,22 +737,7 @@ C:{ .f: A -> A; }
 ///See `.f`.
 D:{ .m: A -> A; }
 """);
-    utils.Err.strCmp("[###]<span class=\"opt-doc\">— Calls <code>this .m</code> on <code><a href=\"#type-p_2e_A-0\">A</a></code>.</span>[###]", docs.html());
-  }
-  @Test void twoAnonymousLiteralsStartingOnOneLineReadDifferentlyInTheListOfTypes(@TempDir Path tmp){
-    var html= docs(tmp, a+"""
-Both:{ #(a: A, b: A): A -> a; }
-Maker:{
-  .two: A ->
-    ///First.
-    Both#(A{ .m -> A }, A{
-      ///Second.
-      .m -> A
-      });
-  }
-""").html();
-    var listed= Pattern.compile("<li><a href=\"#literal-[^>]*>([^<]*)</a>").matcher(html).results().map(m -> m.group(1)).toList();
-    assertEquals(listed.stream().distinct().toList(), listed);
+    utils.Err.strCmp("[###]<p class=\"entry\"><a href=\"#method-p_2e_B-0-_2e_f-0\">B.f()</a><span class=\"brief\">Calls <code>this .m</code> on <code><a href=\"#type-p_2e_A-0\">A</a></code>.</span></p>[###]", docs.html());
   }
   @Test void aDocAboveAnEmptyLineWithNoDeclarationBelowIsNotToldToDeleteTheEmptyLine(@TempDir Path tmp){
     var ex= assertThrows(UserError.class, () -> docs(tmp, a+"""
@@ -762,38 +754,13 @@ A ///, //>, //- or //@ block documents the declaration right below it, but no
 declaration starts right below this block. Move this block right above the
 declaration it documents, or turn it into a plain // comment.""", ex.getMessage());
   }
-  @Test void twoOptionsForTheInheritedMethodsOfAnAnonymousLiteralShowTheirReceiverCapabilities(@TempDir Path tmp){
-    var html= docs(tmp, a+"""
-B:{ read .n: A -> A; mut .n: A -> A; .k: A; }
-Maker:{
-  .make: B -> {'self
-    ///Uses `self.n`.
-    .k -> self.n;
-    };
-  }
-""").html();
-    utils.Err.strCmp("""
-[###]<h2>Several match Anon@_rank_app:4.n</h2>
-<ul class="options">
-<li><a href="#method-p_2e_B-0-read-_2e_n-0">read B.n()</a></li>
-<li><a href="#method-p_2e_B-0-mut-_2e_n-0">mut B.n()</a></li>
-</ul>[###]""", html);
-  }
-  @Test void theWelcomeTextCountsOneTypeAndDoesNotPlaceTheListOfTypesOnTheLeftWhenANarrowWindowShowsItAbove(@TempDir Path tmp){
+  @Test void aNarrowWindowShowsTheTreeAboveTheView(@TempDir Path tmp){
     var html= docs(tmp, a).html();
     utils.Err.strCmp("[###]@media (max-width:48em){\n  .layout{display:block}[###]", html);
-    utils.Err.strCmp("[###]<p id=\"welcome\" class=\"welcome\">Types in the list: 1. Pick one.</p>[###]", html);
-  }
-  @Test void theWelcomeTextDoesNotCountATypeThatIsOnlyUnderAnotherType(@TempDir Path tmp){
-    var html= docs(tmp, a+"""
-//@Group `A`
-B:{ .b: A -> A; }
-""").html();
-    utils.Err.strCmp("[###]<p id=\"welcome\" class=\"welcome\">Types in the list: 1. Pick one.</p>[###]", html);
   }
   @Test void aTypeWithNoMethodsHasNoMethodsHeading(@TempDir Path tmp){
     var html= docs(tmp, a+"Foo:{}\n").html();
-    utils.Err.strCmp("[###]<section class=\"type\" id=\"type-p_2e_Foo-0\">\n<h2>Foo</h2>\n<p class=\"doc missing\">No documentation yet.</p>\n</section>\n[###]", html);
+    utils.Err.strCmp("[###]<section class=\"view\" id=\"type-p_2e_Foo-0\">\n<h2>Foo</h2>\n</section>\n[###]", html);
   }
   @Test void aReferenceWithAnArityTheMethodDoesNotHaveIsToldTheArityTheMethodHas(@TempDir Path tmp){
     var ex= assertThrows(UserError.class, () -> docs(tmp, a+"""
@@ -858,7 +825,7 @@ Maker:{
     };
   }
 """);
-    utils.Err.strCmp("package p\n\ngroup public\n  A\n  Maker\n\nA\n\t.m:A\n\nMaker\n\t.make:A\n\n", docs.text());
+    utils.Err.strCmp("package p\n  A\n  Maker\n\nA\n\t.m:A\n\nMaker\n\t.make:A\n\n", docs.text());
     assertEquals(2, docs.tests().size());
   }
   @Test void aBareSelectorWithAnArityNoMethodHasIsToldTheArityTheMethodHas(@TempDir Path tmp){
@@ -900,14 +867,13 @@ B:{
 """));
     utils.Err.strCmp("Broken reference in a doc comment.[###]`X.m`[###]\"X\" is a generic type parameter, and a generic type parameter has no methods.[###]", ex.getMessage());
   }
-  @Test void aReferenceToAMethodOfAnotherPackageWithTwoReceiverCapabilitiesOffersBoth(@TempDir Path tmp){
+  @Test void aReferenceToAMethodOfAnotherPackageWithTwoReceiverCapabilitiesIsOneLink(@TempDir Path tmp){
     var q= compiled("q", "Thing:{ read .n: read Thing -> this; mut .n: mut Thing -> this; }\n", OtherPackages.empty());
     var html= docs(tmp, OtherPackages.start(Map.of(), q, 0L), """
 ///Same as `q.Thing.n`.
 User:{ .m: User -> this; }
 """).html();
-    utils.Err.strCmp("[###]<li><a href=\"q.html#method-q_2e_Thing-0-read-_2e_n-0\">read q.Thing.n()</a></li>[###]", html);
-    utils.Err.strCmp("[###]<li><a href=\"q.html#method-q_2e_Thing-0-mut-_2e_n-0\">mut q.Thing.n()</a></li>[###]", html);
+    utils.Err.strCmp("[###]<p>Same as <code><a href=\"q.html#method-q_2e_Thing-0-_2e_n-0\">q.Thing.n</a></code>.</p>[###]", html);
   }
   @Test void anInheritedGenericMethodKeepsTheTypeParameterNameItsSourceWrites(@TempDir Path tmp){
     var docs= docs(tmp, a+"""
@@ -949,7 +915,7 @@ Q:q.P{ .own: A -> A; }
 """);
     utils.Err.strCmp("[###]Q : q.P\n\t.own:A\n\t.pipe[_AA:imm](_AA):_AA\n[###]", docs.text());
   }
-  @Test void aSeveralMatchPageShowsTheFirstParagraphOfADocStartingWithACodeBlock(@TempDir Path tmp){
+  @Test void aSeveralMatchViewShowsTheFirstParagraphOfADocStartingWithACodeBlock(@TempDir Path tmp){
     var html= docs(tmp, a+"""
 B:{
   ///```
@@ -962,7 +928,7 @@ C:{ .f: A -> A; }
 ///See `.f`.
 D:{ .m: A -> A; }
 """).html();
-    utils.Err.strCmp("[###]<li><a href=\"#method-p_2e_B-0-imm-_2e_f-0\">B.f()</a> <span class=\"opt-doc\">[###] Gives an A.</span></li>[###]", html);
+    utils.Err.strCmp("[###]<p class=\"entry\"><a href=\"#method-p_2e_B-0-_2e_f-0\">B.f()</a><span class=\"brief\">Gives an A.</span></p>[###]", html);
   }
   @Test void aTrailingDocAfterTwoTypesOnOneLineFollowsMoreThanOneDeclaration(@TempDir Path tmp){
     var ex= assertThrows(UserError.class, () -> docs(tmp, a+"""
@@ -996,44 +962,21 @@ Maker:{
 """);
     utils.Err.strCmp("[###]\nInner : A\n  doc of Inner\n\t.m:A\n[###]", docs.text());
   }
-  @Test void anAnonymousLiteralIsTitledInTheTextByTheNameItsGroupListsItWith(@TempDir Path tmp){
+  @Test void theTestLinesOfAnAnonymousLiteralTypedOncePerReceiverCapabilityRunOnce(@TempDir Path tmp){
     var docs= docs(tmp, a+"""
-Maker:{
-  .make: A ->
-    ///Doc.
-    A{ .m -> A };
-  }
-""");
-    utils.Err.strCmp("package p\n\ngroup public\n  A\n  Maker\ngroup private\n  Anon@_rank_app:5\n\n[###]\nAnon@_rank_app:5 : A\n  Doc.\n[###]", docs.text());
-  }
-  @Test void typedVariantsThatReadTheSameAreShownOnce(@TempDir Path tmp){
-    var html= docs(tmp, a+"""
 Sup:{ mut .foo: A; imm .foo: A; }
 Sub:Sup{ .foo -> A{
-  ///Doc.
+  //- A.m
   .m -> A
   }; }
-""").html();
-    utils.Err.strCmp("""
-[###]<p class="extends"><b>Extends:</b> <a href="#type-p_2e_A-0">A</a></p>
-<h3>Methods</h3>
-<details class="method" id="method-p_2e__5f_ASub-0-imm-_2e_m-0">
-<summary><span class="disclosure">&#9656;</span><span class="sig">.m:<a href="#type-p_2e_A-0">A</a></span></summary>
-<div class="doc">
-<p>Doc.</p>
-</div>
-<p class="doc from">From: <a href="#method-p_2e_A-0-imm-_2e_m-0">A.m</a>.</p>
-</details>
-</section>
-[###]""", html);
+""");
+    assertEquals(List.of("A.m"), docs.tests().stream().flatMap(t -> t.text().lines()).filter(l -> l.contains("A.m")).toList());
   }
   @Test void aDocBlockOnTheFirstLineOfAFileStartingWithAByteOrderMarkDocumentsTheDeclarationBelow(@TempDir Path tmp){
     var docs= docs(tmp, "\uFEFF///Doc of A.\n"+a);
     utils.Err.strCmp("""
 package p
-
-group public
-  A
+  A: Doc of A.
 
 A
   Doc of A.
@@ -1045,10 +988,8 @@ A
     var docs= docs(tmp, "A:{ .m: A -> this; }\u2028///Doc of B.\nB:{}\n");
     utils.Err.strCmp("""
 package p
-
-group public
   A
-  B
+  B: Doc of B.
 
 A
 \t.m:A
@@ -1066,11 +1007,9 @@ Maker:{ .make: A ->
 """);
     utils.Err.strCmp("""
 package p
-
-group public
   A
   Maker
-  Named
+  Named: Doc of Named.
 
 A
 \t.m:A
@@ -1092,17 +1031,13 @@ Circle:Shape{
   .area -> Num;
   }
 """;
-  @Test void aMethodDeclaredOnceForTwoReceiverCapabilitiesHasAnEntryForEachWithTheSameDoc(@TempDir Path tmp){
+  @Test void aMethodDeclaredOnceForTwoReceiverCapabilitiesIsOneEntryWithOneDocumentation(@TempDir Path tmp){
     var docs= docs(tmp, shapes);
     utils.Err.strCmp("""
 [###]
 Circle : Shape
-\t.area:Num
-    The area of a circle.
-    example:
-      .check{Num}
-    from: Shape.area
 \tmut .area:Num
+\t.area:Num
     The area of a circle.
     example:
       .check{Num}
@@ -1114,19 +1049,6 @@ Circle : Shape
     var once= docs(tmp, "Num:{}\nShape:{ mut .area: Num; imm .area: Num; }\nCircle:Shape{ .area -> Num; }\n");
     var twice= docs(tmp, "Num:{}\nShape:{ mut .area: Num; imm .area: Num; }\nCircle:Shape{ mut .area -> Num; imm .area -> Num; }\n");
     assertEquals(once.text(), twice.text());
-  }
-  @Test void aReferenceToAMethodOfAnotherPackageWithTwoReceiverCapabilitiesListsBoth(@TempDir Path tmp){
-    var shapesCore= compiled("shapes", shapes, OtherPackages.empty());
-    var html= docs(tmp, OtherPackages.start(Map.of(), shapesCore, 0L), """
-///See `shapes.Circle.area`.
-Canvas:{ .m: Canvas -> this; }
-""").html();
-    utils.Err.strCmp("""
-[###]<h2>Several match shapes.Circle.area</h2>
-<ul class="options">
-<li><a href="shapes.html#method-shapes_2e_Circle-0-mut-_2e_area-0">mut shapes.Circle.area()</a></li>
-<li><a href="shapes.html#method-shapes_2e_Circle-0-imm-_2e_area-0">shapes.Circle.area()</a></li>
-</ul>[###]""", html);
   }
   @Test void aTypeWhoseNameStartsTheNameOfAPrimedGenericTypeParameterIsLinkedWhereTheTypeIsWritten(@TempDir Path tmp){
     var html= docs(tmp, a+"""
