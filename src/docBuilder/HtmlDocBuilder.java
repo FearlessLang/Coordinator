@@ -181,59 +181,54 @@ public final class HtmlDocBuilder{
   List<String> checkGroups(DocResolver resolver){
     var problems= new ArrayList<String>();
     types.stream().flatMap(t -> t.methods.stream()).flatMap(m -> m.directives().stream()).distinct().forEach(d -> problems.add(line(d, onMethod)));
-    var parents= new LinkedHashMap<TypeDoc,List<Directive.Under>>();
-    var names= new HashMap<String,String>(Map.of("public", "public", "private", "private"));
-    types.forEach(t -> parents.put(t, checkType(resolver, t, names, problems)));
+    var parents= new LinkedHashMap<String,ArrayList<Directive.Under>>();
+    var names= new HashMap<String,String>();
+    types.forEach(t -> parents.computeIfAbsent(t.main().name().simpleName(), _ -> new ArrayList<>()).addAll(checkType(resolver, t, names, problems)));
     if (!problems.isEmpty()){ return problems; }
-    var done= new HashSet<TypeDoc>();
-    parents.keySet().forEach(t -> cycles(resolver, t, new ArrayList<>(), done, parents, problems));
+    var done= new HashSet<String>();
+    parents.keySet().forEach(n -> cycles(n, new ArrayList<>(), done, parents, problems));
     return problems;
   }
   List<Directive.Under> checkType(DocResolver resolver, TypeDoc t, HashMap<String,String> names, ArrayList<String> problems){
+    var hidden= groupOnHidden.formatted(t.main().infName() ? "an anonymous literal" : "the private type "+resolver.named(t.main().name()));
+    if (!t.visible()){ t.directives().forEach(d -> problems.add(line(d, hidden))); return List.of(); }
     t.docs.stream().dropWhile(o -> o.kind()==DocKind.Group).filter(o -> o.kind()==DocKind.Group).findFirst()
       .ifPresent(o -> problems.add(line(o, groupAfterDocs)));
     var ds= t.directives().stream().map(d -> resolver.directive(d, t.scope())).toList();
-    ds.forEach(d -> checkDirective(resolver, t, d, names, problems));
+    ds.forEach(d -> checkDirective(d, names, problems));
     var seen= new HashSet<Object>();
     ds.stream().filter(d -> !seen.add(key(d))).forEach(d -> problems.add(line(d.at(), repeatedGroup)));
-    var unders= ds.stream().<Directive.Under>mapMulti((d, out) -> { if (d instanceof Directive.Under u){ out.accept(u); } }).toList();
-    var named= ds.stream().anyMatch(Directive.Named.class::isInstance);
-    var onlyPrivate= t.main().name().isPublic() && !named && !unders.isEmpty() && unders.stream().noneMatch(u -> u.parent().main().name().isPublic());
-    if (onlyPrivate){ problems.add(line(unders.getFirst().at(), publicUnderPrivate.formatted(resolver.named(t), Join.of(unders.stream().map(u -> resolver.named(u.parent())), "", ", ", "")))); }
-    return unders;
+    return ds.stream().<Directive.Under>mapMulti((d, out) -> { if (d instanceof Directive.Under u){ out.accept(u); } }).toList();
   }
   static Object key(Directive d){
     return switch (d){
-      case Directive.Named n -> n.group();
-      case Directive.Under u -> u.parent();
+      case Directive.Named n -> "\""+n.group();
+      case Directive.Under u -> "`"+u.parent();
       case Directive.Broken b -> b;
     };
   }
-  void checkDirective(DocResolver resolver, TypeDoc t, Directive d, HashMap<String,String> names, ArrayList<String> problems){
-    var isPublic= t.main().name().isPublic();
+  void checkDirective(Directive d, HashMap<String,String> names, ArrayList<String> problems){
     var wrong= switch (d){
       case Directive.Broken b -> Optional.of(b.problem());
-      case Directive.Named(_, var g) when g.equals("private") && isPublic -> Optional.of(publicInPrivate.formatted(resolver.named(t)));
-      case Directive.Named(_, var g) when g.equals("public") && !isPublic -> Optional.of(privateInPublic.formatted(resolver.named(t)));
       case Directive.Named(_, var g) -> Optional.ofNullable(names.putIfAbsent(g.toLowerCase(Locale.ROOT), g)).filter(first -> !first.equals(g)).map(first -> caseOnly.formatted(g, first));
       case Directive.Under _ -> Optional.<String>empty();
     };
     wrong.ifPresent(w -> problems.add(line(d.at(), w)));
   }
-  void cycles(DocResolver resolver, TypeDoc t, ArrayList<TypeDoc> path, HashSet<TypeDoc> done, Map<TypeDoc,List<Directive.Under>> parents, ArrayList<String> problems){
-    if (done.contains(t)){ return; }
-    var at= path.indexOf(t);
-    if (at >= 0){ problems.add(cycle(resolver, path.subList(at, path.size()), parents)); return; }
-    path.add(t);
-    parents.get(t).forEach(u -> cycles(resolver, u.parent(), path, done, parents, problems));
+  void cycles(String n, ArrayList<String> path, HashSet<String> done, Map<String,ArrayList<Directive.Under>> parents, ArrayList<String> problems){
+    if (done.contains(n)){ return; }
+    var at= path.indexOf(n);
+    if (at >= 0){ problems.add(cycle(path.subList(at, path.size()), parents)); return; }
+    path.add(n);
+    parents.get(n).forEach(u -> cycles(u.parent(), path, done, parents, problems));
     path.removeLast();
-    done.add(t);
+    done.add(n);
   }
-  String cycle(DocResolver resolver, List<TypeDoc> ring, Map<TypeDoc,List<Directive.Under>> parents){
+  String cycle(List<String> ring, Map<String,ArrayList<Directive.Under>> parents){
     var n= ring.size();
-    var steps= IntStream.range(0, n).mapToObj(i -> "  "+resolver.named(ring.get(i))+" is under "+resolver.named(ring.get((i+1) % n)));
-    var first= OneOr.of("one line per parent", parents.get(ring.getFirst()).stream().filter(u -> u.parent() == ring.get(1 % n)));
-    return line(first.at(), underItself.formatted(resolver.named(ring.getFirst()), Join.of(steps, "", "\n", "")));
+    var steps= IntStream.range(0, n).mapToObj(i -> "  \""+ring.get(i)+"\" is under \""+ring.get((i+1) % n)+"\"");
+    var first= parents.get(ring.getFirst()).stream().filter(u -> u.parent().equals(ring.get(1 % n))).findFirst().orElseThrow();
+    return line(first.at(), underItself.formatted(ring.getFirst(), Join.of(steps, "", "\n", "")));
   }
   String line(DocOcc d, String msg){
     return message(new Span(d.file(), d.line(), d.column(), d.line(), d.textColumn()+d.text().length()-1), msg);
@@ -278,15 +273,10 @@ public final class HtmlDocBuilder{
     "This //@Group line documents a method.\n"
    +"A //@Group line puts a type in a group or under another type, and a method is\n"
    +"neither. Move this line above the declaration of the type.";
-  static final String publicInPrivate=
-    "%s is public, so it cannot be in the group \"private\".\n"
-   +"The group \"private\" holds only private types: the anonymous literals and the types whose name starts with _.";
-  static final String privateInPublic=
-    "%s is private, so it cannot be in the group \"public\".\n"
-   +"The group \"public\" holds only public types: the types whose written name does not start with _.";
-  static final String publicUnderPrivate=
-    "%s is public, but every type it is under is private: %s.\n"
-   +"A public type must be in a group, or under at least one public type.";
+  static final String groupOnHidden=
+    "This //@Group line documents %s.\n"
+   +"The documentation shows only the public types: the named types whose name does not start with _.\n"
+   +"A //@Group line says where the documentation shows a type, so delete this line.";
   static final String groupAfterDocs=
     "This //@Group line comes after other documentation of the same declaration.\n"
    +"Move every //@Group line above the first ///, //> and //- line of the documentation.";
@@ -297,9 +287,10 @@ public final class HtmlDocBuilder{
     "The group \"%s\" differs from the group \"%s\" only by case.\n"
    +"Write the name of a group the same way every time.";
   static final String underItself=
-    "These //@Group lines put %s under itself:\n"
+    "These //@Group lines put \"%s\" under itself:\n"
    +"%s\n"
-   +"A type cannot be under itself, not even through other types.";
+   +"A type cannot be under itself, not even through other types.\n"
+   +"The documentation shows together all the types with the same name, whatever the number of their generic type parameters.";
   static final String notAName=
     "This is written as a reference, but it is not a name.\n"
    +"Use two backticks or more to show it as code instead.";

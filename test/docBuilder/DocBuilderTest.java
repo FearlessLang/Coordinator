@@ -231,10 +231,11 @@ Foo: Bar {
     assertNotEquals(HtmlDocRenderer.id("+"), HtmlDocRenderer.id("-"));
     assertNotEquals(HtmlDocRenderer.id("=="), HtmlDocRenderer.id("!="));
   }
-  private static Src freshSrc(){
+  private static Src freshSrc(){ return srcAt(Pos.unknown); }
+  private static Src srcAt(Pos at){
     return new Src(new Src.SrcObj(){
-      @Override public Pos pos(){ return Pos.unknown; }
-      @Override public TSpan span(){ return TSpan.fromPos(Pos.unknown, 1); }
+      @Override public Pos pos(){ return at; }
+      @Override public TSpan span(){ return TSpan.fromPos(at, 1); }
     });
   }
   private static T retVoid(){
@@ -340,18 +341,16 @@ Foo: Bar {
     var text= new HtmlDocRenderer(Map.of(), new DocResolver("pkg", List.of(typeDoc), OtherPackages.empty(), TName::s), Optional.empty()).renderText();
     utils.Err.strCmp("[###]\t.take([###]elem[###]Thing):base.Void\n    Stores `elem` in this holder.[###]", text);
   }
-  @Test void aBareTypeNameThatMatchesTwoLocalArityVariantsIsAmbiguous(){
+  @Test void aBareTypeNameOfTwoTypesWithTheSameNameLinksToTheFirstOfThem(){
     var one= namedType("pkg.Pair", List.of(), List.of());
     var two= new Literal(RC.imm, new TName("pkg.Pair", 2, Pos.unknown), twoBounds(), List.of(), "this", List.of(), freshSrc(), false);
     SourceOracle oracle= List::of;
-    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(one, two), Optional.empty(), "pkg", Path.of("pkg.html"), true);
-    builder.visitLiteral(one, Optional.empty());
+    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(two, one), Optional.empty(), "pkg", Path.of("pkg.html"), true);
     builder.visitLiteral(two, Optional.empty());
+    builder.visitLiteral(one, Optional.empty());
     var resolver= new DocResolver("pkg", builder.types, OtherPackages.empty(), TName::s);
     var link= resolver.resolveType(new DocRef.TypeName(Optional.empty(), "Pair", OptionalInt.empty()));
-    assertTrue(link.isPresent());
-    assertTrue(link.get() instanceof DocLink.Ambiguous);
-    assertEquals(2, ((DocLink.Ambiguous)link.get()).options().size());
+    assertEquals(one.name(), ((DocLink.Resolved)link.get()).hit().owner());
   }
   @Test void anExplicitArityResolvesAWouldBeAmbiguousTypeNamePrecisely(){
     var one= namedType("pkg.Pair", List.of(), List.of());
@@ -379,7 +378,7 @@ Foo: Bar {
     assertTrue(link.get() instanceof DocLink.Ambiguous);
     assertEquals(2, ((DocLink.Ambiguous)link.get()).options().size());
   }
-  @Test void aQualifiedSelectorMatchingTwoRcOverloadsOnTheSameLocalTypeIsAmbiguous(){
+  @Test void aSelectorMatchingTheMethodsOfOneNameOnOneTypeIsOneLink(){
     var name= new TName("pkg.Foo", 0, Pos.unknown);
     var imm= fooMethodAt(RC.imm, name, TSpan.fromPos(Pos.of(file, 0, 1), 1));
     var mut= fooMethodAt(RC.mut, name, TSpan.fromPos(Pos.of(file, 0, 2), 1));
@@ -387,13 +386,13 @@ Foo: Bar {
     SourceOracle oracle= List::of;
     var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(foo), Optional.empty(), "pkg", Path.of("pkg.html"), true);
     builder.visitLiteral(foo, Optional.empty());
-    var resolver= new DocResolver("pkg", builder.types, OtherPackages.empty(), TName::s);
-    var ref= new DocRef.MethodName(Optional.of(new DocRef.TypeName(Optional.empty(), "Foo", OptionalInt.empty())), ".foo", OptionalInt.empty());
-    var link= resolver.resolve(ref, scope(foo));
-    assertTrue(link.get() instanceof DocLink.Ambiguous, link.get().toString());
-    assertEquals(2, ((DocLink.Ambiguous)link.get()).options().size());
+    var renderer= new HtmlDocRenderer(Map.of(), new DocResolver("pkg", builder.types, OtherPackages.empty(), TName::s), Optional.empty());
+    var qualified= new DocRef.MethodName(Optional.of(new DocRef.TypeName(Optional.empty(), "Foo", OptionalInt.empty())), ".foo", OptionalInt.empty());
+    var bare= new DocRef.MethodName(Optional.empty(), ".foo", OptionalInt.empty());
+    assertEquals(Optional.of("#method-pkg_2e_Foo-0-_2e_foo-0"), renderer.href(renderer.resolver.resolve(qualified, scope(foo)).get()));
+    assertEquals(Optional.of("#method-pkg_2e_Foo-0-_2e_foo-0"), renderer.href(renderer.resolver.resolve(bare, scope(foo)).get()));
   }
-  @Test void twoDifferentAmbiguousReferencesToOneSelectorLandOnTwoDifferentPages(){
+  @Test void twoDifferentAmbiguousReferencesToOneSelectorOpenTwoDifferentSeveralMatchViews(){
     var aName= new TName("pkg.A", 0, Pos.unknown);
     var bName= new TName("pkg.B", 0, Pos.unknown);
     var a= namedType("pkg.A", List.of(), List.of(namedMethod(".bar", aName), methodTaking(".bar", aName, "x", aName)));
@@ -568,7 +567,7 @@ Foo: Bar {
     assertEquals(List.of(), linked.stream().distinct().filter(l -> !ids.contains(l)).toList(),
       "every in-page link must have a matching id");
   }
-  @Test void aDisambiguationPageNeverOffersAMethodOfATypeThatIsNotRendered(){
+  @Test void aSeveralMatchViewNeverOffersAMethodOfATypeThatIsNotShown(){
     var html= renderedFixture();
     assertFalse(html.contains("Hidden"), "an undocumented anonymous literal must not reach the page: "+html);
   }
@@ -580,19 +579,15 @@ Foo: Bar {
     var text= renderedTextFixture();
     assertFalse(text.contains("Hidden"), "an undocumented anonymous literal must not reach the text doc either: "+text);
   }
-  @Test void aDocumentedAnonymousLiteralIsListedAndTitledByItsFileAndLine(){
+  @Test void aDocumentedAnonymousLiteralIsLeftOut(){
     var at= Pos.of(file, 2, 1);
-    var src= new Src(new Src.SrcObj(){
-      @Override public Pos pos(){ return at; }
-      @Override public TSpan span(){ return TSpan.fromPos(at, 1); }
-    });
-    var anon= new Literal(RC.imm, new TName("pkg.Anon", 0, at), List.of(), List.of(), "this", List.of(), src, true);
+    var anon= new Literal(RC.imm, new TName("pkg._AAnon", 0, at), List.of(), List.of(), "this", List.of(), srcAt(at), true);
     var oracle= SourceOracle.debugBuilder().putURI(file, "\nx /// the anonymous one\n").build();
     var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(anon), Optional.empty(), "pkg", Path.of("pkg.html"), true);
     builder.visitLiteral(anon, Optional.empty());
-    var html= new HtmlDocRenderer(Map.of(), new DocResolver("pkg", builder.types, OtherPackages.empty(), TName::s), Optional.empty()).render();
-    utils.Err.strCmp("[###]>Anon@a:2<[###]", html);
-    utils.Err.strCmp("[###]<h2>Anon@a:2</h2>[###]", html);
+    var renderer= new HtmlDocRenderer(Map.of(), new DocResolver("pkg", builder.types, OtherPackages.empty(), TName::s), Optional.empty());
+    assertFalse(renderer.render().contains("Anon"));
+    assertEquals("package pkg\n\n", renderer.renderText());
   }
   @Test void renderTextProducesAPlainSignatureLineWithNoPlaceholderForMissingDocs(){
     var ownerName= new TName("pkg.Holder", 0, Pos.unknown);
@@ -604,8 +599,6 @@ Foo: Bar {
     var text= new HtmlDocRenderer(Map.of(), new DocResolver("pkg", builder.types, OtherPackages.empty(), TName::s), Optional.empty()).renderText();
     assertEquals("""
 package pkg
-
-group public
   Holder
 
 Holder
@@ -625,8 +618,6 @@ Holder
     var text= new HtmlDocRenderer(Map.of(), new DocResolver("pkg", List.of(typeDoc), OtherPackages.empty(), TName::s), Optional.empty()).renderText();
     assertEquals("""
 package pkg
-
-group public
   Holder
 
 Holder
@@ -648,9 +639,7 @@ Holder
     var text= new HtmlDocRenderer(Map.of(), new DocResolver("pkg", List.of(typeDoc), OtherPackages.empty(), TName::s), Optional.empty()).renderText();
     assertEquals("""
 package pkg
-
-group public
-  Holder
+  Holder: .bar is drawn at this very indent
 
 Holder
   .bar is drawn at this very indent
@@ -746,8 +735,6 @@ Holder
     var text= new HtmlDocRenderer(Map.of(), new DocResolver("pkg", List.of(typeDoc), OtherPackages.empty(), TName::s), Optional.empty()).renderText();
     assertEquals("""
 package pkg
-
-group public
   Holder
 
 Holder
@@ -958,19 +945,23 @@ declaration it documents, or turn it into a plain // comment.""", ex.getMessage(
     builder.visitLiteral(owner, Optional.empty());
     builder.complete(TName::s, true, Runnable::run);
   }
-  @Test void aFromLinkToAnyReceiverCapabilityOfAMethodReachesAnAnchor(){
+  @Test void anInheritedMethodIsListedUnderItsSupertypeAsALinkToTheEntryOfThatSupertype(){
     var subName= new TName("pkg.Sub", 0, Pos.unknown);
     var subMut= fooMethod(RC.mut, subName);
     var subImm= fooMethod(RC.imm, subName);
     var sub= namedType("pkg.Sub", List.of(), List.of(subMut, subImm));
-    var top= namedType("pkg.Top", List.of(new T.C(subName, List.of())), List.of(subImm));
+    var top= namedType("pkg.Top", List.of(new T.C(subName, List.of())), List.of(subMut, subImm));
     SourceOracle oracle= List::of;
     var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(sub, top), Optional.empty(), "pkg", Path.of("pkg.html"), true);
     builder.visitLiteral(sub, Optional.empty());
     builder.visitLiteral(top, Optional.empty());
     var html= new HtmlDocRenderer(Map.of(), new DocResolver("pkg", builder.types, OtherPackages.empty(), TName::s), Optional.empty()).render();
     assertTrue(idsIn(html, "id=\"").containsAll(idsIn(html, "href=\"#")));
-    utils.Err.strCmp("[###]From: <a href=\"#method-pkg_2e_Sub-0-imm-_2e_foo-0\">Sub.foo</a>.[###]", html);
+    utils.Err.strCmp("""
+[###]<h2>Top</h2>
+<h3>Extends</h3>
+<p class="extends"><a href="#type-pkg_2e_Sub-0">Sub</a>: <a id="method-pkg_2e_Top-0-_2e_foo-0" href="#method-pkg_2e_Sub-0-_2e_foo-0">.foo()</a></p>
+</section>[###]""", html);
   }
   @Test void renderTextShowsEveryTypedVariantOfAMethod(){
     var ownerName= new TName("pkg.Holder", 0, Pos.unknown);
@@ -986,7 +977,7 @@ declaration it documents, or turn it into a plain // comment.""", ex.getMessage(
     var renderer= new HtmlDocRenderer(Map.of(), new DocResolver("pkg", List.of(), other, TName::s), Optional.empty());
     var ref= new DocRef.MethodName(Optional.of(new DocRef.TypeName(Optional.of("other"), "Sup", OptionalInt.empty())), ".bar", OptionalInt.empty());
     var link= renderer.resolver.resolve(ref, scope(namedType("pkg.Z", List.of(), List.of()))).get();
-    assertEquals(Optional.of("other.html#method-other_2e_Sup-0-imm-_2e_bar-0"), renderer.href(link));
+    assertEquals(Optional.of("other.html#method-other_2e_Sup-0-_2e_bar-0"), renderer.href(link));
   }
   @Test void twoArityVariantsOfATypeGiveTheirMethodsDistinctAnchors(){
     var oneName= new TName("pkg.Pair", 0, Pos.unknown);
@@ -998,12 +989,12 @@ declaration it documents, or turn it into a plain // comment.""", ex.getMessage(
     builder.visitLiteral(one, Optional.empty());
     builder.visitLiteral(two, Optional.empty());
     var html= new HtmlDocRenderer(Map.of(), new DocResolver("pkg", builder.types, OtherPackages.empty(), TName::s), Optional.empty()).render();
-    assertEquals(List.of("method-pkg_2e_Pair-0-imm-_2e_bar-0", "method-pkg_2e_Pair-2-imm-_2e_bar-0"), idsIn(html, "id=\"method-").stream().map(i -> "method-"+i).toList());
+    assertEquals(List.of("method-pkg_2e_Pair-0-_2e_bar-0", "method-pkg_2e_Pair-2-_2e_bar-0"), idsIn(html, "id=\"method-").stream().map(i -> "method-"+i).toList());
   }
   private static HtmlDocBuilder fixtureBuilder(){
     var aName= new TName("pkg.A", 0, Pos.unknown);
     var bName= new TName("pkg.B", 0, Pos.unknown);
-    var hiddenName= new TName("pkg.Hidden", 0, Pos.unknown);
+    var hiddenName= new TName("pkg._AHidden", 0, Pos.unknown);
     var a= namedType("pkg.A", List.of(), List.of(namedMethod(".bar", aName)));
     var b= namedType("pkg.B", List.of(), List.of(namedMethod(".bar", bName)));
     //an anonymous literal with no docs: never rendered, so never a link target
@@ -1024,41 +1015,39 @@ declaration it documents, or turn it into a plain // comment.""", ex.getMessage(
     var builder= fixtureBuilder();
     return new HtmlDocRenderer(Map.of(), new DocResolver("pkg", builder.types, OtherPackages.empty(), TName::s), Optional.empty()).renderText();
   }
-  @Test void noTwoOptionsOfADisambiguationPageReadTheSame(){
-    var name= new TName("pkg.Foo", 0, Pos.unknown);
-    var imm= fooMethodAt(RC.imm, name, TSpan.fromPos(Pos.of(file, 0, 1), 1));
-    var mut= fooMethodAt(RC.mut, name, TSpan.fromPos(Pos.of(file, 0, 2), 1));
-    var foo= namedType("pkg.Foo", List.of(), List.of(imm, mut));
+  @Test void noTwoOptionsOfASeveralMatchViewReadTheSame(){
+    var oneName= new TName("pkg.Pair", 0, Pos.unknown);
+    var twoName= new TName("pkg.Pair", 2, Pos.unknown);
+    var one= namedType("pkg.Pair", List.of(), List.of(namedMethod(".bar", oneName)));
+    var two= new Literal(RC.imm, twoName, twoBounds(), List.of(), "this", List.of(namedMethod(".bar", twoName)), freshSrc(), false);
     SourceOracle oracle= List::of;
-    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(foo), Optional.empty(), "pkg", Path.of("pkg.html"), true);
-    builder.visitLiteral(foo, Optional.empty());
+    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(one, two), Optional.empty(), "pkg", Path.of("pkg.html"), true);
+    builder.visitLiteral(one, Optional.empty());
+    builder.visitLiteral(two, Optional.empty());
     var renderer= new HtmlDocRenderer(Map.of(), new DocResolver("pkg", builder.types, OtherPackages.empty(), TName::s), Optional.empty());
-    var page= (DocLink.Ambiguous)renderer.resolver.resolve(new DocRef.MethodName(Optional.empty(), ".foo", OptionalInt.empty()), scope(foo)).get();
-    var shown= page.options().stream().map(renderer::renderCandidate).map(s -> s.replaceAll("<[^>]*>", "")).toList();
-    assertEquals(List.of("Foo.foo()", "mut Foo.foo()"), shown);
+    var page= (DocLink.Ambiguous)renderer.resolver.resolve(new DocRef.MethodName(Optional.empty(), ".bar", OptionalInt.empty()), scope(one)).get();
+    var shown= page.options().stream().map(renderer::renderCandidate).map(s -> s.replaceAll("<[^>]*>", "").trim()).toList();
+    assertEquals(List.of("Pair.bar()", "Pair[_,_].bar()"), shown);
   }
   private static Literal anonymousAt(Pos at, List<M> ms){
-    var src= new Src(new Src.SrcObj(){
-      @Override public Pos pos(){ return at; }
-      @Override public TSpan span(){ return TSpan.fromPos(at, 1); }
-    });
-    return new Literal(RC.imm, new TName("pkg._AFoo", 0, at), List.of(), List.of(), "self", ms, src, true);
+    return new Literal(RC.imm, new TName("pkg._AFoo", 0, at), List.of(), List.of(), "self", ms, srcAt(at), true);
   }
-  @Test void aDisambiguationOptionShowsTheFirstParagraphOfTheDocRendered(){
-    var name= new TName("pkg.Foo", 0, Pos.unknown);
-    var imm= fooMethodAt(RC.imm, name, TSpan.fromPos(Pos.of(file, 5, 1), 1));
-    var mut= fooMethodAt(RC.mut, name, TSpan.fromPos(Pos.of(file, 7, 1), 1));
-    var foo= namedType("pkg.Foo", List.of(), List.of(imm, mut));
+  @Test void anOptionOfASeveralMatchViewShowsTheFirstParagraphOfTheDocumentation(){
+    var fooName= new TName("pkg.Foo", 0, Pos.unknown);
+    var barName= new TName("pkg.Bar", 0, Pos.unknown);
+    var foo= namedType("pkg.Foo", List.of(), List.of(fooMethodAt(RC.imm, fooName, TSpan.fromPos(Pos.of(file, 5, 1), 1))));
+    var bar= namedType("pkg.Bar", List.of(), List.of(fooMethodAt(RC.imm, barName, TSpan.fromPos(Pos.of(file, 7, 1), 1))));
     var oracle= SourceOracle.debugBuilder().putURI(file, "/// Gives `this` back,\n/// with one line more.\n///\n/// Not in the option.\n.foo->{}\n/// ```\n.foo->{}\n").build();
-    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(foo), Optional.empty(), "pkg", Path.of("pkg.html"), true);
+    var builder= new HtmlDocBuilder(oracle, OtherPackages.empty(), List.of(foo, bar), Optional.empty(), "pkg", Path.of("pkg.html"), true);
     builder.visitLiteral(foo, Optional.empty());
+    builder.visitLiteral(bar, Optional.empty());
     var renderer= new HtmlDocRenderer(Map.of(), new DocResolver("pkg", builder.types, OtherPackages.empty(), TName::s), Optional.empty());
     var page= (DocLink.Ambiguous)renderer.resolver.resolve(new DocRef.MethodName(Optional.empty(), ".foo", OptionalInt.empty()), scope(foo)).get();
     var shown= page.options().stream().map(renderer::renderCandidate).toList();
-    utils.Err.strCmp("[###]<span class=\"opt-doc\">\u2014 Gives <code>[###]this[###]</code> back, with one line more.</span>", shown.getFirst());
-    assertEquals(List.of("Foo.foo() \u2014 Gives this back, with one line more.", "mut Foo.foo()"), shown.stream().map(s -> s.replaceAll("<[^>]*>", "")).toList());
+    utils.Err.strCmp("[###]<span class=\"brief\">Gives <code>[###]this[###]</code> back, with one line more.</span></p>", shown.getFirst());
+    assertEquals(List.of("Foo.foo()Gives this back, with one line more.", "Bar.foo()"), shown.stream().map(s -> s.replaceAll("<[^>]*>", "").trim()).toList());
   }
-  @Test void aDisambiguationOptionOnAnAnonymousLiteralShowsTheNameTheListShows(){
+  @Test void aBareMethodReferenceSkipsTheMethodsOfAnonymousLiterals(){
     var anonName= new TName("pkg._AFoo", 0, Pos.unknown);
     var anonBar= namedMethod(".bar", anonName);
     var anon= new TypeDoc(anonymousAt(Pos.of(file, 2, 1), List.of(anonBar)), Optional.empty(), List.of());
@@ -1067,10 +1056,8 @@ declaration it documents, or turn it into a plain // comment.""", ex.getMessage(
     var named= new TypeDoc(namedType("pkg.Named", List.of(), List.of()), Optional.empty(), List.of());
     named.declared(namedMethod(".bar", namedName), List::of, List.of());
     var renderer= new HtmlDocRenderer(Map.of(), new DocResolver("pkg", List.of(anon, named), OtherPackages.empty(), TName::s), Optional.empty());
-    var page= (DocLink.Ambiguous)renderer.resolver.resolve(new DocRef.MethodName(Optional.empty(), ".bar", OptionalInt.empty()), scope(named.main())).get();
-    var shown= page.options().stream().map(renderer::renderCandidate).map(s -> s.replaceAll("<[^>]*>", "")).toList();
-    assertEquals(List.of("Anon@a:2.bar() \u2014 the anonymous bar", "Named.bar()"), shown);
-    assertEquals(List.of("Named", "Anon@a:2"), renderer.shown.stream().map(renderer::typeTitle).toList());
+    var link= renderer.resolver.resolve(new DocRef.MethodName(Optional.empty(), ".bar", OptionalInt.empty()), scope(named.main())).get();
+    assertEquals(Optional.of("#method-pkg_2e_Named-0-_2e_bar-0"), renderer.href(link));
   }
   @Test void aFencedBlockIsShownAsOneBlockOfCode(){
     var holder= new TypeDoc(namedType("pkg.Holder", List.of(), List.of()), Optional.empty(), List.of(
@@ -1108,13 +1095,13 @@ declaration it documents, or turn it into a plain // comment.""", ex.getMessage(
     var action= new TypeDoc(new Literal(RC.imm, new TName("pkg.Action", 2, Pos.unknown), twoBounds(), List.of(), "this", List.of(), freshSrc(), false), Optional.empty(), List.of());
     var actionMatch= new TypeDoc(namedType("pkg.ActionMatch", List.of(), List.of()), Optional.empty(), List.of());
     var renderer= new HtmlDocRenderer(Map.of(), new DocResolver("pkg", List.of(actionMatch, action), OtherPackages.empty(), TName::s), Optional.empty());
-    assertEquals(List.of("pkg.Action", "pkg.ActionMatch"), renderer.shown.stream().map(t -> t.main().name().s()).toList());
+    assertEquals(List.of("Action", "ActionMatch"), List.copyOf(renderer.names.keySet()));
   }
   @Test void typesOfOneNameAreListedByArityAsANumber(){
     var ten= new TypeDoc(new Literal(RC.imm, new TName("pkg.F", 10, Pos.unknown), IntStream.range(0, 10).mapToObj(i -> new B("X"+i, EnumSet.of(RC.imm))).toList(), List.of(), "this", List.of(), freshSrc(), false), Optional.empty(), List.of());
     var two= new TypeDoc(new Literal(RC.imm, new TName("pkg.F", 2, Pos.unknown), twoBounds(), List.of(), "this", List.of(), freshSrc(), false), Optional.empty(), List.of());
     var renderer= new HtmlDocRenderer(Map.of(), new DocResolver("pkg", List.of(ten, two), OtherPackages.empty(), TName::s), Optional.empty());
-    assertEquals(List.of(2, 10), renderer.shown.stream().map(t -> t.main().name().arity()).toList());
+    assertEquals(List.of(2, 10), renderer.names.get("F").stream().map(t -> t.main().name().arity()).toList());
   }
   private static List<String> idsIn(String html, String prefix){
     var res= new ArrayList<String>();

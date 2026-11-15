@@ -2,22 +2,26 @@ package docBuilder;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.function.Function;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import core.B;
 import core.ExportedToStr;
 import core.M;
+import core.MName;
 import core.Sig;
 import core.T;
 import core.TName;
@@ -33,14 +37,14 @@ final class HtmlDocRenderer{
   final String pkgName;
   final List<TypeDoc> types;
   final Optional<Path> baseDocLocation;
-  final LinkedHashMap<DocLink.Ambiguous,String> pages= new LinkedHashMap<>();
+  final ArrayList<DocLink.Ambiguous> pages= new ArrayList<>();
   final ExportedToStr toStr;
   final DocResolver resolver;
   final HashMap<String,Pattern> namePatterns= new HashMap<>();
-  final TreeMap<String,ArrayList<TypeDoc>> groups= new TreeMap<>(Comparator.comparing(HtmlDocRenderer::groupKey, String.CASE_INSENSITIVE_ORDER));
-  final HashMap<TypeDoc,ArrayList<TypeDoc>> parents= new HashMap<>();
-  final HashMap<TypeDoc,ArrayList<TypeDoc>> children= new HashMap<>();
-  final List<TypeDoc> shown;
+  final HashSet<String> ids= new HashSet<>();
+  final TreeMap<String,ArrayList<TypeDoc>> names= new TreeMap<>();
+  final TreeMap<String,TreeSet<String>> groups= new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+  final TreeMap<String,TreeSet<String>> under= new TreeMap<>();
   HtmlDocRenderer(Map<String,String> uses, DocResolver resolver, Optional<Path> baseDocLocation){
     assert Require.nonNull(uses, resolver, baseDocLocation);
     pkgName= resolver.pkgName();
@@ -48,29 +52,26 @@ final class HtmlDocRenderer{
     this.baseDocLocation= baseDocLocation;
     toStr= new ExportedToStr(pkgName, uses);
     this.resolver= resolver;
-    var visible= sortedTypes().stream().filter(TypeDoc::visible).toList();
-    visible.forEach(this::place);
-    var res= new LinkedHashSet<TypeDoc>();
-    groups.values().forEach(ms -> ms.forEach(m -> visit(m, res)));
-    shown= List.copyOf(res);
-    assert shown.size() == visible.size();
+    sortedTypes().stream().filter(TypeDoc::visible).forEach(this::place);
   }
   void place(TypeDoc t){
-    if (t.directives().isEmpty()){ add(groups, t.main().name().isPublic() ? "public" : "private", t); }
+    var name= t.main().name().simpleName();
+    names.computeIfAbsent(name, _ -> new ArrayList<>()).add(t);
     for (var d : t.directives()){
       switch (resolver.directive(d, t.scope())){
-        case Directive.Named n -> add(groups, n.group(), t);
-        case Directive.Under u -> { add(parents, t, u.parent()); add(children, u.parent(), t); }
+        case Directive.Named n -> groups.computeIfAbsent(n.group(), _ -> new TreeSet<>()).add(name);
+        case Directive.Under u -> under.computeIfAbsent(u.parent(), _ -> new TreeSet<>()).add(name);
         case Directive.Broken _ -> throw Bug.unreachable();
       }
     }
   }
-  static <K> void add(Map<K,ArrayList<TypeDoc>> m, K k, TypeDoc t){ m.computeIfAbsent(k, _ -> new ArrayList<>()).add(t); }
-  void visit(TypeDoc t, LinkedHashSet<TypeDoc> res){
-    if (res.add(t)){ related(children, t).forEach(c -> visit(c, res)); }
+  Collection<String> under(String name){ return under.getOrDefault(name, new TreeSet<>()); }
+  static Stream<String> holders(Map<String,TreeSet<String>> m, String name){
+    return m.entrySet().stream().filter(e -> e.getValue().contains(name)).map(Map.Entry::getKey);
   }
-  static List<TypeDoc> related(HashMap<TypeDoc,ArrayList<TypeDoc>> m, TypeDoc t){ return m.getOrDefault(t, new ArrayList<>()); }
-  static String groupKey(String g){ return g.equals("public") ? "1" : g.equals("private") ? "2" : "0"+g; }
+  List<String> loose(){
+    return names.keySet().stream().filter(n -> Stream.concat(holders(groups, n), holders(under, n)).findAny().isEmpty()).toList();
+  }
   String render(){
     var sb= new StringBuilder(16_000)
       .append("<!doctype html>\n<html>\n<head>\n<meta charset=\"utf-8\">\n")
@@ -79,20 +80,35 @@ final class HtmlDocRenderer{
       .append("<style>\n").append(css).append("</style>\n")
       .append("</head>\n<body>\n<div class=\"layout\">\n");
     renderToc(sb);
-    sb.append("<main>\n");
-    renderHeader(sb);
-    shown.forEach(t -> renderType(sb, t));
-    pages.forEach((p,id) -> renderPage(sb, p, id));
+    sb.append("<main>\n<header class=\"hdr\">").append(mark)
+      .append("<div><p class=\"eyebrow\">package</p><h1><a href=\"#top\">").append(h(pkgName)).append("</a></h1></div></header>\n")
+      .append("<section class=\"view\" id=\"top\">\n");
+    groups.forEach((g, ns) -> sb.append(entry("#"+groupId(g), g, "<span class=\"brief\">"+h(String.join(", ", ns))+"</span>")));
+    loose().forEach(n -> sb.append(nameEntry(n)));
+    sb.append("</section>\n");
+    groups.forEach((g, ns) -> renderGroup(sb, g, ns));
+    names.forEach((n, ts) -> renderName(sb, n, ts));
+    for (var i= 0; i < pages.size(); i += 1){ renderPage(sb, pages.get(i)); }
     sb.append(router);
     return sb.append("</main>\n</div>\n</body>\n</html>\n").toString();
   }
   String renderText(){
-    var sb= new StringBuilder(4_000).append("package ").append(pkgName).append("\n\n");
-    groups.forEach((g, ms) -> sb.append("group ").append(g).append('\n').append(Join.of(ms.stream().map(this::typeTitle), "  ", "\n  ", "\n")));
+    var sb= new StringBuilder(4_000).append("package ").append(pkgName).append('\n');
+    for (var g : groups.entrySet()){
+      sb.append("  \"").append(g.getKey()).append("\"\n");
+      g.getValue().forEach(n -> renderNameText(sb, "    ", n));
+    }
+    loose().forEach(n -> renderNameText(sb, "  ", n));
     sb.append('\n');
-    shown.forEach(t -> renderTypeText(sb, t));
+    names.values().forEach(ts -> ts.forEach(t -> renderTypeText(sb, t)));
     return sb.toString();
   }
+  void renderNameText(StringBuilder sb, String indent, String name){
+    var brief= documented(name).flatMap(t -> paragraphs(t.visibleDocs()).stream().findFirst()).map(p -> ": "+joined(p).replace("\n", " ")).orElse("");
+    sb.append(indent).append(name).append(brief).append('\n');
+    under(name).forEach(n -> renderNameText(sb, indent+"  ", n));
+  }
+  Optional<TypeDoc> documented(String name){ return names.get(name).stream().filter(TypeDoc::hasDocs).findFirst(); }
   record Suite(String name, List<List<DocOcc>> groups){}
   List<Suite> suites(){
     return sortedTypes().stream()
@@ -100,9 +116,8 @@ final class HtmlDocRenderer{
       .filter(s -> !s.groups().isEmpty())
       .toList();
   }
-  Stream<DeclarationDoc> declarations(TypeDoc t){ return Stream.concat(Stream.of(t), visibleMethods(t).stream()); }
   List<List<DocOcc>> testGroups(TypeDoc t){
-    return declarations(t)
+    return Stream.<DeclarationDoc>concat(Stream.of(t), t.methods.stream())
       .map(d -> d.docs.stream().filter(o -> o.kind().tested()).toList())
       .filter(g -> !g.isEmpty())
       .distinct()
@@ -140,17 +155,18 @@ final class HtmlDocRenderer{
     return lines.source(first.file());
   }
   void renderTypeText(StringBuilder sb, TypeDoc t){
-    sb.append(typeTitle(t)).append(Join.of(t.main().cs().stream().map(toStr::typeName), " : ", ", ", "", "")).append('\n');
-    related(parents, t).forEach(p -> sb.append("  under: ").append(typeTitle(p)).append('\n'));
-    related(children, t).forEach(c -> sb.append("  see also: ").append(typeTitle(c)).append('\n'));
+    sb.append(typeTitle(t)).append(Join.of(supers(t).stream().map(toStr::typeName), " : ", ", ", "", "")).append('\n');
     renderDocText(sb, "  ", t);
-    visibleMethods(t).forEach(m -> renderMethodText(sb, m));
+    for (var e : entries(t)){
+      docGroups(e).forEach(g -> renderMethodText(sb, g, holder(g.getFirst(), e), fromRefs(g)));
+    }
+    supers(t).forEach(c -> homed(t, c).forEach(m -> renderMethodText(sb, List.of(m), m, List.of(m.home().get()))));
     sb.append('\n');
   }
-  void renderMethodText(StringBuilder sb, MethodDoc m){
-    m.variants.stream().map(this::sig).distinct().forEach(s -> sb.append('\t').append(s).append('\n'));
-    if (m.declared()){ renderDocText(sb, "    ", m); }
-    sb.append(Join.of(fromRefs(m).stream().map(this::fromName), "    from: ", ", ", "\n", ""));
+  void renderMethodText(StringBuilder sb, List<MethodDoc> ms, MethodDoc holder, List<MethodRef> from){
+    ms.forEach(m -> sb.append('\t').append(sig(m.main())).append('\n'));
+    renderDocText(sb, "    ", holder);
+    sb.append(Join.of(from.stream().map(this::fromName), "    from: ", ", ", "\n", ""));
   }
   void renderDocText(StringBuilder sb, String indent, DeclarationDoc d){
     for (var run : runs(d.visibleDocs(), o -> o.kind()==DocKind.Example)){
@@ -170,13 +186,6 @@ final class HtmlDocRenderer{
   static void appendIndented(StringBuilder sb, String indent, String line){
     if (!line.isBlank()){ sb.append(indent); }
     sb.append(line).append('\n');
-  }
-  void renderHeader(StringBuilder sb){
-    sb.append("<header class=\"hdr\">").append(mark)
-      .append("<div><p class=\"eyebrow\">package</p><h1>").append(h(pkgName)).append("</h1></div>")
-      .append("</header>\n")
-      .append("<p id=\"welcome\" class=\"welcome\">")
-      .append("Types in the list: ").append(groups.values().stream().flatMap(List::stream).distinct().count()).append(". Pick one.</p>\n");
   }
   static final String mark= ""
     +"<svg class=\"mark\" viewBox=\"0 0 64 64\" width=\"38\" height=\"38\" aria-hidden=\"true\">"
@@ -221,82 +230,89 @@ a:hover{text-decoration:underline}
   color:var(--fg); background:var(--bg); border:1px solid var(--border); border-radius:.4em;
 }
 .toc input:focus{outline:none; border-color:var(--blue)}
-.toc ul{list-style:none; margin:0; padding:0; overflow:auto; flex:1}
+.toc ul{list-style:none; margin:0; padding:0}
+#tree,#found{overflow:auto; flex:1}
+#tree ul{display:none; padding-left:.9em}
+#tree li.open>ul{display:block}
 .toc li{margin:1px 0}
-.toc li.group{
-  margin:0 0 .25em; padding:0 .55em;
-  font-size:.74em; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--orange);
-}
-.toc li:not([hidden])~li.group{margin-top:.9em; padding-top:.55em; border-top:1px solid var(--border)}
 .toc a{
   display:block; padding:.28em .55em; border-radius:.35em; border-left:3px solid transparent;
-  color:var(--fg-muted); font-size:.93em; padding-left:1.4em; text-indent:-.85em; overflow-wrap:anywhere;
+  color:var(--fg-muted); font-size:.93em; overflow-wrap:anywhere;
 }
 .toc a:hover{background:var(--border-soft); color:var(--fg); text-decoration:none}
 .toc a.sel{background:var(--bg); border-left-color:var(--orange); color:var(--blue); font-weight:600}
+#tree>li.folder>a{color:var(--fg); font-weight:600}
+#tree li.folder>a::before{
+  content:"\\25B8"; display:inline-block; width:1em; color:var(--fg-faint); transition:transform .12s ease;
+}
+#tree li.open>a::before{transform:rotate(90deg)}
+#tree li:not(.folder)>a,#found a{padding-left:1.55em}
 main{flex:1; min-width:0; padding:2.2em 2.6em 6em; max-width:64em}
 .hdr{display:flex; align-items:center; gap:.85em; padding-bottom:1em; border-bottom:1px solid var(--border)}
 .hdr h1{margin:0; font-size:1.65em; letter-spacing:-.01em}
+.hdr h1 a{color:inherit}
 .eyebrow{
   margin:0; font-size:.7em; font-weight:600; letter-spacing:.12em;
   text-transform:uppercase; color:var(--fg-faint);
 }
-.welcome{color:var(--fg-muted)}
-.type{display:none; margin:1.6em 0}
-.type.active{display:block}
-.type>h2{
+.view{display:none; margin:1.6em 0}
+.view.active{display:block}
+.view>h2{
   margin:.2em 0 .1em; font-size:1.3em; color:var(--blue-deep);
   font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
 }
-.type>h3{
+.view>h2~h2{margin-top:2.2em; padding-top:1em; border-top:1px solid var(--border)}
+.view>h2.plain{font-family:inherit; font-size:1.15em; color:var(--fg)}
+.view>h3{
   margin:1.8em 0 .4em; font-size:.78em; font-weight:600; letter-spacing:.1em;
   text-transform:uppercase; color:var(--fg-faint); border-bottom:1px solid var(--border-soft);
   padding-bottom:.35em;
 }
-.extends{margin:.5em 0 0; font-size:.92em; color:var(--fg-muted)}
-.also{display:grid; grid-template-columns:auto 1fr; gap:.15em .4em; justify-items:start}
-.also a{grid-column:2}
+.where,.extends{margin:.5em 0; font-size:.92em; color:var(--fg-muted)}
+.entry{margin:0; padding:.5em .2em; border-top:1px solid var(--border-soft)}
+.entry>a{font-weight:600}
+.brief{
+  display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
+  color:var(--fg-muted); font-size:.93em;
+}
 .method{margin:0; padding:.45em .2em; border-top:1px solid var(--border-soft)}
-.method:first-of-type{border-top:none}
-.method:target{background:var(--bg-soft); border-radius:.4em}
+h3+.method,h3+.entry,.where+.entry{border-top:none}
+.method:target,.extends a:target{background:var(--bg-soft); border-radius:.4em}
+.method>summary,div.method{display:grid; grid-template-columns:1.1em 1fr}
 .method>summary{list-style:none; cursor:text}
 .method>summary::-webkit-details-marker{display:none}
+.method .brief{grid-column:2; cursor:pointer}
+.method[open] .brief{display:none}
 .examples>summary{list-style:none; cursor:pointer; color:var(--orange); font-size:.86em; font-weight:600}
 .examples>summary::-webkit-details-marker{display:none}
-.variants>summary{cursor:pointer}
 .disclosure{
   display:inline-block; width:1em; cursor:pointer; color:var(--fg-faint);
   transition:transform .12s ease; user-select:none;
 }
 .disclosure:hover{color:var(--blue)}
 details[open]>summary .disclosure{transform:rotate(90deg)}
-.sig{
+.sig,.of{
   font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
   white-space:pre-wrap; font-size:.95em; font-weight:600; color:var(--fg);
 }
+.of{margin:.8em 0 0 1.6em; font-size:.85em; font-weight:400; color:var(--fg-faint)}
 .doc{margin:.3em 0 .3em 1.6em; color:var(--fg-muted); font-size:.95em}
 .doc p{white-space:pre-wrap; margin:.55em 0}
-.missing{color:var(--fg-faint); font-style:italic}
-.from,.variants{color:var(--fg-faint); font-size:.88em}
+.from{color:var(--fg-faint); font-size:.88em}
 details{margin:.4em 0}
 code{
   font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
   font-size:.92em; background:var(--bg-code); border:1px solid var(--border-soft);
   padding:.05em .32em; border-radius:.3em; overflow-wrap:anywhere;
 }
-.example,.variant,.fenced{
+.example,.fenced{
   font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
   white-space:pre-wrap; font-size:.88em; margin:.4em 0 .2em;
   background:var(--bg-code); border:1px solid var(--border-soft);
   border-left:3px solid var(--orange); border-radius:.3em;
   padding:.6em .8em; overflow-x:auto; color:var(--fg);
 }
-.variant,.fenced{border-left-color:var(--border)}
-.options{list-style:none; margin:.6em 0; padding:0}
-.options li{padding:.4em .1em; border-top:1px solid var(--border-soft)}
-.options li:first-child{border-top:none}
-.opt-doc{color:var(--fg-muted); font-size:.92em}
-.disambig>h2{font-family:inherit; font-size:1.15em; color:var(--fg)}
+.fenced{border-left-color:var(--border)}
 @media (max-width:48em){
   .layout{display:block}
   .toc{width:auto; height:auto; max-height:40vh; position:static; border-right:none; border-bottom:1px solid var(--border)}
@@ -306,62 +322,59 @@ code{
   static final String router= """
 <script>
 (function(){
-  var secs= document.querySelectorAll('.type');
-  var links= document.querySelectorAll('#toclist a');
-  var items= document.querySelectorAll('#toclist li:not(.group)');
-  var groups= document.querySelectorAll('#toclist li.group');
+  var views= document.querySelectorAll('.view');
+  var tree= document.getElementById('tree');
+  var found= document.getElementById('found');
   var filter= document.getElementById('filter');
-  var welcome= document.getElementById('welcome');
+  var clicked= null;
   function route(){
     var hash= decodeURIComponent(location.hash.slice(1));
     var target= hash ? document.getElementById(hash) : null;
-    var active= target && (target.classList.contains('type') ? target : target.closest('.type'));
-    secs.forEach(function(el){ el.classList.toggle('active', el===active); });
-    var sel= active ? inToc([active]) : [];
-    links.forEach(function(a){ a.classList.toggle('sel', sel.indexOf(a.getAttribute('href'))>=0); });
-    showSel();
-    welcome.style.display= active ? 'none' : '';
+    var active= (target && target.closest('.view')) || document.getElementById('top');
+    views.forEach(function(el){ el.classList.toggle('active', el===active); });
+    var a= pick('#'+active.id);
+    if (a || active.id==='top'){ tree.querySelectorAll('.open,.sel').forEach(function(el){ el.classList.remove('open','sel'); }); }
+    for (var li= a && a.parentElement; li; li= li.parentElement.closest('li')){ li.classList.add('open'); }
+    if (a){ a.classList.add('sel'); a.scrollIntoView({block:'nearest'}); }
+    clicked= null;
     var opened= target && target.closest('details');
     if (opened){ opened.open= true; }
     if (history.state){ window.scrollTo(0, history.state.y); }
-    else if (active && target!==active){ target.scrollIntoView(); }
+    else if (target && target!==active){ target.scrollIntoView(); }
     else { window.scrollTo(0,0); }
   }
-  function inToc(ts){
-    var hrefs= ts.map(function(t){ return '#'+t.id; });
-    var hit= hrefs.filter(function(h){ return document.querySelector('#toclist a[href="'+h+'"]'); });
-    if (hit.length || !ts.length){ return hit; }
-    var up= [];
-    ts.forEach(function(t){ t.querySelectorAll('.under a').forEach(function(a){ up.push(document.getElementById(a.getAttribute('href').slice(1))); }); });
-    return inToc(up);
-  }
-  function showSel(){
-    var sel= document.querySelector('#toclist a.sel');
-    var list= document.getElementById('toclist');
-    if (sel){ list.scrollTop= sel.offsetTop-list.offsetTop-list.clientHeight/2; }
+  function pick(href){
+    if (clicked && clicked.getAttribute('href')===href){ return clicked; }
+    var q= 'a[href="'+href+'"]';
+    var sel= tree.querySelector('a.sel');
+    for (var li= sel && sel.parentElement; li; li= li.parentElement.closest('li')){
+      var hit= li.querySelector(q);
+      if (hit){ return hit; }
+    }
+    return tree.querySelector(q);
   }
   document.addEventListener('click', function(e){
     if (e.target.closest('a')){ history.replaceState({y:window.scrollY}, ''); }
   }, true);
+  tree.addEventListener('click', function(e){
+    var a= e.target.closest('a');
+    if (!a){ return; }
+    clicked= a;
+    if (a.classList.contains('sel')){ a.parentElement.classList.toggle('open'); }
+    else if (a.getAttribute('href')===location.hash){ route(); }
+  });
   window.addEventListener('hashchange', route);
   window.addEventListener('load', route);
   route();
   filter.addEventListener('input', function(){
     var q= filter.value.toLowerCase();
-    items.forEach(function(li){
-      li.hidden= li.textContent.split('[')[0].toLowerCase().indexOf(q) < 0;
-    });
-    groups.forEach(function(g){
-      var n= g.nextElementSibling;
-      while (n && !n.classList.contains('group') && n.hidden){ n= n.nextElementSibling; }
-      g.hidden= !n || n.classList.contains('group');
-    });
-    document.getElementById('toclist').scrollTop= 0;
-    showSel();
+    tree.hidden= !!q;
+    found.hidden= !q;
+    found.querySelectorAll('li').forEach(function(li){ li.hidden= li.textContent.toLowerCase().indexOf(q)<0; });
   });
   document.querySelectorAll('.method>summary').forEach(function(s){
     s.addEventListener('click', function(e){
-      if (e.detail && !e.target.closest('.disclosure') && !e.target.closest('a')){ e.preventDefault(); }
+      if (e.detail && e.target.closest('.sig') && !e.target.closest('a')){ e.preventDefault(); }
     });
   });
 })();
@@ -374,55 +387,111 @@ code{
         .thenComparingInt(t -> t.main().pos().column()))
       .toList();
   }
-  List<MethodDoc> visibleMethods(TypeDoc t){
-    return t.methods.stream()
-      .filter(MethodDoc::visible)
-      .sorted(Comparator.comparing((MethodDoc m) -> m.main().sig().m().s())
-        .thenComparingInt(m -> m.main().sig().m().arity())
-        .thenComparing(m -> m.main().sig().rc()+"/"+toStr.sig(m.main().sig())))
-      .toList();
-  }
   void renderToc(StringBuilder sb){
     sb.append("<nav class=\"toc\">\n")
-      .append("<input id=\"filter\" type=\"search\" placeholder=\"Filter types\" autocomplete=\"off\">\n")
-      .append("<ul id=\"toclist\">\n");
-    groups.forEach((g, ms) -> renderTocGroup(sb, g, ms));
+      .append("<input id=\"filter\" type=\"search\" placeholder=\"Find a type\" autocomplete=\"off\">\n")
+      .append("<ul id=\"tree\">\n");
+    groups.forEach((g, ns) -> sb.append(folder("#"+groupId(g), g, ns)));
+    loose().forEach(n -> sb.append(folder(n)));
+    sb.append("</ul>\n<ul id=\"found\" hidden>\n");
+    names.keySet().forEach(n -> sb.append("<li>").append(nameLink(n)).append("</li>\n"));
     sb.append("</ul>\n</nav>\n");
   }
-  void renderTocGroup(StringBuilder sb, String group, List<TypeDoc> members){
-    sb.append("<li class=\"group\">").append(h(group)).append("</li>\n");
-    members.forEach(t -> sb.append("<li>").append(typeDocLink(t)).append("</li>\n"));
+  String folder(String name){ return folder(nameHref(name), name, under(name)); }
+  String folder(String href, String title, Collection<String> inside){
+    var link= "<a href=\""+href+"\">"+h(title)+"</a>";
+    if (inside.isEmpty()){ return "<li>"+link+"</li>\n"; }
+    return "<li class=\"folder\">"+link+"<ul>\n"+inside.stream().map(this::folder).collect(Collectors.joining())+"</ul></li>\n";
   }
-  String typeDocLink(TypeDoc t){ return "<a href=\"#"+typeId(t)+"\">"+wrap(typeTitle(t))+"</a>"; }
-  void renderType(StringBuilder sb, TypeDoc t){
-    sb.append("<section class=\"type\" id=\"").append(typeId(t)).append("\">\n")
-      .append("<h2>").append(wrap(typeTitle(t))).append("</h2>\n");
-    renderDoc(sb, t);
-    sb.append(Join.of(related(parents, t).stream().map(this::typeDocLink), "<p class=\"extends under\"><b>Under:</b> ", ", ", "</p>\n", ""));
-    sb.append(Join.of(related(children, t).stream().map(this::typeDocLink), "<p class=\"extends also\"><b>See also:</b> ", "\n", "</p>\n", ""));
-    sb.append(Join.of(t.main().cs().stream().map(this::typeLink), "<p class=\"extends\"><b>Extends:</b> ", ", ", "</p>\n", ""));
-    renderVariants(sb, "Typed literal variants", t.variants, toStr::lit);
-    var ms= visibleMethods(t);
-    if (!ms.isEmpty()){ sb.append("<h3>Methods</h3>\n"); }
-    ms.forEach(m -> renderMethod(sb, m));
+  static String entry(String href, String title, String brief){
+    return "<p class=\"entry\"><a href=\""+h(href)+"\">"+h(title)+"</a>"+brief+"</p>\n";
+  }
+  String nameEntry(String name){ return entry(nameHref(name), name, documented(name).map(this::brief).orElse("")); }
+  String nameLink(String name){ return "<a href=\""+nameHref(name)+"\">"+h(name)+"</a>"; }
+  String nameHref(String name){ return "#"+typeId(names.get(name).getFirst().main().name()); }
+  String brief(DeclarationDoc d){
+    return paragraphs(d.visibleDocs()).stream().findFirst()
+      .map(p -> "<span class=\"brief\">"+renderParagraph(p, d.scope()).replace("\n", " ")+"</span>").orElse("");
+  }
+  void renderGroup(StringBuilder sb, String group, Collection<String> inside){
+    sb.append("<section class=\"view\" id=\"").append(groupId(group)).append("\">\n")
+      .append("<h2 class=\"plain\">").append(h(group)).append("</h2>\n");
+    inside.forEach(n -> sb.append(nameEntry(n)));
     sb.append("</section>\n");
   }
-  void renderMethod(StringBuilder sb, MethodDoc m){
-    var ids= m.variants.stream().map(v -> methodId(m.owner.main().name(), v.sig())).distinct().toList();
-    sb.append("<details class=\"method\" id=\"").append(ids.getFirst()).append("\">\n")
-      .append("<summary><span class=\"disclosure\">&#9656;</span>");
-    ids.stream().skip(1).forEach(id -> sb.append("<span id=\"").append(id).append("\"></span>"));
-    sb.append("<span class=\"sig\">").append(renderSig(m)).append("</span></summary>\n");
-    if (m.declared()){ renderDoc(sb, m); }
-    sb.append(Join.of(fromRefs(m).stream().map(this::fromLink), "<p class=\"doc from\">From: ", ", ", ".</p>\n", ""));
-    renderVariants(sb, "Typed method variants", m.variants, this::sig);
-    sb.append("</details>\n");
+  void renderName(StringBuilder sb, String name, List<TypeDoc> ts){
+    var in= Stream.concat(holders(groups, name).map(g -> "<a href=\"#"+groupId(g)+"\">"+h(g)+"</a>"), holders(under, name).map(this::nameLink));
+    sb.append("<section class=\"view\"").append(anchor(typeId(ts.getFirst().main().name()))).append(">\n")
+      .append(Join.of(in, "<p class=\"where\">In: ", ", ", "</p>\n", ""));
+    ts.forEach(t -> renderType(sb, t));
+    if (!under(name).isEmpty()){ sb.append("<h3>Under ").append(h(name)).append("</h3>\n"); }
+    under(name).forEach(n -> sb.append(nameEntry(n)));
+    sb.append("</section>\n");
+  }
+  String anchor(String id){ return ids.add(id) ? " id=\""+id+"\"" : ""; }
+  void renderType(StringBuilder sb, TypeDoc t){
+    sb.append("<h2").append(anchor(typeId(t.main().name()))).append(">").append(wrap(typeTitle(t))).append("</h2>\n");
+    renderDoc(sb, t);
+    var own= entries(t);
+    if (!own.isEmpty()){ sb.append("<h3>Methods</h3>\n"); }
+    own.forEach(e -> renderEntry(sb, e));
+    if (!supers(t).isEmpty()){ sb.append("<h3>Extends</h3>\n"); }
+    supers(t).forEach(c -> sb.append("<p class=\"extends\">").append(typeLink(c))
+      .append(Join.of(homed(t, c).stream().gather(DistinctBy.<MethodDoc,MName>of(m -> m.main().sig().m())).map(this::homedLink), ": ", ", ", "", "")).append("</p>\n"));
+  }
+  static List<T.C> supers(TypeDoc t){ return t.main().cs().stream().filter(c -> c.name().isPublic()).toList(); }
+  static List<MethodDoc> homed(TypeDoc t, T.C c){
+    return t.methods.stream()
+      .filter(m -> m.home().filter(r -> r.provider().equals(c)).isPresent())
+      .sorted(Comparator.comparing((MethodDoc m) -> m.main().sig().m().s()).thenComparingInt(m -> m.main().sig().m().arity()))
+      .toList();
+  }
+  String homedLink(MethodDoc m){
+    var s= m.main().sig();
+    return "<a"+anchor(methodId(m.owner.main().name(), s))+" href=\""+h(methodHref(m.home().get().provider().name(), s))+"\">"
+      +h(s.m().s()+DocResolver.shape(OptionalInt.of(s.m().arity()), "(", ")"))+"</a>";
+  }
+  static Collection<List<MethodDoc>> entries(TypeDoc t){
+    var cs= t.main().cs().stream().map(T.C::name).toList();
+    return t.methods.stream()
+      .filter(m -> m.home().isEmpty())
+      .sorted(Comparator.comparingInt((MethodDoc m) -> cs.indexOf(m.main().sig().origin()))
+        .thenComparingInt(m -> m.main().sig().span().pos().line())
+        .thenComparingInt(m -> m.main().sig().span().pos().column()))
+      .collect(Collectors.groupingBy(m -> m.main().sig().m(), LinkedHashMap::new, Collectors.toList())).values();
+  }
+  MethodDoc holder(MethodDoc m, List<MethodDoc> entry){
+    return Stream.concat(Stream.of(m), entry.stream()).flatMap(this::inherited).filter(MethodDoc::hasDocs).findFirst().orElse(m);
+  }
+  Stream<MethodDoc> inherited(MethodDoc m){
+    var key= new MethodKey.Declared(m.main().sig().rc(), m.main().sig().m());
+    return Stream.concat(Stream.of(m), m.inheritedFrom.stream()
+      .flatMap(r -> resolver.localTypeDoc(r.provider().name()).stream())
+      .flatMap(p -> Stream.ofNullable(p.byKey.get(key))));
+  }
+  Collection<List<MethodDoc>> docGroups(List<MethodDoc> entry){
+    return entry.stream().collect(Collectors.groupingBy(m -> holder(m, entry).visibleDocs().stream().map(DocOcc::text).toList(), LinkedHashMap::new, Collectors.toList())).values();
+  }
+  void renderEntry(StringBuilder sb, List<MethodDoc> entry){
+    var first= entry.getFirst();
+    var groups= docGroups(entry);
+    var body= new StringBuilder();
+    for (var g : groups){
+      if (groups.size() > 1){ body.append("<p class=\"of\">").append(h(Join.of(g.stream().map(m -> sig(m.main())), "", "\n", ""))).append("</p>\n"); }
+      renderDoc(body, holder(g.getFirst(), entry));
+    }
+    body.append(Join.of(fromRefs(entry).stream().map(this::fromLink), "<p class=\"doc from\">From: ", ", ", ".</p>\n", ""));
+    var open= " class=\"method\""+anchor(methodId(first.owner.main().name(), first.main().sig()))+">";
+    var sigs= "<span class=\"sig\">"+Join.of(entry.stream().map(this::renderSig), "", "\n", "")+"</span>";
+    if (body.isEmpty()){ sb.append("<div").append(open).append("<span></span>").append(sigs).append("</div>\n"); return; }
+    sb.append("<details").append(open).append("<summary><span class=\"disclosure\">&#9656;</span>").append(sigs)
+      .append(brief(holder(first, entry))).append("</summary>\n").append(body).append("</details>\n");
   }
   String fromLink(MethodRef r){
     return "<a href=\""+h(methodHref(r.provider().name(), r.method().sig()))+"\">"+h(fromName(r))+"</a>";
   }
-  List<MethodRef> fromRefs(MethodDoc m){
-    return m.inheritedFrom.stream().gather(DistinctBy.<MethodRef,String>of(this::fromName)).toList();
+  List<MethodRef> fromRefs(List<MethodDoc> ms){
+    return ms.stream().flatMap(m -> m.inheritedFrom.stream()).filter(MethodRef::shows).gather(DistinctBy.<MethodRef,String>of(this::fromName)).toList();
   }
   String sig(M m){
     var s= m.sig();
@@ -444,7 +513,7 @@ code{
       var found= at.find(from);
       assert found;
       from = at.end();
-      if (!resolver.byName().containsKey(n) && !resolver.other().dom().contains(n)){ continue; }
+      if (!n.isPublic() || !resolver.byName().containsKey(n) && !resolver.other().dom().contains(n)){ continue; }
       sb.append(wrap(text.substring(i, at.start())));
       sb.append("<a href=\"").append(h(typeHref(n))).append("\">").append(h(printed)).append("</a>");
       i = from;
@@ -457,12 +526,7 @@ code{
     return Stream.concat(Stream.of(rcc.c().name()), rcc.c().ts().stream().flatMap(HtmlDocRenderer::typeNames));
   }
   void renderDoc(StringBuilder sb, DeclarationDoc d){
-    var visible= d.visibleDocs();
-    if (visible.isEmpty()){
-      sb.append("<p class=\"doc missing\">No documentation yet.</p>\n");
-      return;
-    }
-    for (var run : runs(visible, o -> o.kind()==DocKind.Example)){
+    for (var run : runs(d.visibleDocs(), o -> o.kind()==DocKind.Example)){
       if (run.getFirst().kind()==DocKind.Example){ renderExamples(sb, run.stream().map(DocOcc::text).toList()); continue; }
       sb.append("<div class=\"doc\">\n");
       runs(run, DocOcc::kind).forEach(b -> renderBlock(sb, b, d.scope()));
@@ -502,30 +566,30 @@ code{
     return href(resolver.resolve(DocRefScanner.wholeRef(written).orElseThrow(), scope).orElseThrow())
       .map(href -> "<a href=\""+h(href)+"\">"+body+"</a>").orElse(body);
   }
-  void renderPage(StringBuilder sb, DocLink.Ambiguous p, String anchor){
-    sb.append("<section class=\"type disambig\" id=\"").append(anchor).append("\">\n")
-      .append("<h2>Several match ").append(h(p.title())).append("</h2>\n<ul class=\"options\">\n");
+  void renderPage(StringBuilder sb, DocLink.Ambiguous p){
+    sb.append("<section class=\"view\" id=\"").append(pageId(p)).append("\">\n")
+      .append("<h2 class=\"plain\">Several match ").append(h(p.title())).append("</h2>\n");
     p.options().stream()
       .sorted(Comparator.comparing((Candidate c) -> c.owner().s()).thenComparingInt(c -> c.owner().arity())
         .thenComparingInt(c -> c instanceof Candidate.Method m ? m.sig().m().arity() : 0))
-      .forEach(c -> sb.append("<li>").append(renderCandidate(c)).append("</li>\n"));
-    sb.append("</ul>\n</section>\n");
+      .forEach(c -> sb.append(renderCandidate(c)));
+    sb.append("</section>\n");
+  }
+  String pageId(DocLink.Ambiguous p){
+    if (!pages.contains(p)){ pages.add(p); }
+    return "disambig-"+id(p.title())+"-"+pages.indexOf(p);
   }
   String renderCandidate(Candidate c){
-    var owner= h(resolver.localTypeDoc(c.owner()).filter(t -> t.main().infName()).map(this::typeTitle).orElseGet(() -> toStr.typeNameWithArity(c.owner())));
-    var link= "<a href=\""+h(candidateHref(c))+"\">";
+    var owner= toStr.typeNameWithArity(c.owner());
     return switch (c){
-      case Candidate.Type _ -> link+owner+"</a>";
-      case Candidate.Method(_, var s, var local) -> link+s.rc().toStrSpace()+owner+h(s.m().s()+DocResolver.shape(OptionalInt.of(s.m().arity()), "(", ")"))+"</a>"
-        +local.flatMap(this::renderFirstParagraph).map(p -> " <span class=\"opt-doc\">\u2014 "+p.replace("\n", " ")+"</span>").orElse("");
+      case Candidate.Type _ -> entry(candidateHref(c), owner, "");
+      case Candidate.Method(_, var s, var local) -> entry(candidateHref(c), owner+s.m().s()+DocResolver.shape(OptionalInt.of(s.m().arity()), "(", ")"),
+        local.map(m -> brief(holder(m, List.of()))).orElse(""));
     };
-  }
-  Optional<String> renderFirstParagraph(MethodDoc m){
-    return paragraphs(m.visibleDocs()).stream().findFirst().map(p -> renderParagraph(p, m.scope()));
   }
   Optional<String> href(DocLink link){
     return switch (link){
-      case DocLink.Ambiguous a -> Optional.of("#"+pages.computeIfAbsent(a, _ -> "disambig-"+id(a.title())+"-"+pages.size()));
+      case DocLink.Ambiguous a -> Optional.of("#"+pageId(a));
       case DocLink.Resolved r -> Optional.of(candidateHref(r.hit()));
       case DocLink.NoLink _ -> Optional.empty();
     };
@@ -536,40 +600,25 @@ code{
       case Candidate.Method m -> methodHref(m.owner(), m.sig());
     };
   }
-  <V> void renderVariants(StringBuilder sb, String title, List<V> variants, Function<V,String> show){
-    if (variants.size() <= 1){ return; }
-    var shown= variants.stream().map(show).distinct().toList();
-    if (shown.size() <= 1){ return; }
-    sb.append("<details class=\"variants\"><summary>")
-      .append(h(title)).append(": ").append(shown.size()).append("</summary>\n");
-    shown.forEach(v -> sb.append("<pre class=\"variant\">").append(h(v)).append("</pre>\n"));
-    sb.append("</details>\n");
-  }
   String typeTitle(TypeDoc t){
-    var l= t.main();
-    if (l.infName()){ return resolver.anonTitle(l); }
-    return toStr.typeName(l.name())+Join.of(l.bs().stream().map(B::compactToString), "[", ",", "]", "");
+    return toStr.typeName(t.main().name())+Join.of(t.main().bs().stream().map(B::compactToString), "[", ",", "]", "");
   }
   String typeLink(T.C c){
     return "<a href=\""+h(typeHref(c.name()))+"\">"+h(toStr.typeName(c))+"</a>";
   }
-  String typeHref(TName n){ return resolver.localTypeDoc(n).map(t -> "#"+typeId(t)).orElseGet(() -> prefix(n.pkgName())+"#"+typeId(n)); }
+  String typeHref(TName n){ return prefix(n.pkgName())+"#"+typeId(n); }
   String methodHref(TName owner, Sig s){ return prefix(owner.pkgName())+"#"+methodId(owner, s); }
   String prefix(String pkg){
     if (pkg.equals(pkgName)){ return ""; }
     if (pkg.equals("base")){ return baseDocLocation.map(p -> p.toUri().toString()).orElse("base.html"); }
     return pkg+".html";
   }
-  static String typeId(TypeDoc t){
-    if (!t.main().infName()){ return typeId(t.main().name()); }
-    var p= t.main().pos();
-    return "literal-"+id(p.fileName().toString())+"-"+p.line()+"-"+p.column();
-  }
+  static String groupId(String group){ return "group-"+id(group); }
   static String typeId(TName n){
     return "type-"+id(n.s())+"-"+n.arity();
   }
   static String methodId(TName owner, Sig s){
-    return "method-"+id(owner.s())+"-"+owner.arity()+"-"+id(s.rc().name())+"-"+id(s.m().s())+"-"+s.m().arity();
+    return "method-"+id(owner.s())+"-"+owner.arity()+"-"+id(s.m().s())+"-"+s.m().arity();
   }
   private static final Pattern notPlain= Pattern.compile("[^a-zA-Z0-9]");
   static String id(String s){ return notPlain.matcher(s).replaceAll(m -> "_"+Integer.toHexString(m.group().codePointAt(0))+"_"); }

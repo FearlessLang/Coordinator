@@ -1717,7 +1717,7 @@ ZBaz: base.TxtFile{[###]
 //@Group "beer"
 ZBeerQux: base.TxtFile{[###]""", generated);
   }
-  @Test void anAutoloadedTypeInAFolderNamedPublicOrPrivateHasNoGroupLine(@TempDir Path tmp){
+  @Test void aFolderNamedPublicOrPrivateIsAGroupLikeAnyOtherAndAPrivateAutoloadedTypeHasNoGroupLine(@TempDir Path tmp){
     var root= tmp.resolve("root");
     UserError.root = root;
     FsDsl.materialize(root, """
@@ -1743,6 +1743,7 @@ zip
 _XPublicK: base.TxtFile{[###]
   .originalFileName: base.Str -> "k.txt";
 }
+//@Group "private"
 PrivateKey: base.TxtFile{[###]
   .originalFileName: base.Str -> "key.txt";
 }
@@ -1750,6 +1751,7 @@ PrivateKey: base.TxtFile{[###]
 PublicSmallDot: base.TxtFile{[###]
   .originalFileName: base.Str -> "dot.txt";
 }
+//@Group "private"
 ZPrivateDeep: base.TxtFile{[###]""", generated);
   }
   @Test void okBaseAssetAutoload(@TempDir Path tmp){
