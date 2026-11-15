@@ -183,7 +183,7 @@ public final class HtmlDocBuilder{
     types.stream().flatMap(t -> t.methods.stream()).flatMap(m -> m.directives().stream()).distinct().forEach(d -> problems.add(line(d, onMethod)));
     var parents= new LinkedHashMap<TypeDoc,List<Directive.Under>>();
     var names= new HashMap<String,String>(Map.of("public", "public", "private", "private"));
-    types.stream().filter(TypeDoc::visible).forEach(t -> parents.put(t, checkType(resolver, t, names, problems)));
+    types.forEach(t -> parents.put(t, checkType(resolver, t, names, problems)));
     if (!problems.isEmpty()){ return problems; }
     var done= new HashSet<TypeDoc>();
     parents.keySet().forEach(t -> cycles(resolver, t, new ArrayList<>(), done, parents, problems));
@@ -193,10 +193,9 @@ public final class HtmlDocBuilder{
     t.docs.stream().dropWhile(o -> o.kind()==DocKind.Group).filter(o -> o.kind()==DocKind.Group).findFirst()
       .ifPresent(o -> problems.add(line(o, groupAfterDocs)));
     var ds= t.directives().stream().map(d -> resolver.directive(d, t.scope())).toList();
-    ds.forEach(d -> checkDirective(resolver, t, d, problems));
+    ds.forEach(d -> checkDirective(resolver, t, d, names, problems));
     var seen= new HashSet<Object>();
     ds.stream().filter(d -> !seen.add(key(d))).forEach(d -> problems.add(line(d.at(), repeatedGroup)));
-    ds.stream().<Directive.Named>mapMulti((d, out) -> { if (d instanceof Directive.Named n){ out.accept(n); } }).forEach(n -> checkCase(n, names, problems));
     var unders= ds.stream().<Directive.Under>mapMulti((d, out) -> { if (d instanceof Directive.Under u){ out.accept(u); } }).toList();
     var named= ds.stream().anyMatch(Directive.Named.class::isInstance);
     var onlyPrivate= t.main().name().isPublic() && !named && !unders.isEmpty() && unders.stream().noneMatch(u -> u.parent().main().name().isPublic());
@@ -210,17 +209,14 @@ public final class HtmlDocBuilder{
       case Directive.Broken b -> b;
     };
   }
-  void checkCase(Directive.Named n, HashMap<String,String> names, ArrayList<String> problems){
-    var first= names.putIfAbsent(n.group().toLowerCase(Locale.ROOT), n.group());
-    if (first != null && !first.equals(n.group())){ problems.add(line(n.at(), caseOnly.formatted(n.group(), first))); }
-  }
-  void checkDirective(DocResolver resolver, TypeDoc t, Directive d, ArrayList<String> problems){
+  void checkDirective(DocResolver resolver, TypeDoc t, Directive d, HashMap<String,String> names, ArrayList<String> problems){
     var isPublic= t.main().name().isPublic();
     var wrong= switch (d){
       case Directive.Broken b -> Optional.of(b.problem());
       case Directive.Named(_, var g) when g.equals("private") && isPublic -> Optional.of(publicInPrivate.formatted(resolver.named(t)));
       case Directive.Named(_, var g) when g.equals("public") && !isPublic -> Optional.of(privateInPublic.formatted(resolver.named(t)));
-      case Directive.Named _, Directive.Under _ -> Optional.<String>empty();
+      case Directive.Named(_, var g) -> Optional.ofNullable(names.putIfAbsent(g.toLowerCase(Locale.ROOT), g)).filter(first -> !first.equals(g)).map(first -> caseOnly.formatted(g, first));
+      case Directive.Under _ -> Optional.<String>empty();
     };
     wrong.ifPresent(w -> problems.add(line(d.at(), w)));
   }
@@ -236,7 +232,7 @@ public final class HtmlDocBuilder{
   String cycle(DocResolver resolver, List<TypeDoc> ring, Map<TypeDoc,List<Directive.Under>> parents){
     var n= ring.size();
     var steps= IntStream.range(0, n).mapToObj(i -> "  "+resolver.named(ring.get(i))+" is under "+resolver.named(ring.get((i+1) % n)));
-    var first= parents.get(ring.getFirst()).stream().filter(u -> u.parent() == ring.get(1 % n)).findFirst().orElseThrow();
+    var first= OneOr.of("one line per parent", parents.get(ring.getFirst()).stream().filter(u -> u.parent() == ring.get(1 % n)));
     return line(first.at(), underItself.formatted(resolver.named(ring.getFirst()), Join.of(steps, "", "\n", "")));
   }
   String line(DocOcc d, String msg){

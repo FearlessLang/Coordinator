@@ -94,7 +94,8 @@ Bar
 \t.b:A
 
 _Shared
-  under: Foo, Bar
+  under: Foo
+  under: Bar
 \t.s:A
 
 Foo
@@ -140,7 +141,7 @@ _Child:{ .c: A -> A; }
     utils.Err.strCmp("""
 [###]<h2>A</h2>
 <p class="doc missing">No documentation yet.</p>
-<p class="extends"><b>See also:</b> <a href="#type-p_2e__5f_Child-0">_Child</a></p>
+<p class="extends also"><b>See also:</b> <a href="#type-p_2e__5f_Child-0">_Child</a></p>
 [###]<h2>_Child</h2>
 <p class="doc missing">No documentation yet.</p>
 <p class="extends under"><b>Under:</b> <a href="#type-p_2e_A-0">A</a></p>
@@ -206,7 +207,7 @@ _P:{ .p: A -> A; }
 //@Group `A`
 B:{ .b: A -> A; }
 """);
-    utils.Err.strCmp("[###]B\n  under: _P, A\n[###]", docs.text());
+    utils.Err.strCmp("[###]B\n  under: _P\n  under: A\n[###]", docs.text());
   }
   @Test void aPublicTypeUnderAPrivateTypeAndInAGroupIsListedInTheGroup(@TempDir Path tmp){
     var docs= docs(tmp, a+"""

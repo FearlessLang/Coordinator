@@ -56,18 +56,16 @@ final class HtmlDocRenderer{
     assert shown.size() == visible.size();
   }
   void place(TypeDoc t){
-    var named= new ArrayList<String>();
+    if (t.directives().isEmpty()){ add(groups, t.main().name().isPublic() ? "public" : "private", t); }
     for (var d : t.directives()){
       switch (resolver.directive(d, t.scope())){
-        case Directive.Named n -> named.add(n.group());
-        case Directive.Under u -> { parents.computeIfAbsent(t, _ -> new ArrayList<>()).add(u.parent()); children.computeIfAbsent(u.parent(), _ -> new ArrayList<>()).add(t); }
+        case Directive.Named n -> add(groups, n.group(), t);
+        case Directive.Under u -> { add(parents, t, u.parent()); add(children, u.parent(), t); }
         case Directive.Broken _ -> throw Bug.unreachable();
       }
     }
-    var standard= named.isEmpty() && !parents.containsKey(t);
-    if (standard){ named.add(t.main().name().isPublic() ? "public" : "private"); }
-    named.forEach(g -> groups.computeIfAbsent(g, _ -> new ArrayList<>()).add(t));
   }
+  static <K> void add(Map<K,ArrayList<TypeDoc>> m, K k, TypeDoc t){ m.computeIfAbsent(k, _ -> new ArrayList<>()).add(t); }
   void visit(TypeDoc t, LinkedHashSet<TypeDoc> res){
     if (res.add(t)){ related(children, t).forEach(c -> visit(c, res)); }
   }
@@ -143,8 +141,8 @@ final class HtmlDocRenderer{
   }
   void renderTypeText(StringBuilder sb, TypeDoc t){
     sb.append(typeTitle(t)).append(Join.of(t.main().cs().stream().map(toStr::typeName), " : ", ", ", "", "")).append('\n');
-    sb.append(Join.of(related(parents, t).stream().map(this::typeTitle), "  under: ", ", ", "\n", ""));
-    sb.append(Join.of(related(children, t).stream().map(this::typeTitle), "  see also: ", ", ", "\n", ""));
+    related(parents, t).forEach(p -> sb.append("  under: ").append(typeTitle(p)).append('\n'));
+    related(children, t).forEach(c -> sb.append("  see also: ").append(typeTitle(c)).append('\n'));
     renderDocText(sb, "  ", t);
     visibleMethods(t).forEach(m -> renderMethodText(sb, m));
     sb.append('\n');
@@ -256,6 +254,8 @@ main{flex:1; min-width:0; padding:2.2em 2.6em 6em; max-width:64em}
   padding-bottom:.35em;
 }
 .extends{margin:.5em 0 0; font-size:.92em; color:var(--fg-muted)}
+.also{display:grid; grid-template-columns:auto 1fr; gap:.15em .4em; justify-items:start}
+.also a{grid-column:2}
 .method{margin:0; padding:.45em .2em; border-top:1px solid var(--border-soft)}
 .method:first-of-type{border-top:none}
 .method:target{background:var(--bg-soft); border-radius:.4em}
@@ -399,7 +399,7 @@ code{
       .append("<h2>").append(wrap(typeTitle(t))).append("</h2>\n");
     renderDoc(sb, t);
     sb.append(Join.of(related(parents, t).stream().map(this::typeDocLink), "<p class=\"extends under\"><b>Under:</b> ", ", ", "</p>\n", ""));
-    sb.append(Join.of(related(children, t).stream().map(this::typeDocLink), "<p class=\"extends\"><b>See also:</b> ", ", ", "</p>\n", ""));
+    sb.append(Join.of(related(children, t).stream().map(this::typeDocLink), "<p class=\"extends also\"><b>See also:</b> ", "\n", "</p>\n", ""));
     sb.append(Join.of(t.main().cs().stream().map(this::typeLink), "<p class=\"extends\"><b>Extends:</b> ", ", ", "</p>\n", ""));
     renderVariants(sb, "Typed literal variants", t.variants, toStr::lit);
     var ms= visibleMethods(t);
