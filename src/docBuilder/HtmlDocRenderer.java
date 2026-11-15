@@ -242,10 +242,8 @@ a:hover{text-decoration:underline}
 .toc a:hover{background:var(--border-soft); color:var(--fg); text-decoration:none}
 .toc a.sel{background:var(--bg); border-left-color:var(--orange); color:var(--blue); font-weight:600}
 #tree>li.folder>a{color:var(--fg); font-weight:600}
-#tree li.folder>a::before{
-  content:"\\25B8"; display:inline-block; width:1em; color:var(--fg-faint); transition:transform .12s ease;
-}
-#tree li.open>a::before{transform:rotate(90deg)}
+#tree li.folder>a::before{content:"\\25B8"; display:inline-block; width:1em; color:var(--fg-faint)}
+#tree li.folder.open>a::before{content:"\\25BE"}
 #tree li:not(.folder)>a,#found a{padding-left:1.55em}
 main{flex:1; min-width:0; padding:2.2em 2.6em 6em; max-width:64em}
 .hdr{display:flex; align-items:center; gap:.85em; padding-bottom:1em; border-bottom:1px solid var(--border)}
