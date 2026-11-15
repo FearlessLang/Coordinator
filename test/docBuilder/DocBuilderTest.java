@@ -458,7 +458,7 @@ Foo: Bar {
   //the type being documented and the type of that parameter.
   @Test void thisNamesTheTypeBeingDocumented(){
     var owner= namedType("pkg.Holder", List.of(), List.of());
-    var resolver= new DocResolver("pkg", List.of(), OtherPackages.empty(), TName::s);
+    var resolver= new DocResolver("pkg", List.of(new TypeDoc(owner, Optional.empty(), List.of())), OtherPackages.empty(), TName::s);
     var link= resolver.resolve(new DocRef.LocalName("this"), scope(owner));
     assertEquals(owner.name(), ((DocLink.Resolved)link.get()).hit().owner());
   }
@@ -467,7 +467,8 @@ Foo: Bar {
     var paramType= new TName("pkg.Thing", 0, Pos.unknown);
     var m= methodTaking(".take", ownerName, "elem", paramType);
     var owner= namedType("pkg.Holder", List.of(), List.of(m));
-    var resolver= new DocResolver("pkg", List.of(), OtherPackages.empty(), TName::s);
+    var thing= new TypeDoc(namedType("pkg.Thing", List.of(), List.of()), Optional.empty(), List.of());
+    var resolver= new DocResolver("pkg", List.of(thing), OtherPackages.empty(), TName::s);
     var link= resolver.resolve(new DocRef.LocalName("elem"), scope(owner, m));
     assertEquals(paramType, ((DocLink.Resolved)link.get()).hit().owner());
   }

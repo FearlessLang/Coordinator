@@ -33,6 +33,53 @@ A
 """, docs.text());
     assertFalse(docs.html().contains("_Hidden"));
   }
+  @Test void aPrivateTypeIsShownWhenAMethodOfAShownTypeHasItInItsSignature(@TempDir Path tmp){
+    var docs= docs(tmp, a+"""
+B:{ .b: _C -> _C; }
+_C:{ .c(d: _D): A -> A; }
+_D:{ .d: A -> A; }
+_E:{ .e: _F -> _F; }
+_F:{ .f: A -> A; }
+""");
+    utils.Err.strCmp("""
+package p
+  A
+  B
+  _C
+  _D
+
+A
+\t.m:A
+
+B
+\t.b:_C
+
+_C
+\t.c(d:_D):A
+
+_D
+\t.d:A
+""", docs.text());
+    utils.Err.strCmp("""
+[###]<span class="sig">.b:<a href="#type-p_2e__5f_C-0">_C</a></span>[###]""", docs.html());
+  }
+  @Test void aShownPrivateTypeTakesGroupLinesAndHasTypesUnderIt(@TempDir Path tmp){
+    var docs= docs(tmp, a+"""
+B:{ .b: _C -> _C; }
+//@Group `B`
+_C:{ .c: A -> A; }
+//@Group `_C`
+D:{ .d: A -> A; }
+""");
+    utils.Err.strCmp("""
+package p
+  A
+  B
+    _C
+      D
+
+[###]""", docs.text());
+  }
   @Test void aGroupListsItsNamesAndANameUnderANameFollowsThatName(@TempDir Path tmp){
     var docs= docs(tmp, a+"""
 //@Group "Collections"
@@ -184,6 +231,21 @@ C:{ .c: A -> A; }
 <li><a href="#type-p_2e_C-0">C</a></li>
 </ul>[###]""", html);
   }
+  @Test void theTextBoxHasAListOfTheMethodsEachUnderTheTypeWhoseViewShowsTheMethod(@TempDir Path tmp){
+    var html= docs(tmp, a+"""
+B:{ .b: A -> A; .b(x: A): A -> A; }
+C:B{ .b -> A; .c: A -> A; }
+""").html();
+    utils.Err.strCmp("""
+[###]<ul id="methods" hidden>
+<li><a href="#method-p_2e_B-0-_2e_b-0">B<b>.b()</b></a></li>
+<li><a href="#method-p_2e_C-0-_2e_b-0">C<b>.b()</b></a></li>
+<li><a href="#method-p_2e_B-0-_2e_b-1">B<b>.b(_)</b></a></li>
+<li><a href="#method-p_2e_C-0-_2e_c-0">C<b>.c()</b></a></li>
+<li><a href="#method-p_2e_A-0-_2e_m-0">A<b>.m()</b></a></li>
+</ul>
+</nav>[###]""", html);
+  }
   @Test void theViewOfANameSaysWhereTheNameIsAndListsTheNamesUnderIt(@TempDir Path tmp){
     var html= docs(tmp, a+"""
 //@Group "Tools"
@@ -269,7 +331,7 @@ B:{ .b: A -> A; } //@Group "Tools"
 """);
     utils.Err.strCmp("package p\n  \"Tools\"\n    B\n  A\n[###]", docs.text());
   }
-  @Test void aGroupLineOnAPrivateTypeIsAnError(@TempDir Path tmp){
+  @Test void aGroupLineOnAPrivateTypeThatTheDocumentationDoesNotShowIsAnError(@TempDir Path tmp){
     utils.Err.strCmp("""
 Broken group in a doc comment.
 
@@ -278,7 +340,9 @@ In file: fear:/_p/_rank_app.fear
 002| //@Group "Tools"
    | ^^^^^^^^^^^^^^^^
 [###]This //@Group line documents the private type "_B".
-The documentation shows only the public types: the named types whose name does not start with _.
+The documentation shows the public types: the named types whose name does not start with _.
+The documentation shows a private type only when a method of a type that the
+documentation shows has that private type in its signature.
 A //@Group line says where the documentation shows a type, so delete this line.""", error(tmp, a+"""
 //@Group "Tools"
 _B:{ .b: A -> A; }
@@ -289,7 +353,9 @@ _B:{ .b: A -> A; }
 [###]004|     //@Group `Maker`
    |     ^^^^^^^^^^^^^^^^
 [###]This //@Group line documents an anonymous literal.
-The documentation shows only the public types: the named types whose name does not start with _.
+The documentation shows the public types: the named types whose name does not start with _.
+The documentation shows a private type only when a method of a type that the
+documentation shows has that private type in its signature.
 A //@Group line says where the documentation shows a type, so delete this line.""", error(tmp, a+"""
 Maker:{
   .make: A ->
@@ -298,12 +364,14 @@ Maker:{
   }
 """));
   }
-  @Test void aTypeCanNotBeUnderAPrivateType(@TempDir Path tmp){
+  @Test void aTypeCanNotBeUnderAPrivateTypeThatTheDocumentationDoesNotShow(@TempDir Path tmp){
     utils.Err.strCmp("""
 [###]003| //@Group `_P`
    | ^^^^^^^^^^^^^
-[###]"_P" is a private type.
-The documentation shows only the public types, so a //@Group line can only put a type under a public type.""", error(tmp, a+"""
+[###]The documentation does not show the private type "_P".
+The documentation shows a private type only when a method of a type that the
+documentation shows has that private type in its signature.
+A //@Group line can only put a type under a type that the documentation shows.""", error(tmp, a+"""
 _P:{ .p: A -> A; }
 //@Group `_P`
 B:{ .b: A -> A; }

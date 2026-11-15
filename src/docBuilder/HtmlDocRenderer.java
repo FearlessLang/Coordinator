@@ -10,7 +10,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.OptionalInt;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.function.Function;
@@ -52,7 +51,7 @@ final class HtmlDocRenderer{
     this.baseDocLocation= baseDocLocation;
     toStr= new ExportedToStr(pkgName, uses);
     this.resolver= resolver;
-    sortedTypes().stream().filter(TypeDoc::visible).forEach(this::place);
+    sortedTypes().stream().filter(t -> resolver.shown().contains(t.main().name())).forEach(this::place);
   }
   void place(TypeDoc t){
     var name= t.main().name().simpleName();
@@ -160,7 +159,7 @@ final class HtmlDocRenderer{
     for (var e : entries(t)){
       docGroups(e).forEach(g -> renderMethodText(sb, g, holder(g.getFirst(), e), fromRefs(g)));
     }
-    supers(t).forEach(c -> homed(t, c).forEach(m -> renderMethodText(sb, List.of(m), m, List.of(m.home().get()))));
+    supers(t).forEach(c -> homed(t, c).forEach(m -> renderMethodText(sb, List.of(m), m, List.of(resolver.home(m).get()))));
     sb.append('\n');
   }
   void renderMethodText(StringBuilder sb, List<MethodDoc> ms, MethodDoc holder, List<MethodRef> from){
@@ -231,7 +230,7 @@ a:hover{text-decoration:underline}
 }
 .toc input:focus{outline:none; border-color:var(--blue)}
 .toc ul{list-style:none; margin:0; padding:0}
-#tree,#found{overflow:auto; flex:1}
+.toc>ul{overflow:auto; flex:1}
 #tree ul{display:none; padding-left:.9em}
 #tree li.open>ul{display:block}
 .toc li{margin:1px 0}
@@ -244,7 +243,7 @@ a:hover{text-decoration:underline}
 #tree>li.folder>a{color:var(--fg); font-weight:600}
 #tree li.folder>a::before{content:"\\25B8"; display:inline-block; width:1em; color:var(--fg-faint)}
 #tree li.folder.open>a::before{content:"\\25BE"}
-#tree li:not(.folder)>a,#found a{padding-left:1.55em}
+.toc li:not(.folder)>a{padding-left:1.55em}
 main{flex:1; min-width:0; padding:2.2em 2.6em 6em; max-width:64em}
 .hdr{display:flex; align-items:center; gap:.85em; padding-bottom:1em; border-bottom:1px solid var(--border)}
 .hdr h1{margin:0; font-size:1.65em; letter-spacing:-.01em}
@@ -323,6 +322,7 @@ code{
   var views= document.querySelectorAll('.view');
   var tree= document.getElementById('tree');
   var found= document.getElementById('found');
+  var methods= document.getElementById('methods');
   var filter= document.getElementById('filter');
   var clicked= null;
   function route(){
@@ -366,9 +366,15 @@ code{
   route();
   filter.addEventListener('input', function(){
     var q= filter.value.toLowerCase();
+    var at= q.search(/[^a-z0-9_]/);
+    var list= at<0 ? found : methods;
+    var type= at<0 ? q : q.slice(0, at);
     tree.hidden= !!q;
-    found.hidden= !q;
-    found.querySelectorAll('li').forEach(function(li){ li.hidden= li.textContent.toLowerCase().indexOf(q)<0; });
+    found.hidden= !q || list!==found;
+    methods.hidden= list!==methods;
+    list.querySelectorAll('a').forEach(function(a){
+      a.parentElement.hidden= a.firstChild.textContent.toLowerCase().indexOf(type)<0 || a.lastChild.textContent.toLowerCase().indexOf(q.slice(type.length))<0;
+    });
   });
   document.querySelectorAll('.method>summary').forEach(function(s){
     s.addEventListener('click', function(e){
@@ -387,14 +393,21 @@ code{
   }
   void renderToc(StringBuilder sb){
     sb.append("<nav class=\"toc\">\n")
-      .append("<input id=\"filter\" type=\"search\" placeholder=\"Find a type\" autocomplete=\"off\">\n")
+      .append("<input id=\"filter\" type=\"search\" placeholder=\"Find a Type or a .method\" autocomplete=\"off\">\n")
       .append("<ul id=\"tree\">\n");
     groups.forEach((g, ns) -> sb.append(folder("#"+groupId(g), g, ns)));
     loose().forEach(n -> sb.append(folder(n)));
     sb.append("</ul>\n<ul id=\"found\" hidden>\n");
     names.keySet().forEach(n -> sb.append("<li>").append(nameLink(n)).append("</li>\n"));
+    sb.append("</ul>\n<ul id=\"methods\" hidden>\n");
+    names.values().stream().flatMap(List::stream).flatMap(t -> entries(t).stream()).map(List::getFirst).sorted(byMName).forEach(m -> sb.append(methodItem(m)));
     sb.append("</ul>\n</nav>\n");
   }
+  String methodItem(MethodDoc m){
+    var owner= m.owner.main().name();
+    return "<li><a href=\""+methodHref(owner, m.main().sig())+"\">"+h(toStr.typeNameWithArity(owner))+"<b>"+h(DocResolver.shape(m.main().sig().m()))+"</b></a></li>\n";
+  }
+  static final Comparator<MethodDoc> byMName= Comparator.comparing((MethodDoc m) -> m.main().sig().m().s()).thenComparingInt(m -> m.main().sig().m().arity());
   String folder(String name){ return folder(nameHref(name), name, under(name)); }
   String folder(String href, String title, Collection<String> inside){
     var link= "<a href=\""+href+"\">"+h(title)+"</a>";
@@ -437,22 +450,21 @@ code{
     supers(t).forEach(c -> sb.append("<p class=\"extends\">").append(typeLink(c))
       .append(Join.of(homed(t, c).stream().gather(DistinctBy.<MethodDoc,MName>of(m -> m.main().sig().m())).map(this::homedLink), ": ", ", ", "", "")).append("</p>\n"));
   }
-  static List<T.C> supers(TypeDoc t){ return t.main().cs().stream().filter(c -> c.name().isPublic()).toList(); }
-  static List<MethodDoc> homed(TypeDoc t, T.C c){
+  List<T.C> supers(TypeDoc t){ return t.main().cs().stream().filter(c -> resolver.shown().contains(c.name())).toList(); }
+  List<MethodDoc> homed(TypeDoc t, T.C c){
     return t.methods.stream()
-      .filter(m -> m.home().filter(r -> r.provider().equals(c)).isPresent())
-      .sorted(Comparator.comparing((MethodDoc m) -> m.main().sig().m().s()).thenComparingInt(m -> m.main().sig().m().arity()))
+      .filter(m -> resolver.home(m).filter(r -> r.provider().equals(c)).isPresent())
+      .sorted(byMName)
       .toList();
   }
   String homedLink(MethodDoc m){
     var s= m.main().sig();
-    return "<a"+anchor(methodId(m.owner.main().name(), s))+" href=\""+h(methodHref(m.home().get().provider().name(), s))+"\">"
-      +h(s.m().s()+DocResolver.shape(OptionalInt.of(s.m().arity()), "(", ")"))+"</a>";
+    return "<a"+anchor(methodId(m.owner.main().name(), s))+" href=\""+h(methodHref(resolver.home(m).get().provider().name(), s))+"\">"+h(DocResolver.shape(s.m()))+"</a>";
   }
-  static Collection<List<MethodDoc>> entries(TypeDoc t){
+  Collection<List<MethodDoc>> entries(TypeDoc t){
     var cs= t.main().cs().stream().map(T.C::name).toList();
     return t.methods.stream()
-      .filter(m -> m.home().isEmpty())
+      .filter(m -> resolver.home(m).isEmpty())
       .sorted(Comparator.comparingInt((MethodDoc m) -> cs.indexOf(m.main().sig().origin()))
         .thenComparingInt(m -> m.main().sig().span().pos().line())
         .thenComparingInt(m -> m.main().sig().span().pos().column()))
@@ -489,7 +501,7 @@ code{
     return "<a href=\""+h(methodHref(r.provider().name(), r.method().sig()))+"\">"+h(fromName(r))+"</a>";
   }
   List<MethodRef> fromRefs(List<MethodDoc> ms){
-    return ms.stream().flatMap(m -> m.inheritedFrom.stream()).filter(MethodRef::shows).gather(DistinctBy.<MethodRef,String>of(this::fromName)).toList();
+    return ms.stream().flatMap(m -> m.inheritedFrom.stream()).filter(resolver::shows).gather(DistinctBy.<MethodRef,String>of(this::fromName)).toList();
   }
   String sig(M m){
     var s= m.sig();
@@ -505,13 +517,13 @@ code{
     var sb= new StringBuilder();
     var i= 0;
     var from= 0;
-    for (var n : Stream.concat(sig.ts().stream(), Stream.of(sig.ret())).flatMap(HtmlDocRenderer::typeNames).toList()){
+    for (var n : typeNames(sig).toList()){
       var printed= toStr.typeName(n);
       var at= namePatterns.computeIfAbsent(printed, p -> Pattern.compile("(?<![\\p{L}\\p{Nd}_.])"+Pattern.quote(p)+"(?![\\p{L}\\p{Nd}_'])")).matcher(text);
       var found= at.find(from);
       assert found;
       from = at.end();
-      if (!n.isPublic() || !resolver.byName().containsKey(n) && !resolver.other().dom().contains(n)){ continue; }
+      if (!resolver.shown().contains(n)){ continue; }
       sb.append(wrap(text.substring(i, at.start())));
       sb.append("<a href=\"").append(h(typeHref(n))).append("\">").append(h(printed)).append("</a>");
       i = from;
@@ -519,6 +531,7 @@ code{
     sb.append(wrap(text.substring(i)));
     return sb.toString();
   }
+  static Stream<TName> typeNames(Sig s){ return Stream.concat(s.ts().stream(), Stream.of(s.ret())).flatMap(HtmlDocRenderer::typeNames); }
   static Stream<TName> typeNames(T t){
     if (!(t instanceof T.RCC rcc)){ return Stream.of(); }
     return Stream.concat(Stream.of(rcc.c().name()), rcc.c().ts().stream().flatMap(HtmlDocRenderer::typeNames));
@@ -581,7 +594,7 @@ code{
     var owner= toStr.typeNameWithArity(c.owner());
     return switch (c){
       case Candidate.Type _ -> entry(candidateHref(c), owner, "");
-      case Candidate.Method(_, var s, var local) -> entry(candidateHref(c), owner+s.m().s()+DocResolver.shape(OptionalInt.of(s.m().arity()), "(", ")"),
+      case Candidate.Method(_, var s, var local) -> entry(candidateHref(c), owner+DocResolver.shape(s.m()),
         local.map(m -> brief(holder(m, List.of()))).orElse(""));
     };
   }

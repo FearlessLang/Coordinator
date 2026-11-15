@@ -35,7 +35,6 @@ final class TypeDoc extends DeclarationDoc{
   }
   Literal main(){ return variants.getFirst(); }
   Scope scope(){ return new Scope(main(), Optional.empty(), outer); }
-  boolean visible(){ return main().name().isPublic(); }
   void addVariant(Literal l){
     assert variants.stream().noneMatch(v -> v.name().equals(l.name())) :
       "Repeated literal source with same name: "+l.pos()+" "+l.name();
@@ -65,17 +64,9 @@ final class MethodDoc extends DeclarationDoc{
   }
   M main(){ return variants.getFirst(); }
   Scope scope(){ return new Scope(owner.main(), Optional.of(main()), owner.outer); }
-  Optional<MethodRef> home(){
-    return inheritedFrom.stream().filter(r -> r.shows() && r.method().sig().origin().equals(main().sig().origin())).findFirst();
-  }
   void add(M m){ variants.add(m); }
 }
-record MethodRef(T.C provider, M method){
-  boolean shows(){
-    var origin= method.sig().origin();
-    return provider.name().isPublic() && (!origin.isPublic() || origin.equals(provider.name()));
-  }
-}
+record MethodRef(T.C provider, M method){}
 sealed interface MethodKey{
   record Declared(RC rc, MName m) implements MethodKey{}
   record Imported(TName origin, RC rc, MName m) implements MethodKey{}

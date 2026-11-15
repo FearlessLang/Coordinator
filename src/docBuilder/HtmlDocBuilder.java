@@ -111,7 +111,7 @@ public final class HtmlDocBuilder{
     var ws= OneOr.of("one origin", from.stream().filter(r -> r.provider().name().equals(s.origin())).map(r -> B.xs(r.method().sig().bs())).distinct());
     var xs= B.xs(s.bs());
     if (ws.equals(xs)){ return m; }
-    var used= Stream.concat(Stream.concat(s.ts().stream(), Stream.of(s.ret())).flatMap(HtmlDocRenderer::typeNames), currentByName.keySet().stream()).map(TName::simpleName);
+    var used= Stream.concat(HtmlDocRenderer.typeNames(s), currentByName.keySet().stream()).map(TName::simpleName);
     if (Stream.concat(B.xs(l.bs()).stream(), used).anyMatch(ws::contains)){ return m; }
     var bs= Streams.zip(s.bs(), ws).map((b, w) -> new B(w, b.rcs())).toList();
     return m.withSig(new Sig(s.rc(), s.m(), bs, s.ts().stream().map(t -> renamed(t, xs, ws)).toList(), renamed(s.ret(), xs, ws), s.origin(), s.abs(), s.span()));
@@ -191,7 +191,7 @@ public final class HtmlDocBuilder{
   }
   List<Directive.Under> checkType(DocResolver resolver, TypeDoc t, HashMap<String,String> names, ArrayList<String> problems){
     var hidden= groupOnHidden.formatted(t.main().infName() ? "an anonymous literal" : "the private type "+resolver.named(t.main().name()));
-    if (!t.visible()){ t.directives().forEach(d -> problems.add(line(d, hidden))); return List.of(); }
+    if (!resolver.shown().contains(t.main().name())){ t.directives().forEach(d -> problems.add(line(d, hidden))); return List.of(); }
     t.docs.stream().dropWhile(o -> o.kind()==DocKind.Group).filter(o -> o.kind()==DocKind.Group).findFirst()
       .ifPresent(o -> problems.add(line(o, groupAfterDocs)));
     var ds= t.directives().stream().map(d -> resolver.directive(d, t.scope())).toList();
@@ -275,7 +275,8 @@ public final class HtmlDocBuilder{
    +"neither. Move this line above the declaration of the type.";
   static final String groupOnHidden=
     "This //@Group line documents %s.\n"
-   +"The documentation shows only the public types: the named types whose name does not start with _.\n"
+   +"The documentation shows the public types: the named types whose name does not start with _.\n"
+   +DocResolver.shownPrivate
    +"A //@Group line says where the documentation shows a type, so delete this line.";
   static final String groupAfterDocs=
     "This //@Group line comes after other documentation of the same declaration.\n"
