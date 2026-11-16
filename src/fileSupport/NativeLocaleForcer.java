@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.Locale;
 
 import tools.Fs;
+import utils.Bug;
 import userMessages.Report;
 import userMessages.UserError;
 import userMessages.Violation;
@@ -58,6 +59,13 @@ public final class NativeLocaleForcer{
     }
     catch (UserError e){ throw e; }
     catch (Throwable e){ throw Violation.couldNotForceEnglish("The call into the operating system failed.", e); }
+  }
+  @SuppressWarnings("restricted")
+  public static void nonReparentingOnSway(){
+    if (System.getenv("SWAYSOCK") == null){ return; }
+    var setenv= linker.downcallHandle(linker.defaultLookup().findOrThrow("setenv"), FunctionDescriptor.of(JAVA_INT, ADDRESS, ADDRESS, JAVA_INT));
+    try (var arena= Arena.ofConfined()){ int _= (int)setenv.invokeExact(arena.allocateFrom("_JAVA_AWT_WM_NONREPARENTING"), arena.allocateFrom("1"), 1); }
+    catch (Throwable e){ throw Bug.of(e); }
   }
   // char* setlocale(int category, const char* locale);
   // Returns NULL when the request is rejected; per the fail-loudly policy NULL is an Error.

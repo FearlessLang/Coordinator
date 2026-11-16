@@ -64,6 +64,7 @@ public final class Main{
   private static final AtomicInteger macSpawnOk= new AtomicInteger(0);
   public static void main(String[] args){
     NativeLocaleForcer.forceEnglish();
+    NativeLocaleForcer.nonReparentingOnSway();
     JavacTool.reqAppDir(Violation::mustUseLauncher);
     try{ if (!hasConsoleFlag()){ hookStd(); } NativeLocaleForcer.requireUtf8FileNames(); run(args); }
     catch (UserError e){ failed(e.getMessage()); }
