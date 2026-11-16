@@ -2352,7 +2352,7 @@ In file: fear:/_col/_rank_app.fear
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 While inspecting type declaration "A"
-Type declaration "A" implements `OpenWith[IconsFoo,"abcd-3456"]`.
+Type declaration "A" implements `OpenWith[IconsFoo,"abcdefghij0123456"]`.
 "abcdefghij0123456" is not a valid extension.
 An extension is 1 to 16 characters, each a lowercase letter "a"-"z" or a digit "0"-"9", with no dot; or implement "OpenWith[_]" to let the Fearless manager choose one.
 Error 7 WellFormedness"""); }
@@ -4426,7 +4426,7 @@ This call to method ".legacy" cannot typecheck.
 Method ".legacy" is not declared on type "Foo".
 
 Available methods on type "Foo":
--       .version:Str
+- .version:Str
 
 Name "Foo" stands for "foo.Foo" because of "use foo.Foo as Foo".
 Source code inside folders named "_lib" uses package name "foo" to refer to the code inside folders named "_foo_v4", because of "map foo as _foo_v4 in _lib", written in fear:/_lib/_rank_driver.fear.
@@ -4464,7 +4464,7 @@ This call to method ".legacy" cannot typecheck.
 Method ".legacy" is not declared on type "Foo".
 
 Available methods on type "Foo":
--       .version:Str
+- .version:Str
 
 Name "Foo" stands for "foo.Foo" because of "use foo.Foo as Foo".
 """+fooNote+"""
