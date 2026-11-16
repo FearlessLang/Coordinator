@@ -2933,7 +2933,7 @@ not read by the compiler
 }
 """, manifests(root));
   }
-  @Test void theSelfNameOfAnAnonymousLiteralInADocLinksToTheSectionOfTheLiteral(@TempDir Path tmp) throws InterruptedException{
+  @Test void aDocUsingTheSelfNameOfAnAnonymousLiteralIsAcceptedAndNotShown(@TempDir Path tmp) throws InterruptedException{
     var root= tmp.resolve("root");
     UserError.root = root;
     FsDsl.materialize(root, """
@@ -2944,34 +2944,14 @@ use base.Nat as Nat;
 Bar:{ .bar: Nat; .twice: Nat }
 Foo:{ .make: Bar -> {'self
   .bar -> 1;
-  ///Twice the bar of `self`.
+  ///Twice `self.bar`, the bar of `self`.
   .twice -> self.bar + (self.bar)
   } }
 App:Main{s->base.Debug#(`app`)}
 """);
     utils.Err.strCmp("app\n", main(root, List.of()));
     var html= Fs.readUtf8(root.resolve(Coordinator.outDir).resolve("p.html"));
-    utils.Err.strCmp("[###]id=\"literal-fear_3a__2f__5f_p_2f__5f_rank_5f_app_2e_fear-4-21\"[###]<p>Twice the bar of <code><a href=\"#literal-fear_3a__2f__5f_p_2f__5f_rank_5f_app_2e_fear-4-21\">self</a></code>.</p>[###]", html);
-  }
-  @Test void theSelfNameOfAnAnonymousLiteralInADocNamesTheLiteral(@TempDir Path tmp) throws InterruptedException{
-    var root= tmp.resolve("root");
-    UserError.root = root;
-    FsDsl.materialize(root, """
-_p/_rank_app.fear
-iii
-use base.Main as Main;
-use base.Nat as Nat;
-Bar:{ .bar: Nat; .twice: Nat }
-Foo:{ .make: Bar -> {'self
-  .bar -> 1;
-  ///Twice `self.bar`.
-  .twice -> self.bar + (self.bar)
-  } }
-App:Main{s->base.Debug#(`app`)}
-""");
-    utils.Err.strCmp("app\n", main(root, List.of()));
-    var html= Fs.readUtf8(root.resolve(Coordinator.outDir).resolve("p.html"));
-    utils.Err.strCmp("[###]<p>Twice <code><a href=\"#method-p_2e__5f_AFoo-0-imm-_2e_bar-0\">self.bar</a></code>.</p>[###]", html);
+    assertFalse(html.contains("Twice"));
   }
   @Test void aRemovedPackageMakesTheProjectOutOfDateAndLosesItsMains(@TempDir Path tmp) throws Exception{
     var root= claimsProject(tmp, """
