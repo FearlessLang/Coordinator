@@ -2352,7 +2352,7 @@ In file: fear:/_col/_rank_app.fear
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 While inspecting type declaration "A"
-Type declaration "A" implements `OpenWith[IconsFoo,"abcd-3456"]`.
+Type declaration "A" implements `OpenWith[IconsFoo,"abcdefghij0123456"]`.
 "abcdefghij0123456" is not a valid extension.
 An extension is 1 to 16 characters, each a lowercase letter "a"-"z" or a digit "0"-"9", with no dot; or implement "OpenWith[_]" to let the Fearless manager choose one.
 Error 7 WellFormedness"""); }
