@@ -4430,9 +4430,6 @@ Available methods on type "Foo":
 
 Name "Foo" stands for "foo.Foo" because of "use foo.Foo as Foo".
 Source code inside folders named "_lib" uses package name "foo" to refer to the code inside folders named "_foo_v4", because of "map foo as _foo_v4 in _lib", written in fear:/_lib/_rank_driver.fear.
-
-Relevant code with inferred types:
-f.legacy
 Error 8 TypeError
 """, mapsError(tmp, foos+"""
 _lib/_rank_driver.fear
@@ -4469,9 +4466,6 @@ Available methods on type "Foo":
 Name "Foo" stands for "foo.Foo" because of "use foo.Foo as Foo".
 """+fooNote+"""
 
-
-Relevant code with inferred types:
-[###]
 Error 8 TypeError
 """, mapsError(tmp, foos+fooV7+"""
 _lib/_rank_driver.fear
