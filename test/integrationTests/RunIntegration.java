@@ -537,7 +537,7 @@ In file: fear:/_p/_rank_app.fear
 006|   //> .check{Calc.inc(1) .assertEq 2}
    | ... 2 lines ...
 009|   //> .check{Calc.thrice(2) .assertEq 5}
-   |              ~~~~^^^^^^^^~~------------
+   |              ~~~~^^^^^^^~~~------------
 [###]Method ".thrice(_)" is not declared on type "Calc".[###]""", ex.getMessage());
     }
   }
@@ -3317,7 +3317,7 @@ Grow:Main{s -> base.Block#
     utils.Err.strCmp("""
 [###]
 005|   .return{base.Debug#(l.removeIf{e -> base.Block#(l.add e, base.True)}.list.size)}
-   |                                  -----------------~^^^^~~~-----------
+   |                                  -----------------^~~~~~~------------
 
 While inspecting [###]
 This call to method "mut base.EList[_].add(_)" cannot typecheck.
@@ -3342,7 +3342,7 @@ Grow:Main{s -> base.Block#
     utils.Err.strCmp("""
 [###]
 005|   .return{base.Debug#(l.mapInPlace{e -> base.Block#(l.add e, e)}.list.size)}
-   |                                    -----------------~^^^^~~~---
+   |                                    -----------------^~~~~~~----
 
 While inspecting [###]
 This call to method "mut base.EList[_].add(_)" cannot typecheck.
@@ -3556,7 +3556,7 @@ Greeting:{ .hi: Str -> "hi" }
 In file: fear:/_a/_rank_core.fear
 
 002| Hello:Main{s->base.Debug#(z.Greeting.hi)}
-   |                           ^^^^^^^^^^^
+   |                           ^^^^^^^^^^
 
 While inspecting a type name
 The type name "z.Greeting" refers to the code inside folders named "_z", which has a higher rank than the code inside folders named "_a".
@@ -3584,7 +3584,7 @@ Greeting:{ .hi: Str -> "hi" }
 In file: fear:/_a/_rank_core.fear
 
 002| Hello:Main{s->base.Debug#(z.Greeting.hi)}
-   |                           ^^^^^^^^^^^
+   |                           ^^^^^^^^^^
 
 While inspecting a type name
 The type name "z.Greeting" refers to the code inside folders named "_z", which has the same rank as the code inside folders named "_a".
@@ -3879,7 +3879,7 @@ Hello:Main{s->base.Debug#(webserver_v12.Server.version)}
 In file: fear:/_app/_rank_app.fear
 
 003| Hello:Main{s->base.Debug#(webserver_v12.Server.version)}
-   |                           ^^^^^^^^^^^^^^^^^^^^^
+   |                           ^^^^^^^^^^^^^^^^^^^^
 
 While inspecting a type name
 Source code inside folders named "_app" cannot use package name "webserver_v12".
@@ -4670,7 +4670,7 @@ In file: fear:/_blog/_rank_framework200.fear
 In file: fear:/_shop/_rank_framework100.fear
 
 005|   .old(r: http_v2.Request): Str -> r.path;
-   |           ^^^^^^^^^^^^^^^^
+   |           ^^^^^^^^^^^^^^^
 
 While inspecting a type name
 Source code inside folders named "_shop" cannot use package name "http_v2".
@@ -4686,7 +4686,7 @@ Error 7 WellFormedness
 In file: fear:/_blog/_rank_framework200.fear
 
 005|   .old(r: http_v2.Request): Str -> r.path;
-   |           ^^^^^^^^^^^^^^^^
+   |           ^^^^^^^^^^^^^^^
 
 While inspecting a type name
 Source code inside folders named "_blog" cannot use package name "http_v2".
@@ -4994,7 +4994,7 @@ jjj
 In file: fear:/_lib/_rank_driver.fear
 
 003| Lib:{ .foo: Str -> Foo.version }
-   |                    ^^^^
+   |                    ^^^
 
 While inspecting a type name
 Type "Foo" is not declared in package "lib" and is not made visible via "use".
