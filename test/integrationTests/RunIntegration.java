@@ -730,7 +730,7 @@ In file: fear:/_p/calc.fear
 002|   //> .check{Calc.zz .assertEq 2}
    |              ~~~~^^^------------
 
-While inspecting "#" line 2 > ".tests(_)" line 2 > ".tests(_)" line 2
+While inspecting method "base.Check#" (line 2) > method "base.Test.tests(_)" (line 2) > method "_Calc_Examples.tests(_)" (line 2)
 This call to method ".zz" cannot typecheck.
 Method ".zz" is not declared on type "Calc".
 [###]""", ex.getMessage());
@@ -4421,7 +4421,7 @@ In file: fear:/_lib/_rank_driver.fear
 004| Lib:{ .foo(f: Foo): Str -> f.legacy }
    |       ---------------------~^^^^^^^
 
-While inspecting ".foo(_)" line 4
+While inspecting method "Lib.foo(_)" (line 4)
 This call to method ".legacy" cannot typecheck.
 Method ".legacy" is not declared on type "Foo".
 
@@ -4456,7 +4456,7 @@ In file: fear:/_lib/_rank_driver.fear
 
 004| Lib:{ .foo: Str -> Foo.legacy }
 [###]
-While inspecting ".foo" line 4
+While inspecting method "Lib.foo" (line 4)
 This call to method ".legacy" cannot typecheck.
 Method ".legacy" is not declared on type "Foo".
 
