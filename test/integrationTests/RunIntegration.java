@@ -2262,8 +2262,8 @@ In file: fear:/_col/_rank_app.fear
 
 While inspecting type declaration "A[_]"
 Type declaration "A[_]" implements "OpenWith[IconsFoo,X]".
-The extension "X" is not a string literal type.
-An extension is written as a string literal type, like `"ffile347"`, `"xml"` or `"txt"`; or implement "OpenWith[_]" to let the Fearless manager choose one.
+The extension "X" is not a type name in quotes.
+An extension is written as a type name in quotes, like `"ffile347"`, `"xml"` or `"txt"`; or implement "OpenWith[_]" to let the Fearless manager choose one.
 Error 7 WellFormedness"""); }
   @Test void aClaimWithATypeNameExtensionIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 A:Main,OpenWith[IconsFoo,IconsFoo]{}
@@ -2275,8 +2275,8 @@ In file: fear:/_col/_rank_app.fear
 
 While inspecting type declaration "A"
 Type declaration "A" implements "OpenWith[IconsFoo,IconsFoo]".
-The extension "IconsFoo" is not a string literal type.
-An extension is written as a string literal type, like `"ffile347"`, `"xml"` or `"txt"`; or implement "OpenWith[_]" to let the Fearless manager choose one.
+The extension "IconsFoo" is not a type name in quotes.
+An extension is written as a type name in quotes, like `"ffile347"`, `"xml"` or `"txt"`; or implement "OpenWith[_]" to let the Fearless manager choose one.
 Error 7 WellFormedness"""); }
   @Test void aClaimWithANumberExtensionIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 A:Main,Shortcut[IconsFoo,42]{}
@@ -2288,8 +2288,8 @@ In file: fear:/_col/_rank_app.fear
 
 While inspecting type declaration "A"
 Type declaration "A" implements "Shortcut[IconsFoo,42]".
-The extension "42" is not a string literal type.
-An extension is written as a string literal type, like `"fapp042"`; or implement "Shortcut[_]" to let the Fearless manager choose one.
+The extension "42" is not a type name in quotes.
+An extension is written as a type name in quotes, like `"fapp042"`; or implement "Shortcut[_]" to let the Fearless manager choose one.
 Error 7 WellFormedness"""); }
   @Test void anUppercaseExtensionIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 A:Main,OpenWith[IconsFoo,"Txt"]{}
