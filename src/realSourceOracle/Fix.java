@@ -43,6 +43,7 @@ import java.util.zip.ZipOutputStream;
 
 import tools.Fs;
 import userMessages.Report;
+import userMessages.UserError;
 import utils.Join;
 import utils.OneOr;
 
@@ -51,6 +52,7 @@ public final class Fix{
   private interface Dir{
     List<String> names();
     Kind kind(String name);
+    Optional<Path> drive(String name);
     Dir dir(String name);
     byte[] read(String name);
     void write(String name, byte[] bytes);
@@ -70,9 +72,17 @@ public final class Fix{
       if (unreachable(name)){ return kindOf(Fs.of(() -> LongPath.attributes(LongPath.of(p, name))).orElseThrow()); }
       var at= at(name);
       var a= Fs.of(() -> Files.readAttributes(at, BasicFileAttributes.class, NOFOLLOW_LINKS));
-      if (Fs.isLink(at, a)){ return Kind.other; }
+      if (Fs.isLink(at, a) && !isDrive(at, a)){ return Kind.other; }
       if (a.isDirectory()){ return Kind.folder; }
       return a.isRegularFile() || Fs.isWindows() && a.isOther() ? Kind.file : Kind.other;
+    }
+    public Optional<Path> drive(String name){
+      if (unreachable(name)){ return Optional.empty(); }
+      var at= at(name);
+      return Optional.of(at).filter(_ -> isDrive(at, Fs.of(() -> Files.readAttributes(at, BasicFileAttributes.class, NOFOLLOW_LINKS))));
+    }
+    private static boolean isDrive(Path at, BasicFileAttributes a){
+      return a.isDirectory() && Fs.isLink(at, a) && (!Fs.isWindows() || Fs.of(LongPath::mountPoints).contains(at));
     }
     private static Kind kindOf(int attributes){
       if ((attributes & 0x10) == 0){ return Kind.file; }
@@ -87,9 +97,9 @@ public final class Fix{
         finally{ back(mid, name); }
       });
     }
-    public void write(String name, byte[] bytes){ Fs.ofV(() -> Files.write(oneName(at(name)), bytes)); }
+    public void write(String name, byte[] bytes){ Fs.ofV(() -> Files.write(writable(at(name)), bytes)); }
     public long time(String name){ return Fs.of(() -> Files.getLastModifiedTime(at(name), NOFOLLOW_LINKS)).toMillis(); }
-    public void time(String name, long time){ Fs.ofV(() -> Files.setLastModifiedTime(oneName(at(name)), FileTime.fromMillis(time))); }
+    public void time(String name, long time){ Fs.ofV(() -> Files.setLastModifiedTime(writable(at(name)), FileTime.fromMillis(time))); }
     public void delete(String name){
       Fs.ofV(() -> {
         var at= checked(name);
@@ -118,7 +128,7 @@ public final class Fix{
     private Path checked(String name) throws IOException{
       var at= unreachable(name) ? moveOut(p, name) : at(name);
       try{ return noMountBelow(at); }
-      catch (IOException e){ back(at, name); throw e; }
+      catch (IOException | RuntimeException e){ back(at, name); throw e; }
     }
     private void back(Path at, String name) throws IOException{
       if (unreachable(name)){ LongPath.move(LongPath.of(at), LongPath.of(p, name)); }
@@ -151,24 +161,20 @@ public final class Fix{
       Files.move(from, mid);
       Files.move(mid, to);
     }
-    private static Path oneName(Path f) throws IOException{
-      noMountBelow(f);
-      var names= Fs.isWindows() ? LongPath.names(LongPath.of(f)) : (int)Files.getAttribute(f, "unix:nlink", NOFOLLOW_LINKS);
-      if (names != 1){ throw new FileSystemException(f.toString(), null, "this file has more than one name, so writing it changes those other names too"); }
-      writable(f);
-      return f;
-    }
-    private static void writable(Path f) throws IOException{
+    private static Path writable(Path f) throws IOException{
       if (Fs.isWindows()){
         if (!Files.isDirectory(f, NOFOLLOW_LINKS)){ Files.setAttribute(f, "dos:readonly", false, NOFOLLOW_LINKS); }
-        return;
+        return f;
       }
       var all= Files.getPosixFilePermissions(f, NOFOLLOW_LINKS);
       if (all.add(OWNER_WRITE)){ Files.setPosixFilePermissions(f, all); }
+      return f;
     }
     private static Path noMountBelow(Path f) throws IOException{
-      if (mountAtOrBelow(f) || holdsASource(f)){ throw new FileSystemException(f.toString(), null, "this entry, or an entry inside it, is a mount point or is also mounted at another place"); }
-      return f;
+      var m= mountAtOrBelow(f).or(() -> source(f));
+      if (m.isEmpty()){ return f; }
+      if (!m.get().equals(f)){ throw driveError(m.get()); }
+      throw new FileSystemException(f.toString(), null, "this folder, or a folder inside it, is a mount point or is also mounted at another place");
     }
     private static void remove(Path f) throws IOException{
       var folder= realFolder(f);
@@ -191,6 +197,7 @@ public final class Fix{
     }
     private static int order(String a, String b){ return Fs.isWindows() ? a.compareTo(b) : Arrays.compareUnsigned(a.getBytes(UTF_8), b.getBytes(UTF_8)); }
     public Kind kind(String name){ return all.stream().anyMatch(e -> e.name.startsWith(prefix+name+"/")) ? Kind.folder : Kind.file; }
+    public Optional<Path> drive(String name){ return Optional.empty(); }
     public Dir dir(String name){ return new Zip(all, prefix+name+"/"); }
     public byte[] read(String name){ return file(name).bytes; }
     public void write(String name, byte[] bytes){ each(name, e -> new Stored(e.name, FileTime.fromMillis(System.currentTimeMillis()), bytes)); }
@@ -257,44 +264,42 @@ public final class Fix{
   public static void of(Path folder, Consumer<String> out){ new Fix(out, 0, fixFolder(folder)).dir(new Disk(folder), "", false); }
   private record Mount(String dev, Path root, Path point){}
   private static List<Mount> mounts(){
+    if (Fs.isMac()){ return new String(Fs.of(() -> new ProcessBuilder("mount").start().getInputStream().readAllBytes()), UTF_8).lines().map(Fix::macMount).toList(); }
     return Fs.mountInfo().map(f -> new Mount(f[2], Fs.mountPath(f[3]), Fs.mountPath(f[4]))).toList();
+  }
+  private static Mount macMount(String line){
+    var dev= line.substring(0, line.indexOf(" on "));
+    var server= dev.indexOf(":/")+1;
+    var point= Path.of(line.substring(dev.length()+4, line.lastIndexOf(" (")));
+    return server == 0 ? new Mount(dev, Path.of("/"), point) : new Mount(dev.substring(0, server), Path.of(dev.substring(server)), point);
   }
   private static Set<Path> mountSet(){
     if (Fs.isWindows()){ return Fs.of(LongPath::mountPoints); }
     return mounts().stream().map(Mount::point).collect(Collectors.toSet());
   }
-  private static boolean mountAtOrBelow(Path f) throws IOException{
-    if (!Fs.isMac()){ return mountSet().stream().anyMatch(m -> m.startsWith(f)); }
-    if (!Files.isDirectory(f, NOFOLLOW_LINKS)){ return false; }
-    if (Fs.isLink(f)){ return true; }
-    try (var s= Files.list(f)){ for (var e : s.toList()){ if (mountAtOrBelow(e)){ return true; } } }
-    return false;
+  private static UserError driveError(Path m){ return new UserError(m+" is a drive: remove the drive, then run Fix again."); }
+  private static Optional<Path> mountAtOrBelow(Path f) throws IOException{
+    if (!Fs.isMac()){ return mountSet().stream().filter(m -> m.startsWith(f)).findFirst(); }
+    if (!Files.isDirectory(f, NOFOLLOW_LINKS)){ return Optional.empty(); }
+    if (Fs.isLink(f)){ return Optional.of(f); }
+    try (var s= Files.list(f)){
+      for (var e : s.toList()){
+        var m= mountAtOrBelow(e);
+        if (m.isPresent()){ return m; }
+      }
+    }
+    return Optional.empty();
   }
-  private static boolean holdsASource(Path f){
-    if (Fs.isMac()){ return Fs.of(() -> exportedInside(f)); }
+  private static Optional<Path> source(Path f){
+    var real= Fs.of(() -> f.getParent().toRealPath()).resolve(f.getFileName());
     if (Fs.isWindows()){
-      var real= Fs.of(() -> f.getParent().toRealPath()).resolve(f.getFileName());
-      return Fs.of(LongPath::shownFolders).stream().filter(Files::exists).anyMatch(s -> Fs.of(s::toRealPath).startsWith(real));
+      var shown= Fs.of(LongPath::shownFolders).entrySet().stream().filter(e -> Files.exists(e.getValue()) && Fs.of(e.getValue()::toRealPath).startsWith(real));
+      return shown.findFirst().map(e -> Fs.of(e.getValue()::toRealPath).equals(real) ? f : e.getKey());
     }
-    if (!Fs.isLinux()){ return false; }
     var all= mounts();
-    var on= all.stream().filter(m -> f.startsWith(m.point)).reduce((a, b) -> b.point.getNameCount() >= a.point.getNameCount() ? b : a).orElseThrow();
-    var inside= on.root.resolve(on.point.relativize(f));
-    return all.stream().anyMatch(m -> m != on && m.dev.equals(on.dev) && m.root.startsWith(inside));
-  }
-  private static boolean exportedInside(Path f) throws IOException{
-    if (!realFolder(f)){ return false; }
-    var own= Files.getFileStore(f);
-    var server= own.name().indexOf(":/")+1;
-    if (server == 0){ return false; }
-    var point= f;
-    while (Files.getFileStore(point.getParent()).equals(own)){ point= point.getParent(); }
-    var inside= Path.of(own.name().substring(server)).resolve(point.relativize(f));
-    for (var s : f.getFileSystem().getFileStores()){
-      var same= !s.equals(own) && s.name().startsWith(own.name().substring(0, server));
-      if (same && Path.of(s.name().substring(server)).startsWith(inside)){ return true; }
-    }
-    return false;
+    var on= all.stream().filter(m -> real.startsWith(m.point)).reduce((a, b) -> b.point.getNameCount() >= a.point.getNameCount() ? b : a).orElseThrow();
+    var inside= on.root.resolve(on.point.relativize(real));
+    return all.stream().filter(m -> m != on && m.dev.equals(on.dev) && m.root.startsWith(inside)).findFirst().map(m -> m.root.equals(inside) ? f : m.point);
   }
   public static boolean realFolder(Path p){ return Files.isDirectory(p, NOFOLLOW_LINKS) && !Fs.isLink(p); }
   private static Path fixFolder(Path folder){
@@ -310,9 +315,12 @@ public final class Fix{
   private void entry(Dir d, String old, String path, boolean inside, Set<String> kept, ArrayList<String> listing){
     var kind= d.kind(old);
     if (junk(old, kind)){ d.delete(old); listing.remove(old); out.accept("Deleted "+path+old); return; }
+    d.drive(old).ifPresent(m -> { throw driveError(m); });
     if (kind == Kind.other){ away(d, old, path); listing.remove(old); return; }
     var hidden= inside || old.startsWith(".");
-    var name= hidden ? old : renamed(d, old, path, kind == Kind.folder, listing);
+    var fixed= hidden ? Optional.of(old) : renamed(d, old, path, kind == Kind.folder, listing);
+    if (fixed.isEmpty()){ away(d, old, path); listing.remove(old); return; }
+    var name= fixed.get();
     var tooLong= BuildWithZip.len(path+name) > (hidden ? 250 : 200);
     var badHidden= hidden && BuildWithZip.hiddenProblem(name).isPresent();
     var key= BuildWithZip.foldKey(name);
@@ -322,11 +330,12 @@ public final class Fix{
     kept.add(key);
   }
   private boolean file(Dir d, String name, String path, boolean hidden){
-    if (!hidden && name.endsWith(".fear")){ fear(d, name, path+name); }
+    if (hidden){ return false; }
+    if (name.endsWith(".fear")){ fear(d, name, path+name); }
     var time= d.time(name);
     var now= System.currentTimeMillis();
     if (time<=0 || time>now+BuildWithZip.futureTolerance){ d.time(name, now); out.accept("Reset the time of "+path+name); }
-    return !hidden && name.endsWith(".zip") && zip(d, name, path);
+    return name.endsWith(".zip") && zip(d, name, path);
   }
   private void away(Dir d, String name, String path){
     var into= folderOf(fixFolder);
@@ -349,17 +358,18 @@ public final class Fix{
     out.accept("Deleted the empty folder "+full);
     return true;
   }
-  private String renamed(Dir d, String old, String path, boolean isDir, ArrayList<String> listing){
+  private Optional<String> renamed(Dir d, String old, String path, boolean isDir, ArrayList<String> listing){
     var ext= isDir ? "" : "."+ext(d, old);
     var seg= segment(isDir || !old.toLowerCase(Locale.ROOT).endsWith(ext) ? old : old.substring(0, old.length()-ext.length()));
     var zipOf= !isDir && old.endsWith(".zip") && listing.contains(old.substring(0, old.length()-4));
-    if ((seg+ext).equals(old) && !zipOf){ return old; }
+    if ((seg+ext).equals(old) && !zipOf && seg.length() <= BuildWithZip.maxSegment){ return Optional.of(old); }
     var taken= listing.stream().filter(n -> !n.equals(old)).map(Fix::clashKey).collect(Collectors.toSet());
-    var res= Stream.iterate(1, i -> i+1).map(i -> seg+(i==1 ? "" : i)).filter(s -> !Fs.winReserved.contains(s)).map(s -> s+ext)
-      .filter(n -> !taken.contains(clashKey(n)) && !junk(n, isDir ? Kind.folder : Kind.file)).findFirst().get();
-    d.rename(old, res);
-    listing.set(listing.indexOf(old), res);
-    out.accept("Renamed "+path+old+" to "+res);
+    var res= Stream.iterate(1, i -> i+1).map(i -> seg+(i==1 ? "" : i)).takeWhile(s -> s.length() <= BuildWithZip.maxSegment).filter(s -> !Fs.winReserved.contains(s)).map(s -> s+ext)
+      .filter(n -> !taken.contains(clashKey(n)) && !junk(n, isDir ? Kind.folder : Kind.file)).findFirst();
+    if (res.isEmpty()){ return res; }
+    d.rename(old, res.get());
+    listing.set(listing.indexOf(old), res.get());
+    out.accept("Renamed "+path+old+" to "+res.get());
     return res;
   }
   private static String ext(Dir d, String name){

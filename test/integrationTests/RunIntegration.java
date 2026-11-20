@@ -337,16 +337,16 @@ top level main
 """, run("mainInMethod"));
   }
   @Test void testingStandardLibrary(){ testOk("testingStandardLibrary");}
-  //every main runs under base.NoManager, Child and Failing on their own first; every process Parent starts keeps that attenuator and adds its own
+  //every main runs under base.NoManager and proc.NoDownloadHere, Child and Failing on their own first; every process Parent starts keeps base.NoManager, which gives u.process.with NoManager, not proc.NoDownloadHere, which gives u.process, and adds its own
   //Failing run as a new process prints nothing: its Info reaches Parent, which prints it
   @Test void testProcessAttenuation(){
     utils.Err.strCmp("""
 child starts
-child: download ok
+child: download revoked
 child: manager revoked
 child ends
 the failing main throws
-imm Failing.main(_) error line: 40 in file _proc/_rank_app.fear
+imm Failing.main(_) error line: 48 in file _proc/_rank_app.fear
 parent starts
 parent: manager revoked
 child starts
@@ -379,7 +379,33 @@ spin again: CapRunningMain.terminate was called on a surely terminated CapRunnin
 spin ends
 failing terminated: the failing main throws
 starter ends
-""", main(freshIntegrationRoot("testProcessAttenuation"), List.of("-DfearlessAttenuators=base.NoManager")));
+""", main(freshIntegrationRoot("testProcessAttenuation"), List.of("-DfearlessAttenuators=base.NoManager,proc.NoDownloadHere")));
+  }
+  @Test void testNoButton(){
+    utils.Err.strCmp("""
+child: NoButton: RegionFiller.button is revoked.
+Frame.content: NoButton: RegionFiller.button is revoked.
+Frame chained: NoButton: RegionFiller.button is revoked.
+Pane: NoButton: Pane.button is revoked.
+Pane chained: NoButton: Pane.button is revoked.
+Pane.self: NoButton: Pane.button is revoked.
+Pane.style: NoButton: Pane.button is revoked.
+Pane.changeDetached: NoButton: Pane.button is revoked.
+Pane.pane: NoButton: Pane.button is revoked.
+Pane.split: NoButton: RegionFiller.button is revoked.
+Border: NoButton: RegionFiller.button is revoked.
+Border chained: NoButton: RegionFiller.button is revoked.
+RegionFiller.split: NoButton: RegionFiller.button is revoked.
+And: NoButton: RegionFiller.button is revoked.
+SplitAnd: NoButton: RegionFiller.button is revoked.
+Split.region: NoButton: RegionFiller.button is revoked.
+Sections.section: NoButton: RegionFiller.button is revoked.
+Sections And: NoButton: RegionFiller.button is revoked.
+Sections.title: NoButton: RegionFiller.button is revoked.
+Sections.content: NoButton: RegionFiller.button is revoked.
+label: the window opened and closed
+child: NoButton: RegionFiller.button is revoked.
+""", main(freshIntegrationRoot("testNoButton"), List.of("-DfearlessAttenuators=nobutton.NoButton")));
   }
   @Test void aProcessTerminatedRightAfterItsStartLeavesOnlyItsOutput(@TempDir Path tmp){
     var root= unitTestsProject(tmp, """

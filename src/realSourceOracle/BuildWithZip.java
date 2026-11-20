@@ -135,10 +135,12 @@ public final class BuildWithZip{
     if (split){ checkExt(kid, name.substring(d0 + 1)); return; }
     if (kid instanceof Ref){ throw Report.needsExtension(kid); }
   }
+  static final int maxSegment= 191;
   private static void checkVisibleAtom(RefParent kid, String atom){
     var c0= atom.charAt(0);
     if (c0!='_' && !('a'<=c0 && c0<='z')){ throw Report.visibleMustStartWithLetterOrUnderscore(kid); }
     atom.chars().skip(1).filter(c -> c!='_' && !Fs.isExtSegChar((char)c)).findFirst().ifPresent(c -> { throw Report.visibleInvalidChar(kid, (char)c); });
+    if (atom.length() > maxSegment){ throw Report.visibleNameTooLong(kid); }
     if (Fs.winReserved.contains(atom)){ throw Report.windowsReservedName(kid); }
   }
   private static void checkExt(RefParent kid, String tail){

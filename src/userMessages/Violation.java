@@ -8,7 +8,6 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
@@ -82,8 +81,8 @@ This copy of Fearless should already have this file:
         freshCopyThenReport()
       ));
   }
-  public static UserError associationsAmbiguous(String reported){
-    return new UserError("""
+  public static String associationsAmbiguous(String reported){
+    return """
 Fearless cannot tell which of your Fearless installs should open Fearless
 projects: more than one is registered with your system at once.
 
@@ -91,42 +90,38 @@ Fearless stopped before touching anything: your system is exactly as it
 was.
 
 What is registered:
-%s""".formatted(reported));
+%s""".formatted(reported);
   }
-  private static String held(Map<String,String> held, Function<String,String> claimedBy){
-    return Join.of(held.entrySet().stream().map(e -> "  "+UserError.disp(e.getKey())+claimedBy.apply(e.getKey())+" is opened with "+UserError.disp(e.getValue())), "", "\n", "");
-  }
-  public static String associationQuestion(Map<String,String> held, Function<String,String> claimedBy, String no){
+  public static final String removeAllButOne= "Remove all of those Fearless installs but one, then close this dialog.";
+  public static String associationNotOurs(Map<String,String> held){
     return """
-The desktop opens the files with the extensions listed below with other programs.
-Fearless needs the desktop to open those files with Fearless:
-%s
-Let the desktop open the files with these extensions with Fearless?
-Answering No %s.""".formatted(held(held, claimedBy), no);
-  }
-  public static UserError associationNotOurs(Map<String,String> held, Function<String,String> claimedBy){
-    return new UserError("""
 Fearless needs the desktop to open the files with the extensions listed below with Fearless.
 The desktop opens those files with other programs:
-%s""".formatted(held(held, claimedBy)));
+%s""".formatted(Join.of(held.entrySet().stream().map(e -> "  "+UserError.disp(e.getKey())+" is opened with "+UserError.disp(e.getValue())), "", "\n", ""));
   }
-  public static UserError associationNotTaken(Map<String,String> blocked, Function<String,String> claimedBy){
-    var listed= Join.of(blocked.entrySet().stream().map(e -> "  "+UserError.disp(e.getKey())+claimedBy.apply(e.getKey())+" needs a change of\n    "+e.getValue().replace("\n", "\n    ")), "", "\n", "");
-    return new UserError("""
+  public static final String tickToHold= """
+Fearless makes the desktop open the files of each ticked extension with Fearless.
+Fearless gives up each extension left unticked; Cancel gives up every extension.""";
+  public static String associationNotTaken(Map<String,String> blocked){
+    return """
 Fearless needs the desktop to open the files with the extensions listed below with Fearless.
 The desktop does not let Fearless change the program opening those files:
-%s""".formatted(listed));
+%s""".formatted(Join.of(blocked.entrySet().stream().map(e -> "  "+UserError.disp(e.getKey())+" needs a change of\n    "+e.getValue().replace("\n", "\n    ")), "", "\n", ""));
   }
-  public static UserError associationNotWritable(String reported){
-    return new UserError("""
+  public static final String tickToTake= """
+Change the desktop so that Fearless can change the program opening the files of each ticked extension, then press OK.
+Fearless gives up each extension left unticked; Cancel gives up every extension.""";
+  public static String associationNotWritable(String reported){
+    return """
 Fearless cannot become the program that opens Fearless projects and the
 other kinds of file it registers.
 
 What Fearless would need to write, or remove, is not yours to change.
 
 What stood in the way:
-%s""".formatted(reported));
+%s""".formatted(reported);
   }
+  public static final String givePermission= "Give Fearless the permission to change each of those files, folders and settings, then close this dialog.";
   public static UserError associationLeftHalfDone(String reported){
     return new UserError("""
 Fearless could not finish changing which programs open the kinds of file

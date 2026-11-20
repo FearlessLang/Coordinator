@@ -460,9 +460,10 @@ x2.zip[b.txt=b;]
     assertArrayEquals(zip, Fs.readAllBytes(root.resolve("x.zip")));
   }
   @Test void aRenameCanBringAPathOverTheLimitAndTheEntryMovesToTheFixFolder(@TempDir Path tmp){
-    var name= "a".repeat(197);
-    var root= root(tmp, name+"\niii\nx");
-    assertEquals("Renamed "+name+" to "+name+".txt\nMoved "+name+".txt to "+tmp.resolve("root_fix").resolve(name+".txt")+"\n", fix(root));
+    var name= "a".repeat(191);
+    var root= root(tmp, "bbbbbb/"+name+"\niii\nx");
+    var moved= tmp.resolve("root_fix").resolve("bbbbbb").resolve(name+".txt");
+    assertEquals("Renamed bbbbbb/"+name+" to "+name+".txt\nMoved bbbbbb/"+name+".txt to "+moved+"\nDeleted the empty folder bbbbbb\n", fix(root));
     assertEquals(List.of(), names(root));
     assertEquals("", fix(root));
   }
@@ -546,15 +547,23 @@ a_b/x.txt=x
     assertEquals("Fixed the line endings of x/a.fear\n", fix(root));
     assertTrue(stored(Fs.readAllBytes(root.resolve("x.zip"))).getFirst().getTime() >= before-2_000);
   }
-  @Test void endsAtAWriteOfAFileWithMoreThanOneName(@TempDir Path tmp) throws IOException{
+  @Test void aWriteOfAFileWithMoreThanOneNameChangesTheFileAtItsOtherNames(@TempDir Path tmp) throws IOException{
     var root= root(tmp);
     Fs.writeUtf8(root.resolve("a.fear"), "A:{}\r\n");
     Files.createLink(tmp.resolve("other.fear"), root.resolve("a.fear"));
-    var lines= new ArrayList<String>();
-    var e= assertThrows(UncheckedIOException.class, () -> Fix.of(root, lines::add));
-    utils.Err.strCmp("[###]this file has more than one name, so writing it changes those other names too", e.getCause().getMessage());
-    assertEquals(List.of(), lines);
-    assertEquals("A:{}\r\n", Fs.readUtf8(tmp.resolve("other.fear")));
+    assertEquals("Fixed the line endings of a.fear\n", fix(root));
+    assertEquals("A:{}\n", Fs.readUtf8(tmp.resolve("other.fear")));
+    assertEquals("", fix(root));
+  }
+  @Test void movesAVisibleEntryWithNoFixedNameOfAtMost191CharactersToTheFixFolder(@TempDir Path tmp){
+    var clashing= "a".repeat(190)+"!.txt";
+    var kept= "a".repeat(190)+"_.txt";
+    var tooLong= "b".repeat(192)+".txt";
+    var root= root(tmp, clashing+"\niii\nc\njjj\n"+kept+"\niii\nk\njjj\n"+tooLong+"\niii\nb");
+    var fixed= tmp.resolve("root_fix");
+    assertEquals("Moved "+clashing+" to "+fixed.resolve(clashing)+"\nMoved "+tooLong+" to "+fixed.resolve(tooLong)+"\n", fix(root));
+    assertEquals(kept+"=k\n", dump(root));
+    assertEquals("", fix(root));
   }
   @Test void fixChangesTheReadOnlyFilesAndFoldersOfTheProject(@TempDir Path tmp){
     var root= root(tmp, "lib/a.fear\niii\nA:{}\njjj\nlib/Bad Name.txt\niii\nb\njjj\n__MACOSX/x/._a\niii\nj");
@@ -831,11 +840,11 @@ x""");
     Fs.ofV(() -> Fs.setLastModifiedTime(root.resolve("img/future.png"), FileTime.fromMillis(before+3_600_000)));
     Fs.ofV(() -> Fs.setLastModifiedTime(root.resolve("img/fine.png"), FileTime.fromMillis(fine)));
     assertEquals("""
-Reset the time of .git/unset
 Reset the time of img/future.png
 Reset the time of img/unset.png
 """, fix(root));
-    for (var f : List.of("img/unset.png", "img/future.png", ".git/unset")){
+    assertEquals(0, Fs.lastModified(root.resolve(".git/unset")));
+    for (var f : List.of("img/unset.png", "img/future.png")){
       var t= Fs.lastModified(root.resolve(f));
       assertTrue(t>=before-2_000 && t<=System.currentTimeMillis()+2_000, f+" "+t);
     }
@@ -1147,17 +1156,15 @@ d.zip[my_dir/a_file.fear=A:{}<lf>B:{ };.git/refs/;.git/Keep Me=x;notes.txt=n;my_
     }
     Fs.write(root.resolve("x.zip"), bytes.toByteArray());
     assertEquals("""
-Reset the time of x/.git/future
 Reset the time of x/unset.txt
 """, fix(root));
     var after= stored(Fs.readAllBytes(root.resolve("x.zip")));
     assertEquals(List.of("z.txt", "unset.txt", ".git/future", "a.txt"), after.stream().map(ZipEntry::getName).toList());
     assertEquals(fine, after.get(0).getTime());
+    assertEquals((before+3_600_000)/2_000, after.get(2).getTime()/2_000);
     assertEquals(fine+2_000, after.get(3).getTime());
-    for (var i : List.of(1, 2)){
-      var t= after.get(i).getTime();
-      assertTrue(t>=before-2_000 && t<=System.currentTimeMillis(), after.get(i).getName()+" "+t);
-    }
+    var t= after.get(1).getTime();
+    assertTrue(t>=before-2_000 && t<=System.currentTimeMillis(), "unset.txt "+t);
     assertEquals("", fix(root));
   }
   @Test void leavesAsItIsAZipWithNothingToFix(@TempDir Path tmp) throws IOException{

@@ -20,7 +20,9 @@ import java.nio.file.FileSystemException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.OptionalInt;
 import java.util.Set;
 
@@ -42,9 +44,6 @@ public final class LongPath{
   private static final SymbolLookup netapi32= SymbolLookup.libraryLookup("netapi32.dll", Arena.global());
   private static final MethodHandle shareEnum= linker.downcallHandle(netapi32.findOrThrow("NetShareEnum"), FunctionDescriptor.of(JAVA_INT, ADDRESS, JAVA_INT, ADDRESS, JAVA_INT, ADDRESS, ADDRESS, ADDRESS));
   private static final MethodHandle bufferFree= linker.downcallHandle(netapi32.findOrThrow("NetApiBufferFree"), FunctionDescriptor.of(JAVA_INT, ADDRESS));
-  private static final MethodHandle openFile= call("CreateFileW", FunctionDescriptor.of(ADDRESS, ADDRESS, JAVA_INT, JAVA_INT, ADDRESS, JAVA_INT, JAVA_INT, ADDRESS));
-  private static final MethodHandle fileInfo= call("GetFileInformationByHandle", FunctionDescriptor.of(JAVA_INT, ADDRESS, ADDRESS));
-  private static final MethodHandle closeFile= call("CloseHandle", FunctionDescriptor.of(JAVA_INT, ADDRESS));
   private static MethodHandle call(String name, FunctionDescriptor d){ return linker.downcallHandle(kernel32.findOrThrow(name), d, Linker.Option.captureCallState("GetLastError")); }
   public static String of(Path folder, String name){
     var f= folder.toAbsolutePath().toString();
@@ -98,21 +97,6 @@ public final class LongPath{
     catch (IOException e){ throw e; }
     catch (Throwable t){ throw Bug.of(t); }
   }
-  public static int names(String path) throws IOException{
-    try (var arena= Arena.ofConfined()){
-      var state= arena.allocate(Linker.Option.captureStateLayout());
-      var file= (MemorySegment)openFile.invokeExact(state, wide(arena, path), 0, 7, MemorySegment.NULL, 3, 0, MemorySegment.NULL);
-      if (file.address() == -1L){ throw failed(shown(path), error(state)); }
-      try{
-        var info= arena.allocate(JAVA_INT, 13);
-        if ((int)fileInfo.invokeExact(state, file, info) == 0){ throw failed(shown(path), error(state)); }
-        return info.getAtIndex(JAVA_INT, 10);
-      }
-      finally{ var _= (int)closeFile.invokeExact(state, file); }
-    }
-    catch (IOException e){ throw e; }
-    catch (Throwable t){ throw Bug.of(t); }
-  }
   private static List<Path> paths(Arena arena, MemorySegment state, MemorySegment volume) throws Throwable{
     var names= arena.allocate(JAVA_CHAR, 32768);
     if ((int)volumePaths.invokeExact(state, volume, names, 32768, arena.allocate(JAVA_INT)) == 0){ throw failed(volume.getString(0, UTF_16LE), error(state)); }
@@ -125,16 +109,16 @@ public final class LongPath{
     }
     return res;
   }
-  public static List<Path> shownFolders() throws IOException{
+  public static Map<Path,Path> shownFolders() throws IOException{
     try (var arena= Arena.ofConfined()){
       var state= arena.allocate(Linker.Option.captureStateLayout());
       var target= arena.allocate(JAVA_CHAR, 32768);
-      var res= new ArrayList<Path>();
+      var res= new LinkedHashMap<Path,Path>();
       for (var root : File.listRoots()){
         var drive= root.toString().substring(0, 2);
         if ((int)queryDevice.invokeExact(state, wide(arena, drive), target, 32768) == 0){ throw failed(drive, error(state)); }
         var t= target.getString(0, UTF_16LE);
-        if (t.startsWith("\\??\\")){ res.add(Path.of(shown("\\\\?\\"+t.substring(4)))); }
+        if (t.startsWith("\\??\\")){ res.put(root.toPath(), Path.of(shown("\\\\?\\"+t.substring(4)))); }
       }
       var shares= arena.allocate(ADDRESS);
       var count= arena.allocate(JAVA_INT);
@@ -145,7 +129,7 @@ public final class LongPath{
       var all= shares.get(ADDRESS, 0L).reinterpret(56L*n);
       try{
         for (var i= 0; i < n; i += 1){
-          if ((all.get(JAVA_INT, 56L*i+8) & 0xFF) == 0){ res.add(Path.of(all.get(ADDRESS, 56L*i+40).reinterpret(Long.MAX_VALUE).getString(0, UTF_16LE))); }
+          if ((all.get(JAVA_INT, 56L*i+8) & 0xFF) == 0){ res.put(Path.of("\\\\localhost\\"+text(all, 56L*i)+"\\"), Path.of(text(all, 56L*i+40))); }
         }
       }
       finally{ var _= (int)bufferFree.invokeExact(all); }
@@ -154,6 +138,7 @@ public final class LongPath{
     catch (IOException e){ throw e; }
     catch (Throwable t){ throw Bug.of(t); }
   }
+  private static String text(MemorySegment all, long at){ return all.get(ADDRESS, at).reinterpret(Long.MAX_VALUE).getString(0, UTF_16LE); }
   public static String shown(String path){ return path.startsWith("\\\\?\\UNC\\") ? "\\\\"+path.substring(8) : path.substring(4); }
   private static MemorySegment wide(Arena arena, String s){ return arena.allocateFrom(JAVA_CHAR, (s+"\0").toCharArray()); }
   private static int error(MemorySegment state){ return (int)lastError.get(state, 0L); }
