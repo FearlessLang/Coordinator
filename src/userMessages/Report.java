@@ -522,7 +522,8 @@ Rename the folder so that the name after the "_" is a different package name.
 This path contains more than one folder whose name starts with "_":
   %s
 
-Candidates: %s
+Candidates:
+%s
 
 Exactly one "_pkg" folder must define the package.
 
@@ -549,7 +550,7 @@ Valid alternatives:
       +-- bla/
           +-- _beer/
               +-- bar.fear
-""".formatted(disp(file.fearPath()), Join.of(candidates.stream().map(UserError::disp), "", ", ", "")));
+""".formatted(disp(file.fearPath()), Join.of(candidates.stream().map(c -> "- "+UserError.disp(c)), "", "\n", "")));
   }
   private static final String rankFilePattern= """
 Each package folder must contain exactly one file whose name follows this pattern:

@@ -56,7 +56,9 @@ That folder name, without the leading "_", defines the package name.
 This path contains more than one folder whose name starts with "_":
   "fear:/src/_bla/_beer/bar.fear"
 
-Candidates: "_bla", "_beer"
+Candidates:
+- "_bla"
+- "_beer"
 
 Exactly one "_pkg" folder must define the package.
 [###]
@@ -196,7 +198,10 @@ Error 7 WellFormedness
 The map refers to the code inside folders named "_bas", but no folder is named "_bas":
 - "map a as _bas in _pkb;"; written in fear:/_pka/_rank_app999.fear
 Did you mean "_base" ?
-Existing folders: "_base", "_pka", "_pkb".
+Existing folders:
+- "_base"
+- "_pka"
+- "_pkb"
 Error 7 WellFormedness
 """,
     "_pka/_rank_app999.fear", "map a as _bas in _pkb;",
