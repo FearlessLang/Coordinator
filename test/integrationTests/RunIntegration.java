@@ -3504,7 +3504,10 @@ B:{.text:Str->a.C.text;}
     utils.Err.strCmp("""
 The map refers to the code inside folders named "_nonexistentpkg", but no folder is named "_nonexistentpkg":
 - "map a as _nonexistentpkg in _pkb;"; written in fear:/_pka/_rank_app999.fear
-Existing folders: "_base", "_pka", "_pkb".
+Existing folders:
+- "_base"
+- "_pka"
+- "_pkb"
 Error 7 WellFormedness
 """, ex.getMessage());
   }
@@ -3884,7 +3887,9 @@ In file: fear:/_app/_rank_app.fear
 While inspecting a type name
 Source code inside folders named "_app" cannot use package name "webserver_v12".
 Did you mean "webserver" ?
-Visible package names: "base", "webserver".
+Visible package names:
+- "base"
+- "webserver"
 Source code inside folders named "_app" uses package name "webserver" to refer to the code inside folders named "_webserver_v12", because of "map webserver as _webserver_v12 in _app", written in fear:/_app/_rank_app.fear.
 Error 7 WellFormedness
 """, ex.getMessage());
@@ -3987,7 +3992,10 @@ C:{.text:Str->"c";}
 The map applies to source code inside folders named "_pkbb", but no folder is named "_pkbb":
 - "map a as _pkc in _pkbb;"; written in fear:/_pka/_rank_app999.fear
 Did you mean "_pkb" ?
-Existing folders: "_pka", "_pkb", "_pkc".
+Existing folders:
+- "_pka"
+- "_pkb"
+- "_pkc"
 Error 7 WellFormedness
 """, ex.getMessage());
   }
@@ -4397,7 +4405,14 @@ jjj
     utils.Err.strCmp("""
 The map refers to the code inside folders named "_foo_v7", but no folder is named "_foo_v7":
 - "map foo as _foo_v7 in _lib instead of _foo_v4;"; written in fear:/_app/_rank_app.fear
-Existing folders: "_app", "_base", "_foo_v3", "_foo_v4", "_foo_v5", "_foo_v6", "_lib".
+Existing folders:
+- "_app"
+- "_base"
+- "_foo_v3"
+- "_foo_v4"
+- "_foo_v5"
+- "_foo_v6"
+- "_lib"
 Error 7 WellFormedness
 """, mapsError(tmp, foos
       +fooLib("map foo as _foo_v4 in _lib;\n")
@@ -4408,7 +4423,13 @@ Error 7 WellFormedness
 The map applies to source code inside folders named "_libb", but no folder is named "_libb":
 - "map foo as _foo_v5 in _libb;"; written in fear:/_app/_rank_app.fear
 Did you mean "_lib" ?
-Existing folders: "_app", "_foo_v3", "_foo_v4", "_foo_v5", "_foo_v6", "_lib".
+Existing folders:
+- "_app"
+- "_foo_v3"
+- "_foo_v4"
+- "_foo_v5"
+- "_foo_v6"
+- "_lib"
 Error 7 WellFormedness
 """, mapsError(tmp, foos
       +fooLib("map foo as _foo_v4 in _lib;\n")
@@ -4675,7 +4696,10 @@ In file: fear:/_shop/_rank_framework100.fear
 While inspecting a type name
 Source code inside folders named "_shop" cannot use package name "http_v2".
 Did you mean "web" ?
-Visible package names: "base", "http_v1", "web".
+Visible package names:
+- "base"
+- "http_v1"
+- "web"
 """+shopWebNote+"""
 
 Error 7 WellFormedness
@@ -4691,7 +4715,11 @@ In file: fear:/_blog/_rank_framework200.fear
 While inspecting a type name
 Source code inside folders named "_blog" cannot use package name "http_v2".
 Did you mean "http" ?
-Visible package names: "base", "http", "http_v1", "shop".
+Visible package names:
+- "base"
+- "http"
+- "http_v1"
+- "shop"
 """+blogHttpNote+"""
 
 Error 7 WellFormedness
@@ -5003,7 +5031,9 @@ In file: fear:/_lib/_rank_driver.fear
 
 While inspecting a type name
 Type "Foo" is not declared in package "lib" and is not made visible via "use".
-In scope: "Lib", "Str".
+In scope:
+- "Lib"
+- "Str"
 Did you mean one of the following?
 - "foo.Foo"
 - "foo_v3.Foo"
