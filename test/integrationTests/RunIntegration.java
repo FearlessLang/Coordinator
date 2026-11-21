@@ -4270,7 +4270,7 @@ jjj
     utils.Err.strCmp("""
 In file: fear:/_lib/_rank_driver.fear
 [###]
-Source code inside folders named "_lib" uses package name "foo" to refer to the code inside folders named "_foo_v5", because of "map foo as _foo_v5 in _lib", written in fear:/_app/_rank_app.fear.
+Source code inside folders named "_lib" uses package name "foo" to refer to the code inside folders named "_foo_v5", because of "map foo as _foo_v5 in _lib instead of _foo_v7", written in fear:/_app/_rank_app.fear.
 [###]""", msg);
   }
   @Test void onlyTheWinningMapIsCheckedForInsteadOf(@TempDir Path tmp) throws InterruptedException{
@@ -4470,7 +4470,7 @@ Foo:{ .version: Str -> "v7"; .legacy: Str -> "legacy" }
 Legacy:{}
 jjj
 """;
-  static final String fooNote= "Source code inside folders named \"_lib\" uses package name \"foo\" to refer to the code inside folders named \"_foo_v5\", because of \"map foo as _foo_v5 in _lib\", written in fear:/_app/_rank_app.fear.";
+  static final String fooNote= "Source code inside folders named \"_lib\" uses package name \"foo\" to refer to the code inside folders named \"_foo_v5\", because of \"map foo as _foo_v5 in _lib instead of _foo_v7\", written in fear:/_app/_rank_app.fear.";
   @Test void aMethodErrorInALibraryWithItsOwnPinAndAnOverrideCitesTheApplication(@TempDir Path tmp){
     utils.Err.strCmp("""
 In file: fear:/_lib/_rank_driver.fear
@@ -4900,7 +4900,7 @@ Source code inside folders named "_lib" uses package name "foo" to refer to the 
     utils.Err.strCmp("""
 In file: fear:/_lib/_rank_driver.fear
 [###]
-Source code inside folders named "_lib" uses package name "foo" to refer to the code inside folders named "_foo_v7", because of "map foo as _foo_v7 in _lib", written in fear:/_app/_rank_app.fear.
+Source code inside folders named "_lib" uses package name "foo" to refer to the code inside folders named "_foo_v7", because of "map foo as _foo_v7 in _lib instead of _foo_v4", written in fear:/_app/_rank_app.fear.
 [###]""", assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib)).getMessage());
   }
   @Test void reorderingTheInsteadOfListKeepsTheOutputAndAWrongListIsAnErrorUntilFixed(@TempDir Path tmp) throws IOException, InterruptedException{
