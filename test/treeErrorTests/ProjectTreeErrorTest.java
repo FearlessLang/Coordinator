@@ -54,18 +54,18 @@ That folder name, without the leading "_", defines the package name.
     "src/foo.fear", ""); }
   @Test void ambiguousPackageSegment(){ runErr("""
 This path contains more than one folder whose name starts with "_":
-  "fear:/src/_bla/_beer/bar.fear"
+  "fear:/src/_shop/_cart/item.fear"
 
 Candidates:
-- "_bla"
-- "_beer"
+- "_shop"
+- "_cart"
 
 Exactly one "_pkg" folder must define the package.
 [###]
 Is "bar.fear" in package "bla" or in package "beer"?
 [###]
 """,
-    "src/_bla/_beer/bar.fear", ""); }
+    "src/_shop/_cart/item.fear", ""); }
   //The folder name after the "_" is the package name, and it also becomes a folder and a
   //file name in the generated code. "con" passes every rule of the project scanner, which
   //only rejects a folder literally called "con".
