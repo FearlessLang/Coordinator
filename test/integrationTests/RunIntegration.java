@@ -4978,7 +4978,8 @@ In file: fear:/_lib/_rank_driver.fear
 
 While inspecting package header
 "use" directive refers to "Foo", which is not a full type name.
-A "use" directive refers to a type of another package by its full type name, as in "use base.Str as Str;".
+A "use" directive refers to a type of another package by its full type name.
+Did you mean "use foo.Foo as Foo;" or "use foo_v3.Foo as Foo;" or "use foo_v5.Foo as Foo;" or "use foo_v6.Foo as Foo;" ?
 Error 7 WellFormedness
 """, mapsError(tmp, foos+"""
 _lib/_rank_driver.fear
