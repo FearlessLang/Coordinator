@@ -4979,7 +4979,11 @@ In file: fear:/_lib/_rank_driver.fear
 While inspecting package header
 "use" directive refers to "Foo", which is not a full type name.
 A "use" directive refers to a type of another package by its full type name.
-Did you mean "use foo.Foo as Foo;" or "use foo_v3.Foo as Foo;" or "use foo_v5.Foo as Foo;" or "use foo_v6.Foo as Foo;" ?
+Did you mean one of the following?
+- "use foo.Foo as Foo;"
+- "use foo_v3.Foo as Foo;"
+- "use foo_v5.Foo as Foo;"
+- "use foo_v6.Foo as Foo;"
 Error 7 WellFormedness
 """, mapsError(tmp, foos+"""
 _lib/_rank_driver.fear
@@ -5000,7 +5004,11 @@ In file: fear:/_lib/_rank_driver.fear
 While inspecting a type name
 Type "Foo" is not declared in package "lib" and is not made visible via "use".
 In scope: "Lib", "Str".
-Did you mean "foo.Foo" or "foo_v3.Foo" or "foo_v5.Foo" or "foo_v6.Foo" ?
+Did you mean one of the following?
+- "foo.Foo"
+- "foo_v3.Foo"
+- "foo_v5.Foo"
+- "foo_v6.Foo"
 Add a "use" or write the full type name.
 
 Source code inside folders named "_lib" uses package name "foo" to refer to the code inside folders named "_foo_v4", because of "map foo as _foo_v4 in _lib", written in fear:/_lib/_rank_driver.fear.
