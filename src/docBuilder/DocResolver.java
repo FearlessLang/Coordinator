@@ -177,7 +177,7 @@ record DocResolver(String pkgName, List<TypeDoc> types, OtherPackages other, Fun
   private static String others(String missing, String kind, Stream<String> forms, String counted){
     var fs= forms.map(f -> "\""+f+"\"").distinct().sorted(Comparator.comparingInt(String::length).thenComparing(Comparator.naturalOrder())).toList();
     if (fs.isEmpty()){ return missing; }
-    return missing+"\n"+(fs.size()==1 ? "There is a "+kind+" " : "There are "+kind+"s ")+choices(fs)+",\nbut with a different number of "+counted+".";
+    return missing+"\n"+(fs.size()==1 ? "There is a "+kind+" " : "There are "+kind+"s ")+choices(fs)+", but with a different number of "+counted+".";
   }
   private String title(TName n){
     return localTypeDoc(n).map(t -> t.main().infName() ? anonTitle(t.main()) : n.simpleName()).orElseGet(() -> names.apply(n));

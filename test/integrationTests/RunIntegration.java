@@ -2378,8 +2378,7 @@ In file: fear:/_col/_rank_app.fear
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 While inspecting type declaration "A"
-Type declaration "A" claims the extension "fapp042" more than once:
-both `Shortcut[IconsFoo,"fapp042"]` and `Shortcut[base.IconsConflict,"fapp042"]` claim it.
+Type declaration "A" claims the extension "fapp042" more than once: both `Shortcut[IconsFoo,"fapp042"]` and `Shortcut[base.IconsConflict,"fapp042"]` claim it.
 A main can claim each extension at most once, across all its "OpenWith[_,_]" and "Shortcut[_,_]", since one extension has one icon.
 Error 7 WellFormedness"""); }
   @Test void anExtensionClaimedTwiceWithDifferentDelimitersIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
@@ -2391,8 +2390,7 @@ In file: fear:/_col/_rank_app.fear
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 While inspecting type declaration "A"
-Type declaration "A" claims the extension "txt" more than once:
-both `OpenWith[IconsFoo,"txt"]` and "OpenWith[IconsFoo,`txt`]" claim it.
+Type declaration "A" claims the extension "txt" more than once: both `OpenWith[IconsFoo,"txt"]` and "OpenWith[IconsFoo,`txt`]" claim it.
 A main can claim each extension at most once, across all its "OpenWith[_,_]" and "Shortcut[_,_]", since one extension has one icon.
 Error 7 WellFormedness"""); }
   @Test void aShortcutOfAnotherExtensionIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
@@ -2594,8 +2592,7 @@ In file: fear:/_col/_rank_app.fear
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 While inspecting type declaration "Clash"
-Type declaration "Clash" claims the extension "fear" more than once:
-both `OpenWith[IconsFoo,"fear"]` and `OpenWith[base.IconsConflict,"fear"]` claim it.
+Type declaration "Clash" claims the extension "fear" more than once: both `OpenWith[IconsFoo,"fear"]` and `OpenWith[base.IconsConflict,"fear"]` claim it.
 A main can claim each extension at most once, across all its "OpenWith[_,_]" and "Shortcut[_,_]", since one extension has one icon.
 Error 7 WellFormedness""", ex.getMessage());
   }

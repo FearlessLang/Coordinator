@@ -777,8 +777,7 @@ In file: fear:/_p/_rank_app.fear
 
 While inspecting the documentation of package p
 Type "A" has no method ".m(_)".
-There is a method "A.m()",
-but with a different number of arguments.[###]""", ex.getMessage());
+There is a method "A.m()", but with a different number of arguments.[###]""", ex.getMessage());
   }
   @Test void aReferenceToAMethodTheTypeDoesNotHaveIsToldTheTypeHasNoSuchMethod(@TempDir Path tmp){
     var ex= assertThrows(UserError.class, () -> docs(tmp, a+"""
@@ -840,8 +839,7 @@ Broken reference in a doc comment.[###]
 
 While inspecting the documentation of package p
 No type has a method ".m(_)".
-There is a method "A.m()",
-but with a different number of arguments.[###]""", ex.getMessage());
+There is a method "A.m()", but with a different number of arguments.[###]""", ex.getMessage());
   }
   @Test void aTypeReferenceWithAnArityTheTypeDoesNotHaveIsToldTheArityTheTypeHas(@TempDir Path tmp){
     var ex= assertThrows(UserError.class, () -> docs(tmp, a+"""
@@ -855,8 +853,7 @@ Broken reference in a doc comment.[###]
 
 While inspecting the documentation of package p
 There is no type "A[_]".
-There is a type "A",
-but with a different number of generic type parameters.[###]""", ex.getMessage());
+There is a type "A", but with a different number of generic type parameters.[###]""", ex.getMessage());
   }
   @Test void aMethodOnATypeParameterIsToldThatATypeParameterHasNoMethods(@TempDir Path tmp){
     var ex= assertThrows(UserError.class, () -> docs(tmp, a+"""
@@ -890,8 +887,7 @@ B:{ .k: A -> A; }
 """));
     utils.Err.strCmp("""
 [###]Type "A" has no method ".m(_,_,_)".
-There are methods "A.m()", "A.m(_)" and "A.m(_,_)",
-but with a different number of arguments.[###]""", ex.getMessage());
+There are methods "A.m()", "A.m(_)" and "A.m(_,_)", but with a different number of arguments.[###]""", ex.getMessage());
   }
   @Test void aMethodMissingOnATypeOfAnotherPackageQuotesTheTypeAsTheReferenceWritesIt(@TempDir Path tmp){
     var q= compiled("q", "Thing:{ .n: Thing -> this; }\n", OtherPackages.empty());
