@@ -150,24 +150,30 @@ Each package folder must contain exactly one file whose name follows this patter
   //Two rank files of the SAME rank map the same virtual name to different real
   //packages, so neither can override the other. Reported as a well formedness error.
   @Test void mapConflict(){ runErr("""
-Maps of the same rank give package name "a" different folders, for source code inside folders named "_pkb":
+Maps of the same rank give package name "a" different folders,
+for source code inside folders named "_pkb":
 - "map a as _pkc in _pkb;"; written in fear:/_pka/_rank_app999.fear
 - "map a as _pkb in _pkb;"; written in fear:/_pkd/_rank_app999.fear
 
 How maps work:
 - A rank file can have lines like "map name as _folder in _target;".
 - With no map, package name "x" refers to the code inside folders named "_x".
-- A map in a rank file of higher rank overrides the maps of lower rank, and lists their folders with "instead of".
+- A map in a rank file of higher rank overrides the maps of lower rank,
+  and lists their folders with "instead of".
 
 How to fix it:
-- Decide which folder package name "a" refers to, for source code inside folders named "_pkb".
-- Add one map in a rank file of higher rank (typically the rank file of your application), with "instead of" listing every folder chosen by the maps of lower rank.
+- Decide which folder package name "a" refers to,
+  for source code inside folders named "_pkb".
+- Add one map in a rank file of higher rank
+  (typically the rank file of your application),
+  with "instead of" listing every folder chosen by the maps of lower rank.
 Error 7 WellFormedness
 """,
     "_pka/_rank_app999.fear", "map a as _pkc in _pkb;",
     "_pkd/_rank_app999.fear", "map a as _pkb in _pkb;"); }
   @Test void mapConflictListsTwelveMapsAndCountsTheOthers(){ runErr("""
-Maps of the same rank give package name "a" different folders, for source code inside folders named "_pkb":
+Maps of the same rank give package name "a" different folders,
+for source code inside folders named "_pkb":
 - "map a as _q10 in _pkb;"; written in fear:/_p10/_rank_app999.fear
 - "map a as _q11 in _pkb;"; written in fear:/_p11/_rank_app999.fear
 - "map a as _q12 in _pkb;"; written in fear:/_p12/_rank_app999.fear
@@ -185,11 +191,15 @@ Maps of the same rank give package name "a" different folders, for source code i
 How maps work:
 - A rank file can have lines like "map name as _folder in _target;".
 - With no map, package name "x" refers to the code inside folders named "_x".
-- A map in a rank file of higher rank overrides the maps of lower rank, and lists their folders with "instead of".
+- A map in a rank file of higher rank overrides the maps of lower rank,
+  and lists their folders with "instead of".
 
 How to fix it:
-- Decide which folder package name "a" refers to, for source code inside folders named "_pkb".
-- Add one map in a rank file of higher rank (typically the rank file of your application), with "instead of" listing every folder chosen by the maps of lower rank.
+- Decide which folder package name "a" refers to,
+  for source code inside folders named "_pkb".
+- Add one map in a rank file of higher rank
+  (typically the rank file of your application),
+  with "instead of" listing every folder chosen by the maps of lower rank.
 Error 7 WellFormedness
 """, java.util.stream.IntStream.rangeClosed(10, 23)
     .mapToObj(i -> new String[]{"_p"+i+"/_rank_app999.fear", "map a as _q"+i+" in _pkb;"})

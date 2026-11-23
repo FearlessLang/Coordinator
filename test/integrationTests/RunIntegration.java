@@ -304,7 +304,8 @@ log2: == invoice 42 ==
     var app= root.resolve("_billing", "_rank_app.fear");
     edit(app, " instead of _log_v1", "");
     utils.Err.strCmp("""
-The "instead of" list of a map must name exactly the folders chosen by the maps of lower rank that the map overrides:
+The "instead of" list of a map must name exactly
+the folders chosen by the maps of lower rank that the map overrides:
 - "map log as _log_v2 in _invoice;"; written in fear:/_billing/_rank_app.fear
 These maps of lower rank choose other folders:
 - "map log as _log_v1 in _invoice;"; written in fear:/_invoice/_rank_worker200.fear
@@ -314,7 +315,8 @@ Error 7 WellFormedness
     edit(app, "in _invoice;", "in _invoice instead of _log_v1;");
     edit(root.resolve("_invoice", "_rank_worker200.fear"), "_log_v1", "_log_v2");
     utils.Err.strCmp("""
-The "instead of" list of a map must name exactly the folders chosen by the maps of lower rank that the map overrides:
+The "instead of" list of a map must name exactly
+the folders chosen by the maps of lower rank that the map overrides:
 - "map log as _log_v2 in _invoice instead of _log_v1;"; written in fear:/_billing/_rank_app.fear
 No map of lower rank chooses another folder.
 Expected: "map log as _log_v2 in _invoice;".
@@ -2169,7 +2171,9 @@ In file: fear:/_col/_rank_app.fear
 
 While inspecting type declaration "Assoc"
 Type declaration "Assoc" implements "OpenWith[_,_]".
-Only a main can implement "OpenWith[_,_]": type declaration "Assoc" must also implement "Main", directly or through one of its supertypes.
+Only a main can implement "OpenWith[_,_]":
+type declaration "Assoc" must also implement "Main",
+directly or through one of its supertypes.
 Error 7 WellFormedness"""); }
   @Test void aClaimOnANamedObjectLiteralWithoutMainIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 Test:{ #: I -> I: Shortcut[IconsFoo]{} }
@@ -2181,7 +2185,9 @@ In file: fear:/_col/_rank_app.fear
 
 While inspecting object literal "I"
 Object literal "I" implements "Shortcut[_]".
-Only a main can implement "Shortcut[_]": object literal "I" must also implement "Main", directly or through one of its supertypes.
+Only a main can implement "Shortcut[_]":
+object literal "I" must also implement "Main",
+directly or through one of its supertypes.
 Error 7 WellFormedness"""); }
   @Test void aClaimOnAnAnonymousObjectLiteralWithoutMainIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 Test:{ #: Shortcut[IconsFoo] -> { .foo: base.Void -> base.Void } }
@@ -2193,7 +2199,9 @@ In file: fear:/_col/_rank_app.fear
 
 While inspecting object literal instance of "Shortcut[_]"
 Object literal instance of "Shortcut[_]" implements "Shortcut[_]".
-Only a main can implement "Shortcut[_]": object literal instance of "Shortcut[_]" must also implement "Main", directly or through one of its supertypes.
+Only a main can implement "Shortcut[_]":
+object literal instance of "Shortcut[_]" must also implement "Main",
+directly or through one of its supertypes.
 Error 7 WellFormedness"""); }
   @Test void aClaimWithoutMainBlamesTheDeclarationAddingIt(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 B:A{}
@@ -2207,7 +2215,9 @@ In file: fear:/_col/_rank_app.fear
 
 While inspecting type declaration "A"
 Type declaration "A" implements "OpenWith[_,_]".
-Only a main can implement "OpenWith[_,_]": type declaration "A" must also implement "Main", directly or through one of its supertypes.
+Only a main can implement "OpenWith[_,_]":
+type declaration "A" must also implement "Main",
+directly or through one of its supertypes.
 Error 7 WellFormedness"""); }
   @Test void aClaimWithoutMainInALowerRankPackageIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 Foo:Main{s->base.Debug#(`foo`)}
@@ -2223,7 +2233,9 @@ In file: fear:/_lib/_rank_core.fear
 
 While inspecting type declaration "Lib"
 Type declaration "Lib" implements "base.Shortcut[_]".
-Only a main can implement "base.Shortcut[_]": type declaration "Lib" must also implement "base.Main", directly or through one of its supertypes.
+Only a main can implement "base.Shortcut[_]":
+type declaration "Lib" must also implement "base.Main",
+directly or through one of its supertypes.
 Error 7 WellFormedness"""); }
   @Test void aClaimWithATypeVariableIconIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 A[X:imm]:Main,OpenWith[X,"q"]{}
@@ -2263,7 +2275,8 @@ In file: fear:/_col/_rank_app.fear
 While inspecting type declaration "A[_]"
 Type declaration "A[_]" implements "OpenWith[IconsFoo,X]".
 The extension "X" is not a type name in quotes.
-An extension is written as a type name in quotes, like `"ffile347"`, `"xml"` or `"txt"`; or implement "OpenWith[_]" to let the Fearless manager choose one.
+An extension is written as a type name in quotes, like `"ffile347"`, `"xml"` or `"txt"`;
+or implement "OpenWith[_]" to let the Fearless manager choose one.
 Error 7 WellFormedness"""); }
   @Test void aClaimWithATypeNameExtensionIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 A:Main,OpenWith[IconsFoo,IconsFoo]{}
@@ -2276,7 +2289,8 @@ In file: fear:/_col/_rank_app.fear
 While inspecting type declaration "A"
 Type declaration "A" implements "OpenWith[IconsFoo,IconsFoo]".
 The extension "IconsFoo" is not a type name in quotes.
-An extension is written as a type name in quotes, like `"ffile347"`, `"xml"` or `"txt"`; or implement "OpenWith[_]" to let the Fearless manager choose one.
+An extension is written as a type name in quotes, like `"ffile347"`, `"xml"` or `"txt"`;
+or implement "OpenWith[_]" to let the Fearless manager choose one.
 Error 7 WellFormedness"""); }
   @Test void aClaimWithANumberExtensionIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 A:Main,Shortcut[IconsFoo,42]{}
@@ -2289,7 +2303,8 @@ In file: fear:/_col/_rank_app.fear
 While inspecting type declaration "A"
 Type declaration "A" implements "Shortcut[IconsFoo,42]".
 The extension "42" is not a type name in quotes.
-An extension is written as a type name in quotes, like `"fapp042"`; or implement "Shortcut[_]" to let the Fearless manager choose one.
+An extension is written as a type name in quotes, like `"fapp042"`;
+or implement "Shortcut[_]" to let the Fearless manager choose one.
 Error 7 WellFormedness"""); }
   @Test void anUppercaseExtensionIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 A:Main,OpenWith[IconsFoo,"Txt"]{}
@@ -2302,7 +2317,9 @@ In file: fear:/_col/_rank_app.fear
 While inspecting type declaration "A"
 Type declaration "A" implements `OpenWith[IconsFoo,"Txt"]`.
 "Txt" is not a valid extension.
-An extension is 1 to 16 characters, each a lowercase letter "a"-"z" or a digit "0"-"9", with no dot; or implement "OpenWith[_]" to let the Fearless manager choose one.
+An extension is 1 to 16 characters,
+each a lowercase letter "a"-"z" or a digit "0"-"9", with no dot;
+or implement "OpenWith[_]" to let the Fearless manager choose one.
 Error 7 WellFormedness"""); }
   @Test void aMultiDotExtensionIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 A:Main,OpenWith[IconsFoo,"tar.gz"]{}
@@ -2315,7 +2332,9 @@ In file: fear:/_col/_rank_app.fear
 While inspecting type declaration "A"
 Type declaration "A" implements `OpenWith[IconsFoo,"tar.gz"]`.
 "tar.gz" is not a valid extension.
-An extension is 1 to 16 characters, each a lowercase letter "a"-"z" or a digit "0"-"9", with no dot; or implement "OpenWith[_]" to let the Fearless manager choose one.
+An extension is 1 to 16 characters,
+each a lowercase letter "a"-"z" or a digit "0"-"9", with no dot;
+or implement "OpenWith[_]" to let the Fearless manager choose one.
 Error 7 WellFormedness"""); }
   @Test void aLeadingDotExtensionIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 A:Main,OpenWith[IconsFoo,".txt"]{}
@@ -2328,7 +2347,9 @@ In file: fear:/_col/_rank_app.fear
 While inspecting type declaration "A"
 Type declaration "A" implements `OpenWith[IconsFoo,".txt"]`.
 ".txt" is not a valid extension.
-An extension is 1 to 16 characters, each a lowercase letter "a"-"z" or a digit "0"-"9", with no dot; or implement "OpenWith[_]" to let the Fearless manager choose one.
+An extension is 1 to 16 characters,
+each a lowercase letter "a"-"z" or a digit "0"-"9", with no dot;
+or implement "OpenWith[_]" to let the Fearless manager choose one.
 Error 7 WellFormedness"""); }
   @Test void anEmptyExtensionIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 A:Main,OpenWith[IconsFoo,""]{}
@@ -2341,7 +2362,9 @@ In file: fear:/_col/_rank_app.fear
 While inspecting type declaration "A"
 Type declaration "A" implements `OpenWith[IconsFoo,""]`.
 "" is not a valid extension.
-An extension is 1 to 16 characters, each a lowercase letter "a"-"z" or a digit "0"-"9", with no dot; or implement "OpenWith[_]" to let the Fearless manager choose one.
+An extension is 1 to 16 characters,
+each a lowercase letter "a"-"z" or a digit "0"-"9", with no dot;
+or implement "OpenWith[_]" to let the Fearless manager choose one.
 Error 7 WellFormedness"""); }
   @Test void aTooLongExtensionIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 A:Main,OpenWith[IconsFoo,"abcdefghij0123456"]{}
@@ -2354,7 +2377,9 @@ In file: fear:/_col/_rank_app.fear
 While inspecting type declaration "A"
 Type declaration "A" implements `OpenWith[IconsFoo,"abcdefghij0123456"]`.
 "abcdefghij0123456" is not a valid extension.
-An extension is 1 to 16 characters, each a lowercase letter "a"-"z" or a digit "0"-"9", with no dot; or implement "OpenWith[_]" to let the Fearless manager choose one.
+An extension is 1 to 16 characters,
+each a lowercase letter "a"-"z" or a digit "0"-"9", with no dot;
+or implement "OpenWith[_]" to let the Fearless manager choose one.
 Error 7 WellFormedness"""); }
   @Test void theFearlessExtensionIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 A:Main,OpenWith[IconsFoo,`fearless`]{}
@@ -2367,7 +2392,8 @@ In file: fear:/_col/_rank_app.fear
 While inspecting type declaration "A"
 Type declaration "A" implements "OpenWith[IconsFoo,`fearless`]".
 "fearless" is not a valid extension.
-The extension "fearless" is reserved; or implement "OpenWith[_]" to let the Fearless manager choose one.
+The extension "fearless" is reserved;
+or implement "OpenWith[_]" to let the Fearless manager choose one.
 Error 7 WellFormedness"""); }
   @Test void anExtensionClaimedTwiceIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 A:Main,Shortcut[IconsFoo,"fapp042"],Shortcut[base.IconsConflict,"fapp042"]{}
@@ -2380,7 +2406,9 @@ In file: fear:/_col/_rank_app.fear
 While inspecting type declaration "A"
 Type declaration "A" claims the extension "fapp042" more than once:
 both `Shortcut[IconsFoo,"fapp042"]` and `Shortcut[base.IconsConflict,"fapp042"]` claim it.
-A main can claim each extension at most once, across all its "OpenWith[_,_]" and "Shortcut[_,_]", since one extension has one icon.
+A main can claim each extension at most once,
+across all its "OpenWith[_,_]" and "Shortcut[_,_]",
+since one extension has one icon.
 Error 7 WellFormedness"""); }
   @Test void anExtensionClaimedTwiceWithDifferentDelimitersIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 A:Main,OpenWith[IconsFoo,"txt"],OpenWith[IconsFoo,`txt`]{}
@@ -2393,7 +2421,9 @@ In file: fear:/_col/_rank_app.fear
 While inspecting type declaration "A"
 Type declaration "A" claims the extension "txt" more than once:
 both `OpenWith[IconsFoo,"txt"]` and "OpenWith[IconsFoo,`txt`]" claim it.
-A main can claim each extension at most once, across all its "OpenWith[_,_]" and "Shortcut[_,_]", since one extension has one icon.
+A main can claim each extension at most once,
+across all its "OpenWith[_,_]" and "Shortcut[_,_]",
+since one extension has one icon.
 Error 7 WellFormedness"""); }
   @Test void aShortcutOfAnotherExtensionIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 A:Main,Shortcut[IconsFoo,"bar"]{}
@@ -2405,8 +2435,11 @@ In file: fear:/_col/_rank_app.fear
 
 While inspecting type declaration "A"
 Type declaration "A" implements `Shortcut[IconsFoo,"bar"]`.
-"bar" is not a shortcut extension: a shortcut file only starts its main, so it must not look like a document of another program or a file of the project.
-A shortcut extension is "fapp" followed by three digits, like "fapp042"; or implement "Shortcut[_]" to let the Fearless manager choose one.
+"bar" is not a shortcut extension:
+a shortcut file only starts its main,
+so it must not look like a document of another program or a file of the project.
+A shortcut extension is "fapp" followed by three digits, like "fapp042";
+or implement "Shortcut[_]" to let the Fearless manager choose one.
 Error 7 WellFormedness"""); }
   @Test void aShortcutOfAFfileExtensionIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 A:Main,Shortcut[IconsFoo,"ffile042"]{}
@@ -2418,8 +2451,11 @@ In file: fear:/_col/_rank_app.fear
 
 While inspecting type declaration "A"
 Type declaration "A" implements `Shortcut[IconsFoo,"ffile042"]`.
-"ffile042" is not a shortcut extension: a shortcut file only starts its main, so it must not look like a document of another program or a file of the project.
-A shortcut extension is "fapp" followed by three digits, like "fapp042"; or implement "Shortcut[_]" to let the Fearless manager choose one.
+"ffile042" is not a shortcut extension:
+a shortcut file only starts its main,
+so it must not look like a document of another program or a file of the project.
+A shortcut extension is "fapp" followed by three digits, like "fapp042";
+or implement "Shortcut[_]" to let the Fearless manager choose one.
 Error 7 WellFormedness"""); }
   @Test void aShortcutOfAFourDigitFappExtensionIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 A:Main,Shortcut[IconsFoo,"fapp0420"]{}
@@ -2431,8 +2467,11 @@ In file: fear:/_col/_rank_app.fear
 
 While inspecting type declaration "A"
 Type declaration "A" implements `Shortcut[IconsFoo,"fapp0420"]`.
-"fapp0420" is not a shortcut extension: a shortcut file only starts its main, so it must not look like a document of another program or a file of the project.
-A shortcut extension is "fapp" followed by three digits, like "fapp042"; or implement "Shortcut[_]" to let the Fearless manager choose one.
+"fapp0420" is not a shortcut extension:
+a shortcut file only starts its main,
+so it must not look like a document of another program or a file of the project.
+A shortcut extension is "fapp" followed by three digits, like "fapp042";
+or implement "Shortcut[_]" to let the Fearless manager choose one.
 Error 7 WellFormedness"""); }
   @Test void anOpenWithNeverClaimsAFappExtension(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 A:Main,OpenWith[IconsFoo,"fapp042"]{}
@@ -2444,8 +2483,11 @@ In file: fear:/_col/_rank_app.fear
 
 While inspecting type declaration "A"
 Type declaration "A" implements `OpenWith[IconsFoo,"fapp042"]`.
-"fapp042" is a shortcut extension: "fapp" followed by three digits names the shortcut files of the Fearless manager.
-Use an extension of the form "ffile" followed by three digits, like "ffile042", or a system extension, like "htm"; or implement "OpenWith[_]" to let the Fearless manager choose one.
+"fapp042" is a shortcut extension:
+"fapp" followed by three digits names the shortcut files of the Fearless manager.
+Use an extension of the form "ffile" followed by three digits, like "ffile042",
+or a system extension, like "htm";
+or implement "OpenWith[_]" to let the Fearless manager choose one.
 Error 7 WellFormedness"""); }
   @Test void aCompilationFailingAfterTheFrontendKeepsTheOldDocumentation(@TempDir Path tmp) throws Exception{
     var root= claimsProject(tmp, "///The first text.\nA:Main{}\n");
@@ -2470,7 +2512,8 @@ In file: fear:/_col/_rank_app.fear
 While inspecting type declaration "col.A"
 Type declaration "col.A" implements `base.OpenWith[base.Str,"q"]`.
 The icon "base.Str" is not the type generated for an image file.
-An icon is the type generated for an image file, like "IconsFoo" for "_pkg/icons/foo.png", or "base.IconsConflict"."""); }
+An icon is the type generated for an image file,
+like "IconsFoo" for "_pkg/icons/foo.png", or "base.IconsConflict"."""); }
   @Test void aClaimWhoseIconIsImageFileItselfIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 A:Main,Shortcut[base.ImageFile]{}
 """, """
@@ -2482,7 +2525,8 @@ In file: fear:/_col/_rank_app.fear
 While inspecting type declaration "col.A"
 Type declaration "col.A" implements "base.Shortcut[base.ImageFile]".
 The icon "base.ImageFile" is not the type generated for an image file.
-An icon is the type generated for an image file, like "IconsFoo" for "_pkg/icons/foo.png", or "base.IconsConflict"."""); }
+An icon is the type generated for an image file,
+like "IconsFoo" for "_pkg/icons/foo.png", or "base.IconsConflict"."""); }
   @Test void aClaimWhoseIconIsAPlainDeclarationIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 Data:Mid{}
 Mid:{}
@@ -2496,7 +2540,8 @@ In file: fear:/_col/_rank_app.fear
 While inspecting type declaration "col.A"
 Type declaration "col.A" implements "base.Shortcut[col.Data]".
 The icon "col.Data" is not the type generated for an image file.
-An icon is the type generated for an image file, like "IconsFoo" for "_pkg/icons/foo.png", or "base.IconsConflict"."""); }
+An icon is the type generated for an image file,
+like "IconsFoo" for "_pkg/icons/foo.png", or "base.IconsConflict"."""); }
   @Test void anInheritedClaimWithABadIconBlamesTheDeclarationAddingIt(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 Data:{}
 B:A{}
@@ -2510,7 +2555,8 @@ In file: fear:/_col/_rank_app.fear
 While inspecting type declaration "col.A"
 Type declaration "col.A" implements "base.Shortcut[col.Data]".
 The icon "col.Data" is not the type generated for an image file.
-An icon is the type generated for an image file, like "IconsFoo" for "_pkg/icons/foo.png", or "base.IconsConflict"."""); }
+An icon is the type generated for an image file,
+like "IconsFoo" for "_pkg/icons/foo.png", or "base.IconsConflict"."""); }
   @Test void aClaimOnAnObjectLiteralMainWithABadIconIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 Data:{}
 Test:{ #: I -> I: Main,OpenWith[Data,"q"]{s->base.Debug#(`i`)} }
@@ -2523,7 +2569,8 @@ In file: fear:/_col/_rank_app.fear
 While inspecting object literal "col.I"
 Object literal "col.I" implements `base.OpenWith[col.Data,"q"]`.
 The icon "col.Data" is not the type generated for an image file.
-An icon is the type generated for an image file, like "IconsFoo" for "_pkg/icons/foo.png", or "base.IconsConflict"."""); }
+An icon is the type generated for an image file,
+like "IconsFoo" for "_pkg/icons/foo.png", or "base.IconsConflict"."""); }
   @Test void aClaimWhoseIconIsAnAbstractImageFileIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 A:Main,OpenWith[Icon,"q"]{}
 Icon:Img{}
@@ -2537,7 +2584,8 @@ In file: fear:/_col/_rank_app.fear
 While inspecting type declaration "col.A"
 Type declaration "col.A" implements `base.OpenWith[col.Icon,"q"]`.
 The icon "col.Icon" is not the type generated for an image file.
-An icon is the type generated for an image file, like "IconsFoo" for "_pkg/icons/foo.png", or "base.IconsConflict"."""); }
+An icon is the type generated for an image file,
+like "IconsFoo" for "_pkg/icons/foo.png", or "base.IconsConflict"."""); }
   @Test void aClaimWhoseIconIsATextAssetIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 A:Main,OpenWith[IconsNotes,"q"]{}
 jjj
@@ -2553,7 +2601,8 @@ In file: fear:/_col/_rank_app.fear
 While inspecting type declaration "col.A"
 Type declaration "col.A" implements `base.OpenWith[col.IconsNotes,"q"]`.
 The icon "col.IconsNotes" is not the type generated for an image file.
-An icon is the type generated for an image file, like "IconsFoo" for "_pkg/icons/foo.png", or "base.IconsConflict"."""); }
+An icon is the type generated for an image file,
+like "IconsFoo" for "_pkg/icons/foo.png", or "base.IconsConflict"."""); }
   @Test void aHandWrittenImageFileIsNotAnIcon(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 Fake:base.ImageFile{
   .path: base.Str -> "fear:/_col/icons/foo.png";
@@ -2572,7 +2621,8 @@ In file: fear:/_col/_rank_app.fear
 While inspecting type declaration "col.Foo"
 Type declaration "col.Foo" implements `base.OpenWith[col.Fake,"foo"]`.
 The icon "col.Fake" is not the type generated for an image file.
-An icon is the type generated for an image file, like "IconsFoo" for "_pkg/icons/foo.png", or "base.IconsConflict"."""); }
+An icon is the type generated for an image file,
+like "IconsFoo" for "_pkg/icons/foo.png", or "base.IconsConflict"."""); }
   static void edit(Path file, String from, String to){ Fs.writeUtf8(file, Fs.readUtf8(file).replace(from, to)); }
   @Test void aClaimReadBackFromTheApiJsonOfALowerRankPackageIsChecked(@TempDir Path tmp) throws Exception{
     var root= claimsProject(tmp, """
@@ -2596,7 +2646,9 @@ In file: fear:/_col/_rank_app.fear
 While inspecting type declaration "Clash"
 Type declaration "Clash" claims the extension "fear" more than once:
 both `OpenWith[IconsFoo,"fear"]` and `OpenWith[base.IconsConflict,"fear"]` claim it.
-A main can claim each extension at most once, across all its "OpenWith[_,_]" and "Shortcut[_,_]", since one extension has one icon.
+A main can claim each extension at most once,
+across all its "OpenWith[_,_]" and "Shortcut[_,_]",
+since one extension has one icon.
 Error 7 WellFormedness""", ex.getMessage());
   }
   /// The manifest of every <pkg>.json of the project, as its Info text.
@@ -3534,8 +3586,10 @@ In file: fear:/_a/_rank_core345.fear
    |     ^^^^^^^^^^
 
 While inspecting package header
-"use" directive refers to the code inside folders named "_z", which has a higher rank than the code inside folders named "_a".
-Folders named "_a" have rank "core345" ("_rank_core345.fear") and folders named "_z" have rank "app999" ("_rank_app.fear").
+"use" directive refers to the code inside folders named "_z",
+which has a higher rank than the code inside folders named "_a".
+Folders named "_a" have rank "core345" ("_rank_core345.fear")
+and folders named "_z" have rank "app999" ("_rank_app.fear").
 Source code can only refer to code of a lower rank.
 Error 7 WellFormedness
 """, ex.getMessage());
@@ -3562,8 +3616,10 @@ In file: fear:/_a/_rank_core.fear
    |                           ^^^^^^^^^^
 
 While inspecting a type name
-The type name "z.Greeting" refers to the code inside folders named "_z", which has a higher rank than the code inside folders named "_a".
-Folders named "_a" have rank "core999" ("_rank_core.fear") and folders named "_z" have rank "app999" ("_rank_app.fear").
+The type name "z.Greeting" refers to the code inside folders named "_z",
+which has a higher rank than the code inside folders named "_a".
+Folders named "_a" have rank "core999" ("_rank_core.fear")
+and folders named "_z" have rank "app999" ("_rank_app.fear").
 Source code can only refer to code of a lower rank.
 Error 7 WellFormedness
 """, ex.getMessage());
@@ -3590,8 +3646,10 @@ In file: fear:/_a/_rank_core.fear
    |                           ^^^^^^^^^^
 
 While inspecting a type name
-The type name "z.Greeting" refers to the code inside folders named "_z", which has the same rank as the code inside folders named "_a".
-Folders named "_a" have rank "core999" ("_rank_core.fear") and folders named "_z" have rank "core999" ("_rank_core999.fear").
+The type name "z.Greeting" refers to the code inside folders named "_z",
+which has the same rank as the code inside folders named "_a".
+Folders named "_a" have rank "core999" ("_rank_core.fear")
+and folders named "_z" have rank "core999" ("_rank_core999.fear").
 Source code can only refer to code of a lower rank.
 Error 7 WellFormedness
 """, ex.getMessage());
@@ -3619,8 +3677,10 @@ In file: fear:/_a/_rank_core.fear
    |     ^^^^^^^^^^
 
 While inspecting package header
-"use" directive refers to the code inside folders named "_z", which has the same rank as the code inside folders named "_a".
-Folders named "_a" have rank "core999" ("_rank_core.fear") and folders named "_z" have rank "core999" ("_rank_core999.fear").
+"use" directive refers to the code inside folders named "_z",
+which has the same rank as the code inside folders named "_a".
+Folders named "_a" have rank "core999" ("_rank_core.fear")
+and folders named "_z" have rank "core999" ("_rank_core999.fear").
 Source code can only refer to code of a lower rank.
 Error 7 WellFormedness
 """, ex.getMessage());
@@ -3759,7 +3819,8 @@ Hello:Main{s->base.Debug#("lib uses "+(lib.Lib.foo))}
 """);
     var ex= assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib));
     utils.Err.strCmp("""
-The "instead of" list of a map must name exactly the folders chosen by the maps of lower rank that the map overrides:
+The "instead of" list of a map must name exactly
+the folders chosen by the maps of lower rank that the map overrides:
 - "map foo as _foo_v5 in _lib;"; written in fear:/_app/_rank_app.fear
 These maps of lower rank choose other folders:
 - "map foo as _foo_v4 in _lib;"; written in fear:/_lib/_rank_driver.fear
@@ -3789,7 +3850,8 @@ Hello:Main{s->base.Debug#("lib uses "+(lib.Lib.foo))}
 """);
     var ex= assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib));
     utils.Err.strCmp("""
-The "instead of" list of a map must name exactly the folders chosen by the maps of lower rank that the map overrides:
+The "instead of" list of a map must name exactly
+the folders chosen by the maps of lower rank that the map overrides:
 - "map foo as _foo_v5 in _lib instead of _foo_v4;"; written in fear:/_app/_rank_app.fear
 No map of lower rank chooses another folder.
 Expected: "map foo as _foo_v5 in _lib;".
@@ -3890,7 +3952,9 @@ Did you mean "webserver" ?
 Visible package names:
 - "base"
 - "webserver"
-Source code inside folders named "_app" uses package name "webserver" to refer to the code inside folders named "_webserver_v12", because of "map webserver as _webserver_v12 in _app", written in fear:/_app/_rank_app.fear.
+Source code inside folders named "_app" uses package name "webserver"
+to refer to the code inside folders named "_webserver_v12",
+because of "map webserver as _webserver_v12 in _app", written in fear:/_app/_rank_app.fear.
 Error 7 WellFormedness
 """, ex.getMessage());
   }
@@ -3942,7 +4006,8 @@ Hello:Main{s->base.Debug#(a.A.text)}
 """);
     var ex= assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib));
     utils.Err.strCmp("""
-Source code inside folders named "_b" can use only one package name to refer to the code inside folders named "_c":
+Source code inside folders named "_b" can use only one package name
+to refer to the code inside folders named "_c":
 - "map a as _c in _b;"; written in fear:/_b/_rank_app.fear
 - "map d as _c in _b;"; written in fear:/_b/_rank_app.fear
 - "map e as _c in _b;"; written in fear:/_b/_rank_app.fear
@@ -3961,7 +4026,8 @@ Hello:Main{s->base.Debug#(`b`)}
 """);
     var ex= assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib));
     utils.Err.strCmp("""
-A map cannot refer to the code inside folders named "_b" for source code inside folders named "_b":
+A map cannot refer to the code inside folders named "_b"
+for source code inside folders named "_b":
 - "map me as _b in _b;"; written in fear:/_b/_rank_app.fear
 Source code inside folders named "_b" uses the simple names of its own types.
 Error 7 WellFormedness
@@ -4034,9 +4100,11 @@ B:{.text:Str->a.T.text;}
 """);
     var ex= assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib));
     utils.Err.strCmp("""
-The map refers to the code inside folders named "_pka", which has a higher rank than the code inside folders named "_pkb":
+The map refers to the code inside folders named "_pka",
+which has a higher rank than the code inside folders named "_pkb":
 - "map a as _pka in _pkb;"; written in fear:/_pka/_rank_app999.fear
-Folders named "_pkb" have rank "app200" ("_rank_app200.fear") and folders named "_pka" have rank "app999" ("_rank_app999.fear").
+Folders named "_pkb" have rank "app200" ("_rank_app200.fear")
+and folders named "_pka" have rank "app999" ("_rank_app999.fear").
 Source code can only refer to code of a lower rank.
 Error 7 WellFormedness
 """, ex.getMessage());
@@ -4070,7 +4138,8 @@ jjj
   }
   @Test void aMapListingItsOwnFolderInInsteadOfIsAnError(@TempDir Path tmp){
     utils.Err.strCmp("""
-The "instead of" list of a map must name exactly the folders chosen by the maps of lower rank that the map overrides:
+The "instead of" list of a map must name exactly
+the folders chosen by the maps of lower rank that the map overrides:
 - "map foo as _foo_v4 in _lib instead of _foo_v4;"; written in fear:/_app/_rank_app.fear
 No map of lower rank chooses another folder.
 Expected: "map foo as _foo_v4 in _lib;".
@@ -4081,7 +4150,8 @@ Error 7 WellFormedness
   }
   @Test void anInsteadOfListingAFolderTwiceIsAnError(@TempDir Path tmp){
     utils.Err.strCmp("""
-The "instead of" list of a map must name exactly the folders chosen by the maps of lower rank that the map overrides:
+The "instead of" list of a map must name exactly
+the folders chosen by the maps of lower rank that the map overrides:
 - "map foo as _foo_v5 in _lib instead of _foo_v4, _foo_v4;"; written in fear:/_app/_rank_app.fear
 These maps of lower rank choose other folders:
 - "map foo as _foo_v4 in _lib;"; written in fear:/_lib/_rank_driver.fear
@@ -4093,7 +4163,8 @@ Error 7 WellFormedness
   }
   @Test void anInsteadOfListingAFolderNoMapChoseIsAnError(@TempDir Path tmp){
     utils.Err.strCmp("""
-The "instead of" list of a map must name exactly the folders chosen by the maps of lower rank that the map overrides:
+The "instead of" list of a map must name exactly
+the folders chosen by the maps of lower rank that the map overrides:
 - "map foo as _foo_v5 in _lib instead of _foo_v4, _foo_v3;"; written in fear:/_app/_rank_app.fear
 These maps of lower rank choose other folders:
 - "map foo as _foo_v4 in _lib;"; written in fear:/_lib/_rank_driver.fear
@@ -4111,7 +4182,8 @@ Error 7 WellFormedness
     edit(root.resolve("_lib", "_rank_driver.fear"), "_foo_v4", "_foo_v3");
     var ex= assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib));
     utils.Err.strCmp("""
-The "instead of" list of a map must name exactly the folders chosen by the maps of lower rank that the map overrides:
+The "instead of" list of a map must name exactly
+the folders chosen by the maps of lower rank that the map overrides:
 - "map foo as _foo_v5 in _lib instead of _foo_v4;"; written in fear:/_app/_rank_app.fear
 These maps of lower rank choose other folders:
 - "map foo as _foo_v3 in _lib;"; written in fear:/_lib/_rank_driver.fear
@@ -4129,18 +4201,23 @@ Error 7 WellFormedness
   }
   @Test void twoMapsOfTheSameRankChoosingDifferentFoldersConflict(@TempDir Path tmp){
     utils.Err.strCmp("""
-Maps of the same rank give package name "foo" different folders, for source code inside folders named "_lib":
+Maps of the same rank give package name "foo" different folders,
+for source code inside folders named "_lib":
 - "map foo as _foo_v5 in _lib instead of _foo_v4;"; written in fear:/_w1/_rank_worker.fear
 - "map foo as _foo_v6 in _lib instead of _foo_v4;"; written in fear:/_w2/_rank_worker.fear
 
 How maps work:
 - A rank file can have lines like "map name as _folder in _target;".
 - With no map, package name "x" refers to the code inside folders named "_x".
-- A map in a rank file of higher rank overrides the maps of lower rank, and lists their folders with "instead of".
+- A map in a rank file of higher rank overrides the maps of lower rank,
+  and lists their folders with "instead of".
 
 How to fix it:
-- Decide which folder package name "foo" refers to, for source code inside folders named "_lib".
-- Add one map in a rank file of higher rank (typically the rank file of your application), with "instead of" listing every folder chosen by the maps of lower rank.
+- Decide which folder package name "foo" refers to,
+  for source code inside folders named "_lib".
+- Add one map in a rank file of higher rank
+  (typically the rank file of your application),
+  with "instead of" listing every folder chosen by the maps of lower rank.
 Error 7 WellFormedness
 """, mapsError(tmp, foos
       +fooLib("map foo as _foo_v4 in _lib;\n")
@@ -4157,7 +4234,8 @@ Error 7 WellFormedness
   }
   @Test void twoMapsOfTheSameRankAgreeingOnTheFolderAreBothChecked(@TempDir Path tmp){
     utils.Err.strCmp("""
-The "instead of" list of a map must name exactly the folders chosen by the maps of lower rank that the map overrides:
+The "instead of" list of a map must name exactly
+the folders chosen by the maps of lower rank that the map overrides:
 - "map foo as _foo_v5 in _lib;"; written in fear:/_w2/_rank_worker.fear
 These maps of lower rank choose other folders:
 - "map foo as _foo_v4 in _lib;"; written in fear:/_lib/_rank_driver.fear
@@ -4178,9 +4256,11 @@ Error 7 WellFormedness
   }
   @Test void aMapToAFolderOfTheSameRankIsAnError(@TempDir Path tmp){
     utils.Err.strCmp("""
-The map refers to the code inside folders named "_foo", which has the same rank as the code inside folders named "_lib":
+The map refers to the code inside folders named "_foo",
+which has the same rank as the code inside folders named "_lib":
 - "map ff as _foo in _lib;"; written in fear:/_app/_rank_app.fear
-Folders named "_lib" have rank "driver999" ("_rank_driver.fear") and folders named "_foo" have rank "driver999" ("_rank_driver999.fear").
+Folders named "_lib" have rank "driver999" ("_rank_driver.fear")
+and folders named "_foo" have rank "driver999" ("_rank_driver999.fear").
 Source code can only refer to code of a lower rank.
 Error 7 WellFormedness
 """, mapsError(tmp, """
@@ -4200,7 +4280,8 @@ Error 7 WellFormedness
   }
   @Test void anOverrideMakingTwoPackageNamesReferToOneFolderIsAnError(@TempDir Path tmp){
     utils.Err.strCmp("""
-Source code inside folders named "_lib" can use only one package name to refer to the code inside folders named "_foo_v5":
+Source code inside folders named "_lib" can use only one package name
+to refer to the code inside folders named "_foo_v5":
 - "map foo as _foo_v5 in _lib instead of _foo_v4;"; written in fear:/_app/_rank_app.fear
 - "map newfoo as _foo_v5 in _lib;"; written in fear:/_lib/_rank_driver.fear
 Error 7 WellFormedness
@@ -4250,7 +4331,9 @@ Hello:Main{s->base.Debug#(lib.Lib.describe(foo.Foo))}
     utils.Err.strCmp("""
 In file: fear:/_app/_rank_app.fear
 [###]foo_v4.Foo[###]
-Source code inside folders named "_app" uses package name "foo" to refer to the code inside folders named "_foo_v5", because of "map foo as _foo_v5 in _app", written in fear:/_app/_rank_app.fear.
+Source code inside folders named "_app" uses package name "foo"
+to refer to the code inside folders named "_foo_v5",
+because of "map foo as _foo_v5 in _app", written in fear:/_app/_rank_app.fear.
 [###]""", msg);
   }
   @Test void anOverrideBreakingTheLibraryNamesTheRankFileThatChoseTheVersion(@TempDir Path tmp){
@@ -4270,7 +4353,9 @@ jjj
     utils.Err.strCmp("""
 In file: fear:/_lib/_rank_driver.fear
 [###]
-Source code inside folders named "_lib" uses package name "foo" to refer to the code inside folders named "_foo_v5", because of "map foo as _foo_v5 in _lib instead of _foo_v7", written in fear:/_app/_rank_app.fear.
+Source code inside folders named "_lib" uses package name "foo"
+to refer to the code inside folders named "_foo_v5",
+because of "map foo as _foo_v5 in _lib instead of _foo_v7", written in fear:/_app/_rank_app.fear.
 [###]""", msg);
   }
   @Test void onlyTheWinningMapIsCheckedForInsteadOf(@TempDir Path tmp) throws InterruptedException{
@@ -4305,7 +4390,8 @@ jjj
 """+fooApp("map foo as _foo_v5 in _lib;\n")));
   }
   static String insteadOfError(String written, String overridden, String expected){ return """
-The "instead of" list of a map must name exactly the folders chosen by the maps of lower rank that the map overrides:
+The "instead of" list of a map must name exactly
+the folders chosen by the maps of lower rank that the map overrides:
 - "%s;"; written in fear:/_app/_rank_app.fear
 These maps of lower rank choose other folders:
 - "%s;"; written in fear:/_lib/_rank_driver.fear
@@ -4356,7 +4442,9 @@ jjj
     utils.Err.strCmp("""
 In file: fear:/_app/_rank_app.fear
 [###]
-Source code inside folders named "_app" uses package name "foo" to refer to the code inside folders named "_foo_v5", because of "map foo as _foo_v5 in _app", written in fear:/_app/_rank_app.fear.
+Source code inside folders named "_app" uses package name "foo"
+to refer to the code inside folders named "_foo_v5",
+because of "map foo as _foo_v5 in _app", written in fear:/_app/_rank_app.fear.
 [###]""", msg);
   }
   @Test void useOfAnOwnTypeInARankFile(@TempDir Path tmp){
@@ -4388,8 +4476,10 @@ In file: fear:/_lib/_rank_driver.fear
    |     ^^^^^^^^^
 
 While inspecting package header
-"use" directive refers to the code inside folders named "_app", which has a higher rank than the code inside folders named "_lib".
-Folders named "_lib" have rank "driver999" ("_rank_driver.fear") and folders named "_app" have rank "app999" ("_rank_app.fear").
+"use" directive refers to the code inside folders named "_app",
+which has a higher rank than the code inside folders named "_lib".
+Folders named "_lib" have rank "driver999" ("_rank_driver.fear")
+and folders named "_app" have rank "app999" ("_rank_app.fear").
 Source code can only refer to code of a lower rank.
 Error 7 WellFormedness
 """, mapsError(tmp, foos+"""
@@ -4450,7 +4540,9 @@ Available methods on type "Foo":
 -       .version: Str
 
 Name "Foo" stands for "foo.Foo" because of "use foo.Foo as Foo".
-Source code inside folders named "_lib" uses package name "foo" to refer to the code inside folders named "_foo_v4", because of "map foo as _foo_v4 in _lib", written in fear:/_lib/_rank_driver.fear.
+Source code inside folders named "_lib" uses package name "foo"
+to refer to the code inside folders named "_foo_v4",
+because of "map foo as _foo_v4 in _lib", written in fear:/_lib/_rank_driver.fear.
 Error 8 TypeError
 """, mapsError(tmp, foos+"""
 _lib/_rank_driver.fear
@@ -4470,7 +4562,7 @@ Foo:{ .version: Str -> "v7"; .legacy: Str -> "legacy" }
 Legacy:{}
 jjj
 """;
-  static final String fooNote= "Source code inside folders named \"_lib\" uses package name \"foo\" to refer to the code inside folders named \"_foo_v5\", because of \"map foo as _foo_v5 in _lib instead of _foo_v7\", written in fear:/_app/_rank_app.fear.";
+  static final String fooNote= "Source code inside folders named \"_lib\" uses package name \"foo\"\nto refer to the code inside folders named \"_foo_v5\",\nbecause of \"map foo as _foo_v5 in _lib instead of _foo_v7\", written in fear:/_app/_rank_app.fear.";
   @Test void aMethodErrorInALibraryWithItsOwnPinAndAnOverrideCitesTheApplication(@TempDir Path tmp){
     utils.Err.strCmp("""
 In file: fear:/_lib/_rank_driver.fear
@@ -4568,7 +4660,9 @@ Hello:Main{s->base.Debug#((blog.Blog.home)+", "+(shop.Shop.home)+", "+(shop.Shop
     utils.Err.strCmp("""
 In file: fear:/_app/_rank_app.fear
 [###]
-Source code inside folders named "_app" uses package name "web" to refer to the code inside folders named "_http_v1", because of "map web as _http_v1 in _app", written in fear:/_app/_rank_app.fear.
+Source code inside folders named "_app" uses package name "web"
+to refer to the code inside folders named "_http_v1",
+because of "map web as _http_v1 in _app", written in fear:/_app/_rank_app.fear.
 [###]""", msg);
   }
   static String jsonLogProject(String appMaps){ return Stream.of("1(:)", "2[:]", "3-:-").map(v -> """
@@ -4661,8 +4755,8 @@ iii
 use base.Main as Main;
 Hello:Main{s->base.Debug#((blog.Blog.home)+", "+(shop.Shop.home))}
 """; }
-  static final String shopWebNote= "Source code inside folders named \"_shop\" uses package name \"web\" to refer to the code inside folders named \"_http_v2\", because of \"map web as _http_v2 in _shop\", written in fear:/_shop/_rank_framework100.fear.";
-  static final String blogHttpNote= "Source code inside folders named \"_blog\" uses package name \"http\" to refer to the code inside folders named \"_http_v2\", because of \"map http as _http_v2 in _blog\", written in fear:/_blog/_rank_framework200.fear.";
+  static final String shopWebNote= "Source code inside folders named \"_shop\" uses package name \"web\"\nto refer to the code inside folders named \"_http_v2\",\nbecause of \"map web as _http_v2 in _shop\", written in fear:/_shop/_rank_framework100.fear.";
+  static final String blogHttpNote= "Source code inside folders named \"_blog\" uses package name \"http\"\nto refer to the code inside folders named \"_http_v2\",\nbecause of \"map http as _http_v2 in _blog\", written in fear:/_blog/_rank_framework200.fear.";
   @Test void twoPackagesReachTheSameVersionThroughDifferentNames(@TempDir Path tmp) throws InterruptedException{
     utils.Err.strCmp("[http2] blog at /blog, [http2] shop at /shop\n", mapsRun(tmp, httpTwoNames("", "")));
   }
@@ -4870,7 +4964,9 @@ While inspecting package header
 Source code inside folders named "_app" cannot use package name "base".
 Did you mean "bb" ?
 Visible package names: "bb".
-Source code inside folders named "_app" uses package name "bb" to refer to the code inside folders named "_base", because of "map bb as _base in _app", written in fear:/_app/_rank_app.fear.
+Source code inside folders named "_app" uses package name "bb"
+to refer to the code inside folders named "_base",
+because of "map bb as _base in _app", written in fear:/_app/_rank_app.fear.
 Error 7 WellFormedness
 """, ex.getMessage());
   }
@@ -4884,7 +4980,9 @@ Error 7 WellFormedness
     utils.Err.strCmp("""
 In file: fear:/_lib/_rank_driver.fear
 [###]
-Source code inside folders named "_lib" uses package name "foo" to refer to the code inside folders named "_foo_v4", because of "map foo as _foo_v4 in _lib", written in fear:/_app/_rank_app.fear.
+Source code inside folders named "_lib" uses package name "foo"
+to refer to the code inside folders named "_foo_v4",
+because of "map foo as _foo_v4 in _lib", written in fear:/_app/_rank_app.fear.
 [###]""", assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib)).getMessage());
   }
   @Test void movingAnOverrideFromAMiddleLayerToTheApplicationKeepsTheVersionAndTheNoteCitesTheApplication(@TempDir Path tmp) throws IOException, InterruptedException{
@@ -4900,7 +4998,9 @@ Source code inside folders named "_lib" uses package name "foo" to refer to the 
     utils.Err.strCmp("""
 In file: fear:/_lib/_rank_driver.fear
 [###]
-Source code inside folders named "_lib" uses package name "foo" to refer to the code inside folders named "_foo_v7", because of "map foo as _foo_v7 in _lib instead of _foo_v4", written in fear:/_app/_rank_app.fear.
+Source code inside folders named "_lib" uses package name "foo"
+to refer to the code inside folders named "_foo_v7",
+because of "map foo as _foo_v7 in _lib instead of _foo_v4", written in fear:/_app/_rank_app.fear.
 [###]""", assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib)).getMessage());
   }
   @Test void reorderingTheInsteadOfListKeepsTheOutputAndAWrongListIsAnErrorUntilFixed(@TempDir Path tmp) throws IOException, InterruptedException{
@@ -4914,7 +5014,8 @@ Source code inside folders named "_lib" uses package name "foo" to refer to the 
     utils.Err.strCmp("lib uses v6\n", coordinator(root).main(root, stLib));
     edit(app, "instead of _foo_v5, _foo_v4", "instead of _foo_v5");
     utils.Err.strCmp("""
-The "instead of" list of a map must name exactly the folders chosen by the maps of lower rank that the map overrides:
+The "instead of" list of a map must name exactly
+the folders chosen by the maps of lower rank that the map overrides:
 - "map foo as _foo_v6 in _lib instead of _foo_v5;"; written in fear:/_app/_rank_app.fear
 These maps of lower rank choose other folders:
 - "map foo as _foo_v4 in _lib;"; written in fear:/_lib/_rank_driver.fear
@@ -4959,18 +5060,23 @@ Source code inside folders named "_app" cannot use package name "f".
       +fooApp("")));
     edit(root.resolve("_w2", "_rank_worker.fear"), "Userw2", "map foo as _foo_v6 in _lib instead of _foo_v4;\nUserw2");
     utils.Err.strCmp("""
-Maps of the same rank give package name "foo" different folders, for source code inside folders named "_lib":
+Maps of the same rank give package name "foo" different folders,
+for source code inside folders named "_lib":
 - "map foo as _foo_v5 in _lib instead of _foo_v4;"; written in fear:/_w1/_rank_worker.fear
 - "map foo as _foo_v6 in _lib instead of _foo_v4;"; written in fear:/_w2/_rank_worker.fear
 
 How maps work:
 - A rank file can have lines like "map name as _folder in _target;".
 - With no map, package name "x" refers to the code inside folders named "_x".
-- A map in a rank file of higher rank overrides the maps of lower rank, and lists their folders with "instead of".
+- A map in a rank file of higher rank overrides the maps of lower rank,
+  and lists their folders with "instead of".
 
 How to fix it:
-- Decide which folder package name "foo" refers to, for source code inside folders named "_lib".
-- Add one map in a rank file of higher rank (typically the rank file of your application), with "instead of" listing every folder chosen by the maps of lower rank.
+- Decide which folder package name "foo" refers to,
+  for source code inside folders named "_lib".
+- Add one map in a rank file of higher rank
+  (typically the rank file of your application),
+  with "instead of" listing every folder chosen by the maps of lower rank.
 Error 7 WellFormedness
 """, assertThrows(RuntimeException.class, () -> coordinator(root).main(root, stLib)).getMessage());
     edit(root.resolve("_app", "_rank_app.fear"), "use base.Main as Main;\n", "use base.Main as Main;\nmap foo as _foo_v6 in _lib instead of _foo_v4, _foo_v5;\n");
@@ -4986,7 +5092,9 @@ In file: fear:/_lib/_rank_driver.fear
 While inspecting package header
 "use" directive refers to type "Legacy", which is not declared in package "foo".
 
-Source code inside folders named "_lib" uses package name "foo" to refer to the code inside folders named "_foo_v4", because of "map foo as _foo_v4 in _lib", written in fear:/_lib/_rank_driver.fear.
+Source code inside folders named "_lib" uses package name "foo"
+to refer to the code inside folders named "_foo_v4",
+because of "map foo as _foo_v4 in _lib", written in fear:/_lib/_rank_driver.fear.
 Error 7 WellFormedness
 """, mapsError(tmp, foos+fooV7+"""
 _lib/_rank_driver.fear
@@ -5041,7 +5149,9 @@ Did you mean one of the following?
 - "foo_v6.Foo"
 Add a "use" or write the full type name.
 
-Source code inside folders named "_lib" uses package name "foo" to refer to the code inside folders named "_foo_v4", because of "map foo as _foo_v4 in _lib", written in fear:/_lib/_rank_driver.fear.
+Source code inside folders named "_lib" uses package name "foo"
+to refer to the code inside folders named "_foo_v4",
+because of "map foo as _foo_v4 in _lib", written in fear:/_lib/_rank_driver.fear.
 Error 7 WellFormedness
 """, mapsError(tmp, foos+"""
 _lib/_rank_driver.fear
@@ -5447,7 +5557,7 @@ Foo:Main, OpenWith[IconsFoo], Shortcut[IconsFoo], Shortcut[base.IconsConflict,`f
 Foo:Main, OpenWith[IconsFoo]{s->base.Debug#(`foo`)}
 """);
     var error= compileWith(coordinator(root), root, cs -> Optional.empty()).orElseThrow();
-    utils.Err.strCmp("No free extension is left for [###] of main [###]: all the 1000 extensions \"ffile000\" to \"ffile999\" are used by the projects of this manager.[###]", error.getMessage());
+    utils.Err.strCmp("No free extension is left for [###] of main [###]:\nall the 1000 extensions \"ffile000\" to \"ffile999\" are used by the projects of this manager.[###]", error.getMessage());
   }
   void anIconIsRefused(Path tmp, byte[] icon, String expected) throws IOException{
     var root= claimsProject(tmp, """
@@ -5481,7 +5591,7 @@ Foo:Main, OpenWith[IconsFoo]{s->base.Debug#(`foo`)}
     ImageIO.write(new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB), "png", bout);
     return bout.toByteArray();
   }
-  static final String iconRule= " (from [###]foo.png[###]): an icon must be a square PNG image with a side from 64 to 1024 pixels.";
+  static final String iconRule= " (from [###]foo.png[###]):\nan icon must be a square PNG image with a side from 64 to 1024 pixels.";
   @Test void theIconErrorNamesTheClaimAsTheSourceWritesIt(@TempDir Path tmp) throws IOException{
     var root= claimsProject(tmp, """
 Foo:Main, Shortcut[IconsFoo, "fapp123"]{s->base.Debug#(`foo`)}
