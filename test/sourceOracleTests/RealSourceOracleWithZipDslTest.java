@@ -1525,7 +1525,8 @@ Path: "<root>/%s"
 
 What went wrong
 - This path is a symbolic link/junction/mount point.
-  Symbolic links/junctions/mount points behave differently across systems and tools, so we forbid them.
+  Symbolic links/junctions/mount points behave differently across systems and tools,
+  so we forbid them.
 
 How to fix
 - Replace the symbolic link/junction/mount point with a real file/folder.

@@ -196,7 +196,7 @@ when deciding what needs compiling, so such a date cannot be trusted.
   public static UserError symlinkForbidden(Path kid){
     return fail(showRel(kid),
       "- This path is a symbolic link/junction/mount point.\n"
-    +"  Symbolic links/junctions/mount points behave differently across systems and tools, so we forbid them.",
+    +"  Symbolic links/junctions/mount points behave differently across systems and tools,\n  so we forbid them.",
       "- Replace the symbolic link/junction/mount point with a real file/folder.\n"
     +"- If you need the linked content, copy it into the repository."
     );
@@ -621,23 +621,23 @@ File:
   public static UserError filesUpdated(String projectName){ return new UserError("Some files inside the project "+disp(projectName)+" were updated while the project was compiling."); }
   public static UserError noFreeExtension(String main, boolean shortcut, String icon){
     var prefix= shortcut ? "fapp" : "ffile";
-    var used= "No free extension is left for "+claim(shortcut ? "Shortcut" : "OpenWith", icon, "")+" of main "+disp(main)+": all the 1000 extensions \""+prefix+"000\" to \""+prefix+"999\" are used by the projects of this manager.";
+    var used= "No free extension is left for "+claim(shortcut ? "Shortcut" : "OpenWith", icon, "")+" of main "+disp(main)+":\nall the 1000 extensions \""+prefix+"000\" to \""+prefix+"999\" are used by the projects of this manager.";
     if (shortcut){ return new UserError(used); }
     var name= main.substring(main.lastIndexOf('.')+1).toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]", "");
     var cut= name.substring(0, Math.min(name.length(), Fs.maxExtSeg));
     var system= !cut.isEmpty() && !cut.matches("fearless|fapp[0-9]{3}|ffile[0-9]{3}");
-    return new UserError(used+" A system extension can be claimed instead, for example "+claim("OpenWith", icon, system ? cut : "ext")+".");
+    return new UserError(used+"\nA system extension can be claimed instead, for example "+claim("OpenWith", icon, system ? cut : "ext")+".");
   }
   private static String claim(String kind, String icon, String ext){ return "\"base."+kind+"["+icon+(ext.isEmpty() ? "" : ",\\\""+ext+"\\\"")+"]\""; }
   public static UserError iconRefused(String main, String kind, MainsInfo.Claim c, String problem){
     var from= disp(Join.of(Stream.of(c.diskPath(), c.zipSteps().replace(';', '/'), c.zipEntry()).filter(x -> !x.isEmpty()), "", "/", ""));
-    return new UserError("The icon "+disp(c.icon())+" in "+claim(kind, c.icon(), c.extension())+" of main "+disp(main)+" "+problem+" (from "+from+"): an icon must be a square PNG image with a side from 64 to 1024 pixels.");
+    return new UserError("The icon "+disp(c.icon())+" in "+claim(kind, c.icon(), c.extension())+" of main "+disp(main)+" "+problem+" (from "+from+"):\nan icon must be a square PNG image with a side from 64 to 1024 pixels.");
   }
   public static UserError claimIconNotAsset(SourceOracle src, Literal l, T.C c){
     var owner= owner(l);
     return new UserError(Message.of(src::loadString, List.of(new Frame(owner, l.span().inner)), Character.toUpperCase(owner.charAt(0))+owner.substring(1)+" implements "+disp(repr(c))+".\n"
     +"The icon "+disp(repr(c.ts().getFirst()))+" is not the type generated for an image file.\n"
-    +"An icon is the type generated for an image file, like \"IconsFoo\" for \"_pkg/icons/foo.png\", or \"base.IconsConflict\"."));
+    +"An icon is the type generated for an image file,\nlike \"IconsFoo\" for \"_pkg/icons/foo.png\", or \"base.IconsConflict\"."));
   }
   public static UserError docMisplaced(List<String> problems){ return new UserError("""
 Misplaced doc comment.
