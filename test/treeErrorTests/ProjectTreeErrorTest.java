@@ -66,21 +66,11 @@ Is "bar.fear" in package "bla" or in package "beer"?
 [###]
 """,
     "src/_shop/_cart/item.fear", ""); }
-  //The folder name after the "_" is the package name, and it also becomes a folder and a
-  //file name in the generated code. "con" passes every rule of the project scanner, which
-  //only rejects a folder literally called "con".
-  @Test void windowsReservedPackageName(){ runErr("""
-This folder does not name a valid package.
-Folder:
-  "fear:/src/_con"
+  @Test void aFolderNamedLikeADeviceNamesAPackage(){ runErr("""
+Missing rank file for a package.
 
-Package name: "con"
-
-A folder whose name starts with "_" defines a package: the name after the "_"
-is the package name. It must start with a lowercase letter, then use only
-lowercase letters (a-z), digits (0-9) and underscore (_), and must not be a
-Windows reserved device name: "con", "prn", "aux", "nul", "com1".."com9",
-"lpt1".."lpt9".
+Package:
+  "con"
 [###]
 """,
     "src/_con/foo.fear", ""); }
@@ -90,7 +80,15 @@ Folder:
   "fear:/src/_"
 
 Package name: ""
-[###]
+
+A folder whose name starts with "_" defines a package: the name after the "_"
+is the package name. It must start with a lowercase letter, then use only
+lowercase letters (a-z), digits (0-9) and underscore (_).
+
+Valid examples:
+  "_bla" is the package "bla"
+  "_my_pkg2" is the package "my_pkg2"
+  "_console" is the package "console"
 """,
     "src/_/foo.fear", ""); }
   @Test void packageNameStartingWithADigit(){ runErr("""

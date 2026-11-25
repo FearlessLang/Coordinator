@@ -621,8 +621,8 @@ code{
   String methodHref(TName owner, Sig s){ return prefix(owner.pkgName())+"#"+methodId(owner, s); }
   String prefix(String pkg){
     if (pkg.equals(pkgName)){ return ""; }
-    if (pkg.equals("base")){ return baseDocLocation.map(p -> p.toUri().toString()).orElse("base.html"); }
-    return pkg+".html";
+    if (pkg.equals("base")){ return baseDocLocation.map(p -> p.toUri().toString()).orElse("_base.html"); }
+    return "_"+pkg+".html";
   }
   static String groupId(String group){ return "group-"+id(group); }
   static String typeId(TName n){

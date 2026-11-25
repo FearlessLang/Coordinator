@@ -35,7 +35,7 @@ final class DocFromSourceTest{
   record Docs(String html, String text, List<TestSource> tests){}
   static Docs docs(Path tmp, OtherPackages other, String source){
     var oracle= SourceOracle.debugBuilder().putURI(file, source).build();
-    var html= tmp.resolve("p.html");
+    var html= tmp.resolve("_p.html");
     var tests= new ArrayList<TestSource>();
     try{
       new FrontendLogicMain().of("p", Map.of(), oracle.allFiles(), other, core -> {
@@ -49,7 +49,7 @@ final class DocFromSourceTest{
       });
     }
     catch (FearlessException fe){ throw new AssertionFailedError(fe.render(oracle)); }
-    return new Docs(Fs.readUtf8(html), Fs.readUtf8(html.resolveSibling("p.txt")), List.copyOf(tests));
+    return new Docs(Fs.readUtf8(html), Fs.readUtf8(html.resolveSibling("_p.txt")), List.copyOf(tests));
   }
   static Docs docs(Path tmp, String source){ return docs(tmp, OtherPackages.empty(), source); }
   static List<Literal> compiled(String pkg, String source, OtherPackages other){
@@ -187,7 +187,7 @@ use q.Widget as Widget;
 ///Wraps a `Widget`.
 Wrap:{ .get: Widget; }
 """);
-    utils.Err.strCmp("[###]<p>Wraps a <code><a href=\"q.html#type-q_2e_Widget-0\">Widget</a></code>.</p>[###]", docs.html());
+    utils.Err.strCmp("[###]<p>Wraps a <code><a href=\"_q.html#type-q_2e_Widget-0\">Widget</a></code>.</p>[###]", docs.html());
   }
   @Test void aTypeParameterIsANameInScopeWhereTheCommentIsWritten(@TempDir Path tmp){
     var docs= docs(tmp, """
@@ -532,7 +532,7 @@ _Hidden:{ .orValue(a: _Hidden): _Hidden -> a; }
 ///Same as `.orValue`.
 User:{ .m: User -> this; }
 """);
-    utils.Err.strCmp("[###]<p>Same as <code><a href=\"q.html#method-q_2e_Thing-0-_2e_orValue-1\">.orValue</a></code>.</p>[###]", docs.html());
+    utils.Err.strCmp("[###]<p>Same as <code><a href=\"_q.html#method-q_2e_Thing-0-_2e_orValue-1\">.orValue</a></code>.</p>[###]", docs.html());
   }
   @Test void aLongSignatureMayWrapAfterEachComma(@TempDir Path tmp){
     var docs= docs(tmp, a+"""
@@ -550,7 +550,7 @@ Thing:_Base{}
 ///Same as `.reset`.
 User:{ .m: User -> this; }
 """);
-    utils.Err.strCmp("[###]<p>Same as <code><a href=\"q.html#method-q_2e_Thing-0-_2e_reset-0\">.reset</a></code>.</p>[###]", docs.html());
+    utils.Err.strCmp("[###]<p>Same as <code><a href=\"_q.html#method-q_2e_Thing-0-_2e_reset-0\">.reset</a></code>.</p>[###]", docs.html());
   }
   @Test void aBareSelectorDeclaredInThisPackageWinsOverASameNamedMethodOfAnotherPackage(@TempDir Path tmp){
     var q= compiled("q", "Thing:{ .reset(a: Thing): Thing -> a; }\n", OtherPackages.empty());
@@ -873,7 +873,7 @@ B:{
 ///Same as `q.Thing.n`.
 User:{ .m: User -> this; }
 """).html();
-    utils.Err.strCmp("[###]<p>Same as <code><a href=\"q.html#method-q_2e_Thing-0-_2e_n-0\">q.Thing.n</a></code>.</p>[###]", html);
+    utils.Err.strCmp("[###]<p>Same as <code><a href=\"_q.html#method-q_2e_Thing-0-_2e_n-0\">q.Thing.n</a></code>.</p>[###]", html);
   }
   @Test void anInheritedGenericMethodKeepsTheTypeParameterNameItsSourceWrites(@TempDir Path tmp){
     var docs= docs(tmp, a+"""

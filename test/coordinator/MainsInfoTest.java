@@ -35,7 +35,7 @@ final class MainsInfoTest{
     List.of("hello.NoGui", "hello.NoDownload"), List.of("hello.Pub", "hello.Archive"), List.of("hello.Diary"));
   @Test void printsSortedAndReadsBack(){
     utils.Err.strCmp(text, info.print());
-    var back= MainsInfo.parse(info.print(), Path.of("hello.json"));
+    var back= MainsInfo.parse(info.print(), Path.of("_hello.json"));
     assertEquals(info, back);
     assertEquals(List.of("hello.Bar", "hello.Beer"), List.copyOf(back.mains().keySet()));
   }

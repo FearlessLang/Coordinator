@@ -140,7 +140,7 @@ public final class HtmlDocBuilder{
     var renderer= new HtmlDocRenderer(DocNames.uses(Stream.concat(currentByName.keySet().stream(), other.dom().stream()), pkgNames), resolver, baseDocLocation);
     var html= renderer.render();
     var txt= renderer.renderText();
-    writes.accept(() -> { Fs.writeUtf8(htmlPath, html); Fs.writeUtf8(htmlPath.resolveSibling(pkgName+".txt"), txt); });
+    writes.accept(() -> { Fs.writeUtf8(htmlPath, html); Fs.writeUtf8(htmlPath.resolveSibling("_"+pkgName+".txt"), txt); });
     if (!generatesTests || !testable){ return List.of(); }
     return tests(renderer, pkgNames);
   }

@@ -542,7 +542,7 @@ Foo: Bar {
     builder.visitLiteral(local, Optional.empty());
     builder.visitLiteral(holder, Optional.empty());
     var html= new HtmlDocRenderer(DocNames.uses(Stream.of(local.name(), holder.name()), new ExportedToStr("pkg", Map.of())::typeName), new DocResolver("pkg", builder.types, other, TName::s), Optional.empty()).render();
-    utils.Err.strCmp("[###]<span class=\"sig\">[###]href=\"base.html#type-base_2e_List-0\"[###]", html);
+    utils.Err.strCmp("[###]<span class=\"sig\">[###]href=\"_base.html#type-base_2e_List-0\"[###]", html);
   }
   @Test void aSignatureTypeOfAMappedPackageLinksToItsType(){
     var holderName= new TName("pkg.Holder", 0, Pos.unknown);
@@ -554,7 +554,7 @@ Foo: Bar {
     var builder= new HtmlDocBuilder(oracle, other, List.of(holder), Optional.empty(), "pkg", Path.of("pkg.html"), true);
     builder.visitLiteral(holder, Optional.empty());
     var html= new HtmlDocRenderer(DocNames.uses(Stream.of(holder.name()), new ExportedToStr("pkg", Map.of())::typeName), new DocResolver("pkg", builder.types, other, TName::s), Optional.empty()).render();
-    utils.Err.strCmp("[###]<span class=\"sig\">.get:<a href=\"q.html#type-q_2e_Thing-0\">[###]", html);
+    utils.Err.strCmp("[###]<span class=\"sig\">.get:<a href=\"_q.html#type-q_2e_Thing-0\">[###]", html);
   }
 
   //Two ways a link can point at nothing: its disambiguation section was never emitted,
@@ -978,7 +978,7 @@ declaration it documents, or turn it into a plain // comment.""", ex.getMessage(
     var renderer= new HtmlDocRenderer(Map.of(), new DocResolver("pkg", List.of(), other, TName::s), Optional.empty());
     var ref= new DocRef.MethodName(Optional.of(new DocRef.TypeName(Optional.of("other"), "Sup", OptionalInt.empty())), ".bar", OptionalInt.empty());
     var link= renderer.resolver.resolve(ref, scope(namedType("pkg.Z", List.of(), List.of()))).get();
-    assertEquals(Optional.of("other.html#method-other_2e_Sup-0-_2e_bar-0"), renderer.href(link));
+    assertEquals(Optional.of("_other.html#method-other_2e_Sup-0-_2e_bar-0"), renderer.href(link));
   }
   @Test void twoArityVariantsOfATypeGiveTheirMethodsDistinctAnchors(){
     var oneName= new TName("pkg.Pair", 0, Pos.unknown);

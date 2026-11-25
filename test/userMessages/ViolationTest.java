@@ -67,12 +67,12 @@ If this keeps happening, report the problem.
       Violation.couldNotForceEnglish("mock locale failure").getMessage());
   }
   @Test void cacheMissingBaseApiFile(){
-    var apiJson= Path.of("C:\\Users\\ada\\Downloads\\fearlessManaged0_007\\app\\stdLib\\baseCache\\base.json");
+    var apiJson= Path.of("C:\\Users\\ada\\Downloads\\fearlessManaged0_007\\app\\stdLib\\baseCache\\_base.json");
     utils.Err.strCmp("""
 Fearless could not load the API of its own standard library.
 
 This copy of Fearless should already have this file:
-  C:\\Users\\ada\\Downloads\\fearlessManaged0_007\\app\\stdLib\\baseCache\\base.json
+  C:\\Users\\ada\\Downloads\\fearlessManaged0_007\\app\\stdLib\\baseCache\\_base.json
 
 Replace this Fearless folder with a fresh copy.
 If this keeps happening, report the problem.
