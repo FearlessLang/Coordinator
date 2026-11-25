@@ -22,6 +22,8 @@ import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileTime;
 import java.text.Normalizer;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -179,7 +181,7 @@ public final class Fix{
       Files.delete(f);
     }
   }
-  private record Stored(String name, FileTime time, byte[] bytes){}
+  private record Stored(String name, long time, byte[] bytes){}
   private record Zip(ArrayList<Stored> all, String prefix) implements Dir{
     private boolean in(Stored e, String name){ return e.name.equals(prefix+name) || e.name.startsWith(prefix+name+"/"); }
     private Stored file(String name){ return OneOr.of("", all.stream().filter(e -> e.name.equals(prefix+name))); }
@@ -193,9 +195,10 @@ public final class Fix{
     public Kind kind(String name){ return all.stream().anyMatch(e -> e.name.startsWith(prefix+name+"/")) ? Kind.folder : Kind.file; }
     public Dir dir(String name){ return new Zip(all, prefix+name+"/"); }
     public byte[] read(String name){ return file(name).bytes; }
-    public void write(String name, byte[] bytes){ each(name, e -> new Stored(e.name, FileTime.fromMillis(System.currentTimeMillis()), bytes)); }
-    public long time(String name){ return file(name).time.toMillis(); }
-    public void time(String name, long time){ each(name, e -> new Stored(e.name, FileTime.fromMillis(time), e.bytes)); }
+    private boolean is(Stored e, String name){ return e.name.equals(prefix+name) || e.name.equals(prefix+name+"/"); }
+    public void write(String name, byte[] bytes){ each(name, e -> new Stored(e.name, ZipLocator.asUtc(System.currentTimeMillis()), bytes)); }
+    public long time(String name){ return all.stream().filter(e -> is(e, name)).mapToLong(Stored::time).max().orElse(0); }
+    public void time(String name, long time){ all.replaceAll(e -> is(e, name) ? new Stored(e.name, ZipLocator.asUtc(time), e.bytes) : e); }
     public void delete(String name){
       var gone= all.stream().filter(e -> in(e, name)).toList();
       all.removeAll(gone);
@@ -303,7 +306,7 @@ public final class Fix{
   }
   private void time(Dir d, String name, String full){
     var now= System.currentTimeMillis();
-    var bad= d instanceof Zip ? ZipLocator.asUtc(d.time(name)) > now+ZipLocator.futureTolerance : d.time(name) > now+BuildWithZip.futureTolerance;
+    var bad= d.time(name) > now+(d instanceof Zip ? ZipLocator.futureTolerance : BuildWithZip.futureTolerance);
     if (bad){ d.time(name, now); out.accept("Reset the time of "+full); }
   }
   private void away(Dir d, String name, String path){
@@ -324,7 +327,7 @@ public final class Fix{
   private boolean folder(Dir d, String name, String full, boolean hidden){
     if (!hidden){ dir(d.dir(name), full+"/"); }
     if (!d.dir(name).names().isEmpty()){
-      if (!hidden && d instanceof Disk){ time(d, name, full); }
+      if (!hidden){ time(d, name, full); }
       return false;
     }
     d.delete(name);
@@ -396,12 +399,15 @@ public final class Fix{
   }
   private boolean zip(Dir d, String name, String path){
     var full= path+name;
+    var tooBig= d instanceof Disk disk && Fs.of(() -> Files.size(disk.at(name))) > ZipLocator.maxBytes;
+    if (tooBig){ away(d, name, path); return true; }
     var bytes= d.read(name);
     var read= read(bytes);
-    var all= new ArrayList<>(read.orElse(List.of()).stream().map(e -> new Stored(storedName(e.name), e.time, e.bytes)).filter(e -> !e.name.equals("/")).toList());
+    var times= ZipLocator.times(bytes);
+    var all= new ArrayList<>(read.orElse(List.of()).stream().map(e -> new Stored(storedName(e.name), times.map(m -> m.get(e.name)).orElse(0L), e.bytes)).filter(e -> !e.name.equals("/")).toList());
     var names= all.stream().map(Stored::name).toList();
     var noZip= read.isEmpty() || read.get().isEmpty() && !new String(bytes, ISO_8859_1).startsWith("PK\5\6");
-    if (noZip || depth>ZipEntry.maxZipNesting || !namesOk(names) || !ZipLocator.centralDirectoryOk(bytes)){ away(d, name, path); return true; }
+    if (noZip || depth>ZipEntry.maxZipNesting || !namesOk(names) || times.isEmpty()){ away(d, name, path); return true; }
     var lines= new ArrayList<String>();
     if (!names.equals(read.get().stream().map(Stored::name).toList())){ lines.add("Fixed the stored names of "+full); }
     try{ new Fix(lines::add, depth+1, fixFolder).dir(new Zip(all, ""), full.substring(0, full.length()-4)+"/"); }
@@ -429,7 +435,7 @@ public final class Fix{
     var res= new ArrayList<Stored>();
     try (var zin= new ZipInputStream(new ByteArrayInputStream(bytes), UTF_8)){
       for (var e= zin.getNextEntry(); e != null; e = zin.getNextEntry()){
-        res.add(new Stored(e.getName(), e.getLastModifiedTime(), zin.readAllBytes()));
+        res.add(new Stored(e.getName(), 0, zin.readAllBytes()));
       }
     }
     catch (IOException | IllegalArgumentException _){ return Optional.empty(); }
@@ -441,7 +447,7 @@ public final class Fix{
       try (var zout= new ZipOutputStream(res, UTF_8)){
         for (var e : all){
           var entry= new java.util.zip.ZipEntry(e.name);
-          entry.setLastModifiedTime(e.time);
+          entry.setTimeLocal(LocalDateTime.ofEpochSecond(e.time/1000, 0, ZoneOffset.UTC));
           zout.putNextEntry(entry);
           zout.write(e.bytes);
         }

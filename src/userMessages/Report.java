@@ -190,6 +190,8 @@ Make the zip again.
     return directFail(showZip(diskZip, steps), """
 The list of entries at the end of this zip file does not match the entries of this zip file.
 A zip file holds its entries one after the other, and then a list of all of them.
+The list must hold exactly the names of the entries, and must give for each entry
+the same compression method, sizes, checksum, date and time that the entry itself gives.
 Some tools read the entries and some tools read the list, so this zip file shows different content in different tools.
 This usually comes from a zip file that was cut short while it was copied or downloaded.
 Make the zip again.
@@ -431,6 +433,12 @@ Fearless ran out of memory while unpacking this single entry.
 A zip entry can be much bigger unpacked than it looks inside the zip,
 sometimes thousands of times bigger, and we can only check content we can hold.
 Remove this entry from the zip, or store its content as normal files instead.
+""");}
+  public static UserError zipTooBig(Path diskZip){
+    return directFail(showZip(diskZip, List.of()), """
+This zip file has more than 2147483639 bytes.
+Fearless reads a zip file of at most 2147483639 bytes.
+Split the content into more zip files, or store the content as normal files instead.
 """);}
   public static UserError zipEntryNameNotUtf8(Path diskZip, List<String> steps){
     return directFail(showZip(diskZip, steps), """
