@@ -19,7 +19,6 @@ import java.nio.file.FileSystemException;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileTime;
 import java.text.Normalizer;
@@ -43,6 +42,7 @@ import java.util.zip.ZipOutputStream;
 
 import tools.Fs;
 import userMessages.Report;
+import utils.Bug;
 import utils.Join;
 import utils.OneOr;
 
@@ -203,58 +203,15 @@ public final class Fix{
       if (empty){ all.add(new Stored(prefix, gone.getFirst().time, new byte[0])); }
     }
     public void rename(String name, String to){ each(name, e -> new Stored(prefix+to+e.name.substring(prefix.length()+name.length()), e.time, e.bytes)); }
-    public String away(String name, Path into){
-      var mine= all.stream().filter(e -> in(e, name)).toList();
-      Fs.ofV(Fs.isWindows() ? () -> awayLong(mine, name, into) : () -> awayReached(mine, name, into));
-      delete(name);
-      return into+File.separator+name;
-    }
-    private void awayReached(List<Stored> mine, String name, Path into) throws IOException{
-      var to= Disk.free(into.resolve(name));
-      try{ for (var e : mine){ extract(e, into.resolve(e.name.substring(prefix.length()))); } }
-      catch (IOException | RuntimeException ex){
-        if (Files.exists(to, NOFOLLOW_LINKS)){ Disk.remove(to); }
-        throw ex;
-      }
-    }
-    private static void extract(Stored e, Path to) throws IOException{
-      if (e.name.endsWith("/")){ Files.createDirectories(to); return; }
-      Files.createDirectories(to.getParent());
-      Files.write(to, e.bytes, StandardOpenOption.CREATE_NEW);
-      Files.setLastModifiedTime(to, e.time);
-    }
-    private void awayLong(List<Stored> mine, String name, Path into) throws IOException{
-      var to= LongPath.of(into, name);
-      if (LongPath.attributes(to).isPresent()){ throw new FileAlreadyExistsException(LongPath.shown(to)); }
-      try{ for (var e : mine){ extractLong(e, into, e.name.substring(prefix.length())); } }
-      catch (IOException | RuntimeException ex){
-        if (LongPath.attributes(to).isEmpty()){ throw ex; }
-        var mid= Disk.free(into.resolve("fix_"+UUID.randomUUID()));
-        LongPath.move(to, LongPath.of(mid));
-        Disk.remove(mid);
-        throw ex;
-      }
-    }
-    private static void extractLong(Stored e, Path into, String rel) throws IOException{
-      var segs= List.of(rel.split("/"));
-      var folders= rel.endsWith("/") ? segs.size() : segs.size()-1;
-      for (var i= 1; i<=folders; i += 1){
-        var f= LongPath.of(into, String.join("/", segs.subList(0, i)));
-        if (LongPath.attributes(f).isEmpty()){ LongPath.makeFolder(f); }
-      }
-      if (rel.endsWith("/")){ return; }
-      var mid= Disk.free(into.resolve("fix_"+UUID.randomUUID()));
-      Files.write(mid, e.bytes, StandardOpenOption.CREATE_NEW);
-      Files.setLastModifiedTime(mid, e.time);
-      try{ LongPath.move(LongPath.of(mid), LongPath.of(into, rel)); }
-      catch (IOException ex){ Files.delete(mid); throw ex; }
-    }
+    public String away(String name, Path into){ throw Bug.unreachable(); }
   }
+  // Fix moves nothing out of a zip file: a zip file that the changes inside it can not make ok is moved away whole.
+  private static final class NotFixable extends RuntimeException{ private static final long serialVersionUID= 1L; }
   private final Consumer<String> out;
   private final int depth;
   private final Path fixFolder;
   private Fix(Consumer<String> out, int depth, Path fixFolder){ this.out= out; this.depth= depth; this.fixFolder= fixFolder; }
-  public static void of(Path folder, Consumer<String> out){ new Fix(out, 0, fixFolder(folder)).dir(new Disk(folder), "", false); }
+  public static void of(Path folder, Consumer<String> out){ new Fix(out, 0, fixFolder(folder)).dir(new Disk(folder), ""); }
   private record Mount(String dev, Path root, Path point){}
   private static List<Mount> mounts(){
     return Fs.mountInfo().map(f -> new Mount(f[2], Fs.mountPath(f[3]), Fs.mountPath(f[4]))).toList();
@@ -302,33 +259,45 @@ public final class Fix{
     var f= folder.getFileName().toString();
     return Stream.iterate(1, i -> i+1).map(i -> f+"_fix"+(i==1 ? "" : i)).filter(n -> !taken.contains(clashKey(n))).map(folder::resolveSibling).findFirst().get();
   }
-  private void dir(Dir d, String path, boolean inside){
+  private void dir(Dir d, String path){
     var kept= new HashSet<String>();
     var listing= new ArrayList<>(d.names());
-    for (var name : List.copyOf(listing)){ entry(d, name, path, inside, kept, listing); }
+    for (var name : List.copyOf(listing)){ entry(d, name, path, kept, listing); }
   }
-  private void entry(Dir d, String old, String path, boolean inside, Set<String> kept, ArrayList<String> listing){
+  private void entry(Dir d, String old, String path, Set<String> kept, ArrayList<String> listing){
     var kind= d.kind(old);
     if (junk(old, kind)){ d.delete(old); listing.remove(old); out.accept("Deleted "+path+old); return; }
     if (kind == Kind.other){ away(d, old, path); listing.remove(old); return; }
-    var hidden= inside || old.startsWith(".");
+    var hidden= old.startsWith(".");
     var name= hidden ? old : renamed(d, old, path, kind == Kind.folder, listing);
     var tooLong= BuildWithZip.len(path+name) > (hidden ? 250 : 200);
-    var badHidden= hidden && BuildWithZip.hiddenProblem(name).isPresent();
+    var inZip= d instanceof Zip;
+    var badHidden= hidden && (BuildWithZip.hiddenProblem(name).isPresent() || (kind != Kind.folder ? inZip : inZip ? !d.dir(name).names().isEmpty() : !hiddenOk(d.dir(name), path+name+"/")));
     var key= BuildWithZip.foldKey(name);
     if (tooLong || badHidden || kept.contains(key)){ away(d, name, path); listing.remove(name); return; }
-    var deleted= kind == Kind.folder ? folder(d, name, path+name, hidden, inside) : file(d, name, path, hidden);
+    var deleted= kind == Kind.folder ? folder(d, name, path+name, hidden) : !hidden && file(d, name, path);
     if (deleted){ listing.remove(name); return; }
     kept.add(key);
   }
-  private boolean file(Dir d, String name, String path, boolean hidden){
-    if (!hidden && name.endsWith(".fear")){ fear(d, name, path+name); }
+  // Fix changes nothing inside a hidden folder: a hidden folder holding an entry that is not ok is moved away whole.
+  private static boolean hiddenOk(Dir d, String path){
+    var kept= new HashSet<String>();
+    for (var name : d.names()){
+      var kind= d.kind(name);
+      var ok= kind != Kind.other && BuildWithZip.len(path+name) <= 250 && BuildWithZip.hiddenProblem(name).isEmpty() && kept.add(BuildWithZip.foldKey(name));
+      if (!ok || kind == Kind.folder && !hiddenOk(d.dir(name), path+name+"/")){ return false; }
+    }
+    return true;
+  }
+  private boolean file(Dir d, String name, String path){
+    if (name.endsWith(".fear")){ fear(d, name, path+name); }
     var now= System.currentTimeMillis();
-    var bad= d instanceof Zip ? ZipLocator.asUtc(d.time(name)) > now+ZipLocator.futureTolerance : d.time(name)<=0 || d.time(name)>now+BuildWithZip.futureTolerance;
+    var bad= d instanceof Zip ? ZipLocator.asUtc(d.time(name)) > now+ZipLocator.futureTolerance : d.time(name) > now+BuildWithZip.futureTolerance;
     if (bad){ d.time(name, now); out.accept("Reset the time of "+path+name); }
-    return !hidden && name.endsWith(".zip") && zip(d, name, path);
+    return name.endsWith(".zip") && zip(d, name, path);
   }
   private void away(Dir d, String name, String path){
+    if (d instanceof Zip){ throw new NotFixable(); }
     var into= folderOf(fixFolder);
     for (var seg : Stream.of(path.split("/")).filter(s -> !s.isEmpty()).toList()){ into = folderOf(into.resolve(seg)); }
     var at= d.away(name, into);
@@ -342,9 +311,9 @@ public final class Fix{
     });
     return p;
   }
-  private boolean folder(Dir d, String name, String full, boolean hidden, boolean inside){
-    dir(d.dir(name), full+"/", hidden);
-    if (inside || !d.dir(name).names().isEmpty()){ return false; }
+  private boolean folder(Dir d, String name, String full, boolean hidden){
+    if (!hidden){ dir(d.dir(name), full+"/"); }
+    if (!d.dir(name).names().isEmpty()){ return false; }
     d.delete(name);
     out.accept("Deleted the empty folder "+full);
     return true;
@@ -418,15 +387,11 @@ public final class Fix{
     var all= new ArrayList<>(read.orElse(List.of()).stream().map(e -> new Stored(storedName(e.name), e.time, e.bytes)).filter(e -> !e.name.equals("/")).toList());
     var names= all.stream().map(Stored::name).toList();
     var noZip= read.isEmpty() || read.get().isEmpty() && !new String(bytes, ISO_8859_1).startsWith("PK\5\6");
-    if (noZip || depth>ZipEntry.maxZipNesting || !namesOk(names)){ away(d, name, path); return true; }
+    if (noZip || depth>ZipEntry.maxZipNesting || !namesOk(names) || !ZipLocator.centralDirectoryOk(bytes)){ away(d, name, path); return true; }
     var lines= new ArrayList<String>();
     if (!names.equals(read.get().stream().map(Stored::name).toList())){ lines.add("Fixed the stored names of "+full); }
-    try{ new Fix(lines::add, depth+1, fixFolder).dir(new Zip(all, ""), full.substring(0, full.length()-4)+"/", false); }
-    catch (RuntimeException e){
-      if (!lines.isEmpty()){ d.write(name, write(all)); }
-      lines.forEach(out);
-      throw e;
-    }
+    try{ new Fix(lines::add, depth+1, fixFolder).dir(new Zip(all, ""), full.substring(0, full.length()-4)+"/"); }
+    catch (NotFixable _){ away(d, name, path); return true; }
     if (all.isEmpty()){ d.delete(name); lines.add("Deleted the empty zip "+full); }
     if (!all.isEmpty() && !lines.isEmpty()){ d.write(name, write(all)); }
     lines.forEach(out);

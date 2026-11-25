@@ -88,16 +88,15 @@ Protected paths
 Many tools treat names starting with '.' (for example `.gitignore`) as private tool data.
 Fearless respects this convention and ignores those files and folders.
 But we still require them to be safe to check out using a relaxed set of checks:
-  - no control characters
-  - no invalid Unicode
+  - only the characters from space to ~ (U+0020 to U+007E)
   - no Windows-forbidden characters like < > : " / \\ | ? *
   - no name ending with '.' or a space
   - not using Windows reserved device names
-  - a name of at most 255 bytes in UTF-8
-  - no two items in the same folder that differ only by case or by Unicode-equivalent spellings
+  - no two items in the same folder that differ only by case
   - a total path length of 250 characters
   - a protected folder is not empty, unless it is inside another protected folder
 Nothing else about a protected path is checked: a zip inside it is never opened.
+Inside a zip file that Fearless opens, no name starts with '.'.
 
 Other rules (everywhere)
 - Symbolic links/junctions/mount points are not allowed.
@@ -162,13 +161,18 @@ Save the file again, or correct the clock of this computer.
 Fearless reads the source files of a project as UTF-8 text.
 Save the file again as UTF-8, or remove it from the project folder.
 """);}
-  public static UserError dateUnset(Path kid, long t){
-    return new UserError(showRel(kid)+"\nThis file is dated "+dateOf(t)+"."+unset+"Save the file again, so that it gets the current date.\n");}
   public static UserError zipEntryDateInTheFuture(Path diskZip, List<String> steps, String entryName, long t, long now){
     return new UserError(showZipRel(diskZip, steps, entryName)+"\nThis zip entry is dated "+future(t, now)+"""
 A zip entry dated more than one day in the future usually comes from a computer
 whose clock was wrong when the zip was made.
 Make the zip again from files with the correct dates, or correct the clock of this computer.
+""");}
+  public static UserError zipProtectedEntryName(Path diskZip, List<String> steps, String entryName){
+    return directFail(showZipRel(diskZip, steps, entryName), """
+A segment of the name of this zip entry starts with a dot.
+In a folder, Fearless ignores the names starting with a dot.
+In a zip file, every entry is part of the project, so no name starts with a dot.
+Remove this entry from the zip, or rename it.
 """);}
   public static UserError zipCanNotBeRead(Path diskZip, List<String> steps, String reason){
     return directFail(showZip(diskZip, steps), "This zip file can not be read: "+reason+"\n"+"""
@@ -186,11 +190,6 @@ Some tools read the entries and some tools read the list, so this zip file shows
 This usually comes from a zip file that was cut short while it was copied or downloaded.
 Make the zip again.
 """);}
-  private static final String unset= """
-
-Fearless uses dates at or before the start of 1970 to mean "no date"
-when deciding what needs compiling, so such a date cannot be trusted.
-""";
   private static String future(long t, long now){
     var ahead= Duration.ofMillis(t-now);
     return dateOf(t)+",\n"+ahead.toHours()+"h "+ahead.toMinutesPart()+"m "+ahead.toSecondsPart()+"s after the current time of this computer, "+dateOf(now)+".\n";

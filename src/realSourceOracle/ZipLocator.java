@@ -40,14 +40,14 @@ public final class ZipLocator{
     }
   }
   private static List<String> reqCentralDirectory(Path diskZip, List<String> steps, byte[] bytes, List<String> names){
-    var all= bytes!=null ? bytes : Fs.of(() -> Fs.readAllBytes(diskZip));
+    if (!centralDirectoryOk(bytes!=null ? bytes : Fs.of(() -> Fs.readAllBytes(diskZip)))){ throw Report.zipCentralDirectory(diskZip, steps); }
+    return names;
+  }
+  static boolean centralDirectoryOk(byte[] all){
     var local= new ArrayList<String>();
     Fs.ofV(() -> { try (var zin= new ZipInputStream(new ByteArrayInputStream(all), UTF_8)){ for (var e= zin.getNextEntry(); e != null; e = zin.getNextEntry()){ local.add(e.getName()); } } });
-    List<String> central;
-    try{ central = centralNames(ByteBuffer.wrap(all).order(ByteOrder.LITTLE_ENDIAN)); }
-    catch (IndexOutOfBoundsException|ArithmeticException _){ throw Report.zipCentralDirectory(diskZip, steps); }
-    if (!local.stream().sorted().toList().equals(central.stream().sorted().toList())){ throw Report.zipCentralDirectory(diskZip, steps); }
-    return names;
+    try{ return local.stream().sorted().toList().equals(centralNames(ByteBuffer.wrap(all).order(ByteOrder.LITTLE_ENDIAN)).stream().sorted().toList()); }
+    catch (IndexOutOfBoundsException|ArithmeticException _){ return false; }
   }
   private static List<String> centralNames(ByteBuffer b){
     var end= b.limit()-22;

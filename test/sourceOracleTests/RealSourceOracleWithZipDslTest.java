@@ -25,6 +25,7 @@ import org.junit.jupiter.api.io.TempDir;
 import org.opentest4j.AssertionFailedError;
 
 import core.TName;
+import realSourceOracle.LongPath;
 import realSourceOracle.RealSourceOracleWithZip;
 import realSourceOracle.SourceOracleWithAutoload;
 import realSourceOracle.Since;
@@ -155,18 +156,9 @@ Save the file again, or correct the clock of this computer.
     var root= dated(tmp, aFear, "_pkg/a.fear", 0);
     assertEquals(1, RealSourceOracleWithZip.stdLib(root).allFiles().size());
   }
-  @Test void errFileDatedAtTheStartOf1970(@TempDir Path tmp){
+  @Test void okFileDatedAtTheStartOf1970(@TempDir Path tmp){
     var root= dated(tmp, aFear, "_pkg/a.fear", 0);
-    var ex= assertThrows(UserError.class, () -> new RealSourceOracleWithZip(root));
-    utils.Err.strCmp("""
-Root: [###]
-Path: "_pkg/a.fear"
-
-This file is dated 19[###].
-Fearless uses dates at or before the start of 1970 to mean "no date"
-when deciding what needs compiling, so such a date cannot be trusted.
-Save the file again, so that it gets the current date.
-""", FsDsl.dumpErr(root, ex));
+    assertEquals(1, new RealSourceOracleWithZip(root).allFiles().size());
   }
   @Test void errZipFileDatedInTheFuture(@TempDir Path tmp){
     var root= dated(tmp, "_pkg/z.zip/a.fear\niii\nA\n", "_pkg/z.zip", System.currentTimeMillis()+3_600_000);
@@ -195,7 +187,7 @@ This file is dated [###]""", FsDsl.dumpErr(root, ex));
     return root;
   }
   @Test void errZipEntryDatedInTheFuture(@TempDir Path tmp){
-    for (var entry : List.of("a.fear", ".cache/a.txt")){
+    for (var entry : List.of("a.fear", "img/a.txt")){
       var root= zipWithEntryAt(tmp.resolve("c"+entry.length()), entry, System.currentTimeMillis()+3*86_400_000L);
       var ex= assertThrows(UserError.class, () -> new RealSourceOracleWithZip(root));
       utils.Err.strCmp("""
@@ -213,6 +205,10 @@ Make the zip again from files with the correct dates, or correct the clock of th
   }
   @Test void okZipEntryDatedLessThanOneDayInTheFuture(@TempDir Path tmp){
     var root= zipWithEntryAt(tmp, "a.fear", System.currentTimeMillis()+3_600_000);
+    assertEquals(1, new RealSourceOracleWithZip(root).allFiles().size());
+  }
+  @Test void okZipEntryDatedAtTheStartOf1970(@TempDir Path tmp){
+    var root= zipWithEntryAt(tmp, "a.fear", 0);
     assertEquals(1, new RealSourceOracleWithZip(root).allFiles().size());
   }
   @Test void errZipCutBeforeTheCentralDirectory(@TempDir Path tmp){
@@ -397,69 +393,24 @@ supported by compression tools (zip) or version control systems (git).
 
 We check this so that you[###]
 """);}
-  @Test void okProtectedFolderInsideAZipMayHoldEmptyDirectories(@TempDir Path tmp){ testOk(tmp, """
-_pkg/e.zip/.git/refs/tags/
-iii
-jjj
-_pkg/e.zip/a.fear
-iii
-A
-""", """
---- fear:/_pkg/e/a.fear
-A
-
-""");}
-  @Test void errNameOfAnEmptyDirectoryInsideAProtectedFolderOfAZip(@TempDir Path tmp){ runErrIOE(tmp, """
-_pkg/e.zip/.git/a:b/
-iii
-jjj
-_pkg/e.zip/a.fear
-iii
-A
-""", """
-Invalid path in this project folder.
-
+  @Test void errZipEntryWithASegmentStartingWithADot(@TempDir Path tmp){
+    var cases= List.of(List.of("z.zip", ".d/a.txt"), List.of("z.zip", "sub/.a.txt"), List.of("z.zip", ".git/refs/"), List.of("z.zip", ".in.zip"), List.of("z.zip/in.zip", ".a.txt"));
+    for (var c : cases){
+      runErrIOE(tmp.resolve("c"+cases.indexOf(c)), "_pkg/"+c.get(0)+"/a.fear\niii\nA\njjj\n_pkg/"+c.get(0)+"/"+c.get(1)+"\niii\nX\n", """
 Root: [###]
-Path: "_pkg/e/.git/a:b"
+Path: "_pkg/%s"
+Entry: "%s"
 
-What went wrong
-- A protected name segment contains a character that Windows forbids.
-  Bad char: `:`
-  Segment: "a:b"
-[###]
-""");}
-  @Test void errEmptyDirectoryCollidesWithASiblingInsideAProtectedFolderOfAZip(@TempDir Path tmp){ runErrIOE(tmp, """
-_pkg/e.zip/.git/Refs/
-iii
-jjj
-_pkg/e.zip/.git/refs/a.txt
-iii
-A
-""", """
-Invalid path in this project folder.
+A segment of the name of this zip entry starts with a dot.
+In a folder, Fearless ignores the names starting with a dot.
+In a zip file, every entry is part of the project, so no name starts with a dot.
+Remove this entry from the zip, or rename it.
 
-Root: [###]
-Path: "_pkg/e/.git/refs"
 
-What went wrong
-- Two protected names in the same folder collide.
-  Name 1: "Refs"
-  Name 2: "refs"
-  Reason: Names differ only by case.
-[###]
-""");}
-  @Test void okZipMayHoldOnlyEmptyDirectoriesOfAProtectedFolder(@TempDir Path tmp){ testOk(tmp, """
-_pkg/e.zip/.git/refs/
-iii
-jjj
-_pkg/a.fear
-iii
-A
-""", """
---- fear:/_pkg/a.fear
-A
-
-""");}
+We check this so that you[###]
+""".formatted(c.get(0), c.get(1)));
+    }
+  }
   @Test void okProtectedFolderMayHoldAnEmptyZip(@TempDir Path tmp){ testOk(tmp, """
 .tool_cache/e.zip
 iii
@@ -472,55 +423,22 @@ A
 A
 
 """);}
-  @Test void okProtectedFolderInsideAZipMayHoldAnEmptyZip(@TempDir Path tmp){ testOk(tmp, """
-_pkg/z.zip/.tool_cache/e.zip
-iii
-jjj
-_pkg/z.zip/a.fear
-iii
-A
-""", """
---- fear:/_pkg/z/a.fear
-A
-
-""");}
-  @Test void okProtectedFolderInsideAZipMayHoldAZipNextToAFolderOfTheSameName(@TempDir Path tmp){ testOk(tmp, """
-_pkg/z.zip/.tool_cache/e.zip/x.txt
+  @Test void okProtectedFolderMayHoldAZipNextToAFolderOfTheSameName(@TempDir Path tmp){ testOk(tmp, """
+_pkg/.tool_cache/e.zip/x.txt
 iii
 X
 jjj
-_pkg/z.zip/.tool_cache/e/y.txt
+_pkg/.tool_cache/e/y.txt
 iii
 Y
 jjj
-_pkg/z.zip/a.fear
+_pkg/a.fear
 iii
 A
 """, """
---- fear:/_pkg/z/a.fear
+--- fear:/_pkg/a.fear
 A
 
-""");}
-  @Test void errInvisibleZipInsideAZipWindowsBadCharColon(@TempDir Path tmp){ runErrIOE(tmp, """
-_pkg/z.zip/.d/a:b.zip/x.txt
-iii
-X
-""", """
-Invalid path in this project folder.
-
-Root: [###]
-Path: "_pkg/z/.d/a:b.zip"
-
-What went wrong
-- A protected name segment contains a character that Windows forbids.
-  Bad char: `:`
-  Segment: "a:b.zip"
-
-How to fix
-- Rename the segment to remove Windows-forbidden characters.
-  Forbidden on Windows: < > : " / \\ | ? *
-
-We check this so that you[###]
 """);}
   @Test void errEmptyDirectory(@TempDir Path tmp){ runErrIOE(tmp, """
 _pkg/
@@ -920,15 +838,25 @@ How to fix
 
 We check this so that you[###]
 """);}
-  @Test void errInvisibleTrailingDotInZip(@TempDir Path tmp){ runErrIOE(tmp, """
-_pkg/z.zip/.d/a.
-iii
-X
-""", """
+  private static void errHiddenName(Path tmp, String name, String expected){
+    var root= tmp.resolve("root").toAbsolutePath().normalize();
+    UserError.root = root;
+    Fs.writeUtf8(root.resolve("_pkg/a.fear"), "A");
+    var made= root.resolve("_pkg/.d").resolve(Fs.isWindows() ? "made" : name);
+    Fs.writeUtf8(made, "X");
+    try{
+      if (Fs.isWindows()){ Fs.ofV(() -> LongPath.move(LongPath.of(made), LongPath.of(made.getParent(), name))); }
+      utils.Err.strCmp(expected, FsDsl.dumpErr(root, assertThrows(UserError.class, () -> new RealSourceOracleWithZip(root))));
+    }
+    finally{
+      if (Fs.isWindows()){ Fs.of(() -> new ProcessBuilder("cmd", "/c", "rd", "/s", "/q", "\\\\?\\"+tmp).redirectErrorStream(true).redirectOutput(ProcessBuilder.Redirect.DISCARD).start()).onExit().join(); }
+    }
+  }
+  @Test void errInvisibleTrailingDot(@TempDir Path tmp){ errHiddenName(tmp, "a.", """
 Invalid path in this project folder.
 
 Root: [###]
-Path: "_pkg/z/.d/a."
+Path: "_pkg/.d/a."
 
 What went wrong
 - A protected name segment ends with a dot or a space.
@@ -937,27 +865,6 @@ What went wrong
 
 How to fix
 - Rename the segment so it does not end with '.' or space.
-
-We check this so that you[###]
-""");}
-  @Test void errInvisibleWindowsBadCharColonInZip(@TempDir Path tmp){ runErrIOE(tmp, """
-_pkg/z.zip/.d/a:b.txt
-iii
-X
-""", """
-Invalid path in this project folder.
-
-Root: [###]
-Path: "_pkg/z/.d/a:b.txt"
-
-What went wrong
-- A protected name segment contains a character that Windows forbids.
-  Bad char: `:`
-  Segment: "a:b.txt"
-
-How to fix
-- Rename the segment to remove Windows-forbidden characters.
-  Forbidden on Windows: < > : " / \\ | ? *
 
 We check this so that you[###]
 """);}
@@ -988,15 +895,17 @@ How to fix
 
 We check this so that you[###]
 """);}
-  @Test void errInvisibleControlCharInZip(@TempDir Path tmp){ runErrIOE(tmp, """
-_pkg/z.zip/.d/a\u0001b.txt
+  @Test void errInvisibleControlChar(@TempDir Path tmp){
+    if (Fs.isWindows()){ assertThrows(java.nio.file.InvalidPathException.class, () -> FsDsl.materialize(tmp, "_pkg/.d/a\u0001b.txt\niii\nX\n")); return; }
+    runErrIOE(tmp, """
+_pkg/.d/a\u0001b.txt
 iii
 X
 """, """
 Invalid path in this project folder.
 
 Root: [###]
-Path: "_pkg/z/.d/a" [Start Of Heading 0x01] "b.txt"
+Path: "_pkg/.d/a" [Start Of Heading 0x01] "b.txt"
 
 What went wrong
 - A protected name segment contains a character that is not printable ASCII.
@@ -1009,15 +918,11 @@ How to fix
 
 We check this so that you[###]
 """);}
-  @Test void errInvisibleWindowsReservedDeviceNameInZip(@TempDir Path tmp){ runErrIOE(tmp, """
-_pkg/z.zip/.d/con.txt
-iii
-X
-""", """
+  @Test void errInvisibleWindowsReservedDeviceName(@TempDir Path tmp){ errHiddenName(tmp, "con.txt", """
 Invalid path in this project folder.
 
 Root: [###]
-Path: "_pkg/z/.d/con.txt"
+Path: "_pkg/.d/con.txt"
 
 What went wrong
 - A protected name segment uses a Windows reserved device name.
@@ -1031,7 +936,7 @@ We check this so that you[###]
 """);}
   @Test void errInvisibleReservedDeviceNamesOfTheConsoleAndWithSpaces(@TempDir Path tmp){
     for (var name : List.of("conin$.log", "con .txt")){
-      runErrIOE(tmp.resolve("c"+name.length()), "_pkg/z.zip/.d/"+name+"\niii\nX\n", """
+      errHiddenName(tmp.resolve("c"+name.length()), name, """
 Invalid path in this project folder.
 
 Root: [###]
@@ -1085,24 +990,31 @@ How to fix
 
 We check this so that you[###]
 """);}
-  @Test void errHiddenSiblingCaseCollisionInZip(@TempDir Path tmp){ runErrIOE(tmp, """
-_pkg/z.zip/.d/a.txt
+  @Test void errHiddenSiblingCaseCollision(@TempDir Path tmp){
+    var spec= """
+_pkg/.d/a.txt
 iii
 1
 jjj
-_pkg/z.zip/.d/A.txt
+_pkg/.d/A.txt
 iii
 2
-""", """
+jjj
+_pkg/a.fear
+iii
+A
+""";
+    if (!Fs.isLinux()){ testOk(tmp, spec, "--- fear:/_pkg/a.fear\nA\n\n"); return; }
+    runErrIOE(tmp, spec, """
 Invalid path in this project folder.
 
 Root: [###]
-Path: "_pkg/z/.d/A.txt"
+Path: "_pkg/.d/[###].txt"
 
 What went wrong
 - Two protected names in the same folder collide.
-  Name 1: "a.txt"
-  Name 2: "A.txt"
+  Name 1: "[###].txt"
+  Name 2: "[###].txt"
   Reason: Names differ only by case.
 
 How to fix
