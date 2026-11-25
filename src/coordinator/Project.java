@@ -42,9 +42,9 @@ import utils.OneOr;
 /// The Project of CoordinatorDesign: the files of a project folder at one moment, and what
 /// the Coordinator keeps of them in `.fearless_out`.
 final class Project{
-  static final String errorFile= "_error.txt";
-  static final String unfinishedFile= "_unfinished.txt";
-  static final String startFile= "_compile_start.txt";
+  static final String errorFile= "error.txt";
+  static final String unfinishedFile= "unfinished.txt";
+  static final String startFile= "compile_start.txt";
   static final String iconsDir= "icons";
   static final String base= "base";
   record Pkg(String name, int rank, List<Ref> files){}
@@ -77,11 +77,11 @@ final class Project{
   List<Pkg> packages(){ return Stream.concat(Stream.of(new Pkg(base, 0, List.of())), ownPackages.stream()).toList(); }
   Path outFolder(String pkg){ return pkg.equals(base) ? c.baseCachePath().orElseThrow() : out; }
   Optional<Api> optApi(String pkg){
-    var json= outFolder(pkg).resolve(pkg+".json");
+    var json= outFolder(pkg).resolve("_"+pkg+".json");
     return OutputHelper.read(json).map(s -> new LimitedJsonParser(s, json).api());
   }
   Optional<Long> optJarTime(String pkg){
-    var t= Fs.lastModified(outFolder(pkg).resolve(pkg+".jar"));
+    var t= Fs.lastModified(outFolder(pkg).resolve("_"+pkg+".jar"));
     return t < 0 ? Optional.empty() : Optional.of(t);
   }
   List<Pkg> lowerPackages(Pkg p){
@@ -103,7 +103,7 @@ final class Project{
   List<Path> otherFiles(){
     if (!Fs.isDirectory(out)){ return List.of(); }
     var kept= Stream.concat(Stream.of(errorFile, unfinishedFile, startFile, iconsDir),
-      ownPackages.stream().flatMap(p -> Stream.of(".json", ".jar", ".html", ".txt").map(x -> p.name()+x))).toList();
+      ownPackages.stream().flatMap(p -> Stream.of(".json", ".jar", ".html", ".txt").map(x -> "_"+p.name()+x))).toList();
     try (var s= Fs.of(() -> Fs.list(out))){ return s.filter(f -> !f.getFileName().toString().startsWith(".") && !kept.contains(f.getFileName().toString())).sorted().toList(); }
   }
   MainsInfo mergedManifest(){ return MainsInfo.merge(packages().stream().map(p -> optApi(p.name()).orElseThrow().manifest())); }
@@ -164,7 +164,7 @@ final class Project{
     var manifest= MainsInfo.of(core, o, stLib);
     writeIcons(manifest, stdLibBase, projectName);
     var chosen= manifest.withExtensions((main, kind, claim) -> autoselect(p, manifest, projectName, main, kind, claim, take));
-    replace(out.resolve(p.name()+".json"), OutputHelper.apiJson(core, inputsSnapshot(p), chosen));
+    replace(out.resolve("_"+p.name()+".json"), OutputHelper.apiJson(core, inputsSnapshot(p), chosen));
     writes.forEach(Runnable::run);
     c.backend(p.name(), core, rich.oracle(), other, capabilities);
   }

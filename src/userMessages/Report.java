@@ -486,12 +486,7 @@ Package name: %s
 
 A folder whose name starts with "_" defines a package: the name after the "_"
 is the package name. It must start with a lowercase letter, then use only
-lowercase letters (a-z), digits (0-9) and underscore (_), and must not be a
-Windows reserved device name: "con", "prn", "aux", "nul", "com1".."com9",
-"lpt1".."lpt9".
-
-The package name also becomes a folder name and a file name in the generated
-code, so a name Windows reserves would not survive there.
+lowercase letters (a-z), digits (0-9) and underscore (_).
 
 Valid examples:
   "_bla" is the package "bla"

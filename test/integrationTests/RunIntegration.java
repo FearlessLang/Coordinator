@@ -798,7 +798,7 @@ App:Main, lib.Lib{s->base.Debug#(`app`)}
     assertFalse(compiled(root));
     var ex= assertThrows(UserError.class, () -> main(root, List.of()));
     utils.Err.strCmp("[###]lib.Lib[###]", ex.getMessage());
-    assertFalse(Fs.exists(root.resolve(Coordinator.outDir).resolve("lib.jar")));
+    assertFalse(Fs.exists(root.resolve(Coordinator.outDir).resolve("_lib.jar")));
     assertFalse(Fs.exists(root.resolve(Coordinator.outDir).resolve("lib.built")));
   }
   @Test void onlyImmCapture(@TempDir Path tmp){
@@ -839,7 +839,7 @@ Cases:{
       }
       @Override public void backend(String pkgName, List<Literal> core, SourceOracle oracle, OtherPackages other, CapabilityEnvironment capabilities){
         new Backend(genJava, base.backendTools(pkgName, oracle, other, core, capabilities)).produceJavaCode();
-        Fs.writeUtf8(root.resolve(Coordinator.outDir).resolve(pkgName+".jar"), "");
+        Fs.writeUtf8(root.resolve(Coordinator.outDir).resolve("_"+pkgName+".jar"), "");
       }
     }, root);
     var got= Fs.walk(genJava, s -> s.filter(Fs::isRegularFile).sorted().map(p -> p.getFileName()+(Fs.readUtf8(p).contains("_base.OnlyImmCapture") ? " only imm" : "")).toList());
@@ -885,7 +885,7 @@ Applog: FileLog{}
       }
       @Override public void backend(String pkgName, List<Literal> core, SourceOracle oracle, OtherPackages other, CapabilityEnvironment capabilities){
         new Backend(genJava, base.backendTools(pkgName, oracle, other, core, capabilities)).produceJavaCode();
-        Fs.writeUtf8(root.resolve(Coordinator.outDir).resolve(pkgName+".jar"), "");
+        Fs.writeUtf8(root.resolve(Coordinator.outDir).resolve("_"+pkgName+".jar"), "");
       }
     }, root);
     var logFiles= Fs.walk(genJava, s -> s.filter(Fs::isRegularFile)
@@ -1098,7 +1098,7 @@ Again:Main{s->base.Debug#("again")}
 """);
     compile(coordinator(root), root);
     utils.Err.strCmp("""
---- col.json
+--- _col.json
 {
   "mains": {
     "col.Again": [[], [], [["base.IconsFearless", "icons/fearless.png", "", "", "", ""]]],
@@ -1126,7 +1126,7 @@ Shape: DataRead{ .extra: base.Nat }
 """);
     compile(coordinator(root), root);
     utils.Err.strCmp("""
---- col.json
+--- _col.json
 {
   "mains": {},
   "attenuators": [],
@@ -2143,7 +2143,7 @@ Pre:Main, base.PreLoadIcon[base.IconsConflict], base.PreLoadIcon[IconsFoo]{s->ba
 """);
     compile(coordinator(root), root);
     utils.Err.strCmp("""
---- col.json
+--- _col.json
 {
   "mains": {
     "col.Again": [[["col.IconsFoo", "_col/icons/foo.png", "", "", "", "fapp810"]], [["col.IconsFoo", "_col/icons/foo.png", "", "", "q", "q"]], [["col.IconsFoo", "_col/icons/foo.png", "", "", "", ""], ["base.IconsFearless", "icons/fearless.png", "", "", "", ""]]],
@@ -2492,14 +2492,14 @@ Error 7 WellFormedness"""); }
   @Test void aCompilationFailingAfterTheFrontendKeepsTheOldDocumentation(@TempDir Path tmp) throws Exception{
     var root= claimsProject(tmp, "///The first text.\nA:Main{}\n");
     compile(coordinator(root), root);
-    var html= root.resolve(Coordinator.outDir).resolve("col.html");
+    var html= root.resolve(Coordinator.outDir).resolve("_col.html");
     var before= Fs.readUtf8(html);
     assertTrue(before.contains("The first text."));
     var rank= root.resolve("_col").resolve("_rank_app.fear");
     Fs.writeUtf8(rank, Fs.readUtf8(rank).replace("///The first text.\nA:Main{}", "///The second text.\nA:Main,OpenWith[base.Str,\"q\"]{}"));
     assertThrows(UserError.class, () -> compile(coordinator(root), root));
     assertEquals(before, Fs.readUtf8(html));
-    assertEquals(Fs.readUtf8(root.resolve(Coordinator.outDir).resolve("col.txt")).contains("The second text."), false);
+    assertEquals(Fs.readUtf8(root.resolve(Coordinator.outDir).resolve("_col.txt")).contains("The second text."), false);
   }
   @Test void aClaimWhoseIconIsNotAnImageFileIsRefused(@TempDir Path tmp) throws Exception{ claimRefused(tmp, """
 A:Main,OpenWith[base.Str,"q"]{}
@@ -2651,7 +2651,7 @@ across all its "OpenWith[_,_]" and "Shortcut[_,_]",
 since one extension has one icon.
 Error 7 WellFormedness""", ex.getMessage());
   }
-  /// The manifest of every <pkg>.json of the project, as its Info text.
+  /// The manifest of every _<pkg>.json of the project, as its Info text.
   static String manifests(Path root){
     var jsons= Fs.walk(root.resolve(Coordinator.outDir), s -> s.filter(p -> p.getFileName().toString().endsWith(".json")).sorted().toList());
     return jsons.stream().map(p -> "--- "+p.getFileName()+"\n"+manifest(Fs.readUtf8(p))).reduce("", String::concat);
@@ -2685,7 +2685,7 @@ not read by the compiler
 """);
     compile(coordinator(root), root);
     utils.Err.strCmp("""
---- col.json
+--- _col.json
 {
   "mains": {
     "col.Foo": [[["base.IconsConflict", "icons/conflict.png", "", "", "fapp042", "fapp042"], ["col.ZInBar", "_col/z.zip", "", "in/bar.png", "", "fapp504"]], [["col.IconsFoo", "_col/icons/foo.png", "", "", "foo", "foo"], ["lib.IconsLib", "_lib/icons/lib.png", "", "", "", "ffile074"]], [["base.IconsConflict", "icons/conflict.png", "", "", "", ""], ["col.ZInBar", "_col/z.zip", "", "in/bar.png", "", ""], ["base.IconsFearless", "icons/fearless.png", "", "", "", ""], ["col.IconsFoo", "_col/icons/foo.png", "", "", "", ""], ["lib.IconsLib", "_lib/icons/lib.png", "", "", "", ""]]]
@@ -2694,7 +2694,7 @@ not read by the compiler
   "dataRead": [],
   "dataEdit": []
 }
---- lib.json
+--- _lib.json
 {
   "mains": {
     "lib.Lib": [[], [["base.IconsConflict", "icons/conflict.png", "", "", "fear", "fear"]], [["base.IconsFearless", "icons/fearless.png", "", "", "", ""], ["base.IconsConflict", "icons/conflict.png", "", "", "", ""]]]
@@ -2729,7 +2729,7 @@ B:Main{s->base.Debug#(`b`)}
     edit(root.resolve("_b", "_rank_app.fear"), "B:Main", "C:Main{s->base.Debug#(`c`)}\nB:Main");
     compile(coordinator(root), root);
     utils.Err.strCmp("""
---- a.json
+--- _a.json
 {
   "mains": {
     "a.A": [[], [["a.IconsA", "_a/icons/a.png", "", "", "", "ffile614"]], [["base.IconsFearless", "icons/fearless.png", "", "", "", ""], ["a.IconsA", "_a/icons/a.png", "", "", "", ""]]]
@@ -2738,7 +2738,7 @@ B:Main{s->base.Debug#(`b`)}
   "dataRead": [],
   "dataEdit": []
 }
---- b.json
+--- _b.json
 {
   "mains": {
     "b.B": [[], [], [["base.IconsFearless", "icons/fearless.png", "", "", "", ""]]],
@@ -2757,7 +2757,7 @@ Foo:Main, OpenWith[IconsFoo,"foo"]{s->base.Debug#(`foo`)}
     compile(coordinator(root), root);
     var text= manifests(root);
     assertTrue(compiled(root));
-    Fs.delete(root.resolve(Coordinator.outDir).resolve("col.json"));
+    Fs.delete(root.resolve(Coordinator.outDir).resolve("_col.json"));
     assertFalse(compiled(root));
     assertFalse(compiled(root));
     compile(coordinator(root), root);
@@ -2777,9 +2777,9 @@ Lib:base.Main, base.OpenWith[base.IconsConflict,"fear"]{s->base.Debug#(`lib`)}
     Fs.rmTree(root.resolve("_col"));
     assertFalse(compiled(root));
     utils.Err.strCmp("lib\n", coordinator(root).main(root, stLib));
-    assertFalse(Fs.exists(root.resolve(Coordinator.outDir).resolve("col.json")));
+    assertFalse(Fs.exists(root.resolve(Coordinator.outDir).resolve("_col.json")));
     utils.Err.strCmp("""
---- lib.json
+--- _lib.json
 {
   "mains": {
     "lib.Lib": [[], [["base.IconsConflict", "icons/conflict.png", "", "", "fear", "fear"]], [["base.IconsFearless", "icons/fearless.png", "", "", "", ""], ["base.IconsConflict", "icons/conflict.png", "", "", "", ""]]]
@@ -2812,7 +2812,7 @@ Foo:Main{s->base.Debug#(`foo`)}
 """);
     compile(coordinator(root), root);
     assertTrue(compiled(root));
-    var baseApi= baseCache.resolve("base.jar");
+    var baseApi= baseCache.resolve("_base.jar");
     var old= Fs.getLastModifiedTime(baseApi);
     try{
       Fs.setLastModifiedTime(baseApi, FileTime.fromMillis(System.currentTimeMillis()+1000));
@@ -2852,7 +2852,7 @@ use base.Main as Main;
 A:Main{s->base.Debug#(`hi`)}
 """);
     utils.Err.strCmp("hi\n", main(root, List.of()));
-    var json= root.resolve(Coordinator.outDir).resolve("p.json");
+    var json= root.resolve(Coordinator.outDir).resolve("_p.json");
     var good= Fs.readUtf8(json);
     Fs.writeUtf8(json, good.replaceFirst("\"inputsSnapshot\":\"", "\"inputsSnapshot\":\"garbled"));
     assertFalse(compiled(root));
@@ -2860,19 +2860,19 @@ A:Main{s->base.Debug#(`hi`)}
     assertEquals(good, Fs.readUtf8(json));
   }
   @Test void aGarbledManifestIsCacheCorrupted(@TempDir Path tmp){
-    aCorruptedCacheFileIsCacheCorrupted(tmp, "p.json", bs -> new String(bs, UTF_8).replaceFirst("\"manifest\":\"", "\"manifest\":\"[").getBytes(UTF_8), crashedWithCache("utils.Bug"));
+    aCorruptedCacheFileIsCacheCorrupted(tmp, "_p.json", bs -> new String(bs, UTF_8).replaceFirst("\"manifest\":\"", "\"manifest\":\"[").getBytes(UTF_8), crashedWithCache("utils.Bug"));
   }
   @Test void anApiJsonWithAnUnknownReferenceCapabilityIsCacheCorrupted(@TempDir Path tmp){
-    aCorruptedCacheFileIsCacheCorrupted(tmp, "p.json", bs -> new String(bs, UTF_8).replaceFirst("\"imm\"", "\"imx\"").getBytes(UTF_8), crashedWithCache("java.lang.IllegalArgumentException"));
+    aCorruptedCacheFileIsCacheCorrupted(tmp, "_p.json", bs -> new String(bs, UTF_8).replaceFirst("\"imm\"", "\"imx\"").getBytes(UTF_8), crashedWithCache("java.lang.IllegalArgumentException"));
   }
   @Test void anApiJsonWithATypeOfReferenceCapabilityMutHIsCacheCorrupted(@TempDir Path tmp){
-    aCorruptedCacheFileIsCacheCorrupted(tmp, "p.json", bs -> new String(bs, UTF_8).replaceFirst("\\[\"p.A\",\"mut\"", "[\"p.A\",\"mutH\"").getBytes(UTF_8), crashedWithCache("java.lang.AssertionError"));
+    aCorruptedCacheFileIsCacheCorrupted(tmp, "_p.json", bs -> new String(bs, UTF_8).replaceFirst("\\[\"p.A\",\"mut\"", "[\"p.A\",\"mutH\"").getBytes(UTF_8), crashedWithCache("java.lang.AssertionError"));
   }
   @Test void anApiJsonWithAnIsoMethodIsCacheCorrupted(@TempDir Path tmp){
-    aCorruptedCacheFileIsCacheCorrupted(tmp, "p.json", bs -> new String(bs, UTF_8).replaceFirst("\\[\".main\",\"imm\"", "[\".main\",\"iso\"").getBytes(UTF_8), crashedWithCache("java.lang.AssertionError"));
+    aCorruptedCacheFileIsCacheCorrupted(tmp, "_p.json", bs -> new String(bs, UTF_8).replaceFirst("\\[\".main\",\"imm\"", "[\".main\",\"iso\"").getBytes(UTF_8), crashedWithCache("java.lang.AssertionError"));
   }
   @Test void anApiJsonWithARepeatedSupertypeIsCacheCorrupted(@TempDir Path tmp){
-    aCorruptedCacheFileIsCacheCorrupted(tmp, "p.json", bs -> new String(bs, UTF_8).replaceFirst("\\[\"base.Main\"\\]", "[\"base.Main\"],[\"base.Main\"]").getBytes(UTF_8), crashedWithCache("java.lang.AssertionError"));
+    aCorruptedCacheFileIsCacheCorrupted(tmp, "_p.json", bs -> new String(bs, UTF_8).replaceFirst("\\[\"base.Main\"\\]", "[\"base.Main\"],[\"base.Main\"]").getBytes(UTF_8), crashedWithCache("java.lang.AssertionError"));
   }
   @Test void aMapDirectiveEditedInAHigherRankPackageMakesItsTargetPackageNotBuilt(@TempDir Path tmp) throws IOException{
     var root= tmp.resolve("root");
@@ -2920,7 +2920,7 @@ not read by the compiler
     Fs.move(root.resolve("_lib", "icons", "lib.png"), root.resolve("_lib", "icons", "lib.gif"));
     compile(coordinator(root), root);
     utils.Err.strCmp("""
---- col.json
+--- _col.json
 {
   "mains": {
     "col.Foo": [[], [["lib.IconsLib", "_lib/icons/lib.gif", "", "", "", "ffile074"]], [["base.IconsFearless", "icons/fearless.png", "", "", "", ""], ["lib.IconsLib", "_lib/icons/lib.gif", "", "", "", ""]]]
@@ -2929,7 +2929,7 @@ not read by the compiler
   "dataRead": [],
   "dataEdit": []
 }
---- lib.json
+--- _lib.json
 {
   "mains": {},
   "attenuators": [],
@@ -2958,7 +2958,7 @@ not read by the compiler
     Fs.move(root.resolve("_lib", "icons", "lib.png"), root.resolve("_lib", "icons", "lib.gif"));
     compile(coordinator(root), root);
     utils.Err.strCmp("""
---- col.json
+--- _col.json
 {
   "mains": {
     "col.Foo": [[], [], [["base.IconsFearless", "icons/fearless.png", "", "", "", ""]]]
@@ -2967,14 +2967,14 @@ not read by the compiler
   "dataRead": [],
   "dataEdit": []
 }
---- lib.json
+--- _lib.json
 {
   "mains": {},
   "attenuators": [],
   "dataRead": [],
   "dataEdit": []
 }
---- mid.json
+--- _mid.json
 {
   "mains": {
     "mid.Mid": [[], [["lib.IconsLib", "_lib/icons/lib.gif", "", "", "", "ffile972"]], [["base.IconsFearless", "icons/fearless.png", "", "", "", ""], ["lib.IconsLib", "_lib/icons/lib.gif", "", "", "", ""]]]
@@ -3002,7 +3002,7 @@ Foo:{ .make: Bar -> {'self
 App:Main{s->base.Debug#(`app`)}
 """);
     utils.Err.strCmp("app\n", main(root, List.of()));
-    var html= Fs.readUtf8(root.resolve(Coordinator.outDir).resolve("p.html"));
+    var html= Fs.readUtf8(root.resolve(Coordinator.outDir).resolve("_p.html"));
     assertFalse(html.contains("Twice"));
   }
   @Test void aRemovedPackageMakesTheProjectOutOfDateAndLosesItsMains(@TempDir Path tmp) throws Exception{
@@ -3036,7 +3036,7 @@ use base.Main as Main;
 App:Main{s->base.Debug#(`app`)}
 """);
     utils.Err.strCmp("app\n", main(root, List.of()));
-    var html= root.resolve(Coordinator.outDir).resolve("app.html");
+    var html= root.resolve(Coordinator.outDir).resolve("_app.html");
     var clean= Fs.readUtf8(html);
     edit(root.resolve("_app", "_rank_app.fear"), "Calls", "Calls");
     utils.Err.strCmp("app\n", main(root, List.of()));
@@ -3052,7 +3052,7 @@ use base.Main as Main;
 A:Main{s->base.Debug#(`hi`)}
 """);
     utils.Err.strCmp("hi\n", main(root, List.of()));
-    Fs.delete(root.resolve(Coordinator.outDir).resolve("p.jar"));
+    Fs.delete(root.resolve(Coordinator.outDir).resolve("_p.jar"));
     assertFalse(compiled(root));
     utils.Err.strCmp("hi\n", main(root, List.of()));
   }
@@ -3064,7 +3064,7 @@ Foo:Opener, Other, Shortcut[base.IconsConflict,"fapp042"], OpenWith[IconsFoo]{s-
 """);
     compile(coordinator(root), root);
     utils.Err.strCmp("""
---- col.json
+--- _col.json
 {
   "mains": {
     "col.Foo": [[["base.IconsConflict", "icons/conflict.png", "", "", "fapp042", "fapp042"], ["col.IconsFoo", "_col/icons/foo.png", "", "", "", "fapp720"]], [["col.IconsFoo", "_col/icons/foo.png", "", "", "", "ffile720"], ["col.IconsFoo", "_col/icons/foo.png", "", "", "foo", "foo"]], [["base.IconsConflict", "icons/conflict.png", "", "", "", ""], ["col.IconsFoo", "_col/icons/foo.png", "", "", "", ""], ["base.IconsFearless", "icons/fearless.png", "", "", "", ""]]]
@@ -3142,12 +3142,12 @@ Hello:Main{s->base.Debug#(Greeting.hi)}
     var c= coordinator(root);
     utils.Err.strCmp("hi\n", c.main(root, stLib));
     var out= root.resolve(Coordinator.outDir);
-    var aJar= Fs.lastModified(out.resolve("a.jar"));
-    var bJar= Fs.lastModified(out.resolve("b.jar"));
+    var aJar= Fs.lastModified(out.resolve("_a.jar"));
+    var bJar= Fs.lastModified(out.resolve("_b.jar"));
     edit(root.resolve("_a/_rank_core.fear"), "\"hi\"", "\"ho\"");
     utils.Err.strCmp("ho\n", c.main(root, stLib));
-    assertNotEquals(aJar, Fs.lastModified(out.resolve("a.jar")));
-    assertNotEquals(bJar, Fs.lastModified(out.resolve("b.jar")));
+    assertNotEquals(aJar, Fs.lastModified(out.resolve("_a.jar")));
+    assertNotEquals(bJar, Fs.lastModified(out.resolve("_b.jar")));
   }
   // Confirms expected behaviour: only the packages at the highest rank number get their Main run.
   @Test void onlyTheHighestRankPackageMainRuns(@TempDir Path tmp) throws InterruptedException{
@@ -5408,16 +5408,16 @@ A:Main{s->base.Debug#(`hi`)}
     var root= helloProject(tmp);
     var c= coordinator(root);
     assertEquals(Optional.empty(), compileWith(c, root, cs -> cs.stream().findFirst()));
-    assertTrue(Fs.exists(out(root, "_unfinished.txt")));
+    assertTrue(Fs.exists(out(root, "unfinished.txt")));
     assertTrue(c.check(root) instanceof Coordinator.State.OutOfDate);
     Coordinator.finish(root);
-    assertFalse(Fs.exists(out(root, "_unfinished.txt")));
+    assertFalse(Fs.exists(out(root, "unfinished.txt")));
     assertTrue(compiled(root));
   }
   @Test void aCompileWritesItsStartBeforeTheJars(@TempDir Path tmp){
     var root= helloProject(tmp);
     assertEquals(Optional.empty(), compileWith(coordinator(root), root, cs -> cs.stream().findFirst()));
-    assertTrue(Fs.lastModified(out(root, "_compile_start.txt")) < Fs.lastModified(out(root, "p.jar")));
+    assertTrue(Fs.lastModified(out(root, "compile_start.txt")) < Fs.lastModified(out(root, "_p.jar")));
   }
   @Test void aPackageNamedIconsKeepsTheIconsOfTheCache(@TempDir Path tmp){
     var root= tmp.resolve("root");
@@ -5431,6 +5431,57 @@ A:Main{s->base.Debug#(`hi`)}
     compile(coordinator(root), root);
     assertTrue(Fs.isRegularFile(out(root, "icons").resolve("_base").resolve("icons").resolve("fearless.png")));
     utils.Err.strCmp("hi\n", main(root, List.of()));
+  }
+  @Test void aPackageNamedLikeADeviceCompiles(@TempDir Path tmp){
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_con/_rank_app999.fear
+iii
+use base.Main as Main;
+A:Main{s->base.Debug#(`hi`)}
+""");
+    utils.Err.strCmp("hi\n", main(root, List.of()));
+    for (var x : List.of(".json", ".jar", ".html", ".txt")){ assertTrue(Fs.isRegularFile(out(root, "_con"+x))); }
+    assertTrue(compiled(root));
+  }
+  @Test void packagesNamedLikeTheSpecialFilesKeepTheSpecialFiles(@TempDir Path tmp){
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_compile_start/_rank_app999.fear
+iii
+use base.Main as Main;
+A:Main{s->base.Debug#(`a`)}
+jjj
+_error/_rank_app999.fear
+iii
+use base.Main as Main;
+A:Main{s->base.Debug#(`b`)}
+jjj
+_unfinished/_rank_app999.fear
+iii
+use base.Main as Main;
+A:Main{s->base.Debug#(`c`)}
+""");
+    var special= List.of("compile_start.txt", "error.txt", "unfinished.txt");
+    var docs= special.stream().map(s -> "_"+s).toList();
+    assertEquals(Optional.empty(), compileWith(coordinator(root), root, cs -> cs.stream().findFirst()));
+    for (var d : docs){ utils.Err.strCmp("[###]A[###]", Fs.readUtf8(out(root, d))); }
+    assertEquals("", Fs.readUtf8(out(root, "unfinished.txt")));
+    assertEquals("", Fs.readUtf8(out(root, "compile_start.txt")));
+    assertFalse(Fs.exists(out(root, "error.txt")));
+    Coordinator.finish(root);
+    assertTrue(compiled(root));
+    edit(root.resolve("_unfinished", "_rank_app999.fear"), "`c`", "Undefined");
+    var error= compileWith(coordinator(root), root, cs -> cs.stream().findFirst()).orElseThrow();
+    for (var s : special){ assertTrue(Fs.isRegularFile(out(root, s))); }
+    assertEquals(error.getMessage(), Fs.readUtf8(out(root, "error.txt")));
+    for (var d : docs){ utils.Err.strCmp("[###]A[###]", Fs.readUtf8(out(root, d))); }
+    Coordinator.finish(root);
+    edit(root.resolve("_unfinished", "_rank_app999.fear"), "Undefined", "`c`");
+    utils.Err.strCmp("a\nb\nc\n", main(root, List.of()));
+    assertFalse(Fs.exists(out(root, "error.txt")));
   }
   @Test void aFileNewerThanTheStartOfTheCompileIsRefused(@TempDir Path tmp) throws IOException{
     var root= helloProject(tmp);
@@ -5449,19 +5500,19 @@ A:Main{s->base.Debug#(`hi`)}
     compile(coordinator(root), root);
     Coordinator.dropUnfinished(root);
     assertTrue(compiled(root));
-    Fs.writeUtf8(out(root, "_unfinished.txt"), "");
+    Fs.writeUtf8(out(root, "unfinished.txt"), "");
     Coordinator.dropUnfinished(root);
     assertFalse(Fs.exists(root.resolve(Coordinator.outDir)));
   }
   @Test void aCompileOverAnUnfinishedCacheCompilesEveryPackageAgain(@TempDir Path tmp) throws IOException{
     var root= helloProject(tmp);
     compile(coordinator(root), root);
-    var jar= out(root, "p.jar");
+    var jar= out(root, "_p.jar");
     var time= Fs.getLastModifiedTime(jar);
     Fs.write(jar, new byte[]{1, 2, 3});
     Fs.setLastModifiedTime(jar, time);
     assertTrue(compiled(root));
-    Fs.writeUtf8(out(root, "_unfinished.txt"), "");
+    Fs.writeUtf8(out(root, "unfinished.txt"), "");
     compile(coordinator(root), root);
     assertFalse(Arrays.equals(new byte[]{1, 2, 3}, Fs.readAllBytes(jar)));
     utils.Err.strCmp("hi\n", main(root, List.of()));
@@ -5483,11 +5534,11 @@ A:Main{s->base.Debug#(`hi`)}
     var good= Fs.readUtf8(file);
     Fs.writeUtf8(file, good.replace("`hi`", "Undefined"));
     var error= compileWith(coordinator(root), root, cs -> cs.stream().findFirst()).orElseThrow();
-    assertEquals(error.getMessage(), Fs.readUtf8(out(root, "_error.txt")));
+    assertEquals(error.getMessage(), Fs.readUtf8(out(root, "error.txt")));
     Coordinator.finish(root);
     Fs.writeUtf8(file, good);
     compile(coordinator(root), root);
-    assertFalse(Fs.exists(out(root, "_error.txt")));
+    assertFalse(Fs.exists(out(root, "error.txt")));
   }
   @Test void anInvalidProjectIsInvalidAndItsCompileWritesTheProblem(@TempDir Path tmp){
     var root= helloProject(tmp);
@@ -5496,15 +5547,15 @@ A:Main{s->base.Debug#(`hi`)}
     utils.Err.strCmp("[###]top.fear[###]", problem);
     var error= compileWith(coordinator(root), root, cs -> cs.stream().findFirst()).orElseThrow();
     assertEquals(problem, error.getMessage());
-    assertEquals(problem, Fs.readUtf8(out(root, "_error.txt")));
+    assertEquals(problem, Fs.readUtf8(out(root, "error.txt")));
   }
   @Test void aCorruptedJsonFoundByACompileIsTheErrorOfTheCompile(@TempDir Path tmp){
     var root= helloProject(tmp);
     compile(coordinator(root), root);
-    Fs.writeUtf8(out(root, "p.json"), "{");
+    Fs.writeUtf8(out(root, "_p.json"), "{");
     var error= compileWith(coordinator(root), root, cs -> cs.stream().findFirst()).orElseThrow();
     assertTrue(UserError.cacheCorrupted(error.getMessage()));
-    assertEquals(error.getMessage(), Fs.readUtf8(out(root, "_error.txt")));
+    assertEquals(error.getMessage(), Fs.readUtf8(out(root, "error.txt")));
   }
   @Test void deleteCacheRemovesTheCacheFolder(@TempDir Path tmp){
     var root= helloProject(tmp);

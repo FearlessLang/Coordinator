@@ -123,7 +123,7 @@ public interface Coordinator{
     var name= png.getFileName().toString();
     return Fs.isWindows() ? List.of(png, png.resolveSibling(name.substring(0, name.lastIndexOf('.'))+".ico")) : List.of(png);
   }
-  /// The mains of every <pkg>.json of .fearless_out, by name.
+  /// The mains of every _<pkg>.json of .fearless_out, by name.
   static Map<String,MainsInfo.Main> cachedMains(Path folder){
     var out= folder.resolve(outDir);
     if (!Fs.isDirectory(out)){ return Map.of(); }
@@ -133,7 +133,7 @@ public interface Coordinator{
     }
   }
   default Path docs(Path folder, String packageName){
-    return packageName.equals(Project.base) ? baseCachePath().orElseThrow().resolve("base.html") : folder.resolve(outDir).resolve(packageName+".html");
+    return packageName.equals(Project.base) ? baseCachePath().orElseThrow().resolve("_base.html") : folder.resolve(outDir).resolve("_"+packageName+".html");
   }
   /// Compiles, then runs the mains of the packages of the highest rank: the portable Fearless.
   default String main(Path project, Path stdLibBase) throws InterruptedException{
@@ -150,7 +150,7 @@ public interface Coordinator{
     return runMains(Push.of(runData(project, stdLibBase), "-Dapple.awt.application.name="+project.getFileName()), Push.of(project.resolve(outDir), sharedClasspath()), "_"+pkgName+".Main", this::mainEnded);
   }
   default void mainEnded(int exitCode){}
-  /// Writes base.json, base.jar, base.html and base.txt into baseCache; the backend of this Coordinator writes base into out.
+  /// Writes _base.json, _base.jar, _base.html and _base.txt into baseCache; the backend of this Coordinator writes base into out.
   default void buildBaseCache(Path stdLibBase, Path out, Path baseCache){
     Fs.ensureDir(baseCache);
     var o= sourceOracle(stdLibBase, Since.anyTime);
@@ -159,8 +159,8 @@ public interface Coordinator{
     var capabilities= new CapabilityEnvironment(rich.autoloadedAssets());
     var core= frontend(Project.base, rich.sources(o.allFiles()), rich.oracle(), other, Map.of(), capabilities, Runnable::run);
     backend(Project.base, core, rich.oracle(), other, capabilities);
-    Project.replace(baseCache.resolve("base.json"), OutputHelper.apiJson(core, "", new MainsInfo(Map.of(), MainsInfo.attenuators(core), List.of(), List.of())));
-    for (var x : List.of(".jar", ".html", ".txt")){ Fs.ofV(() -> Fs.move(out.resolve("base"+x), baseCache.resolve("base"+x), StandardCopyOption.REPLACE_EXISTING)); }
+    Project.replace(baseCache.resolve("_base.json"), OutputHelper.apiJson(core, "", new MainsInfo(Map.of(), MainsInfo.attenuators(core), List.of(), List.of())));
+    for (var x : List.of(".jar", ".html", ".txt")){ Fs.ofV(() -> Fs.move(out.resolve("_base"+x), baseCache.resolve("_base"+x), StandardCopyOption.REPLACE_EXISTING)); }
   }
   static <R> R guarded(Path project, Supplier<R> f){
     var cached= Fs.exists(project.resolve(outDir));

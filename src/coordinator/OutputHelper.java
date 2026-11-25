@@ -9,7 +9,7 @@ import apiJson.ApiJson;
 import core.E.Literal;
 import tools.Fs;
 
-/// The text of a `<pkg>.json`: {"inputsSnapshot":"...","manifest":"...","types":[...]}, the manifest as an Info text.
+/// The text of a `_<pkg>.json`: {"inputsSnapshot":"...","manifest":"...","types":[...]}, the manifest as an Info text.
 final class OutputHelper{
   static String apiJson(List<Literal> core, String inputsSnapshot, MainsInfo manifest){
     return "{\"inputsSnapshot\":"+q(inputsSnapshot)+",\n\"manifest\":"+q(manifest.print())+",\n\"types\":"+ApiJson.toJson(core)+"}\n";
