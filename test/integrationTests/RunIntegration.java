@@ -3372,7 +3372,7 @@ Grow:Main{s -> base.Block#
    |                                  -----------------^~~~~~~------------
 
 While inspecting [###]
-This call to method "mut base.EList[_].add(_)" cannot typecheck.
+This call to the "mut" method "base.EList[_].add(_)" cannot typecheck.
 The receiver (the expression before the method name) has capability "read".
 This call requires a receiver with capability "mut" or "iso".
 [###]""", ex.getMessage());
@@ -3397,7 +3397,7 @@ Grow:Main{s -> base.Block#
    |                                    -----------------^~~~~~~----
 
 While inspecting [###]
-This call to method "mut base.EList[_].add(_)" cannot typecheck.
+This call to the "mut" method "base.EList[_].add(_)" cannot typecheck.
 The receiver (the expression before the method name) has capability "read".
 This call requires a receiver with capability "mut" or "iso".
 [###]""", ex.getMessage());
