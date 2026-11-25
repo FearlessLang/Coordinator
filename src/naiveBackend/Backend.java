@@ -96,7 +96,7 @@ public final class Backend{
     return "";
   }
   private static String selfNorm(Literal l){
-    if (!LiteralDeclarations.has(l.cs(), LiteralDeclarations.captureFree)){ return "{"; }
+    if (!l.name().equals(LiteralDeclarations.captureFree) && !LiteralDeclarations.has(l.cs(), LiteralDeclarations.captureFree)){ return "{"; }
     return ", _base.Norm$o$1.Own{ final Object _norm= _base.Norm$o$1.of(this); public Object _norm(){ return _norm; }";
   }
   private boolean hasInstance(Literal l){

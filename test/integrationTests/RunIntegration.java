@@ -1586,6 +1586,32 @@ Hello:Main{s->Block#(s.out.byte(72 .getByte), s.out.byte(105 .getByte))}
 """);
     utils.Err.strCmp("Hi", coordinator(root).main(root, stLib));
   }
+  @Test void theTypeCaptureFreeItselfIsACacheKey(@TempDir Path tmp) throws InterruptedException{
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_col/_rank_app.fear
+iii
+use base.Main as Main;
+use base.Block as Block;
+use base.Debug as Debug;
+use base.Str as Str;
+use base.Cache as Cache;
+use base.CacheF as CacheF;
+use base.CaptureFree as CaptureFree;
+Show:CacheF[CaptureFree,Str]{ x -> Block#(Debug#("computing"), "c") }
+Hello:Main{s->Block#
+  .do{ Debug#(Cache#(Cache.normCaptureFree(CaptureFree{}, {::}), Show)) }
+  .do{ Debug#(Cache#(Cache.normCaptureFree(CaptureFree{}, {::}), Show)) }
+  .done
+  }
+""");
+    utils.Err.strCmp("""
+computing
+c
+c
+""", coordinator(root).main(root, stLib));
+  }
   @Test void anEnumerationFamilyListsItsValuesOnceForEachCachedMethod(@TempDir Path tmp) throws InterruptedException{
     var root= tmp.resolve("root");
     UserError.root = root;
