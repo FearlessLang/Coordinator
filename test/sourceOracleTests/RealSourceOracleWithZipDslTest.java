@@ -270,6 +270,38 @@ the same compression method, sizes, checksum, date and time that the entry itsel
       errCentralDirectory(root);
     }
   }
+  private static byte[] storedZip(java.util.Map<String,byte[]> entries){
+    var bytes= new ByteArrayOutputStream();
+    Fs.ofV(() -> {
+      try (var zip= new ZipOutputStream(bytes)){
+        for (var en : entries.entrySet()){
+          var e= new ZipEntry(en.getKey());
+          var crc= new CRC32();
+          crc.update(en.getValue());
+          e.setMethod(ZipEntry.STORED);
+          e.setSize(en.getValue().length);
+          e.setCrc(crc.getValue());
+          e.setTime(978_307_200_000L);
+          zip.putNextEntry(e);
+          zip.write(en.getValue());
+        }
+      }
+    });
+    return bytes.toByteArray();
+  }
+  @Test void errZipWhoseCentralDirectoryPlacesAnEntryInsideTheContentOfAnotherEntry(@TempDir Path tmp){
+    var root= zipWithEntryAt(tmp, "a.fear", System.currentTimeMillis());
+    var header= java.util.Arrays.copyOf(storedZip(java.util.Map.of("a.txt", "x".getBytes(UTF_8))), 35);
+    var entries= new java.util.LinkedHashMap<String,byte[]>();
+    entries.put("a.txt", "x".getBytes(UTF_8));
+    entries.put("b.txt", header);
+    var all= storedZip(entries);
+    var inside= java.util.stream.IntStream.range(1, all.length-35).filter(i -> java.util.Arrays.equals(all, i, i+35, header, 0, 35)).findFirst().getAsInt();
+    java.nio.ByteBuffer.wrap(all).order(java.nio.ByteOrder.LITTLE_ENDIAN).putInt(centralAt(all)+42, inside);
+    all[13] |= (byte)0xFE;
+    Fs.ofV(() -> Fs.write(root.resolve("_pkg/z.zip"), all));
+    errCentralDirectory(root);
+  }
   private static Path zipWithComment(Path tmp, String comment){
     var root= zipWithEntryAt(tmp, "a.fear", System.currentTimeMillis());
     var bytes= new ByteArrayOutputStream();
