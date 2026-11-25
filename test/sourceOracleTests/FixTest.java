@@ -486,6 +486,40 @@ a_b/x.txt=x
     var second= Fs.isWindows() ? "a\uFF01.txt" : "a\uD83D\uDE00.txt";
     assertEquals("Renamed "+first+" to a_.txt\nRenamed "+second+" to a_2.txt\n", fix(root));
   }
+  @Test void movesAZipWhoseTwoHeadersOfAnEntryDisagreeToTheFixFolder(@TempDir Path tmp) throws IOException{
+    var root= root(tmp);
+    Fs.writeUtf8(root.resolve("keep.txt"), "k");
+    var all= zipOf("a.txt", "x".getBytes(UTF_8));
+    var central= IntStream.range(0, all.length-3).filter(i -> all[i]=='P' && all[i+1]=='K' && all[i+2]==1 && all[i+3]==2).findFirst().getAsInt();
+    all[central+12] ^= 1;
+    Fs.write(root.resolve("x.zip"), all);
+    assertEquals("Moved x.zip to "+tmp.resolve("root_fix").resolve("x.zip")+"\n", fix(root));
+    assertEquals("", fix(root));
+  }
+  @Test void movesAZipWithMoreThan2147483639BytesToTheFixFolder(@TempDir Path tmp) throws IOException{
+    var root= root(tmp);
+    Fs.writeUtf8(root.resolve("keep.txt"), "k");
+    try (var f= new java.io.RandomAccessFile(root.resolve("x.zip").toFile(), "rw")){ f.setLength(2147483640L); }
+    assertEquals("Moved x.zip to "+tmp.resolve("root_fix").resolve("x.zip")+"\n", fix(root));
+    assertEquals("", fix(root));
+  }
+  @Test void resetsTheTimeInTheFutureOfAFolderEntryOfAZip(@TempDir Path tmp) throws IOException{
+    var root= root(tmp);
+    var bytes= new ByteArrayOutputStream();
+    try (var zip= new ZipOutputStream(bytes, UTF_8)){
+      put(zip, "img/", System.currentTimeMillis()+3*86_400_000L, "");
+      put(zip, "img/a.txt", fine, "x");
+    }
+    Fs.write(root.resolve("x.zip"), bytes.toByteArray());
+    var before= System.currentTimeMillis();
+    assertEquals("Reset the time of x/img\n", fix(root));
+    var after= stored(Fs.readAllBytes(root.resolve("x.zip")));
+    assertEquals(List.of("img/", "img/a.txt"), after.stream().map(ZipEntry::getName).toList());
+    assertTrue(after.get(0).getTime()>=before-2_000 && after.get(0).getTime()<=System.currentTimeMillis()+2_000);
+    assertEquals(fine, after.get(1).getTime());
+    assertEquals("", fix(root));
+    assertEquals(1, new RealSourceOracleWithZip(root).allFiles().size());
+  }
   @Test void aCleanedFileInsideAZipGetsTheCurrentTime(@TempDir Path tmp) throws IOException{
     var root= root(tmp);
     var bytes= new ByteArrayOutputStream();

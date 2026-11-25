@@ -246,6 +246,102 @@ Path: "_pkg/z.zip"
 The list of entries at the end of this zip file does not match the entries of this zip file.
 [###]""", FsDsl.dumpErr(root, ex));
   }
+  private static int centralAt(byte[] all){
+    return java.util.stream.IntStream.range(0, all.length-3).filter(i -> all[i]=='P' && all[i+1]=='K' && all[i+2]==1 && all[i+3]==2).findFirst().getAsInt();
+  }
+  private static void errCentralDirectory(Path root){
+    var ex= assertThrows(UserError.class, () -> new RealSourceOracleWithZip(root));
+    utils.Err.strCmp("""
+Root: [###]
+Path: "_pkg/z.zip"
+
+The list of entries at the end of this zip file does not match the entries of this zip file.
+A zip file holds its entries one after the other, and then a list of all of them.
+The list must hold exactly the names of the entries, and must give for each entry
+the same compression method, sizes, checksum, date and time that the entry itself gives.
+[###]""", FsDsl.dumpErr(root, ex));
+  }
+  @Test void errZipWhoseTwoHeadersOfAnEntryDisagree(@TempDir Path tmp){
+    for (var field : List.of(10, 12, 14, 16, 20, 24)){
+      var root= zipWithEntryAt(tmp.resolve("c"+field), "a.fear", System.currentTimeMillis());
+      var all= Fs.of(() -> Fs.readAllBytes(root.resolve("_pkg/z.zip")));
+      all[centralAt(all)+field] ^= 1;
+      Fs.ofV(() -> Fs.write(root.resolve("_pkg/z.zip"), all));
+      errCentralDirectory(root);
+    }
+  }
+  private static Path zipWithComment(Path tmp, String comment){
+    var root= zipWithEntryAt(tmp, "a.fear", System.currentTimeMillis());
+    var bytes= new ByteArrayOutputStream();
+    Fs.ofV(() -> {
+      try (var zip= new ZipOutputStream(bytes)){
+        zip.setComment(comment);
+        zip.putNextEntry(new ZipEntry("a.fear"));
+        zip.write("A".getBytes(UTF_8));
+      }
+    });
+    Fs.ofV(() -> Fs.write(root.resolve("_pkg/z.zip"), bytes.toByteArray()));
+    return root;
+  }
+  @Test void okZipWithACommentHoldingTheSignatureOfTheEndRecord(@TempDir Path tmp){
+    var root= zipWithComment(tmp, "PK\5\6"+"x".repeat(30));
+    assertEquals(1, new RealSourceOracleWithZip(root).allFiles().size());
+  }
+  @Test void errZipFolderEntryDatedInTheFuture(@TempDir Path tmp){
+    var root= zipWithEntryAt(tmp, "a.fear", System.currentTimeMillis());
+    var bytes= new ByteArrayOutputStream();
+    Fs.ofV(() -> {
+      try (var zip= new ZipOutputStream(bytes)){
+        var folder= new ZipEntry("img/");
+        folder.setTime(System.currentTimeMillis()+3*86_400_000L);
+        zip.putNextEntry(folder);
+        zip.putNextEntry(new ZipEntry("img/a.txt"));
+        zip.write("A".getBytes(UTF_8));
+      }
+    });
+    Fs.ofV(() -> Fs.write(root.resolve("_pkg/z.zip"), bytes.toByteArray()));
+    var ex= assertThrows(UserError.class, () -> new RealSourceOracleWithZip(root));
+    utils.Err.strCmp("""
+Root: [###]
+Path: "_pkg/z.zip"
+Entry: [###]
+
+This zip entry is dated [###]""", FsDsl.dumpErr(root, ex));
+  }
+  @Test void errZipEntryWithDateFieldsInTheFutureAndAnotherTimeInAnExtraField(@TempDir Path tmp){
+    var root= zipWithEntryAt(tmp, "a.fear", System.currentTimeMillis());
+    var bytes= new ByteArrayOutputStream();
+    Fs.ofV(() -> {
+      try (var zip= new ZipOutputStream(bytes)){
+        var e= new ZipEntry("a.fear");
+        e.setLastModifiedTime(FileTime.fromMillis(System.currentTimeMillis()));
+        zip.putNextEntry(e);
+        zip.write("A".getBytes(UTF_8));
+      }
+    });
+    var all= bytes.toByteArray();
+    all[13] |= (byte)0xFE;
+    all[centralAt(all)+15] |= (byte)0xFE;
+    Fs.ofV(() -> Fs.write(root.resolve("_pkg/z.zip"), all));
+    var ex= assertThrows(UserError.class, () -> new RealSourceOracleWithZip(root));
+    utils.Err.strCmp("""
+Root: [###]
+Path: "_pkg/z.zip"
+Entry: [###]
+
+This zip entry is dated 2107-[###]""", FsDsl.dumpErr(root, ex));
+  }
+  @Test void errZipFileWithMoreThan2147483639Bytes(@TempDir Path tmp){
+    var root= zipWithEntryAt(tmp, "a.fear", System.currentTimeMillis());
+    Fs.ofV(() -> { try (var f= new java.io.RandomAccessFile(root.resolve("_pkg/z.zip").toFile(), "rw")){ f.setLength(2147483640L); } });
+    var ex= assertThrows(UserError.class, () -> new RealSourceOracleWithZip(root));
+    utils.Err.strCmp("""
+[###]
+This zip file has more than 2147483639 bytes.
+Fearless reads a zip file of at most 2147483639 bytes.
+Split the content into more zip files, or store the content as normal files instead.
+[###]""", ex.getMessage());
+  }
   @Test void okTwoDiskFiles(@TempDir Path tmp){ testOk(tmp, """
 _pkg/a.fear
 iii
