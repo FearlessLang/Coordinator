@@ -39,6 +39,7 @@ public final class BuildWithZip{
     this.since= since;
   }
   List<Ref> build(){
+    if (dated){ reqTime(root, Path.of("")); }
     reqNoEmptyDirs();
     Fs.walkV(root, s -> s
       .filter(p -> !p.equals(root))
@@ -83,7 +84,9 @@ public final class BuildWithZip{
       var rel= root.relativize(abs);
       if (Files.isSymbolicLink(abs)){ throw Fs.onSymbolicLink.apply(abs); }
       nonEmpty.add(rel.resolveSibling(""));
-      if (Fs.isDirectory(abs)){ dirs.add(rel); }
+      if (!Fs.isDirectory(abs)){ return; }
+      dirs.add(rel);
+      if (dated && !isInvisible(new PathEntry(root, rel))){ reqTime(abs, rel); }
     }));
     dirs.removeAll(nonEmpty);
     for (var d : dirs){
@@ -94,7 +97,7 @@ public final class BuildWithZip{
   private static void reqTime(Path abs, Path rel){
     var t= Fs.lastModified(abs);
     var now= System.currentTimeMillis();
-    if (t > now+futureTolerance){ throw Report.dateInTheFuture(rel, t, now); }
+    if (t > now+futureTolerance){ throw Report.dateInTheFuture(rel, Fs.isDirectory(abs), t, now); }
   }
   private void collectBodyDiskZip(Path rel){
     for (var e : since.read(root.resolve(rel), () -> ZipEntry.allEntryPaths(root, rel, since))){

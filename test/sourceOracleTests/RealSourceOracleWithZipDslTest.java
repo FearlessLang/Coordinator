@@ -133,12 +133,34 @@ Path: "_pkg/a.fear"
 
 This file is dated [###],
 [###]h [###]m [###]s after the current time of this computer, [###].
-Fearless decides what needs compiling by comparing the modification dates of the files,
-so a file dated in the future would make the later edits look older than the last compile.
+Fearless decides what needs compiling by comparing the modification dates of the files and of the folders,
+so a file or a folder dated in the future would make the later edits look older than the last compile.
 This usually comes from a computer whose clock is wrong, from a shared or network folder
 whose clock is ahead, or from unpacking an archive made in another time zone.
 Save the file again, or correct the clock of this computer.
 """, FsDsl.dumpErr(root, ex));
+  }
+  @Test void errFolderDatedInTheFuture(@TempDir Path tmp){
+    for (var folder : List.of("_pkg", "")){
+      var root= dated(tmp.resolve("case"+folder.length()), aFear, folder, System.currentTimeMillis()+3_600_000);
+      var ex= assertThrows(UserError.class, () -> new RealSourceOracleWithZip(root));
+      utils.Err.strCmp("""
+Root: [###]
+Path: "[###]"
+
+This folder is dated [###],
+[###]h [###]m [###]s after the current time of this computer, [###].
+Fearless decides what needs compiling by comparing the modification dates of the files and of the folders,
+so a file or a folder dated in the future would make the later edits look older than the last compile.
+This usually comes from a computer whose clock is wrong, from a shared or network folder
+whose clock is ahead, or from unpacking an archive made in another time zone.
+Add and remove a file in the folder, or correct the clock of this computer.
+""", FsDsl.dumpErr(root, ex));
+    }
+  }
+  @Test void okInvisibleFolderDatedInTheFuture(@TempDir Path tmp){
+    var root= dated(tmp, aFear+"jjj\n_pkg/.cache/b.txt\niii\nB\n", "_pkg/.cache", System.currentTimeMillis()+3_600_000);
+    assertEquals(1, new RealSourceOracleWithZip(root).allFiles().size());
   }
   @Test void okFileDatedAFewSecondsInTheFuture(@TempDir Path tmp){
     var root= dated(tmp, aFear, "_pkg/a.fear", System.currentTimeMillis()+2_000);

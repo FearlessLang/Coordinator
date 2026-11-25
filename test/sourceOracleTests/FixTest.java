@@ -355,9 +355,9 @@ com10/b.txt=b
 iii
 k
 jjj""", """
-Renamed \u212Aey.txt to _ey.txt
+Renamed \u212Aey.txt to p_ey.txt
 """, """
-_ey.txt=k
+p_ey.txt=k
 """);}
   @Test void deletesTheJunkFilesWithANameThatNotEveryDeskHolds(@TempDir Path tmp){
     for (var name : List.of("Icon\r", "a.txt:Zone.Identifier")){
@@ -390,6 +390,7 @@ x""", "Renamed lib/DES\u212ATOP.INI to des_top.ini\n", "lib/\nlib/des_top.ini=x\
   }
   @Test void movesAHiddenFolderHoldingANameThatIsNotAsciiToTheFixFolder(@TempDir Path tmp){
     var root= root(tmp);
+    Fs.writeUtf8(root.resolve("keep.txt"), "k");
     Fs.writeUtf8(root.resolve(".git/caf\uFFFD"), "real");
     if (Fs.isLinux()){ Fs.writeUtf8(Path.of(URI.create(root.toUri()+".git/raw%E9")), "raw"); }
     if (Fs.isWindows()){ Fs.writeUtf8(root.resolve(".git/lone\uD800"), "lone"); }
@@ -450,19 +451,20 @@ x2.zip[b.txt=b;]
       zipOf("in.zip", stored(List.of(".DS_Store", ".git/config", "a.txt"), UTF_8)));
     for (var i= 0; i<cases.size(); i += 1){
       var root= root(tmp.resolve("case"+i));
+      Fs.writeUtf8(root.resolve("keep.txt"), "k");
       Fs.write(root.resolve("x.zip"), cases.get(i));
       var moved= tmp.resolve("case"+i).resolve("root_fix").resolve("x.zip");
       assertEquals("Moved x.zip to "+moved+"\n", fix(root));
       assertArrayEquals(cases.get(i), Fs.readAllBytes(moved));
-      assertEquals(List.of(), names(root));
+      assertEquals(List.of("keep.txt"), names(root));
       assertEquals("", fix(root));
     }
   }
   @Test void aRenameCanBringAPathOverTheLimitAndTheEntryMovesToTheFixFolder(@TempDir Path tmp){
     var name= "a".repeat(197);
-    var root= root(tmp, name+"\niii\nx");
+    var root= root(tmp, name+"\niii\nx\njjj\nkeep.txt\niii\nk");
     assertEquals("Renamed "+name+" to "+name+".txt\nMoved "+name+".txt to "+tmp.resolve("root_fix").resolve(name+".txt")+"\n", fix(root));
-    assertEquals(List.of(), names(root));
+    assertEquals(List.of("keep.txt"), names(root));
     assertEquals("", fix(root));
   }
   @Test void aDeletedEntryDoesNotMoveALaterEntryRenamedToItsName(@TempDir Path tmp){ fixes(tmp, """
@@ -818,12 +820,56 @@ Deleted the empty folder old
 .cache/empty/
 a.txt=a
 """);}
-  @Test void keepsTheProjectFolderLeftWithNoEntry(@TempDir Path tmp){ fixes(tmp, """
-.DS_Store
+  @Test void endsWithAnErrorWhenTheProjectFolderIsLeftWithNoEntry(@TempDir Path tmp){
+    var root= root(tmp, ".DS_Store\niii\nx");
+    var lines= new ArrayList<String>();
+    var e= assertThrows(UserError.class, () -> Fix.of(root, lines::add));
+    assertEquals(List.of("Deleted .DS_Store"), lines);
+    assertEquals(root+"\nThis project folder holds no file after Fix.\nA project folder with no file can not be repaired.\n", e.getMessage());
+  }
+  @Test void aNameThatFixGivesStartsWithAnUnderscoreOnlyWhenTheOldNameDoes(@TempDir Path tmp){ fixes(tmp, """
+-b.txt
 iii
-x""", """
-Deleted .DS_Store
-""", "");}
+b
+jjj
+_My C.txt
+iii
+c
+jjj
+ d/e.txt
+iii
+e""", """
+Renamed  d to p_d
+Renamed -b.txt to p_b.txt
+Renamed _My C.txt to _my_c.txt
+""", """
+_my_c.txt=c
+p_b.txt=b
+p_d/
+p_d/e.txt=e
+""");}
+  @Test void movesAnEntryWhoseNameIsLongerThan191CharactersBeforeItsExtensionToTheFixFolder(@TempDir Path tmp){
+    var longName= "a".repeat(192)+".txt";
+    var okName= "b".repeat(191)+".txt";
+    var root= root(tmp, longName+"\niii\nx\njjj\n"+okName+"\niii\ny");
+    assertEquals("Moved "+longName+" to "+tmp.resolve("root_fix").resolve(longName)+"\n", fix(root));
+    assertEquals(List.of(okName), names(root));
+    assertEquals("", fix(root));
+  }
+  @Test void resetsTheTimesInTheFutureOfTheVisibleFolders(@TempDir Path tmp){
+    var root= root(tmp, "img/sub/a.png\niii\nx\njjj\nimg/.cache/b\niii\nx\njjj\nfine/c.png\niii\nx");
+    var before= System.currentTimeMillis();
+    var future= before+3_600_000;
+    for (var f : List.of("img/sub", "img/.cache", "img", "")){ Fs.ofV(() -> Fs.setLastModifiedTime(root.resolve(f), FileTime.fromMillis(future))); }
+    assertEquals("Reset the time of img/sub\nReset the time of img\nReset the time of the project folder\n", fix(root));
+    assertEquals(future/2_000, Fs.lastModified(root.resolve("img/.cache"))/2_000);
+    for (var f : List.of("img/sub", "img", "")){
+      var t= Fs.lastModified(root.resolve(f));
+      assertTrue(t>=before-2_000 && t<=System.currentTimeMillis()+2_000, f+" "+t);
+    }
+    assertEquals("", fix(root));
+    assertEquals(2, new RealSourceOracleWithZip(root).allFiles().size());
+  }
   @Test void fixesTheEntriesOfAZip(@TempDir Path tmp){ fixes(tmp, """
 lib/x.zip/a.fear
 iii
@@ -1093,6 +1139,7 @@ A:{}""");
   }
   @Test void movesAFileThatIsNotAZipFileToTheFixFolder(@TempDir Path tmp) throws IOException{
     var root= root(tmp);
+    Fs.writeUtf8(root.resolve("keep.txt"), "k");
     Fs.write(root.resolve("x.zip"), "not a zip".getBytes(UTF_8));
     Fs.write(root.resolve("y.zip"), new byte[0]);
     var fixed= tmp.resolve("root_fix");
@@ -1108,10 +1155,11 @@ A:{}""");
     var cases= List.of(twice, underAFile, broken, notUtf8);
     for (var i= 0; i<cases.size(); i += 1){
       var root= root(tmp.resolve("case"+i));
+      Fs.writeUtf8(root.resolve("keep.txt"), "k");
       Fs.write(root.resolve("x.zip"), cases.get(i));
       assertEquals("Moved x.zip to "+tmp.resolve("case"+i).resolve("root_fix").resolve("x.zip")+"\n", fix(root));
       assertArrayEquals(cases.get(i), Fs.readAllBytes(tmp.resolve("case"+i).resolve("root_fix").resolve("x.zip")));
-      assertEquals(List.of(), names(root));
+      assertEquals(List.of("keep.txt"), names(root));
     }
   }
   private static byte[] stored(List<String> names, java.nio.charset.Charset cs) throws IOException{

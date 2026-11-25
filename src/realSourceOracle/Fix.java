@@ -89,7 +89,7 @@ public final class Fix{
     }
     public void write(String name, byte[] bytes){ Fs.ofV(() -> Files.write(oneName(at(name)), bytes)); }
     public long time(String name){ return Fs.of(() -> Files.getLastModifiedTime(at(name), NOFOLLOW_LINKS)).toMillis(); }
-    public void time(String name, long time){ Fs.ofV(() -> Files.setLastModifiedTime(oneName(at(name)), FileTime.fromMillis(time))); }
+    public void time(String name, long time){ Fs.ofV(() -> Files.setLastModifiedTime(realFolder(at(name)) ? at(name) : oneName(at(name)), FileTime.fromMillis(time))); }
     public void delete(String name){
       Fs.ofV(() -> {
         var at= checked(name);
@@ -211,7 +211,14 @@ public final class Fix{
   private final int depth;
   private final Path fixFolder;
   private Fix(Consumer<String> out, int depth, Path fixFolder){ this.out= out; this.depth= depth; this.fixFolder= fixFolder; }
-  public static void of(Path folder, Consumer<String> out){ new Fix(out, 0, fixFolder(folder)).dir(new Disk(folder), ""); }
+  public static void of(Path folder, Consumer<String> out){
+    new Fix(out, 0, fixFolder(folder)).dir(new Disk(folder), "");
+    if (Disk.names(folder).isEmpty()){ throw Report.fixLeftNoEntry(folder); }
+    var now= System.currentTimeMillis();
+    if (Fs.lastModified(folder) <= now+BuildWithZip.futureTolerance){ return; }
+    Fs.ofV(() -> Files.setLastModifiedTime(folder, FileTime.fromMillis(now)));
+    out.accept("Reset the time of the project folder");
+  }
   private record Mount(String dev, Path root, Path point){}
   private static List<Mount> mounts(){
     return Fs.mountInfo().map(f -> new Mount(f[2], Fs.mountPath(f[3]), Fs.mountPath(f[4]))).toList();
@@ -270,7 +277,7 @@ public final class Fix{
     if (kind == Kind.other){ away(d, old, path); listing.remove(old); return; }
     var hidden= old.startsWith(".");
     var name= hidden ? old : renamed(d, old, path, kind == Kind.folder, listing);
-    var tooLong= BuildWithZip.len(path+name) > (hidden ? 250 : 200);
+    var tooLong= BuildWithZip.len(path+name) > (hidden ? 250 : 200) || !hidden && name.replaceAll("\\..*", "").length() > 191;
     var inZip= d instanceof Zip;
     var badHidden= hidden && (BuildWithZip.hiddenProblem(name).isPresent() || (kind != Kind.folder ? inZip : inZip ? !d.dir(name).names().isEmpty() : !hiddenOk(d.dir(name), path+name+"/")));
     var key= BuildWithZip.foldKey(name);
@@ -291,10 +298,13 @@ public final class Fix{
   }
   private boolean file(Dir d, String name, String path){
     if (name.endsWith(".fear")){ fear(d, name, path+name); }
+    time(d, name, path+name);
+    return name.endsWith(".zip") && zip(d, name, path);
+  }
+  private void time(Dir d, String name, String full){
     var now= System.currentTimeMillis();
     var bad= d instanceof Zip ? ZipLocator.asUtc(d.time(name)) > now+ZipLocator.futureTolerance : d.time(name) > now+BuildWithZip.futureTolerance;
-    if (bad){ d.time(name, now); out.accept("Reset the time of "+path+name); }
-    return name.endsWith(".zip") && zip(d, name, path);
+    if (bad){ d.time(name, now); out.accept("Reset the time of "+full); }
   }
   private void away(Dir d, String name, String path){
     if (d instanceof Zip){ throw new NotFixable(); }
@@ -313,7 +323,10 @@ public final class Fix{
   }
   private boolean folder(Dir d, String name, String full, boolean hidden){
     if (!hidden){ dir(d.dir(name), full+"/"); }
-    if (!d.dir(name).names().isEmpty()){ return false; }
+    if (!d.dir(name).names().isEmpty()){
+      if (!hidden && d instanceof Disk){ time(d, name, full); }
+      return false;
+    }
     d.delete(name);
     out.accept("Deleted the empty folder "+full);
     return true;
@@ -348,7 +361,8 @@ public final class Fix{
   }
   public static String segment(String s){
     var res= s.replaceAll("[^A-Za-z0-9_]+", "_").toLowerCase(Locale.ROOT);
-    return res.matches("[a-z_][a-z0-9_]*") && !Fs.winReserved.contains(res) ? res : "p"+res;
+    var ok= res.matches("[a-z_][a-z0-9_]*") && !Fs.winReserved.contains(res) && (!res.startsWith("_") || s.startsWith("_"));
+    return ok ? res : "p"+res;
   }
   private static final Pattern stray= Pattern.compile("[\\uFFFD\\p{Cs}]");
   private static String clashKey(String name){
