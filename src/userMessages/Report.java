@@ -232,6 +232,12 @@ when deciding what needs compiling, so such a date cannot be trusted.
     +"  Examples: \"foo_bar2\", \"src1\", \"_cache\"."
     );
   }
+  public static UserError visibleNameTooLong(RefParent kid){
+    return fail(showRel(kid),
+      "- A visible folder/file name is longer than 191 characters before its extension.",
+      "- Rename it to a shorter name."
+    );
+  }
   public static UserError windowsReservedName(RefParent kid){
     return fail(showRel(kid),
       "- A visible folder/file name is reserved on Windows (device name).\n"
@@ -298,27 +304,13 @@ when deciding what needs compiling, so such a date cannot be trusted.
       "- Rename the segment so it does not end with '.' or space."
     );
   }
-  public static UserError invisibleInvalidSurrogate(RefParent kid, String name){
+  public static UserError invisibleOnlyAscii(RefParent kid, int cp, String name){
     return fail(showRel(kid),
-      "- A protected name segment contains invalid Unicode.\n"
-    +"  Bad segment: "+disp(name),
-      "- Rename the segment to remove the invalid characters."
-    );
-  }
-  public static UserError invisibleNameTooLong(RefParent kid, String name){
-    return fail(showRel(kid),
-      "- A protected name segment is longer than 255 bytes in UTF-8.\n"
-    +"  Many file systems hold at most 255 bytes in one name.\n"
-    +"  Bad segment: "+disp(name),
-      "- Rename the segment to a shorter name."
-    );
-  }
-  public static UserError invisibleNoControlChars(RefParent kid, int cp, String name){
-    return fail(showRel(kid),
-      "- A protected name segment contains a control character.\n"
+      "- A protected name segment contains a character that is not printable ASCII.\n"
     +"  Character: "+Message.displayChar(cp)+"\n"
-    +"  Segment: "+disp(name),
-      "- Rename the segment to remove the control character."
+    +"  Segment: "+disp(name)+"\n"
+    +"  Protected names may use only the characters from space to ~ (U+0020 to U+007E).",
+      "- Rename the segment to remove the character."
     );}
   public static UserError invisibleNoWindowsBadChars(RefParent kid, char bad, String name){
     return fail(showRel(kid),
@@ -334,21 +326,17 @@ when deciding what needs compiling, so such a date cannot be trusted.
       "- A protected name segment uses a Windows reserved device name.\n"
     +"  Bad base: "+disp(base)+" in segment: "+disp(name),
       "- Rename it so the base name is not a Windows device name.\n"
-    +"  Reserved device name: \"con\", \"prn\", \"aux\", \"nul\", \"com1\"..\"com9\", \"lpt1\"..\"lpt9\", \"conin$\", \"conout$\", and \"com\" or \"lpt\" followed by U+00B9, U+00B2 or U+00B3."
+    +"  Reserved device name: \"con\", \"prn\", \"aux\", \"nul\", \"com1\"..\"com9\", \"lpt1\"..\"lpt9\", \"conin$\", \"conout$\"."
     );
   }
-  public static UserError invisibleSiblingNamesCollide(RefParent kid, String prev, String name, boolean caseOnly, boolean nfcOnly){
-    var reason=
-      caseOnly ? "Names differ only by case."
-      : nfcOnly  ? "Names differ only by Unicode normalization (NFC)."
-      :            "Names collide after Unicode NFC normalization and case-folding.";
+  public static UserError invisibleSiblingNamesCollide(RefParent kid, String prev, String name){
     return fail(showRel(kid),
       "- Two protected names in the same folder collide.\n"
     +"  Name 1: "+disp(prev)+"\n"
     +"  Name 2: "+disp(name)+"\n"
-    +"  Reason: "+reason,
+    +"  Reason: Names differ only by case.",
       "- Rename one of them so they are clearly distinct.\n"
-    +"- Avoid differences that are only case changes or Unicode-equivalent spellings."
+    +"- Avoid differences that are only case changes."
     );
   }
   //-- auto-loaded assets

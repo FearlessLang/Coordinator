@@ -988,12 +988,13 @@ Root: [###]
 Path: "_pkg/z/.d/a" [Start Of Heading 0x01] "b.txt"
 
 What went wrong
-- A protected name segment contains a control character.
+- A protected name segment contains a character that is not printable ASCII.
   Character: [Start Of Heading 0x01]
   Segment: "a" [Start Of Heading 0x01] "b.txt"
+  Protected names may use only the characters from space to ~ (U+0020 to U+007E).
 
 How to fix
-- Rename the segment to remove the control character.
+- Rename the segment to remove the character.
 
 We check this so that you[###]
 """);}
@@ -1013,12 +1014,12 @@ What went wrong
 
 How to fix
 - Rename it so the base name is not a Windows device name.
-  Reserved device name: "con", "prn", "aux", "nul", "com1".."com9", "lpt1".."lpt9", "conin$", "conout$", and "com" or "lpt" followed by U+00B9, U+00B2 or U+00B3.
+  Reserved device name: "con", "prn", "aux", "nul", "com1".."com9", "lpt1".."lpt9", "conin$", "conout$".
 
 We check this so that you[###]
 """);}
   @Test void errInvisibleReservedDeviceNamesOfTheConsoleAndWithSpaces(@TempDir Path tmp){
-    for (var name : List.of("conin$.log", "con .txt", "lpt\u00B9")){
+    for (var name : List.of("conin$.log", "con .txt")){
       runErrIOE(tmp.resolve("c"+name.length()), "_pkg/z.zip/.d/"+name+"\niii\nX\n", """
 Invalid path in this project folder.
 
@@ -1035,56 +1036,43 @@ How to fix
 """);
     }
   }
-  @Test void errInvisibleInvalidUnicode(@TempDir Path tmp){ runErrIOE(tmp, """
-_pkg/.d/a\uFFFDb.txt
-iii
-X
-""", """
+  @Test void errInvisibleNotAscii(@TempDir Path tmp){
+    for (var name : List.of("a\uFFFDb.txt", "\u00E9.txt", "\u017F.txt")){
+      runErrIOE(tmp.resolve("c"+(int)name.charAt(0)+name.length()), "_pkg/.d/"+name+"\niii\nX\n", """
 Invalid path in this project folder.
 
 Root: [###]
 Path: [###]
 
 What went wrong
-- A protected name segment contains invalid Unicode.
+- A protected name segment contains a character that is not printable ASCII.
 [###]
-""");}
-  @Test void errInvisibleNameLongerThan255Bytes(@TempDir Path tmp){ runErrIOE(tmp, "_pkg/z.zip/.d/"+"\u00E9".repeat(130)+"\niii\nX\n", Fs.isWindows() ? """
+""");
+    }
+  }
+  @Test void errZipFilePathLongerThan200CountsTheZipExtension(@TempDir Path tmp){ runErrIOE(tmp, "aaaaa/"+"b".repeat(191)+".zip/.a\niii\nX\n", """
 Invalid path in this project folder.
 
 Root: [###]
 Path: [###]
 
 What went wrong
-- A protected name segment is longer than 255 bytes in UTF-8.
-[###]
-""" : """
-Invalid path in this project folder.
-
-Root: [###]
-Path: [###]
-
-What went wrong
-- The path is longer than 250 <unit>
+- The path is longer than 200 <unit>
 [###]
 """.replace("<unit>", unit));}
-  @Test void errHiddenSiblingCaseFoldingCollisionInZip(@TempDir Path tmp){ runErrIOE(tmp, """
-_pkg/z.zip/.d/s.txt
-iii
-1
-jjj
-_pkg/z.zip/.d/\u017F.txt
-iii
-2
-""", """
+  @Test void errVisibleNameLongerThan191(@TempDir Path tmp){ runErrIOE(tmp, "a".repeat(192)+".txt\niii\nX\n", """
 Invalid path in this project folder.
 
 Root: [###]
 Path: [###]
 
 What went wrong
-- Two protected names in the same folder collide.
-[###]
+- A visible folder/file name is longer than 191 characters before its extension.
+
+How to fix
+- Rename it to a shorter name.
+
+We check this so that you[###]
 """);}
   @Test void errHiddenSiblingCaseCollisionInZip(@TempDir Path tmp){ runErrIOE(tmp, """
 _pkg/z.zip/.d/a.txt
@@ -1108,33 +1096,7 @@ What went wrong
 
 How to fix
 - Rename one of them so they are clearly distinct.
-- Avoid differences that are only case changes or Unicode-equivalent spellings.
-
-We check this so that you[###]
-""");}
-  @Test void errHiddenSiblingNfcCollisionInZip(@TempDir Path tmp){ runErrIOE(tmp, """
-_pkg/z.zip/.d/\u00e9.txt
-iii
-1
-jjj
-_pkg/z.zip/.d/e\u0301.txt
-iii
-2
-""", """
-Invalid path in this project folder.
-
-Root: [###]
-Path: "_pkg/z/.d/e" [U+0301] ".txt"
-
-What went wrong
-- Two protected names in the same folder collide.
-  Name 1: [U+00E9] ".txt"
-  Name 2: "e" [U+0301] ".txt"
-  Reason: Names differ only by Unicode normalization (NFC).
-
-How to fix
-- Rename one of them so they are clearly distinct.
-- Avoid differences that are only case changes or Unicode-equivalent spellings.
+- Avoid differences that are only case changes.
 
 We check this so that you[###]
 """);}
@@ -1569,32 +1531,6 @@ How to fix
 
 We check this so that you[###]
 """).formatted(longName).replace("<unit>", unit));
-  }
-  // Real filesystem paths can't carry a raw UTF-16 surrogate through UTF-8 encoding,
-  // so this exercises the message factory directly rather than through a real scan.
-  @Test void errInvisibleInvalidSurrogateMessage(@TempDir Path tmp) throws Exception{
-    var root= tmp.resolve("root").toAbsolutePath().normalize();
-    UserError.root = root;
-    Fs.createDirectories(root.resolve("_pkg"));
-    Fs.writeString(root.resolve("_pkg/a.fear"), "X");
-    var oracle= new RealSourceOracleWithZip(root);
-    var ref= oracle.allFiles().getFirst();
-    var ex= Report.invisibleInvalidSurrogate(ref, ".x\uD800y");
-    utils.Err.strCmp("""
-Invalid path in this project folder.
-
-Root: [###]
-Path: "_pkg/a.fear"
-
-What went wrong
-- A protected name segment contains invalid Unicode.
-  Bad segment: ".x" [HIGH SURROGATE U+D800] "y"
-
-How to fix
-- Rename the segment to remove the invalid characters.
-
-We check this so that you[###]
-""", ex.getMessage());
   }
   // Two assets that generate the same auto-loaded type name must be rejected, naming both
   // real files, instead of silently declaring that type twice in the synthetic
