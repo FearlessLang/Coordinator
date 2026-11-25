@@ -166,15 +166,26 @@ Save the file again as UTF-8, or remove it from the project folder.
     return new UserError(showRel(kid)+"\nThis file is dated "+dateOf(t)+"."+unset+"Save the file again, so that it gets the current date.\n");}
   public static UserError zipEntryDateInTheFuture(Path diskZip, List<String> steps, String entryName, long t, long now){
     return new UserError(showZipRel(diskZip, steps, entryName)+"\nThis zip entry is dated "+future(t, now)+"""
-Fearless decides what needs compiling by comparing the modification dates of the files,
-and the entries of a zip count as the files they unpack to:
-a file dated in the future would make the later edits look older than the last compile.
-This usually comes from a computer whose clock was wrong when the zip was made,
-or from a zip made in another time zone.
+A zip entry dated more than one day in the future usually comes from a computer
+whose clock was wrong when the zip was made.
 Make the zip again from files with the correct dates, or correct the clock of this computer.
 """);}
-  public static UserError zipEntryDateUnset(Path diskZip, List<String> steps, String entryName, long t){
-    return new UserError(showZipRel(diskZip, steps, entryName)+"\nThis zip entry is dated "+dateOf(t)+"."+unset+"Make the zip again from files with real dates.\n");}
+  public static UserError zipCanNotBeRead(Path diskZip, List<String> steps, String reason){
+    return directFail(showZip(diskZip, steps), "This zip file can not be read: "+reason+"\n"+"""
+Fearless reads a zip file whose entries are stored or deflated, are not encrypted,
+and have the content that their checksum declares.
+This usually comes from a zip file that was cut short while it was copied or downloaded,
+or from a zip file made with an unusual tool or option.
+Make the zip again.
+""");}
+  public static UserError zipCentralDirectory(Path diskZip, List<String> steps){
+    return directFail(showZip(diskZip, steps), """
+The list of entries at the end of this zip file does not match the entries of this zip file.
+A zip file holds its entries one after the other, and then a list of all of them.
+Some tools read the entries and some tools read the list, so this zip file shows different content in different tools.
+This usually comes from a zip file that was cut short while it was copied or downloaded.
+Make the zip again.
+""");}
   private static final String unset= """
 
 Fearless uses dates at or before the start of 1970 to mean "no date"
