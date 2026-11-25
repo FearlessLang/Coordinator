@@ -148,13 +148,17 @@ Different systems handle empty folders differently,
 and they may not be supported by compression tools (zip)
 or version control systems (git).
 """);}
-  public static UserError dateInTheFuture(Path kid, long t, long now){
-    return new UserError(showRel(kid)+"\nThis file is dated "+future(t, now)+"""
-Fearless decides what needs compiling by comparing the modification dates of the files,
-so a file dated in the future would make the later edits look older than the last compile.
+  public static UserError dateInTheFuture(Path kid, boolean folder, long t, long now){
+    return new UserError(showRel(kid)+"\nThis "+(folder ? "folder" : "file")+" is dated "+future(t, now)+"""
+Fearless decides what needs compiling by comparing the modification dates of the files and of the folders,
+so a file or a folder dated in the future would make the later edits look older than the last compile.
 This usually comes from a computer whose clock is wrong, from a shared or network folder
 whose clock is ahead, or from unpacking an archive made in another time zone.
-Save the file again, or correct the clock of this computer.
+"""+(folder ? "Add and remove a file in the folder" : "Save the file again")+", or correct the clock of this computer.\n");}
+  public static UserError fixLeftNoEntry(Path folder){
+    return new UserError(folder+"\n"+"""
+This project folder holds no file after Fix.
+A project folder with no file can not be repaired.
 """);}
   public static UserError notUtf8(Ref kid, long line, int offset){
     return new UserError(showRel(kid)+"\nThis file is not valid UTF-8 text.\nThe first invalid byte sequence is on line "+line+", at byte offset "+offset+" (counting from zero).\n"+"""
