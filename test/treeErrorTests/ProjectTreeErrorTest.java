@@ -152,8 +152,8 @@ Each package folder must contain exactly one file whose name follows this patter
   @Test void mapConflict(){ runErr("""
 Maps of the same rank give package name "a" different folders,
 for source code inside folders named "_pkb":
-- "map a as _pkc in _pkb;"; written in fear:/_pka/_rank_app999.fear
 - "map a as _pkb in _pkb;"; written in fear:/_pkd/_rank_app999.fear
+- "map a as _pkc in _pkb;"; written in fear:/_pka/_rank_app999.fear
 
 How maps work:
 - A rank file can have lines like "map name as _folder in _target;".
