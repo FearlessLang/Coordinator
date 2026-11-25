@@ -29,7 +29,6 @@ import java.lang.foreign.MemoryLayout;
 import java.lang.foreign.MemorySegment;
 import java.lang.foreign.SymbolLookup;
 import java.net.URI;
-import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
@@ -208,7 +207,6 @@ b""", """
 Deleted .AppleDouble
 Deleted .DS_Store
 Deleted ._a.fear
-Deleted .git/.DS_Store
 Deleted __MACOSX
 Deleted lib/#a.fear#
 Deleted lib/.Trash-1000
@@ -223,6 +221,7 @@ Deleted lib/sub/DESKTOP.INI
 Deleted lib/~$doc.docx
 """, """
 .git/
+.git/.DS_Store=x
 .git/config=x
 lib/
 lib/a.fear=A:{}
@@ -389,28 +388,32 @@ x""", "Renamed lib/DES\u212ATOP.INI to des_top.ini\n", "lib/\nlib/des_top.ini=x\
     assertEquals(texts, texts(root));
     assertEquals("", fix(root));
   }
-  @Test void movesTheHiddenNamesThatAreNotValidUnicodeToTheFixFolder(@TempDir Path tmp){
+  @Test void movesAHiddenFolderHoldingANameThatIsNotAsciiToTheFixFolder(@TempDir Path tmp){
     var root= root(tmp);
     Fs.writeUtf8(root.resolve(".git/caf\uFFFD"), "real");
     if (Fs.isLinux()){ Fs.writeUtf8(Path.of(URI.create(root.toUri()+".git/raw%E9")), "raw"); }
     if (Fs.isWindows()){ Fs.writeUtf8(root.resolve(".git/lone\uD800"), "lone"); }
     Fs.writeUtf8(root.resolve(".git/ok"), "ok");
-    var gone= names(root.resolve(".git")).stream().filter(n -> !n.equals("ok")).toList();
-    assertEquals(Fs.isMac() ? 1 : 2, gone.size());
+    var all= names(root.resolve(".git"));
     var into= tmp.resolve("root_fix").resolve(".git");
-    var lines= gone.stream().map(n -> "Moved .git/"+n+" to "+into.resolve(n)+"\n").collect(java.util.stream.Collectors.joining());
-    assertEquals(lines, fix(root));
-    assertEquals(List.of("ok"), names(root.resolve(".git")));
-    assertEquals(gone, names(into));
+    assertEquals("Moved .git to "+into+"\n", fix(root));
+    assertTrue(Files.notExists(root.resolve(".git")));
+    assertEquals(all, names(into));
     assertEquals("", fix(root));
   }
-  @Test void movesTheLaterOfTwoHiddenNamesEqualAfterCaseChangesToTheFixFolder(@TempDir Path tmp){
+  @Test void movesAHiddenFolderHoldingTwoNamesEqualAfterCaseChangesToTheFixFolder(@TempDir Path tmp){
     var root= root(tmp);
     Fs.writeUtf8(root.resolve(".a/x"), "lower");
     if (Fs.isLinux()){ Fs.writeUtf8(root.resolve(".a/X"), "upper"); }
-    var into= tmp.resolve("root_fix").resolve(".a");
-    assertEquals(Fs.isLinux() ? "Moved .a/x to "+into.resolve("x")+"\n" : "", fix(root));
+    assertEquals(Fs.isLinux() ? "Moved .a to "+tmp.resolve("root_fix").resolve(".a")+"\n" : "", fix(root));
     assertEquals("", fix(root));
+  }
+  @Test void leavesAHiddenFolderWithNoProblemAsItIs(@TempDir Path tmp){
+    var root= root(tmp, ".git/.DS_Store\niii\nx\njjj\n.git/sub/HEAD\niii\ny\njjj\n.git/empty/.keep\niii\nz");
+    Fs.ofV(() -> Fs.setLastModifiedTime(root.resolve(".git/sub/HEAD"), FileTime.fromMillis(0)));
+    assertEquals("", fix(root));
+    assertEquals(0, Fs.lastModified(root.resolve(".git/sub/HEAD")));
+    assertEquals("x", Fs.readUtf8(root.resolve(".git/.DS_Store")));
   }
   @Test void movesAnEntryWhosePathIsTooLongToTheFixFolder(@TempDir Path tmp){
     var visible= "a".repeat(100)+"/"+"b".repeat(100)+".txt";
@@ -418,7 +421,7 @@ x""", "Renamed lib/DES\u212ATOP.INI to des_top.ini\n", "lib/\nlib/des_top.ini=x\
     var short1= "a".repeat(100)+"/ok.txt";
     var root= root(tmp, visible+"\niii\nv\njjj\n"+hidden+"\niii\nh\njjj\n"+short1+"\niii\no");
     var fixed= tmp.resolve("root_fix");
-    assertEquals("Moved "+hidden+" to "+fixed.resolve(hidden)+"\nMoved "+visible+" to "+fixed.resolve(visible)+"\n", fix(root));
+    assertEquals("Moved .h to "+fixed.resolve(".h")+"\nMoved "+visible+" to "+fixed.resolve(visible)+"\n", fix(root));
     assertEquals("v", Fs.readUtf8(fixed.resolve(visible)));
     assertEquals("h", Fs.readUtf8(fixed.resolve(hidden)));
     assertEquals("", fix(root));
@@ -437,22 +440,23 @@ x/
 x/a.txt=a
 x2.zip[b.txt=b;]
 """);}
-  @Test void movesAHiddenNameLongerThan255BytesToTheFixFolderOrEndsWhereTheDeskCanNotHoldIt(@TempDir Path tmp) throws IOException{
-    var name= ".h"+"\u00E9".repeat(127);
-    var root= root(tmp);
-    var holds= !Fs.isLinux();
-    var zip= stored(List.of(name, "a.txt"), UTF_8);
-    Fs.write(root.resolve("x.zip"), zip);
-    var to= tmp.resolve("root_fix").resolve("x").resolve(name);
-    if (holds){
-      assertEquals("Moved x/"+name+" to "+to+"\n", fix(root));
-      assertEquals("x.zip[a.txt=x;]\n", dump(root));
-      return;
+  @Test void movesAZipHoldingAHiddenNameThatIsNotJunkToTheFixFolder(@TempDir Path tmp) throws IOException{
+    var cases= List.of(
+      stored(List.of(".DS_Store", "My File.txt", ".git/config", "a.txt"), UTF_8),
+      stored(List.of("lib/.hidden", "a.txt"), UTF_8),
+      stored(List.of(".h/a:b", "a.txt"), UTF_8),
+      stored(List.of(".h/a.", ".h/b ", ".h/con.txt", "a.txt"), UTF_8),
+      stored(List.of(".h"+"\u00E9".repeat(127), "a.txt"), UTF_8),
+      zipOf("in.zip", stored(List.of(".DS_Store", ".git/config", "a.txt"), UTF_8)));
+    for (var i= 0; i<cases.size(); i += 1){
+      var root= root(tmp.resolve("case"+i));
+      Fs.write(root.resolve("x.zip"), cases.get(i));
+      var moved= tmp.resolve("case"+i).resolve("root_fix").resolve("x.zip");
+      assertEquals("Moved x.zip to "+moved+"\n", fix(root));
+      assertArrayEquals(cases.get(i), Fs.readAllBytes(moved));
+      assertEquals(List.of(), names(root));
+      assertEquals("", fix(root));
     }
-    var lines= new ArrayList<String>();
-    assertThrows(UncheckedIOException.class, () -> Fix.of(root, lines::add));
-    assertEquals(List.of(), lines);
-    assertArrayEquals(zip, Fs.readAllBytes(root.resolve("x.zip")));
   }
   @Test void aRenameCanBringAPathOverTheLimitAndTheEntryMovesToTheFixFolder(@TempDir Path tmp){
     var name= "a".repeat(197);
@@ -479,53 +483,6 @@ a_b/x.txt=x
     var first= Fs.isWindows() ? "a\uD83D\uDE00.txt" : "a\uFF01.txt";
     var second= Fs.isWindows() ? "a\uFF01.txt" : "a\uD83D\uDE00.txt";
     assertEquals("Renamed "+first+" to a_.txt\nRenamed "+second+" to a_2.txt\n", fix(root));
-  }
-  @Test void aFixEndingInsideAZipWritesTheZipWithTheChangesDone(@TempDir Path tmp) throws IOException{
-    var root= root(tmp);
-    var tooLong= ".a/"+"c".repeat(250);
-    var longName= ".h"+"\u00E9".repeat(127);
-    var holds= !Fs.isLinux();
-    Fs.write(root.resolve("x.zip"), stored(List.of(".DS_Store", tooLong, longName), UTF_8));
-    var q= tmp.resolve("root_fix").resolve("x");
-    var done= List.of("Deleted x/.DS_Store", "Moved x/"+tooLong+" to "+q.resolve(tooLong), "Deleted the empty folder x/.a");
-    var lines= new ArrayList<String>();
-    if (holds){
-      Fix.of(root, lines::add);
-      assertEquals(Stream.concat(done.stream(), Stream.of("Moved x/"+longName+" to "+q.resolve(longName), "Deleted the empty zip x.zip")).toList(), lines);
-      return;
-    }
-    assertThrows(UncheckedIOException.class, () -> Fix.of(root, lines::add));
-    assertEquals(done, lines);
-    assertEquals(List.of(longName), stored(Fs.readAllBytes(root.resolve("x.zip"))).stream().map(ZipEntry::getName).toList());
-    assertEquals("x", Fs.readUtf8(q.resolve(tooLong)));
-  }
-  @Test void aRefusedMoveOutOfAZipLeavesNoPartialCopy(@TempDir Path tmp) throws IOException{
-    var root= root(tmp);
-    var longName= "\u00E9".repeat(150);
-    var holds= !Fs.isLinux();
-    var zip= stored(List.of(".H/a.txt", ".h/ok.txt", ".h/"+longName), UTF_8);
-    Fs.write(root.resolve("a.zip"), zip);
-    var moved= tmp.resolve("root_fix").resolve("a").resolve(".h");
-    var lines= new ArrayList<String>();
-    if (holds){
-      Fix.of(root, lines::add);
-      assertEquals(List.of("Moved a/.h to "+moved), lines);
-      assertEquals("x", Fs.readUtf8(moved.resolve("ok.txt")));
-      return;
-    }
-    assertThrows(UncheckedIOException.class, () -> Fix.of(root, lines::add));
-    assertEquals(List.of(), lines);
-    assertTrue(!Files.exists(moved, java.nio.file.LinkOption.NOFOLLOW_LINKS));
-    assertArrayEquals(zip, Fs.readAllBytes(root.resolve("a.zip")));
-  }
-  @Test void aMoveEndsWhenAnEarlierMoveLeftALinkOnItsWay(@TempDir Path tmp) throws Exception{
-    var root= root(tmp, "a/a.txt\niii\na\njjj\nx.zip/.h/con\niii\nc");
-    folderLink(root.resolve("x"), root.resolve("a"));
-    var q= tmp.resolve("root_fix").resolve("x");
-    var lines= new ArrayList<String>();
-    var e= assertThrows(UncheckedIOException.class, () -> Fix.of(root, lines::add));
-    assertEquals(new FileAlreadyExistsException(q.toString()).toString(), e.getCause().toString());
-    assertEquals(List.of("Moved x to "+q), lines);
   }
   @Test void aCleanedFileInsideAZipGetsTheCurrentTime(@TempDir Path tmp) throws IOException{
     var root= root(tmp);
@@ -557,35 +514,8 @@ a_b/x.txt=x
     if (Fs.isWindows()){ Fs.ofV(() -> Files.setAttribute(p, "dos:readonly", true)); return; }
     Fs.ofV(() -> Files.setPosixFilePermissions(p, PosixFilePermissions.fromString(Files.isDirectory(p) ? "r-xr-xr-x" : "r--r--r--")));
   }
-  @Test void movesTheHiddenNamesOfAZipEndingWithADotOrASpaceOrReservedForADevice(@TempDir Path tmp) throws IOException{
-    try{
-      var root= root(tmp);
-      Fs.write(root.resolve("x.zip"), stored(List.of(".h/a.", ".h/b ", ".h/con.txt", ".h/d./nul", "a.txt"), UTF_8));
-      var q= tmp.resolve("root_fix")+File.separator+"x"+File.separator+".h"+File.separator;
-      assertEquals("Moved x/.h/a. to "+q+"a.\nMoved x/.h/b  to "+q+"b \nMoved x/.h/con.txt to "+q+"con.txt\nMoved x/.h/d. to "+q+"d.\nDeleted the empty folder x/.h\n", fix(root));
-      assertEquals(List.of("a.", "b ", "con.txt", "d."), names(tmp.resolve("root_fix").resolve("x").resolve(".h")));
-      assertEquals("x.zip[a.txt=x;]\n", dump(root));
-    }
-    finally{ removeUnreachable(tmp); }
-  }
   private static void removeUnreachable(Path folder){
     if (Fs.isWindows()){ run("This test removes the names that only a \\\\?\\ path reaches.", "cmd", "/c", "rd", "/s", "/q", "\\\\?\\"+folder); }
-  }
-  @Test void movesAHiddenNameOfAZipHoldingAColonOrEndsOnWindows(@TempDir Path tmp) throws IOException{
-    var root= root(tmp);
-    var zip= stored(List.of(".h/a:b", "a.txt"), UTF_8);
-    Fs.write(root.resolve("x.zip"), zip);
-    var lines= new ArrayList<String>();
-    if (Fs.isWindows()){
-      assertThrows(UncheckedIOException.class, () -> Fix.of(root, lines::add));
-      assertEquals(List.of(), lines);
-      assertArrayEquals(zip, Fs.readAllBytes(root.resolve("x.zip")));
-      assertEquals(List.of(), texts(tmp.resolve("root_fix")));
-      return;
-    }
-    var q= tmp.resolve("root_fix").resolve("x").resolve(".h");
-    Fix.of(root, lines::add);
-    assertEquals(List.of("Moved x/.h/a:b to "+q.resolve("a:b"), "Deleted the empty folder x/.h"), lines);
   }
   @Test void fixRenamesAndMovesTheNamesEndingWithADotOrASpaceOrReservedForADevice(@TempDir Path tmp){
     try{
@@ -684,6 +614,23 @@ a_b/x.txt=x
     var p= Fs.of(() -> new ProcessBuilder(cmd).redirectErrorStream(true).start());
     var out= new String(Fs.of(() -> p.getInputStream().readAllBytes()));
     assertEquals(0, p.onExit().join().exitValue(), why+"\n"+String.join(" ", cmd)+"\n"+out);
+  }
+  @Test void movesAZipCutBeforeItsCentralDirectoryToTheFixFolder(@TempDir Path tmp) throws IOException{
+    var root= root(tmp);
+    var all= stored(List.of("a.txt"), UTF_8);
+    var central= IntStream.range(0, all.length-3).filter(i -> all[i]=='P' && all[i+1]=='K' && all[i+2]==1 && all[i+3]==2).findFirst().getAsInt();
+    var cut= java.util.Arrays.copyOf(all, central);
+    Fs.write(root.resolve("x.zip"), cut);
+    Fs.writeUtf8(root.resolve("b.txt"), "b");
+    assertEquals("Moved x.zip to "+tmp.resolve("root_fix").resolve("x.zip")+"\n", fix(root));
+    assertArrayEquals(cut, Fs.readAllBytes(tmp.resolve("root_fix").resolve("x.zip")));
+    assertEquals("", fix(root));
+  }
+  @Test void deletesAnEmptyHiddenFolderOfAZip(@TempDir Path tmp) throws IOException{
+    var root= root(tmp);
+    Fs.write(root.resolve("x.zip"), stored(List.of(".gone/", "a.txt"), UTF_8));
+    assertEquals("Deleted the empty folder x/.gone\n", fix(root));
+    assertEquals("x.zip[a.txt=x;]\n", dump(root));
   }
   @Test void aZipWrittenAgainLosesItsComment(@TempDir Path tmp) throws IOException{
     var root= root(tmp);
@@ -801,7 +748,7 @@ Cleaned 3 characters of _app/win.fear
     assertEquals(quotes, Fs.readUtf8(root.resolve(".old/quotes.fear")));
     assertEquals("", fix(root));
   }
-  @Test void resetsTheTimesThatAreUnsetOrInTheFuture(@TempDir Path tmp){
+  @Test void resetsTheTimesInTheFutureOfTheVisibleFiles(@TempDir Path tmp){
     var root= root(tmp, """
 img/unset.png
 iii
@@ -815,26 +762,29 @@ img/fine.png
 iii
 x
 jjj
-.git/unset
+img/.future
+iii
+x
+jjj
+.git/future
 iii
 x""");
     var before= System.currentTimeMillis();
     var fine= before-86_400_000;
+    var future= before+3_600_000;
     Fs.ofV(() -> Fs.setLastModifiedTime(root.resolve("img/unset.png"), FileTime.fromMillis(0)));
-    Fs.ofV(() -> Fs.setLastModifiedTime(root.resolve(".git/unset"), FileTime.fromMillis(0)));
-    Fs.ofV(() -> Fs.setLastModifiedTime(root.resolve("img/future.png"), FileTime.fromMillis(before+3_600_000)));
     Fs.ofV(() -> Fs.setLastModifiedTime(root.resolve("img/fine.png"), FileTime.fromMillis(fine)));
+    for (var f : List.of("img/future.png", "img/.future", ".git/future")){ Fs.ofV(() -> Fs.setLastModifiedTime(root.resolve(f), FileTime.fromMillis(future))); }
     assertEquals("""
-Reset the time of .git/unset
 Reset the time of img/future.png
-Reset the time of img/unset.png
 """, fix(root));
-    for (var f : List.of("img/unset.png", "img/future.png", ".git/unset")){
-      var t= Fs.lastModified(root.resolve(f));
-      assertTrue(t>=before-2_000 && t<=System.currentTimeMillis()+2_000, f+" "+t);
-    }
+    assertEquals(0, Fs.lastModified(root.resolve("img/unset.png")));
+    for (var f : List.of("img/.future", ".git/future")){ assertEquals(future/2_000, Fs.lastModified(root.resolve(f))/2_000, f); }
+    var t= Fs.lastModified(root.resolve("img/future.png"));
+    assertTrue(t>=before-2_000 && t<=System.currentTimeMillis()+2_000, "img/future.png "+t);
     assertEquals(fine/2_000, Fs.lastModified(root.resolve("img/fine.png"))/2_000);
     assertEquals("", fix(root));
+    assertEquals(3, new RealSourceOracleWithZip(root).allFiles().size());
   }
   @Test void deletesTheFoldersLeftWithNoEntryOutsideTheInvisibleFolders(@TempDir Path tmp){ fixes(tmp, """
 old/sub/.DS_Store
@@ -895,38 +845,36 @@ jjj
 lib/x.zip/old/
 iii
 jjj
-lib/x.zip/.gone/
+lib/x.zip/.Trash-1000/files/a.fear
 iii
+x
 jjj
 lib/x.zip/gone/sub/Thumbs.db
 iii
 x
 jjj
-lib/x.zip/.git/refs/
-iii
-jjj
-lib/x.zip/.git/a.fear
-iii
-A:{}\r
-B:{}
-jjj
 lib/x.zip/img/
 iii
+jjj
+lib/x.zip/img/.a.png.swp
+iii
+x
 jjj
 lib/x.zip/img/logo.png
 iii
 x""", """
 Deleted lib/x/.DS_Store
-Deleted the empty folder lib/x/.gone
+Deleted lib/x/.Trash-1000
 Deleted lib/x/__MACOSX
 Fixed the line endings of lib/x/a.fear
 Deleted lib/x/gone/sub/Thumbs.db
 Deleted the empty folder lib/x/gone/sub
 Deleted the empty folder lib/x/gone
+Deleted lib/x/img/.a.png.swp
 Deleted the empty folder lib/x/old
 """, """
 lib/
-lib/x.zip[a.fear=A:{}<lf>B:{};.git/refs/;.git/a.fear=A:{}<cr><lf>B:{};img/;img/logo.png=x;]
+lib/x.zip[a.fear=A:{}<lf>B:{};img/;img/logo.png=x;]
 """);}
   @Test void fixesAZipInsideAZipAndDeletesTheZipsLeftWithNoFile(@TempDir Path tmp){ fixes(tmp, """
 lib/x.zip/in/y.zip/a.fear
@@ -939,10 +887,6 @@ iii
 x
 jjj
 lib/x.zip/none.zip/sub/.DS_Store
-iii
-x
-jjj
-lib/x.zip/.hidden/z.zip/.DS_Store
 iii
 x
 jjj
@@ -977,7 +921,7 @@ Deleted the empty zip lib/x/none.zip
 .inv/v.zip[.DS_Store=x;]
 a.txt=a
 lib/
-lib/x.zip[in/y.zip[a.fear=A:{}<lf>B:{};];.hidden/z.zip[.DS_Store=x;];]
+lib/x.zip[in/y.zip[a.fear=A:{}<lf>B:{};];]
 """);}
   @Test void fixesTheStoredNamesOfAZip(@TempDir Path tmp) throws IOException{
     var root= root(tmp);
@@ -1048,16 +992,6 @@ jjj
 @/empty/
 iii
 jjj
-@/.git/refs/
-iii
-jjj
-@/.git/Keep Me
-iii
-x
-jjj
-@/.gone/
-iii
-jjj
 @/Notes
 iii
 n
@@ -1073,7 +1007,6 @@ iii
     var disk= root(tmp.resolve("disk"), mixed.replace("@", "d"));
     var zip= root(tmp.resolve("zip"), mixed.replace("@", "d.zip"));
     var lines= """
-Deleted the empty folder d/.gone
 Renamed d/My Dir to my_dir
 Deleted d/my_dir/.DS_Store
 Renamed d/my_dir/A File.FEAR to a_file.fear
@@ -1091,9 +1024,6 @@ Renamed d/my file.txt to my_file2.txt
     assertEquals(lines, fix(zip));
     assertEquals("""
 d/
-d/.git/
-d/.git/Keep Me=x
-d/.git/refs/
 d/my_dir/
 d/my_dir/a_file.fear=A:{}<lf>B:{ }
 d/my_file.txt=2
@@ -1101,7 +1031,7 @@ d/my_file2.txt=1
 d/notes.txt=n
 """, dump(disk));
     assertEquals("""
-d.zip[my_dir/a_file.fear=A:{}<lf>B:{ };.git/refs/;.git/Keep Me=x;notes.txt=n;my_file2.txt=1;my_file.txt=2;]
+d.zip[my_dir/a_file.fear=A:{}<lf>B:{ };notes.txt=n;my_file2.txt=1;my_file.txt=2;]
 """, dump(zip));
     var files= FsDsl.dump(new RealSourceOracleWithZip(disk));
     assertEquals(files, FsDsl.dump(new RealSourceOracleWithZip(zip)));
@@ -1118,14 +1048,11 @@ d.zip[my_dir/a_file.fear=A:{}<lf>B:{ };.git/refs/;.git/Keep Me=x;notes.txt=n;my_
     var deep= inner.toByteArray();
     for (var i= 0; i<64; i += 1){ deep = zipOf("in.zip", deep); }
     Fs.write(root.resolve("ok.zip"), deep);
-    Fs.write(root.resolve("x.zip"), zipOf("in.zip", deep));
-    var x= "x/"+"in/".repeat(64);
-    var moved= tmp.resolve("root_fix").resolve(x+"in.zip");
-    var lines= new StringBuilder("Deleted ok/"+"in/".repeat(64)+".DS_Store\nMoved "+x+"in.zip to "+moved+"\n");
-    for (var k= 63; k>=0; k -= 1){ lines.append("Deleted the empty zip x/"+"in/".repeat(k)+"in.zip\n"); }
-    lines.append("Deleted the empty zip x.zip\n");
-    assertEquals(lines.toString(), fix(root));
-    assertArrayEquals(inner.toByteArray(), Fs.readAllBytes(moved));
+    var tooDeep= zipOf("in.zip", deep);
+    Fs.write(root.resolve("x.zip"), tooDeep);
+    var moved= tmp.resolve("root_fix").resolve("x.zip");
+    assertEquals("Deleted ok/"+"in/".repeat(64)+".DS_Store\nMoved x.zip to "+moved+"\n", fix(root));
+    assertArrayEquals(tooDeep, Fs.readAllBytes(moved));
     assertEquals(List.of("ok.zip"), names(root));
     assertEquals("", fix(root));
   }
@@ -1136,19 +1063,15 @@ d.zip[my_dir/a_file.fear=A:{}<lf>B:{ };.git/refs/;.git/Keep Me=x;notes.txt=n;my_
     try (var zip= new ZipOutputStream(bytes, UTF_8)){
       put(zip, "z.txt", fine, "z");
       put(zip, "late.txt", before+3*86_400_000L, "u");
-      put(zip, ".git/future", before+3*86_400_000L, "f");
       put(zip, "a.txt", fine+2_000, "a");
     }
     Fs.write(root.resolve("x.zip"), bytes.toByteArray());
-    assertEquals("""
-Reset the time of x/.git/future
-Reset the time of x/late.txt
-""", fix(root));
+    assertEquals("Reset the time of x/late.txt\n", fix(root));
     var after= stored(Fs.readAllBytes(root.resolve("x.zip")));
-    assertEquals(List.of("z.txt", "late.txt", ".git/future", "a.txt"), after.stream().map(ZipEntry::getName).toList());
+    assertEquals(List.of("z.txt", "late.txt", "a.txt"), after.stream().map(ZipEntry::getName).toList());
     assertEquals(fine, after.get(0).getTime());
-    assertEquals(fine+2_000, after.get(3).getTime());
-    for (var i : List.of(1, 2)){
+    assertEquals(fine+2_000, after.get(2).getTime());
+    for (var i : List.of(1)){
       var t= after.get(i).getTime();
       assertTrue(t>=before-2_000 && t<=System.currentTimeMillis(), after.get(i).getName()+" "+t);
     }

@@ -39,6 +39,7 @@ public record ZipEntry(Path root, Path local, List<String> segments, List<String
     if (steps.size() > maxZipNesting){ throw Report.zipNestingTooDeep(diskZip, steps); }
     for (var name : ZipLocator.entryNames(diskZip, steps)){
       var e= new ZipEntry(root, local, zipsToSegments(steps, name), steps, name, since);
+      if (Stream.of(name.split("/")).anyMatch(s -> s.startsWith("."))){ throw Report.zipProtectedEntryName(diskZip, steps, name); }
       res.add(e);
       if (e.expanded()){ reqCollect(diskZip, root, local, Push.of(steps, name), since, res); }
     }

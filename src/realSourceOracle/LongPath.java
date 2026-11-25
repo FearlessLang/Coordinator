@@ -33,7 +33,6 @@ public final class LongPath{
   private static final VarHandle lastError= Linker.Option.captureStateLayout().varHandle(MemoryLayout.PathElement.groupElement("GetLastError"));
   private static final MethodHandle getAttributes= call("GetFileAttributesW", FunctionDescriptor.of(JAVA_INT, ADDRESS));
   private static final MethodHandle moveFile= call("MoveFileExW", FunctionDescriptor.of(JAVA_INT, ADDRESS, ADDRESS, JAVA_INT));
-  private static final MethodHandle createFolder= call("CreateDirectoryW", FunctionDescriptor.of(JAVA_INT, ADDRESS, ADDRESS));
   private static final MethodHandle firstVolume= call("FindFirstVolumeW", FunctionDescriptor.of(ADDRESS, ADDRESS, JAVA_INT));
   private static final MethodHandle nextVolume= call("FindNextVolumeW", FunctionDescriptor.of(JAVA_INT, ADDRESS, ADDRESS, JAVA_INT));
   private static final MethodHandle closeVolumes= call("FindVolumeClose", FunctionDescriptor.of(JAVA_INT, ADDRESS));
@@ -68,14 +67,6 @@ public final class LongPath{
     try (var arena= Arena.ofConfined()){
       var state= arena.allocate(Linker.Option.captureStateLayout());
       if ((int)moveFile.invokeExact(state, wide(arena, from), wide(arena, to), 0) == 0){ throw failed(shown(to), error(state)); }
-    }
-    catch (IOException e){ throw e; }
-    catch (Throwable t){ throw Bug.of(t); }
-  }
-  public static void makeFolder(String path) throws IOException{
-    try (var arena= Arena.ofConfined()){
-      var state= arena.allocate(Linker.Option.captureStateLayout());
-      if ((int)createFolder.invokeExact(state, wide(arena, path), MemorySegment.NULL) == 0){ throw failed(shown(path), error(state)); }
     }
     catch (IOException e){ throw e; }
     catch (Throwable t){ throw Bug.of(t); }

@@ -14,8 +14,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
-import java.util.function.LongFunction;
-import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
 import tools.Fs;
@@ -61,6 +59,7 @@ public final class BuildWithZip{
     var rel= root.relativize(abs);
     var pe= new PathEntry(root, rel, since);
     var invisible= isInvisible(pe);
+    if (invisible){ hiddenProblem(rel.getFileName().toString()).ifPresent(f -> { throw f.apply(pe); }); }
     if (!Fs.isRegularFile(abs)){ throw invisible
       ? Report.invisibleOnlyRegularFilesAndDirs(abs)
       : Report.onlyRegularFilesAndDirs(abs);
@@ -94,7 +93,8 @@ public final class BuildWithZip{
   }
   private static void reqTime(Path abs, Path rel){
     var t= Fs.lastModified(abs);
-    BuildWithZip.reqTime(t, () -> Report.dateUnset(rel, t), now -> Report.dateInTheFuture(rel, t, now));
+    var now= System.currentTimeMillis();
+    if (t > now+futureTolerance){ throw Report.dateInTheFuture(rel, t, now); }
   }
   private void collectBodyDiskZip(Path rel){
     for (var e : since.read(root.resolve(rel), () -> ZipEntry.allEntryPaths(root, rel, since))){
@@ -110,11 +110,6 @@ public final class BuildWithZip{
     }
   }
   static final long futureTolerance= 5_000;
-  static void reqTime(long t, Supplier<UserError> unset, LongFunction<UserError> future){
-    if (t <= 0){ throw unset.get(); }
-    var now= System.currentTimeMillis();
-    if (t > now+futureTolerance){ throw future.apply(now); }
-  }
   static void checkTooLong(RefParent kid){
     var limit= isInvisible(kid) ? 250 : 200;
     if (len(kid.fearPath().substring(SourceOracle.root.length())) > limit){ throw Report.pathTooLong(kid, limit); }
