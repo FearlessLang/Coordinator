@@ -1135,17 +1135,17 @@ d.zip[my_dir/a_file.fear=A:{}<lf>B:{ };.git/refs/;.git/Keep Me=x;notes.txt=n;my_
     var bytes= new ByteArrayOutputStream();
     try (var zip= new ZipOutputStream(bytes, UTF_8)){
       put(zip, "z.txt", fine, "z");
-      put(zip, "unset.txt", 0, "u");
-      put(zip, ".git/future", before+3_600_000, "f");
+      put(zip, "late.txt", before+3*86_400_000L, "u");
+      put(zip, ".git/future", before+3*86_400_000L, "f");
       put(zip, "a.txt", fine+2_000, "a");
     }
     Fs.write(root.resolve("x.zip"), bytes.toByteArray());
     assertEquals("""
 Reset the time of x/.git/future
-Reset the time of x/unset.txt
+Reset the time of x/late.txt
 """, fix(root));
     var after= stored(Fs.readAllBytes(root.resolve("x.zip")));
-    assertEquals(List.of("z.txt", "unset.txt", ".git/future", "a.txt"), after.stream().map(ZipEntry::getName).toList());
+    assertEquals(List.of("z.txt", "late.txt", ".git/future", "a.txt"), after.stream().map(ZipEntry::getName).toList());
     assertEquals(fine, after.get(0).getTime());
     assertEquals(fine+2_000, after.get(3).getTime());
     for (var i : List.of(1, 2)){

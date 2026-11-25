@@ -323,9 +323,9 @@ public final class Fix{
   }
   private boolean file(Dir d, String name, String path, boolean hidden){
     if (!hidden && name.endsWith(".fear")){ fear(d, name, path+name); }
-    var time= d.time(name);
     var now= System.currentTimeMillis();
-    if (time<=0 || time>now+BuildWithZip.futureTolerance){ d.time(name, now); out.accept("Reset the time of "+path+name); }
+    var bad= d instanceof Zip ? ZipLocator.asUtc(d.time(name)) > now+ZipLocator.futureTolerance : d.time(name)<=0 || d.time(name)>now+BuildWithZip.futureTolerance;
+    if (bad){ d.time(name, now); out.accept("Reset the time of "+path+name); }
     return !hidden && name.endsWith(".zip") && zip(d, name, path);
   }
   private void away(Dir d, String name, String path){

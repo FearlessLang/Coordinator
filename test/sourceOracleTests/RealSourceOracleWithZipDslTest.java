@@ -195,27 +195,38 @@ This file is dated [###]""", FsDsl.dumpErr(root, ex));
     return root;
   }
   @Test void errZipEntryDatedInTheFuture(@TempDir Path tmp){
+    for (var entry : List.of("a.fear", ".cache/a.txt")){
+      var root= zipWithEntryAt(tmp.resolve("c"+entry.length()), entry, System.currentTimeMillis()+3*86_400_000L);
+      var ex= assertThrows(UserError.class, () -> new RealSourceOracleWithZip(root));
+      utils.Err.strCmp("""
+Root: [###]
+Path: "_pkg/z.zip"
+Entry: [###]
+
+This zip entry is dated [###],
+[###]h [###]m [###]s after the current time of this computer, [###].
+A zip entry dated more than one day in the future usually comes from a computer
+whose clock was wrong when the zip was made.
+Make the zip again from files with the correct dates, or correct the clock of this computer.
+""", FsDsl.dumpErr(root, ex));
+    }
+  }
+  @Test void okZipEntryDatedLessThanOneDayInTheFuture(@TempDir Path tmp){
     var root= zipWithEntryAt(tmp, "a.fear", System.currentTimeMillis()+3_600_000);
+    assertEquals(1, new RealSourceOracleWithZip(root).allFiles().size());
+  }
+  @Test void errZipCutBeforeTheCentralDirectory(@TempDir Path tmp){
+    var root= zipWithEntryAt(tmp, "a.fear", System.currentTimeMillis());
+    var all= Fs.of(() -> Fs.readAllBytes(root.resolve("_pkg/z.zip")));
+    var central= java.util.stream.IntStream.range(0, all.length-3).filter(i -> all[i]=='P' && all[i+1]=='K' && all[i+2]==1 && all[i+3]==2).findFirst().getAsInt();
+    Fs.ofV(() -> Fs.write(root.resolve("_pkg/z.zip"), java.util.Arrays.copyOf(all, central)));
     var ex= assertThrows(UserError.class, () -> new RealSourceOracleWithZip(root));
     utils.Err.strCmp("""
 Root: [###]
 Path: "_pkg/z.zip"
-Entry: "a.fear"
 
-This zip entry is dated [###],
-[###]h [###]m [###]s after the current time of this computer, [###].
-Fearless decides what needs compiling by comparing the modification dates of the files,
-and the entries of a zip count as the files they unpack to:
-a file dated in the future would make the later edits look older than the last compile.
-This usually comes from a computer whose clock was wrong when the zip was made,
-or from a zip made in another time zone.
-Make the zip again from files with the correct dates, or correct the clock of this computer.
-""", FsDsl.dumpErr(root, ex));
-  }
-  @Test void okInvisibleZipEntryDatedInTheFuture(@TempDir Path tmp){
-    var root= zipWithEntryAt(tmp, ".cache/a.txt", System.currentTimeMillis()+3_600_000);
-    Fs.writeUtf8(root.resolve("_pkg/b.fear"), "B");
-    assertEquals(1, new RealSourceOracleWithZip(root).allFiles().size());
+The list of entries at the end of this zip file does not match the entries of this zip file.
+[###]""", FsDsl.dumpErr(root, ex));
   }
   @Test void okTwoDiskFiles(@TempDir Path tmp){ testOk(tmp, """
 _pkg/a.fear
