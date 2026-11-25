@@ -16,6 +16,7 @@ import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -50,7 +51,12 @@ public final class ZipLocator{
     boolean agrees(ByteBuffer b, java.util.zip.ZipEntry e){
       var sameHeader= b.getInt(at)==0x04034b50 && name.equals(new String(b.array(), at+30, b.getShort(at+26) & 0xFFFF, UTF_8));
       var sameFields= (b.getShort(at+8) & 0xFFFF)==method && (b.getShort(at+10) & 0xFFFF)==time && (b.getShort(at+12) & 0xFFFF)==date;
-      return sameHeader && sameFields && e.getMethod()==method && e.getCrc()==crc && e.getCompressedSize()==csize && e.getSize()==usize;
+      return sameHeader && sameFields && e.getMethod()==method && e.getCrc()==crc && e.getCompressedSize()==csize && e.getSize()==usize && usize<=maxBytes;
+    }
+    int end(ByteBuffer b){
+      var data= Math.toIntExact(at+30L+(b.getShort(at+26) & 0xFFFF)+(b.getShort(at+28) & 0xFFFF)+csize);
+      if ((b.getShort(at+6) & 8) == 0){ return data; }
+      return data+(b.getInt(data)==0x08074b50 ? 16 : 12);
     }
     long utc(){
       var day= LocalDate.of(1980+(date>>9), 1, 1).plusMonths((date>>5 & 0xF)-1).plusDays((date & 0x1F)-1);
@@ -68,6 +74,11 @@ public final class ZipLocator{
       var res= new LinkedHashMap<String,Long>();
       heads.forEach(c -> res.put(c.name, c.utc()));
       var ok= heads.size()==local.size() && central.size()==local.size() && local.stream().allMatch(e -> central.containsKey(e.getName()) && central.get(e.getName()).agrees(b, e));
+      var next= 0;
+      for (var c : heads.stream().sorted(Comparator.comparingInt(Head::at)).toList()){
+        if (!ok || c.at!=next){ return Optional.empty(); }
+        next = c.end(b);
+      }
       return Optional.<Map<String,Long>>of(res).filter(_ -> ok);
     }
     catch (IOException|IllegalArgumentException|IndexOutOfBoundsException|ArithmeticException _){ return Optional.empty(); }

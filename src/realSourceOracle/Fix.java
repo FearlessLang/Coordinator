@@ -402,12 +402,12 @@ public final class Fix{
     var tooBig= d instanceof Disk disk && Fs.of(() -> Files.size(disk.at(name))) > ZipLocator.maxBytes;
     if (tooBig){ away(d, name, path); return true; }
     var bytes= d.read(name);
-    var read= read(bytes);
     var times= ZipLocator.times(bytes);
+    var read= times.flatMap(_ -> read(bytes));
     var all= new ArrayList<>(read.orElse(List.of()).stream().map(e -> new Stored(storedName(e.name), times.map(m -> m.get(e.name)).orElse(0L), e.bytes)).filter(e -> !e.name.equals("/")).toList());
     var names= all.stream().map(Stored::name).toList();
     var noZip= read.isEmpty() || read.get().isEmpty() && !new String(bytes, ISO_8859_1).startsWith("PK\5\6");
-    if (noZip || depth>ZipEntry.maxZipNesting || !namesOk(names) || times.isEmpty()){ away(d, name, path); return true; }
+    if (noZip || depth>ZipEntry.maxZipNesting || !namesOk(names)){ away(d, name, path); return true; }
     var lines= new ArrayList<String>();
     if (!names.equals(read.get().stream().map(Stored::name).toList())){ lines.add("Fixed the stored names of "+full); }
     try{ new Fix(lines::add, depth+1, fixFolder).dir(new Zip(all, ""), full.substring(0, full.length()-4)+"/"); }
