@@ -2,9 +2,8 @@ package realSourceOracle;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
-import java.text.Normalizer;
-import java.text.Normalizer.Form;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
@@ -12,7 +11,6 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
@@ -68,7 +66,7 @@ public final class BuildWithZip{
       : Report.onlyRegularFilesAndDirs(abs);
     }
     if (!invisible && dated){ reqTime(abs, rel); }
-    if (!invisible && rel.getFileName().toString().endsWith(".zip")){ reqNoSiblingForZipName(rel); collectBodyDiskZip(rel); return; }
+    if (!invisible && rel.getFileName().toString().endsWith(".zip")){ checkTooLong(pe); reqNoSiblingForZipName(rel); collectBodyDiskZip(rel); return; }
     addKids(pe);
     if (!invisible){ visibleFiles.add(pe); }
   }
@@ -84,6 +82,7 @@ public final class BuildWithZip{
     dirs.add(Path.of(""));
     Fs.walkV(root, s -> s.filter(p -> !p.equals(root)).forEach(abs -> {
       var rel= root.relativize(abs);
+      if (Files.isSymbolicLink(abs)){ throw Fs.onSymbolicLink.apply(abs); }
       nonEmpty.add(rel.resolveSibling(""));
       if (Fs.isDirectory(abs)){ dirs.add(rel); }
     }));
@@ -99,7 +98,7 @@ public final class BuildWithZip{
   }
   private void collectBodyDiskZip(Path rel){
     for (var e : since.read(root.resolve(rel), () -> ZipEntry.allEntryPaths(root, rel, since))){
-      if (e.expanded()){ continue; }//expanded
+      if (e.expanded()){ checkTooLong(e); continue; }
       addKids(e);
       if (!isInvisible(e)){ visibleFiles.add(e); }
     }
@@ -122,8 +121,7 @@ public final class BuildWithZip{
   }
   static int len(String path){ return Fs.isWindows() ? path.length() : path.getBytes(UTF_8).length; }
   public static String foldKey(String name){
-    return Normalizer.normalize(name, Form.NFC).codePoints().map(c -> c==0x130 || c==0x131 ? c : Character.toLowerCase(Character.toUpperCase(c)))
-      .collect(StringBuilder::new, StringBuilder::appendCodePoint, StringBuilder::append).toString();
+    return name.chars().map(c -> 'A'<=c && c<='Z' ? c+('a'-'A') : c).collect(StringBuilder::new, StringBuilder::appendCodePoint, StringBuilder::append).toString();
   }
   public static void checkIndividualVisibleSegment(RefParent kid){
     checkTooLong(kid);
@@ -139,6 +137,7 @@ public final class BuildWithZip{
     var c0= atom.charAt(0);
     if (c0!='_' && !('a'<=c0 && c0<='z')){ throw Report.visibleMustStartWithLetterOrUnderscore(kid); }
     atom.chars().skip(1).filter(c -> c!='_' && !Fs.isExtSegChar((char)c)).findFirst().ifPresent(c -> { throw Report.visibleInvalidChar(kid, (char)c); });
+    if (atom.length() > 191){ throw Report.visibleNameTooLong(kid); }
     if (Fs.winReserved.contains(atom)){ throw Report.windowsReservedName(kid); }
   }
   private static void checkExt(RefParent kid, String tail){
@@ -157,35 +156,26 @@ public final class BuildWithZip{
   static Optional<Function<RefParent,UserError>> hiddenProblem(String name){
     if (name.endsWith(".") || name.endsWith(" ")){ return Optional.of(k -> Report.invisibleNoTrailingDotOrSpace(k, name)); }
     for (int cp : name.codePoints().toArray()){
-      if (0xD800<=cp && cp<=0xDFFF || cp==0xFFFD){ return Optional.of(k -> Report.invisibleInvalidSurrogate(k, name)); }
-      if (Character.isISOControl(cp)){ return Optional.of(k -> Report.invisibleNoControlChars(k, cp, name)); }
+      if (cp<32 || cp>126){ return Optional.of(k -> Report.invisibleOnlyAscii(k, cp, name)); }
       if (winBadChars.indexOf(cp) >= 0){ return Optional.of(k -> Report.invisibleNoWindowsBadChars(k, (char)cp, name)); }
     }
     if (reserved(name)){ return Optional.of(k -> Report.invisibleWindowsReservedDeviceName(k, base(name), name)); }
-    if (name.getBytes(UTF_8).length > 255){ return Optional.of(k -> Report.invisibleNameTooLong(k, name)); }
     return Optional.empty();
   }
   static boolean reserved(String name){ return Fs.winReserved.contains(base(name)) || moreReserved.matcher(base(name)).matches(); }
   private static String base(String name){
     var d= name.indexOf('.');
-    return (d<0 ? name : name.substring(0, d)).replaceAll(" +$", "").toLowerCase(Locale.ROOT);
+    return foldKey((d<0 ? name : name.substring(0, d)).replaceAll(" +$", ""));
   }
-  private static final Pattern moreReserved= Pattern.compile("conin\\$|conout\\$|(com|lpt)[\\u00B9\\u00B2\\u00B3]");
+  private static final Pattern moreReserved= Pattern.compile("conin\\$|conout\\$");
   private static void checkCollectiveInvisible(Collection<RefParent> kids){
     var seenKeyToName= new HashMap<String,String>();
     for (var kid : kids){ checkCollectiveInvisibleFocusOn(seenKeyToName, kid); }
   }
   private static void checkCollectiveInvisibleFocusOn(HashMap<String,String> seenKeyToName, RefParent kid){
     var name= Fs.fileNameWithExtension(kid.fearPath());
-    var lowName= name.toLowerCase(Locale.ROOT);
-    var nfc= Normalizer.normalize(name, Form.NFC);
     var prev= seenKeyToName.putIfAbsent(foldKey(name), name);
-    if (prev == null){ return; }
-    var lowPrev= prev.toLowerCase(Locale.ROOT);
-    var prevNfc= Normalizer.normalize(prev, Form.NFC);
-    var caseOnly= lowPrev.equals(lowName) && !prevNfc.equals(nfc);
-    var nfcOnly= prevNfc.equals(nfc) && !lowPrev.equals(lowName);
-    throw Report.invisibleSiblingNamesCollide(kid, prev, name, caseOnly, nfcOnly);
+    if (prev != null){ throw Report.invisibleSiblingNamesCollide(kid, prev, name); }
   }
   private static void checkCollectiveVisible(Set<RefParent> kids){
     checkCollectiveInvisible(kids.stream().filter(kid -> Fs.fileNameWithExtension(kid.fearPath()).startsWith(".")).toList());

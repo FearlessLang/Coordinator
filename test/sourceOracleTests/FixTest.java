@@ -404,17 +404,12 @@ x""", "Renamed lib/DES\u212ATOP.INI to des_top.ini\n", "lib/\nlib/des_top.ini=x\
     assertEquals(gone, names(into));
     assertEquals("", fix(root));
   }
-  @Test void movesTheLaterOfTwoHiddenNamesEqualAfterCaseFoldingToTheFixFolder(@TempDir Path tmp){
+  @Test void movesTheLaterOfTwoHiddenNamesEqualAfterCaseChangesToTheFixFolder(@TempDir Path tmp){
     var root= root(tmp);
     Fs.writeUtf8(root.resolve(".a/x"), "lower");
-    Fs.writeUtf8(root.resolve(".a/\u00E9"), "nfc");
     if (Fs.isLinux()){ Fs.writeUtf8(root.resolve(".a/X"), "upper"); }
-    if (!Fs.isMac()){ Fs.writeUtf8(root.resolve(".a/e\u0301"), "nfd"); }
     var into= tmp.resolve("root_fix").resolve(".a");
-    var lines= new StringBuilder();
-    if (Fs.isLinux()){ lines.append("Moved .a/x to "+into.resolve("x")+"\n"); }
-    if (!Fs.isMac()){ lines.append("Moved .a/\u00E9 to "+into.resolve("\u00E9")+"\n"); }
-    assertEquals(lines.toString(), fix(root));
+    assertEquals(Fs.isLinux() ? "Moved .a/x to "+into.resolve("x")+"\n" : "", fix(root));
     assertEquals("", fix(root));
   }
   @Test void movesAnEntryWhosePathIsTooLongToTheFixFolder(@TempDir Path tmp){
@@ -484,11 +479,6 @@ a_b/x.txt=x
     var first= Fs.isWindows() ? "a\uD83D\uDE00.txt" : "a\uFF01.txt";
     var second= Fs.isWindows() ? "a\uFF01.txt" : "a\uD83D\uDE00.txt";
     assertEquals("Renamed "+first+" to a_.txt\nRenamed "+second+" to a_2.txt\n", fix(root));
-  }
-  @Test void theDottedAndTheDotlessIAreNotEqualAfterSimpleCaseFolding(@TempDir Path tmp){
-    var root= root(tmp, ".h/i\niii\n1\njjj\n.h/\u0131\niii\n2");
-    assertEquals(2, names(root.resolve(".h")).size());
-    assertEquals("", fix(root));
   }
   @Test void aFixEndingInsideAZipWritesTheZipWithTheChangesDone(@TempDir Path tmp) throws IOException{
     var root= root(tmp);
@@ -1261,11 +1251,11 @@ C:{}
 B:{}
 """, FsDsl.dump(new RealSourceOracleWithZip(root)));
   }
-  @Test void aRenameNeverGivesANameThatClashesAfterCaseFolding(@TempDir Path tmp){
+  @Test void aRenameNeverGivesANameThatClashesAfterCaseChanges(@TempDir Path tmp){
     var root= root(tmp);
-    Fs.writeUtf8(root.resolve("\u017F_.txt"), "one");
+    Fs.writeUtf8(root.resolve("S_.txt"), "one");
     Fs.writeUtf8(root.resolve("S!.txt"), "two");
-    assertEquals("Renamed S!.txt to s_2.txt\nRenamed \u017F_.txt to __.txt\n", fix(root));
+    assertEquals("Renamed S!.txt to s_2.txt\nRenamed S_.txt to s_.txt\n", fix(root));
     assertEquals(List.of("one", "two"), texts(root));
     assertEquals("", fix(root));
   }
