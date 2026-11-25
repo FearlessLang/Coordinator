@@ -1574,6 +1574,18 @@ computing b
 b
 """, coordinator(root).main(root, stLib));
   }
+  @Test void bytesPrintedOneByOneReachTheOutputWhenTheMainEnds(@TempDir Path tmp) throws InterruptedException{
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_col/_rank_app.fear
+iii
+use base.Main as Main;
+use base.Block as Block;
+Hello:Main{s->Block#(s.out.byte(72 .getByte), s.out.byte(105 .getByte))}
+""");
+    utils.Err.strCmp("Hi", coordinator(root).main(root, stLib));
+  }
   @Test void anEnumerationFamilyListsItsValuesOnceForEachCachedMethod(@TempDir Path tmp) throws InterruptedException{
     var root= tmp.resolve("root");
     UserError.root = root;
