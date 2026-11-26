@@ -1612,6 +1612,34 @@ c
 c
 """, coordinator(root).main(root, stLib));
   }
+  @Test void aCacheReprFIsNotFlushedByCacheFlush(@TempDir Path tmp){
+    var root= tmp.resolve("root");
+    UserError.root = root;
+    FsDsl.materialize(root, """
+_col/_rank_app.fear
+iii
+use base.Main as Main;
+use base.Cache as Cache;
+use base.CacheReprF as CacheReprF;
+use base.Var as Var;
+use base.Nat as Nat;
+use base.Str as Str;
+Show: CacheReprF[Var[Nat],Str]{n -> n.get.str}
+Hello:Main{s->Cache.flush(Show)}
+""");
+    var ex= assertThrows(UserError.class, () -> compile(coordinator(root), root));
+    utils.Err.strCmp("""
+In file: fear:/_col/_rank_app.fear
+
+008| Hello:Main{s->Cache.flush(Show)}
+   |            ---~~~~~~~~~~~~^^^^~
+
+While inspecting method "Hello.main(_)" (line 8)
+This call to method "Cache.flush(_)" cannot typecheck.
+Argument 1 has type "iso Show".
+That is not a subtype of "base.CacheHandler" (the type required by the method signature).
+Error 8 TypeError""", ex.getMessage());
+  }
   @Test void anEnumerationFamilyListsItsValuesOnceForEachCachedMethod(@TempDir Path tmp) throws InterruptedException{
     var root= tmp.resolve("root");
     UserError.root = root;
